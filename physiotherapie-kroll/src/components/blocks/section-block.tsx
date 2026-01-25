@@ -1,0 +1,185 @@
+"use client"
+
+import { useState } from "react"
+import { cn } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
+import { ArrowRight } from "lucide-react"
+
+interface SectionBlockProps {
+  section?: unknown
+  typography?: unknown
+  eyebrow?: string
+  headline: string
+  content: string
+  align?: "left" | "center"
+  maxWidth?: "md" | "lg" | "xl"
+  primaryCtaText?: string
+  primaryCtaHref?: string
+  variant?: "default" | "soft"
+  background?: "none" | "muted" | "gradient"
+  backgroundColor?: string
+  eyebrowColor?: string
+  headlineColor?: string
+  contentColor?: string
+  ctaTextColor?: string
+  ctaBgColor?: string
+  ctaHoverBgColor?: string
+  ctaBorderColor?: string
+  // CMS/Inline Edit Props
+  editable?: boolean
+  blockId?: string
+  onEditField?: (blockId: string, fieldPath: string, anchorRect?: DOMRect) => void
+}
+
+const maxWidthMap = {
+  md: "max-w-2xl",
+  lg: "max-w-4xl",
+  xl: "max-w-6xl",
+}
+
+const backgroundMap = {
+  none: "",
+  muted: "bg-muted/50",
+  gradient: "bg-gradient-to-br from-primary/5 via-background to-background",
+}
+
+export function SectionBlock({
+  eyebrow,
+  headline,
+  content,
+  align = "left",
+  maxWidth = "lg",
+  primaryCtaText,
+  primaryCtaHref,
+  variant = "default",
+  background = "none",
+  backgroundColor,
+  eyebrowColor,
+  headlineColor,
+  contentColor,
+  ctaTextColor,
+  ctaBgColor,
+  ctaHoverBgColor,
+  ctaBorderColor,
+  editable = false,
+  blockId,
+  onEditField,
+}: SectionBlockProps) {
+  const isCentered = align === "center"
+  const isSoft = variant === "soft"
+  const [ctaHovered, setCtaHovered] = useState(false)
+
+  // Inline edit helper
+  const handleInlineEdit = (e: React.MouseEvent, fieldPath: string) => {
+    if (!editable || !blockId || !onEditField) return
+    e.preventDefault()
+    e.stopPropagation()
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+    onEditField(blockId, fieldPath, rect)
+  }
+
+  return (
+    <section
+      className={cn(
+        "py-16 px-4",
+        backgroundMap[background],
+        isSoft && "py-20"
+      )}
+      style={backgroundColor ? ({ backgroundColor } as React.CSSProperties) : undefined}
+    >
+      <div className="container mx-auto">
+        <div
+          className={cn(
+            "mx-auto",
+            maxWidthMap[maxWidth],
+            isCentered && "text-center"
+          )}
+        >
+          {/* Eyebrow */}
+          {eyebrow && (
+            <p
+              onClick={(e) => handleInlineEdit(e, "eyebrow")}
+              className={cn(
+                "text-sm font-medium uppercase tracking-wider text-primary mb-4",
+                editable && blockId && onEditField && "cursor-pointer rounded px-1 transition-colors hover:bg-primary/10"
+              )}
+              style={eyebrowColor ? ({ color: eyebrowColor } as React.CSSProperties) : undefined}
+            >
+              {eyebrow}
+            </p>
+          )}
+
+          {/* Headline */}
+          <h2
+            onClick={(e) => handleInlineEdit(e, "headline")}
+            className={cn(
+              "text-3xl font-bold tracking-tight text-foreground md:text-4xl",
+              isCentered && "mx-auto",
+              editable && blockId && onEditField && "cursor-pointer rounded px-1 transition-colors hover:bg-primary/10"
+            )}
+            style={headlineColor ? ({ color: headlineColor } as React.CSSProperties) : undefined}
+          >
+            {headline}
+          </h2>
+
+          {/* Content */}
+          <div
+            onClick={(e) => handleInlineEdit(e, "content")}
+            className={cn(
+              "mt-6 text-lg leading-relaxed text-muted-foreground",
+              isCentered && "mx-auto",
+              editable && blockId && onEditField && "cursor-pointer rounded px-1 transition-colors hover:bg-primary/10"
+            )}
+            style={contentColor ? ({ color: contentColor } as React.CSSProperties) : undefined}
+            dangerouslySetInnerHTML={{ __html: content }}
+          />
+
+          {/* CTA Button */}
+          {primaryCtaText && primaryCtaHref && (
+            <div className={cn("mt-8", isCentered && "flex justify-center")}>
+              <Button
+                size="lg"
+                className="gap-2"
+                style={{
+                  color: ctaTextColor || undefined,
+                  backgroundColor: ctaBgColor
+                    ? (ctaHovered && ctaHoverBgColor ? ctaHoverBgColor : ctaBgColor)
+                    : undefined,
+                  borderColor: ctaBorderColor || undefined,
+                }}
+                onMouseEnter={() => setCtaHovered(true)}
+                onMouseLeave={() => setCtaHovered(false)}
+                onClick={editable && blockId && onEditField ? (e) => handleInlineEdit(e, "primaryCtaText") : undefined}
+                asChild={!editable && !!primaryCtaHref}
+              >
+                {!editable && primaryCtaHref ? (
+                  <a href={primaryCtaHref}>
+                    {primaryCtaText}
+                    <ArrowRight className="h-4 w-4" />
+                  </a>
+                ) : (
+                  <>
+                    <span
+                      onClick={(e) => {
+                        if (editable && blockId && onEditField) {
+                          e.stopPropagation()
+                          handleInlineEdit(e, "primaryCtaText")
+                        }
+                      }}
+                      className={cn(
+                        editable && blockId && onEditField && "cursor-pointer"
+                      )}
+                    >
+                      {primaryCtaText}
+                    </span>
+                    <ArrowRight className="h-4 w-4" />
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
+  )
+}
