@@ -14,8 +14,10 @@ import type { ContactFormBlock } from "@/types/cms"
 import { useBrand } from "@/components/brand/BrandProvider"
 import { CheckCircle2, AlertCircle, Loader2, Send, Mail, Clock, Phone, MapPin } from "lucide-react"
 import * as React from "react"
+import { useElementShadowStyle } from "@/lib/shadow"
+import type { CommonBlockProps } from "@/types/cms"
 
-type ContactFormBlockProps = ContactFormBlock["props"] & {
+type ContactFormBlockProps = ContactFormBlock["props"] & CommonBlockProps & {
   blockId?: string
   pageSlug?: string
   editable?: boolean
@@ -283,6 +285,7 @@ export function ContactFormBlock({
   requireConsent = false,
   consentLabel,
   layout = "stack",
+  elements,
   blockId,
   pageSlug,
   editable = false,
@@ -292,6 +295,9 @@ export function ContactFormBlock({
   const [formState, setFormState] = useState<FormState>("idle")
   const [submitError, setSubmitError] = useState<string | null>(null)
   const renderTimeRef = useRef<number>(Date.now())
+
+  // Collect props for shadow access (elements property from CommonBlockProps)
+  const propsFromBlock = { elements: (elements ?? {}) } as any
 
   // Normalize layout: accept "stacked" (legacy) and normalize to "split"
   const normalizedLayout = layout === "stacked" ? "split" : layout
@@ -456,6 +462,23 @@ export function ContactFormBlock({
 
   // Split Layout
   if (normalizedLayout === "split") {
+    const formCardShadow = useElementShadowStyle({
+      elementId: "form-card",
+      elementConfig: (propsFromBlock as any)?.elements?.["form-card"],
+    })
+    const formHeadingShadow = useElementShadowStyle({
+      elementId: "form-heading",
+      elementConfig: (propsFromBlock as any)?.elements?.["form-heading"],
+    })
+    const submitButtonShadow = useElementShadowStyle({
+      elementId: "submit-button",
+      elementConfig: (propsFromBlock as any)?.elements?.["submit-button"],
+    })
+    const contactCardShadow = useElementShadowStyle({
+      elementId: "contact-card",
+      elementConfig: (propsFromBlock as any)?.elements?.["contact-card"],
+    })
+
     return (
       <section className="relative w-full overflow-hidden py-12 px-4">
         {/* Decorative background elements - subtle ambient glow only */}
@@ -477,11 +500,15 @@ export function ContactFormBlock({
               {/* Headline */}
               <h2 
                 data-cms-field="heading"
+                data-element-id="form-heading"
                 className={cn(
                   "text-balance text-3xl font-bold tracking-tight text-foreground md:text-4xl lg:text-5xl",
                   editable && blockId && onEditField && "cursor-pointer rounded px-1 transition-colors hover:bg-primary/10"
                 )}
-                style={headingColor ? ({ color: headingColor } as React.CSSProperties) : undefined}
+                style={{
+                  ...(formHeadingShadow as any),
+                  ...(headingColor ? { color: headingColor } : {}),
+                }}
                 onClick={handleInlineEdit("props.heading")}
               >
                 {heading}
@@ -505,7 +532,10 @@ export function ContactFormBlock({
               {/* Contact Info Cards */}
               <div className="mt-12 space-y-4">
                 {/* Card 1: Schnelle Antwort */}
-                <div className="group flex items-center gap-4 rounded-xl border border-border/30 bg-card/40 p-4 backdrop-blur-sm transition-all duration-300 hover:border-border/60 hover:bg-card/60">
+                <div 
+                  data-element-id="contact-card"
+                  style={contactCardShadow as any}
+                  className="group flex items-center gap-4 rounded-xl border border-border/30 bg-card/40 p-4 backdrop-blur-sm transition-all duration-300 hover:border-border/60 hover:bg-card/60">
                   <div className="flex size-12 shrink-0 items-center justify-center rounded-lg bg-primary/10 transition-colors group-hover:bg-primary/20">
                     <Clock className="size-5 text-primary" />
                   </div>
@@ -516,7 +546,10 @@ export function ContactFormBlock({
                 </div>
 
                 {/* Card 2: Kostenlose Beratung */}
-                <div className="group flex items-center gap-4 rounded-xl border border-border/30 bg-card/40 p-4 backdrop-blur-sm transition-all duration-300 hover:border-border/60 hover:bg-card/60">
+                <div 
+                  data-element-id="contact-card"
+                  style={contactCardShadow as any}
+                  className="group flex items-center gap-4 rounded-xl border border-border/30 bg-card/40 p-4 backdrop-blur-sm transition-all duration-300 hover:border-border/60 hover:bg-card/60">
                   <div className="flex size-12 shrink-0 items-center justify-center rounded-lg bg-primary/10 transition-colors group-hover:bg-primary/20">
                     <Phone className="size-5 text-primary" />
                   </div>
@@ -527,7 +560,10 @@ export function ContactFormBlock({
                 </div>
 
                 {/* Card 3: Lokale Betreuung */}
-                <div className="group flex items-center gap-4 rounded-xl border border-border/30 bg-card/40 p-4 backdrop-blur-sm transition-all duration-300 hover:border-border/60 hover:bg-card/60">
+                <div 
+                  data-element-id="contact-card"
+                  style={contactCardShadow as any}
+                  className="group flex items-center gap-4 rounded-xl border border-border/30 bg-card/40 p-4 backdrop-blur-sm transition-all duration-300 hover:border-border/60 hover:bg-card/60">
                   <div className="flex size-12 shrink-0 items-center justify-center rounded-lg bg-primary/10 transition-colors group-hover:bg-primary/20">
                     <MapPin className="size-5 text-primary" />
                   </div>
@@ -541,7 +577,10 @@ export function ContactFormBlock({
 
             {/* Right Side - Form Card (3 columns) */}
             <div className="relative lg:col-span-3">
-              <div className="relative rounded-3xl border border-border/40 bg-card p-8 shadow-2xl shadow-primary/5 lg:p-12">
+              <div 
+                data-element-id="form-card"
+                style={formCardShadow as any}
+                className="relative rounded-3xl border border-border/40 bg-card p-8 shadow-2xl shadow-primary/5 lg:p-12">
                 {/* Error Alert */}
                 {formState === "error" && submitError && (
                   <div className="mb-8 flex items-start gap-4 rounded-xl border border-destructive/20 bg-destructive/5 p-5">
@@ -673,7 +712,7 @@ export function ContactFormBlock({
                   </div>
 
                   {/* Premium Submit Button with shimmer */}
-                  <div className="pt-4">
+                  <div className="pt-4" data-element-id="submit-button" style={submitButtonShadow as any}>
                     <Button
                       type="submit"
                       disabled={isSubmitting || formState === "loading"}
@@ -719,17 +758,34 @@ export function ContactFormBlock({
   }
 
   // Stacked Layout (Default)
+  const stackedHeadingShadow = useElementShadowStyle({
+    elementId: "stacked-heading",
+    elementConfig: (propsFromBlock as any)?.elements?.["stacked-heading"],
+  })
+  const formCardStackedShadow = useElementShadowStyle({
+    elementId: "form-card-stacked",
+    elementConfig: (propsFromBlock as any)?.elements?.["form-card-stacked"],
+  })
+  const stackedSubmitButtonShadow = useElementShadowStyle({
+    elementId: "stacked-submit-button",
+    elementConfig: (propsFromBlock as any)?.elements?.["stacked-submit-button"],
+  })
+
   return (
     <section className="w-full py-12 px-4">
       <div className="mx-auto max-w-xl">
         {/* Header */}
         <div className="mb-10 text-center">
           <h2 
+            data-element-id="stacked-heading"
             className={cn(
               "text-balance text-3xl font-semibold tracking-tight text-foreground md:text-4xl",
               editable && blockId && onEditField && "cursor-pointer rounded px-1 transition-colors hover:bg-primary/10"
             )}
-            style={headingColor ? ({ color: headingColor } as React.CSSProperties) : undefined}
+            style={{
+              ...(stackedHeadingShadow as any),
+              ...(headingColor ? { color: headingColor } : {}),
+            }}
             onClick={handleInlineEdit("props.heading")}
             data-cms-field="heading"
           >
@@ -751,7 +807,10 @@ export function ContactFormBlock({
         </div>
 
         {/* Form Card */}
-        <div className="rounded-2xl border border-border/40 bg-card/80 p-8 shadow-sm backdrop-blur-sm">
+        <div 
+          data-element-id="form-card-stacked"
+          style={formCardStackedShadow as any}
+          className="rounded-2xl border border-border/40 bg-card/80 p-8 shadow-sm backdrop-blur-sm">
           {/* Error Alert */}
           {formState === "error" && submitError && (
             <div className="mb-6 flex items-start gap-3 rounded-lg border border-destructive/20 bg-destructive/5 p-4">
@@ -875,7 +934,7 @@ export function ContactFormBlock({
             </div>
 
             {/* Premium Submit Button with shimmer */}
-            <div className="pt-4">
+            <div className="pt-4" data-element-id="stacked-submit-button" style={stackedSubmitButtonShadow as any}>
               <Button
                 type="submit"
                 disabled={isSubmitting || formState === "loading"}

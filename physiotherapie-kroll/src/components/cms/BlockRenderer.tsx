@@ -278,7 +278,7 @@ export function BlockRenderer({
     )
   }
 
-  // Wrap content with editable overlay that detects clicks on data-cms-field elements
+  // Wrap content with editable overlay that detects clicks on data-cms-field and data-element-id elements
   return (
     <div
       className={cn(
@@ -288,19 +288,29 @@ export function BlockRenderer({
         typographyClassName
       )}
       onClick={(e) => {
-        if (!canEdit || !onEditField) return
-
-        // Protect interactive elements (forms, buttons, links) unless they have data-cms-field
+        // Protect interactive elements (forms, buttons, links) unless they have data-cms-field or data-element-id
         const interactiveEl = (e.target as HTMLElement).closest("a,button,input,textarea,select,[role='button'],[role='link']")
         const fieldEl = (e.target as HTMLElement).closest("[data-cms-field]")
+        const elementEl = (e.target as HTMLElement).closest("[data-element-id]")
         
-        // If clicking on interactive element without data-cms-field, allow default behavior
-        if (interactiveEl && !fieldEl) {
+        // If clicking on interactive element without special attributes, allow default behavior
+        if (interactiveEl && !fieldEl && !elementEl) {
           return
         }
 
-        // Only trigger edit if element has data-cms-field attribute
-        if (fieldEl) {
+        // Handle data-element-id clicks (for shadow/styling inspector)
+        if (elementEl && onElementClick) {
+          const elementId = elementEl.getAttribute("data-element-id")
+          if (elementId) {
+            e.preventDefault()
+            e.stopPropagation()
+            onElementClick(block.id, elementId)
+            return
+          }
+        }
+
+        // Handle data-cms-field clicks (for inline text editing)
+        if (canEdit && onEditField && fieldEl) {
           const fieldPath = fieldEl.getAttribute("data-cms-field")
           if (fieldPath) {
             e.preventDefault()
