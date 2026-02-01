@@ -307,7 +307,8 @@ export function BlockRenderer({
         }
 
         // Handle data-element-id clicks (for shadow/styling inspector)
-        if (elementEl && onElementClick) {
+        // Only if not already handled by Editable component (check if it's a direct element click, not nested in Editable)
+        if (elementEl && onElementClick && !elementEl.closest("[role='region']")) {
           const elementId = elementEl.getAttribute("data-element-id")
           if (elementId) {
             e.preventDefault()
