@@ -12,8 +12,9 @@ import Image from "next/image"
 import { usePathname, useRouter } from "next/navigation"
 import { AnimatedBlock } from "@/components/blocks/AnimatedBlock"
 
-import type { HeroBlock, MediaValue } from "@/types/cms"
+import type { HeroBlock, MediaValue, CommonBlockProps } from "@/types/cms"
 import type { BrandKey } from "@/components/brand/brandAssets"
+import { useElementShadowStyle } from "@/lib/shadow"
 
 function resolveMediaUrl(mediaValue?: MediaValue, fallbackUrl?: string): string | undefined {
   if (!mediaValue) return fallbackUrl
@@ -63,7 +64,7 @@ function normalizeStringArray(v: unknown): string[] {
   return []
 }
 
-interface HeroSectionProps {
+interface HeroSectionProps extends CommonBlockProps {
   headline?: string
   subheadline?: string
   ctaText?: string
@@ -109,6 +110,7 @@ export function HeroSection({
   onElementClick,
   selectedElementId,
   typography,
+  elements,
   props: heroProps,
   showBrandToggle = false,
   ...restProps
@@ -117,6 +119,24 @@ export function HeroSection({
   const [playHovered, setPlayHovered] = useState(false)
   const pathname = usePathname()
   const router = useRouter()
+
+  // Element shadows
+  const heroHeadlineShadow = useElementShadowStyle({
+    elementId: "hero-headline",
+    elementConfig: (elements ?? {})["hero-headline"],
+  })
+  const heroSubheadlineShadow = useElementShadowStyle({
+    elementId: "hero-subheadline",
+    elementConfig: (elements ?? {})["hero-subheadline"],
+  })
+  const heroPrimaryCtaShadow = useElementShadowStyle({
+    elementId: "hero-primary-cta",
+    elementConfig: (elements ?? {})["hero-primary-cta"],
+  })
+  const heroSecondaryCtaShadow = useElementShadowStyle({
+    elementId: "hero-secondary-cta",
+    elementConfig: (elements ?? {})["hero-secondary-cta"],
+  })
 
   const showBrandToggleNav = showBrandToggle && (pathname === "/" || pathname === "/konzept")
   
@@ -198,6 +218,7 @@ export function HeroSection({
   const headlineTypography = typographyRecord["headline"]
   const subheadlineTypography = typographyRecord["subheadline"]
   const ctaTypography = typographyRecord["cta"]
+  const playTypography = typographyRecord["play"] || typographyRecord["cta"]
 
   const handleInlineEdit = (e: React.MouseEvent, fieldPath: string) => {
     if (!editable || !blockId || !onEditField) return
@@ -331,11 +352,11 @@ export function HeroSection({
           {/* Headline */}
           <Editable
             blockId={blockId || ""}
-            elementId="headline"
+            elementId="hero-headline"
             typography={headlineTypography}
             editable={editable}
             onElementClick={onElementClick}
-            isSelected={selectedElementId === "headline"}
+            isSelected={selectedElementId === "hero-headline"}
             as="h1"
             className={cn(
               "hero-headline text-balance animate-fade-in-up animate-delay-200 text-foreground",
@@ -343,7 +364,11 @@ export function HeroSection({
                 ? "font-serif text-4xl font-semibold tracking-tight md:text-5xl lg:text-6xl"
                 : "font-sans text-4xl font-bold uppercase tracking-tight md:text-5xl lg:text-7xl"
             )}
-            style={resolvedHeadlineColor ? { color: resolvedHeadlineColor } : undefined}
+            style={{
+              ...heroHeadlineShadow,
+              ...(resolvedHeadlineColor ? { color: resolvedHeadlineColor } : {}),
+            }}
+            data-element-id="hero-headline"
           >
             <span onClick={(e) => handleInlineEdit(e, "headline")}>
               {resolvedHeadline}
@@ -353,17 +378,21 @@ export function HeroSection({
           {/* Subheadline */}
           <Editable
             blockId={blockId || ""}
-            elementId="subheadline"
+            elementId="hero-subheadline"
             typography={subheadlineTypography}
             editable={editable}
             onElementClick={onElementClick}
-            isSelected={selectedElementId === "subheadline"}
+            isSelected={selectedElementId === "hero-subheadline"}
             as="p"
             className={cn(
               "hero-subheadline max-w-xl text-pretty leading-relaxed animate-fade-in-up animate-delay-300",
               "text-lg md:text-xl text-muted-foreground" // Standard über Klasse
             )}
-            style={resolvedSubheadlineColor ? { color: resolvedSubheadlineColor } : undefined}
+            style={{
+              ...heroSubheadlineShadow,
+              ...(resolvedSubheadlineColor ? { color: resolvedSubheadlineColor } : {}),
+            }}
+            data-element-id="hero-subheadline"
           >
             <span onClick={(e) => handleInlineEdit(e, "subheadline")}>
               {resolvedSubheadline}
@@ -374,11 +403,12 @@ export function HeroSection({
           <div className="hero-cta mt-4 flex flex-wrap items-center gap-4 animate-fade-in-up animate-delay-400">
             <Editable
               blockId={blockId || ""}
-              elementId="cta"
+              elementId="hero-primary-cta"
               typography={ctaTypography}
               editable={editable}
               onElementClick={onElementClick}
-              isSelected={selectedElementId === "cta"}
+              isSelected={selectedElementId === "hero-primary-cta"}
+              data-element-id="hero-primary-cta"
             >
               <Button
                 size="lg"
@@ -386,8 +416,9 @@ export function HeroSection({
                   "group gap-2 text-base font-semibold",
                   isCalm ? "rounded-full px-8" : "rounded-md px-8 uppercase tracking-wide",
                 )}
-                style={
-                  resolvedCtaColor ||
+                style={{
+                  ...heroPrimaryCtaShadow,
+                  ...(resolvedCtaColor ||
                   resolvedCtaBgColor ||
                   resolvedCtaBorderColor ||
                   (ctaHovered && resolvedCtaHoverBgColor)
@@ -403,8 +434,8 @@ export function HeroSection({
                           ? { borderColor: resolvedCtaBorderColor }
                           : {}),
                       }
-                    : undefined
-                }
+                    : {}),
+                }}
                 onMouseEnter={() => setCtaHovered(true)}
                 onMouseLeave={() => setCtaHovered(false)}
                 onClick={editable && blockId && onEditField ? (e) => handleInlineEdit(e, "ctaText") : onCtaClick}
@@ -437,31 +468,42 @@ export function HeroSection({
             </Editable>
 
             {!isCalm && (
-              <Button
-                variant="outline"
-                size="lg"
-                className="group gap-2 rounded-md border-border/50 bg-transparent text-base uppercase tracking-wide text-foreground hover:bg-secondary hover:text-secondary-foreground"
-                style={
-                  resolvedPlayTextColor ||
-                  resolvedPlayBgColor ||
-                  resolvedPlayBorderColor ||
-                  (playHovered && resolvedPlayHoverBgColor)
-                    ? {
-                        ...(resolvedPlayTextColor ? { color: resolvedPlayTextColor } : {}),
-                        ...(resolvedPlayBgColor || (playHovered && resolvedPlayHoverBgColor)
-                          ? {
-                              backgroundColor:
-                                (playHovered && resolvedPlayHoverBgColor)
-                                  ? resolvedPlayHoverBgColor
-                                  : resolvedPlayBgColor
-                            }
-                          : {}),
-                        ...(resolvedPlayBorderColor
-                          ? { borderColor: resolvedPlayBorderColor }
-                          : {}),
-                      }
-                    : undefined
-                }
+              <Editable
+                blockId={blockId || ""}
+                elementId="hero-secondary-cta"
+                typography={playTypography}
+                editable={editable}
+                onElementClick={onElementClick}
+                isSelected={selectedElementId === "hero-secondary-cta"}
+                data-element-id="hero-secondary-cta"
+                as="div"
+              >
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="group gap-2 rounded-md border-border/50 bg-transparent text-base uppercase tracking-wide text-foreground hover:bg-secondary hover:text-secondary-foreground"
+                  style={{
+                    ...heroSecondaryCtaShadow,
+                    ...(resolvedPlayTextColor ||
+                    resolvedPlayBgColor ||
+                    resolvedPlayBorderColor ||
+                    (playHovered && resolvedPlayHoverBgColor)
+                      ? {
+                          ...(resolvedPlayTextColor ? { color: resolvedPlayTextColor } : {}),
+                          ...(resolvedPlayBgColor || (playHovered && resolvedPlayHoverBgColor)
+                            ? {
+                                backgroundColor:
+                                  (playHovered && resolvedPlayHoverBgColor)
+                                    ? resolvedPlayHoverBgColor
+                                    : resolvedPlayBgColor
+                              }
+                            : {}),
+                          ...(resolvedPlayBorderColor
+                            ? { borderColor: resolvedPlayBorderColor }
+                            : {}),
+                        }
+                      : {}),
+                  }}
                 onMouseEnter={() => setPlayHovered(true)}
                 onMouseLeave={() => setPlayHovered(false)}
                 onClick={editable && blockId && onEditField ? (e) => handleInlineEdit(e, "playText") : undefined}
@@ -491,6 +533,7 @@ export function HeroSection({
                   </>
                 )}
               </Button>
+            </Editable>
             )}
           </div>
 
