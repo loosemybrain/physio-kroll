@@ -22,6 +22,8 @@ type ContactFormBlockProps = ContactFormBlock["props"] & CommonBlockProps & {
   pageSlug?: string
   editable?: boolean
   onEditField?: (blockId: string, fieldPath: string, anchorRect?: DOMRect) => void
+  onElementClick?: (blockId: string, elementId: string) => void
+  selectedElementId?: string | null
 }
 
 /**
@@ -290,6 +292,8 @@ export function ContactFormBlock({
   pageSlug,
   editable = false,
   onEditField,
+  onElementClick,
+  selectedElementId,
 }: ContactFormBlockProps) {
   const { brand: activeBrand } = useBrand()
   const [formState, setFormState] = useState<FormState>("idle")

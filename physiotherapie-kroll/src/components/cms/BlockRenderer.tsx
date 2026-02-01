@@ -193,6 +193,8 @@ export function BlockRenderer({
             pageSlug={pageSlug}
             editable={editable}
             onEditField={onEditField}
+            onElementClick={onElementClick}
+            selectedElementId={selectedElementId}
           />
         )
       }

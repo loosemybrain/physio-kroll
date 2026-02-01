@@ -3296,6 +3296,11 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
                 {selectedElementId && (
                   <>
                     <div className="space-y-3">
+                      <div style={{ padding: '8px', background: '#f0f0f0', borderRadius: '4px', marginBottom: '8px' }}>
+                        <p style={{ margin: 0, fontSize: '12px', color: '#666' }}>
+                          🐛 DEBUG: selectedElementId = "{selectedElementId}"
+                        </p>
+                      </div>
                       <ShadowInspector
                         config={
                           ((selectedBlock.props as Record<string, unknown>)?.elements as Record<string, ElementConfig> | undefined)?.[selectedElementId]?.style?.shadow
