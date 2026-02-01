@@ -3,6 +3,7 @@ import "server-only"
 import type { BrandKey } from "@/components/brand/brandAssets"
 import { getActiveThemePresetForBrand, getActiveThemePresetsForBrands } from "@/lib/supabase/themePresets"
 import { filterThemeTokens, themePresetCssForBrand } from "@/lib/theme/themePresetTokens"
+import { brandDefaultTokens } from "@/lib/theme/brandDefaults"
 import { unstable_noStore as noStore } from "next/cache"
 
 /**
@@ -36,6 +37,9 @@ export async function getThemePresetCss(): Promise<string> {
 /**
  * Loads active preset tokens for ONE brand and returns inline CSS variables for <html style={...}>.
  * This avoids selector/order issues (inline style wins over globals.css).
+ * 
+ * Important: Merges Brand-Defaults with Preset-Tokens so all tokens are always present.
+ * If a preset is partial (e.g. only --hero-bg), the rest come from brandDefaultTokens.
  */
 export async function getThemePresetInlineVars(brand: BrandKey): Promise<{
   brand: BrandKey
@@ -45,8 +49,12 @@ export async function getThemePresetInlineVars(brand: BrandKey): Promise<{
 }> {
   noStore()
   const active = await getActiveThemePresetForBrand(brand)
-  const filtered = filterThemeTokens(active?.tokens ?? {})
-  const vars = Object.fromEntries(Object.entries(filtered)) as Record<string, string>
+  const presetTokens = filterThemeTokens(active?.tokens ?? {})
+  
+  // Merge: Start with brand defaults, then override with preset tokens
+  // This ensures ALL tokens are always present (brand defaults as base)
+  const defaults = brandDefaultTokens[brand] ?? {}
+  const vars = { ...defaults, ...presetTokens } as Record<string, string>
 
   if (process.env.NODE_ENV === "development") {
     console.log("[theme-presets:inline]", {
@@ -54,6 +62,7 @@ export async function getThemePresetInlineVars(brand: BrandKey): Promise<{
       presetId: active?.presetId ?? null,
       presetName: active?.presetName ?? null,
       tokensSet: Object.keys(vars).length,
+      presetTokensCount: Object.keys(presetTokens).length,
     })
   }
 

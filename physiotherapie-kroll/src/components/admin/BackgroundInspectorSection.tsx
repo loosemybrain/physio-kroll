@@ -106,16 +106,42 @@ export function BackgroundInspectorSection(props: {
       </div>
 
       {/* Parallax */}
-      <div className="flex items-center justify-between">
-        <Label className="text-xs">Parallax</Label>
-        <Switch
-          checked={supportsParallax ? !!bg.parallax : false}
-          disabled={!supportsParallax}
-          onCheckedChange={(checked) => {
-            if (!supportsParallax) return
-            props.onChange({ ...bg, parallax: checked })
-          }}
-        />
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <Label className="text-xs">Parallax</Label>
+          <Switch
+            checked={supportsParallax ? !!bg.parallax : false}
+            disabled={!supportsParallax}
+            onCheckedChange={(checked) => {
+              if (!supportsParallax) return
+              props.onChange({ ...bg, parallax: checked })
+            }}
+          />
+        </div>
+
+        {/* Parallax Strength Slider */}
+        {supportsParallax && bg.parallax && (
+          <div className="space-y-1.5 px-1">
+            <div className="flex items-center justify-between">
+              <Label className="text-xs text-muted-foreground">Stärke</Label>
+              <span className="text-xs font-medium">{(bg.parallaxStrength ?? 1.0).toFixed(1)}x</span>
+            </div>
+            <Slider
+              value={[bg.parallaxStrength ?? 1.0]}
+              onValueChange={([value]) => {
+                props.onChange({ ...bg, parallaxStrength: value })
+              }}
+              min={0.5}
+              max={2.0}
+              step={0.1}
+              className="h-6"
+            />
+            <div className="flex justify-between text-xs text-muted-foreground">
+              <span>0.5x</span>
+              <span>2.0x</span>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Color */}

@@ -1,6 +1,5 @@
 "use client"
 
-import { useCallback, type ElementType } from "react"
 import { cn } from "@/lib/utils"
 import type { CMSBlock } from "@/types/cms"
 import { SectionWrapper } from "@/components/cms/SectionWrapper"
@@ -18,6 +17,7 @@ import { TestimonialsBlock } from "@/components/blocks/testimonials-block"
 import { GalleryBlock } from "@/components/blocks/gallery-block"
 import { OpeningHoursBlock } from "@/components/blocks/opening-hours-block"
 import { ImageSliderBlock } from "@/components/blocks/image-slider-block"
+import { TestimonialSliderBlock } from "@/components/blocks/testimonial-slider"
 import type { BlockSectionProps, HeroBlock } from "@/types/cms"
 import { blockRegistry } from "@/cms/blocks/registry"
 import { getTypographyClassName, type TypographySettings } from "@/lib/typography"
@@ -30,66 +30,12 @@ interface BlockRendererProps {
   selectedElementId?: string | null
   pageSlug?: string
   isFirst?: boolean
-}
-
-/**
- * Wrapper component that adds click handlers for editable text fields
- */
-function EditableText({
-  children,
-  blockId,
-  fieldPath,
-  editable,
-  onEditField,
-  className,
-  as: Component = "span",
-}: {
-  children: React.ReactNode
-  blockId: string
-  fieldPath: string
-  editable?: boolean
-  onEditField?: (blockId: string, fieldPath: string) => void
-  className?: string
-  as?: ElementType
-}) {
-  const handleClick = useCallback(
-    (e: React.MouseEvent) => {
-      if (editable && onEditField) {
-        e.preventDefault()
-        e.stopPropagation()
-        onEditField(blockId, fieldPath)
-      }
-    },
-    [editable, onEditField, blockId, fieldPath]
-  )
-
-  if (!editable) {
-    return <Component className={className}>{children}</Component>
-  }
-
-  return (
-    <Component
-      onClick={handleClick}
-      className={cn(
-        "cursor-pointer rounded px-1 transition-colors",
-        "hover:bg-primary/10 hover:outline-2 hover:outline-primary/50",
-        className
-      )}
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e: React.KeyboardEvent) => {
-        if (e.key === "Enter" || e.key === " ") {
-          handleClick(e as unknown as React.MouseEvent)
-        }
-      }}
-    >
-      {children}
-    </Component>
-  )
+  brand?: string
 }
 
 /**
  * Central block renderer that switches on block type and renders the appropriate component
+ * Inline-edit is handled via data-cms-field attributes on block elements
  */
 export function BlockRenderer({
   block,
@@ -99,9 +45,10 @@ export function BlockRenderer({
   selectedElementId,
   pageSlug,
   isFirst,
+  brand,
 }: BlockRendererProps) {
   const definition = blockRegistry[block.type]
-  const allowInlineEdit = definition.allowInlineEdit ?? false
+  const allowInlineEdit = definition?.allowInlineEdit ?? false
   const canEdit = editable && allowInlineEdit && onEditField
 
   const blockProps = (block.props ?? {}) as Record<string, unknown>
@@ -149,7 +96,14 @@ export function BlockRenderer({
 
       case "imageText": {
         const props = block.props
-        return <ImageTextBlock {...props} />
+        return (
+          <ImageTextBlock
+            {...props}
+            editable={editable}
+            blockId={block.id}
+            onEditField={onEditField}
+          />
+        )
       }
 
       case "featureGrid": {
@@ -166,7 +120,14 @@ export function BlockRenderer({
 
       case "cta": {
         const props = block.props
-        return <CtaBlock {...props} />
+        return (
+          <CtaBlock
+            {...props}
+            editable={editable}
+            blockId={block.id}
+            onEditField={onEditField}
+          />
+        )
       }
 
       case "section": {
@@ -224,6 +185,8 @@ export function BlockRenderer({
             {...props}
             blockId={block.id}
             pageSlug={pageSlug}
+            editable={editable}
+            onEditField={onEditField}
           />
         )
       }
@@ -236,6 +199,21 @@ export function BlockRenderer({
             editable={editable}
             blockId={block.id}
             onEditField={onEditField}
+          />
+        )
+      }
+
+      case "testimonialSlider": {
+        const props = block.props
+        return (
+          <TestimonialSliderBlock
+          data={block.props}
+          brand={brand}
+          editable={editable}
+          blockId={block.id}
+          onEditField={onEditField}
+          onElementClick={onElementClick}
+          selectedElementId={selectedElementId}
           />
         )
       }
@@ -300,7 +278,7 @@ export function BlockRenderer({
     )
   }
 
-  // Wrap content with editable overlay that detects clicks on text elements
+  // Wrap content with editable overlay that detects clicks on data-cms-field elements
   return (
     <div
       className={cn(
@@ -311,25 +289,24 @@ export function BlockRenderer({
       )}
       onClick={(e) => {
         if (!canEdit || !onEditField) return
+
+        // Protect interactive elements (forms, buttons, links) unless they have data-cms-field
+        const interactiveEl = (e.target as HTMLElement).closest("a,button,input,textarea,select,[role='button'],[role='link']")
+        const fieldEl = (e.target as HTMLElement).closest("[data-cms-field]")
         
-        // Find the clicked text element and determine field path
-        const target = e.target as HTMLElement
-        const blockElement = e.currentTarget
-        
-        // Check if we clicked on a text element (headline, subheadline, content, etc.)
-        // This is a simple heuristic - can be improved
-        if (target.textContent && target !== blockElement) {
-          const text = target.textContent.trim()
-          if (text.length > 0) {
-            // Try to determine field based on element classes or structure
-            const fieldPath = determineFieldPath(target, block.type)
-            if (fieldPath) {
-              e.preventDefault()
-              e.stopPropagation()
-              // Get bounding rect of the clicked element
-              const anchorRect = target.getBoundingClientRect()
-              onEditField(block.id, fieldPath, anchorRect)
-            }
+        // If clicking on interactive element without data-cms-field, allow default behavior
+        if (interactiveEl && !fieldEl) {
+          return
+        }
+
+        // Only trigger edit if element has data-cms-field attribute
+        if (fieldEl) {
+          const fieldPath = fieldEl.getAttribute("data-cms-field")
+          if (fieldPath) {
+            e.preventDefault()
+            e.stopPropagation()
+            const anchorRect = fieldEl.getBoundingClientRect()
+            onEditField(block.id, fieldPath, anchorRect)
           }
         }
       }}
@@ -341,62 +318,19 @@ export function BlockRenderer({
   )
 }
 
-/**
- * Determines the field path based on the clicked element and block type
- */
-function determineFieldPath(element: HTMLElement, blockType: CMSBlock["type"]): string | null {
-  // Check element classes and structure to determine field
-  const classList = element.classList
-  const tagName = element.tagName.toLowerCase()
-  
-  switch (blockType) {
-    case "hero": {
-      // Hero section structure: h1 for headline, p for subheadline
-      if (tagName === "h1" || classList.contains("hero-headline")) {
-        return "headline"
-      }
-      if (tagName === "p" || classList.contains("hero-subheadline")) {
-        return "subheadline"
-      }
-      break
-    }
-    case "text": {
-      return "content"
-    }
-    case "imageText": {
-      if (tagName === "h2" || classList.contains("headline")) {
-        return "headline"
-      }
-      if (tagName === "p" || classList.contains("content")) {
-        return "content"
-      }
-      break
-    }
-    case "cta": {
-      if (tagName === "h2" || classList.contains("headline")) {
-        return "headline"
-      }
-      if (tagName === "p" || classList.contains("subheadline")) {
-        return "subheadline"
-      }
-      break
-    }
-  }
-  
-  return null
-}
 
 interface CMSRendererProps {
   blocks: CMSBlock[]
   editable?: boolean
   onEditField?: (blockId: string, fieldPath: string, anchorRect?: DOMRect) => void
   pageSlug?: string
+  brand?: string
 }
 
 /**
  * Renders multiple CMS blocks in sequence
  */
-export function CMSRenderer({ blocks, editable, onEditField, pageSlug }: CMSRendererProps) {
+export function CMSRenderer({ blocks, editable, onEditField, pageSlug, brand }: CMSRendererProps) {
   return (
     <>
       {blocks.map((block, index) => (
@@ -407,6 +341,7 @@ export function CMSRenderer({ blocks, editable, onEditField, pageSlug }: CMSRend
           editable={editable}
           onEditField={onEditField}
           pageSlug={pageSlug}
+          brand={brand}
         />
       ))}
     </>

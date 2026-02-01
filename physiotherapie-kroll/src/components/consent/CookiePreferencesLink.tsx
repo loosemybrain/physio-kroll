@@ -11,15 +11,22 @@ interface CookiePreferencesLinkProps {
 }
 
 /**
- * Footer link to open cookie settings
+ * Footer link to open cookie settings (V0 design)
  * Can be used as a link or button
+ * Fully accessible with keyboard navigation
  */
 export function CookiePreferencesLink({ className, variant = "link", children }: CookiePreferencesLinkProps) {
   const { openSettings } = useCookieConsent()
 
   if (variant === "button") {
     return (
-      <Button variant="ghost" size="sm" onClick={openSettings} className={className} type="button">
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={openSettings}
+        className={cn("rounded-lg px-4 transition-colors", className)}
+        type="button"
+      >
         {children || "Cookie-Einstellungen"}
       </Button>
     )
@@ -28,7 +35,10 @@ export function CookiePreferencesLink({ className, variant = "link", children }:
   return (
     <button
       onClick={openSettings}
-      className={cn("text-primary underline hover:text-primary/80 text-sm", className)}
+      className={cn(
+        "text-sm text-primary underline underline-offset-4 transition-colors hover:text-primary/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+        className
+      )}
       type="button"
     >
       {children || "Cookie-Einstellungen"}

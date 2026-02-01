@@ -3,7 +3,7 @@ import { z } from "zod"
 /**
  * Consent categories for GDPR/ePrivacy compliance
  */
-export type ConsentCategory = "necessary" | "functional" | "analytics" | "marketing"
+export type ConsentCategory = "necessary" | "functional" | "analytics" | "marketing" | "externalMedia"
 
 /**
  * Consent state structure
@@ -11,11 +11,12 @@ export type ConsentCategory = "necessary" | "functional" | "analytics" | "market
 export const consentStateSchema = z.object({
   v: z.number().int().positive(), // Version for future migrations
   necessary: z.boolean(),
-  functional: z.boolean(),
+  functional: z.boolean().optional(), // Deprecated: kept for backward compat, use externalMedia
   analytics: z.boolean(),
   marketing: z.boolean(),
+  externalMedia: z.boolean().optional(), // V0: Externe Medien (YouTube, Google Maps, etc.)
   ts: z.number().int().positive(), // Timestamp when consent was given/updated
-})
+}).passthrough() // Allow additional fields for forward compatibility
 
 export type ConsentState = z.infer<typeof consentStateSchema>
 
@@ -28,6 +29,7 @@ export const defaultConsentState: ConsentState = {
   functional: false,
   analytics: false,
   marketing: false,
+  externalMedia: false,
   ts: Date.now(),
 }
 
@@ -52,6 +54,10 @@ export const consentCategoryLabels: Record<ConsentCategory, { label: string; des
   functional: {
     label: "Funktional/Medien",
     description: "Lädt externe Inhalte wie Karten oder Videos. Diese werden nur mit Ihrer Zustimmung geladen.",
+  },
+  externalMedia: {
+    label: "Externe Medien",
+    description: "Ermöglichen das Einbetten von Inhalten externer Plattformen wie YouTube, Google Maps oder Social Media.",
   },
   analytics: {
     label: "Analyse",

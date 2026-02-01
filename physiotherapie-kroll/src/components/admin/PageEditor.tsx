@@ -27,6 +27,7 @@ import { InlineFieldEditor } from "./InlineFieldEditor"
 import { ImageField } from "./ImageField"
 import { TypographyInspectorSection } from "./TypographyInspectorSection"
 import { SectionInspectorSection } from "./SectionInspectorSection"
+import { AnimationInspector } from "./AnimationInspector"
 import { ElementTypographySection } from "./ElementTypographySection"
 import { Accordion } from "@/components/ui/accordion"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
@@ -37,6 +38,9 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import type { TypographySettings } from "@/lib/typography"
 import { ColorField } from "./ColorField"
 import { LivePreviewTheme } from "./LivePreviewTheme"
+import { ShadowInspector } from "./ShadowInspector"
+import { resolveBoxShadow } from "@/lib/shadow/resolveBoxShadow"
+import type { ElementShadow, ElementConfig } from "@/types/cms"
 
 interface PageEditorProps {
   pageId: string | null
@@ -58,6 +62,7 @@ const blockTypes: Array<{ icon: React.ElementType; label: string; type: CMSBlock
   { icon: HelpCircle, label: "FAQ", type: "faq" },
   { icon: Users, label: "Team", type: "team" },
   { icon: FileText, label: "Kontaktformular", type: "contactForm" },
+  { icon: MessageSquareQuote, label: "Testimonial Slider", type: "testimonialSlider" },
 ]
 
 function uuid() {
@@ -869,8 +874,8 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
     setPublishIssues([])
     
     try {
-      // Slug uniqueness in DB space
-      const slug = await generateUniqueSlug(current.title, current.id)
+      // Slug uniqueness in DB space, filtered by brand
+      const slug = await generateUniqueSlug(current.title, current.id, current.brand)
       const saved = await save({ ...current, status: "published", slug })
       toast({
         title: "Veröffentlicht",
@@ -1346,9 +1351,10 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
                               {itemField.label}
                             </Label>
                             <Select
-                              value={String(itemFieldValue)}
-                              onValueChange={(v: string) => handleItemFieldChange(v)}
+                              value={itemFieldValue == null || itemFieldValue === "" ? "none" : String(itemFieldValue)}
+                              onValueChange={(v) => handleItemFieldChange(v === "none" ? "" : v)}
                             >
+
                               <SelectTrigger
                                 id={itemFieldId}
                                 className={cn("h-8 text-sm", isActive && "ring-2 ring-primary")}
@@ -1457,19 +1463,27 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
       }, 50)
     }
 
-    const isActive = activeFieldPath === field.key
+    const handleClearField = () => {
+      if (field.required || !selectedBlock) return
+      handleChange(undefined)
+    }
 
-    // Automatische Erkennung: Wenn field.type === "image" ODER Heuristik true
-    const shouldRenderAsImage = field.type === "image" || isImageField(field.key, value)
+  const isActive = activeFieldPath === field.key
 
-    switch (shouldRenderAsImage ? "image" : field.type) {
-      case "text":
-        return (
-          <div key={field.key} className="space-y-2">
-            <Label htmlFor={fieldKey}>
-              {field.label}
-              {field.required && <span className="text-destructive ml-1">*</span>}
-            </Label>
+  // Automatische Erkennung: Wenn field.type === "image" ODER Heuristik true
+  // ABER: Expliziter field.type hat IMMER Priorität. Heuristik greift nur bei fehlender Klassifizierung.
+  const knownTypes = ["text", "textarea", "color", "select", "url", "image", "checkbox", "number", "date"]
+  const shouldRenderAsImage = field.type === "image" || (knownTypes.indexOf(field.type as string) === -1 && isImageField(field.key, value))
+
+  switch (shouldRenderAsImage ? "image" : field.type) {
+    case "text":
+      return (
+        <div key={field.key} className="space-y-2">
+          <Label htmlFor={fieldKey}>
+            {field.label}
+            {field.required && <span className="text-destructive ml-1">*</span>}
+          </Label>
+          <div className="flex gap-2">
             <Input
               id={fieldKey}
               ref={(el) => {
@@ -1478,19 +1492,31 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
               value={String(value)}
               onChange={(e) => handleChange(e.target.value)}
               placeholder={field.placeholder}
-              className={cn(isActive && "ring-2 ring-primary")}
+              className={cn("flex-1", isActive && "ring-2 ring-primary")}
             />
-            {field.helpText && <p className="text-xs text-muted-foreground">{field.helpText}</p>}
+            {!field.required && (
+              <button
+                type="button"
+                onClick={handleClearField}
+                className="h-10 w-10 px-0 text-xs text-muted-foreground hover:text-destructive transition-colors flex items-center justify-center"
+                title="Löschen"
+              >
+                ✕
+              </button>
+            )}
           </div>
-        )
+          {field.helpText && <p className="text-xs text-muted-foreground">{field.helpText}</p>}
+        </div>
+      )
 
-      case "textarea":
-        return (
-          <div key={field.key} className="space-y-2">
-            <Label htmlFor={fieldKey}>
-              {field.label}
-              {field.required && <span className="text-destructive ml-1">*</span>}
-            </Label>
+    case "textarea":
+      return (
+        <div key={field.key} className="space-y-2">
+          <Label htmlFor={fieldKey}>
+            {field.label}
+            {field.required && <span className="text-destructive ml-1">*</span>}
+          </Label>
+          <div className="flex gap-2">
             <Textarea
               id={fieldKey}
               ref={(el) => {
@@ -1500,7 +1526,6 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
               onChange={(e) => {
                 isTypingRef.current = true
                 handleChange(e.target.value)
-                // Reset typing flag after a short delay
                 setTimeout(() => {
                   isTypingRef.current = false
                 }, 100)
@@ -1513,20 +1538,32 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
               }}
               placeholder={field.placeholder}
               rows={field.key === "content" ? 8 : 4}
-              className={cn(isActive && "ring-2 ring-primary")}
+              className={cn("flex-1", isActive && "ring-2 ring-primary")}
             />
-            {field.helpText && <p className="text-xs text-muted-foreground">{field.helpText}</p>}
+            {!field.required && (
+              <button
+                type="button"
+                onClick={handleClearField}
+                className="h-10 w-10 px-0 text-xs text-muted-foreground hover:text-destructive transition-colors flex items-center justify-center self-start mt-10"
+                title="Löschen"
+              >
+                ✕
+              </button>
+            )}
           </div>
-        )
+          {field.helpText && <p className="text-xs text-muted-foreground">{field.helpText}</p>}
+        </div>
+      )
 
-      case "color":
-        return (
-          <div key={field.key} className="space-y-2">
-            <Label htmlFor={fieldKey}>
-              {field.label}
-              {field.required && <span className="text-destructive ml-1">*</span>}
-            </Label>
-            <div className={cn(isActive && "ring-2 ring-primary rounded-md")}>
+    case "color":
+      return (
+        <div key={field.key} className="space-y-2">
+          <Label htmlFor={fieldKey}>
+            {field.label}
+            {field.required && <span className="text-destructive ml-1">*</span>}
+          </Label>
+          <div className="flex gap-2">
+            <div className={cn("flex-1", isActive && "ring-2 ring-primary rounded-md")}>
               <ColorField
                 value={String(value)}
                 onChange={(v) => handleChange(v)}
@@ -1536,49 +1573,79 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
                 }}
               />
             </div>
-            {field.helpText && <p className="text-xs text-muted-foreground">{field.helpText}</p>}
+            {!field.required && (
+              <button
+                type="button"
+                onClick={handleClearField}
+                className="h-10 w-10 px-0 text-xs text-muted-foreground hover:text-destructive transition-colors flex items-center justify-center"
+                title="Löschen"
+              >
+                ✕
+              </button>
+            )}
           </div>
-        )
+          {field.helpText && <p className="text-xs text-muted-foreground">{field.helpText}</p>}
+        </div>
+      )
 
-      case "select":
-        return (
-          <div key={field.key} className="space-y-2">
-            <Label htmlFor={fieldKey}>
-              {field.label}
-              {field.required && <span className="text-destructive ml-1">*</span>}
-            </Label>
-            <Select
-              value={String(value)}
-              onValueChange={(v: string) => handleChange(v)}
-            >
+    case "select": {
+      // Wichtig: Radix Select darf kein value="" in SelectItem haben.
+      // Außerdem: Select.value sollte bei leerem Wert undefined sein (damit Placeholder greift)
+      const safeValue = value == null || value === "" ? undefined : String(value)
+      const options =
+        field.options
+          ?.filter((o) => o.value !== "" && o.value != null)
+          .map((o) => ({ value: String(o.value), label: o.label })) ?? []
+
+      return (
+        <div key={field.key} className="space-y-2">
+          <Label htmlFor={fieldKey}>
+            {field.label}
+            {field.required && <span className="text-destructive ml-1">*</span>}
+          </Label>
+          <div className="flex gap-2">
+            <Select value={safeValue} onValueChange={(v: string) => handleChange(v)}>
               <SelectTrigger
                 id={fieldKey}
                 ref={(el) => {
                   fieldRefs.current[fieldKey] = el as HTMLSelectElement | null
                 }}
-                className={cn(isActive && "ring-2 ring-primary")}
+                className={cn("flex-1", isActive && "ring-2 ring-primary")}
               >
                 <SelectValue placeholder={field.placeholder} />
               </SelectTrigger>
               <SelectContent>
-                {field.options?.map((option) => (
+                {options.map((option) => (
                   <SelectItem key={option.value} value={option.value}>
                     {option.label}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            {field.helpText && <p className="text-xs text-muted-foreground">{field.helpText}</p>}
+            {!field.required && (
+              <button
+                type="button"
+                onClick={handleClearField}
+                className="h-10 w-10 px-0 text-xs text-muted-foreground hover:text-destructive transition-colors flex items-center justify-center"
+                title="Löschen"
+              >
+                ✕
+              </button>
+            )}
           </div>
-        )
+          {field.helpText && <p className="text-xs text-muted-foreground">{field.helpText}</p>}
+        </div>
+      )
+    }
 
-      case "url":
-        return (
-          <div key={field.key} className="space-y-2">
-            <Label htmlFor={fieldKey}>
-              {field.label}
-              {field.required && <span className="text-destructive ml-1">*</span>}
-            </Label>
+    case "url":
+      return (
+        <div key={field.key} className="space-y-2">
+          <Label htmlFor={fieldKey}>
+            {field.label}
+            {field.required && <span className="text-destructive ml-1">*</span>}
+          </Label>
+          <div className="flex gap-2">
             <Input
               id={fieldKey}
               ref={(el) => {
@@ -1589,7 +1656,6 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
               onChange={(e) => {
                 isTypingRef.current = true
                 handleChange(e.target.value)
-                // Reset typing flag after a short delay
                 setTimeout(() => {
                   isTypingRef.current = false
                 }, 100)
@@ -1601,16 +1667,40 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
                 isTypingRef.current = false
               }}
               placeholder={field.placeholder}
-              className={cn(isActive && "ring-2 ring-primary")}
+              className={cn("flex-1", isActive && "ring-2 ring-primary")}
             />
-            {field.helpText && <p className="text-xs text-muted-foreground">{field.helpText}</p>}
+            {!field.required && (
+              <button
+                type="button"
+                onClick={handleClearField}
+                className="h-10 w-10 px-0 text-xs text-muted-foreground hover:text-destructive transition-colors flex items-center justify-center"
+                title="Löschen"
+              >
+                ✕
+              </button>
+            )}
           </div>
-        )
+          {field.helpText && <p className="text-xs text-muted-foreground">{field.helpText}</p>}
+        </div>
+      )
 
-      case "image":
-        return (
+    case "image":
+      return (
+        <div key={field.key} className="space-y-2">
+          <div className="flex items-center justify-between">
+            <div />
+            {!field.required && (
+              <button
+                type="button"
+                onClick={handleClearField}
+                className="h-8 w-8 px-0 text-xs text-muted-foreground hover:text-destructive transition-colors flex items-center justify-center"
+                title="Löschen"
+              >
+                ✕
+              </button>
+            )}
+          </div>
           <ImageField
-            key={field.key}
             id={fieldKey}
             label={field.label}
             value={String(value)}
@@ -1629,29 +1719,26 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
               fieldRefs.current[fieldKey] = el
             }}
           />
-        )
+        </div>
+      )
 
+    case "boolean":
+      return (
+        <div key={field.key} className="flex items-center space-x-2">
+          <Checkbox id={fieldKey} checked={Boolean(value)} onCheckedChange={(checked) => handleChange(checked)} />
+          <Label htmlFor={fieldKey} className="cursor-pointer">
+            {field.label}
+            {field.required && <span className="text-destructive ml-1">*</span>}
+          </Label>
+          {field.helpText && <p className="text-xs text-muted-foreground">{field.helpText}</p>}
+        </div>
+      )
 
-      case "boolean":
-        return (
-          <div key={field.key} className="flex items-center space-x-2">
-            <Checkbox
-              id={fieldKey}
-              checked={Boolean(value)}
-              onCheckedChange={(checked) => handleChange(checked)}
-            />
-            <Label htmlFor={fieldKey} className="cursor-pointer">
-              {field.label}
-              {field.required && <span className="text-destructive ml-1">*</span>}
-            </Label>
-            {field.helpText && <p className="text-xs text-muted-foreground">{field.helpText}</p>}
-          </div>
-        )
-
-      default:
-        return null
-    }
+    default:
+      return null
   }
+}
+
 
   return (
     <div className="flex h-full flex-col">
@@ -1761,11 +1848,11 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
               const isFirst = index === 0
               const isLast = index === current.blocks.length - 1
 
-              // For hero blocks, use the active brand tab from inspector to show correct brand content in live preview
-              const blockToRender = block.type === "hero" && selectedBlockId === block.id
+              // Live Preview always renders hero after page brand (current.brand), not inspector tab
+              const blockToRender = block.type === "hero"
                 ? (() => {
                     const heroProps = block.props as HeroBlock["props"]
-                    const activeBrand = activeBrandTab[block.id] || heroProps.mood || "physiotherapy"
+                    const renderBrand: BrandKey = (current.brand || "physiotherapy") as BrandKey
                     // Ensure brandContent exists and merge with legacy props if needed
                     const brandContent = heroProps.brandContent || {
                       physiotherapy: {},
@@ -1791,11 +1878,9 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
                       ...block,
                       props: {
                         ...heroProps,
-                        mood: activeBrand,
+                        mood: renderBrand,
                         brandContent,
-                        // Pass activeBrand to Hero component via props
-                        activeBrand,
-                      } as HeroBlock["props"] & { activeBrand: BrandKey },
+                      } as HeroBlock["props"],
                     }
                   })()
                 : block
@@ -1913,7 +1998,7 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
         {/* Block Editor Panel */}
         <div 
           ref={inspectorScrollRef}
-          className="relative w-96 border-l border-border bg-background overflow-y-auto overflow-x-hidden z-50" 
+          className="relative w-96 border-l border-border bg-background overflow-y-auto overflow-x-hidden z-50 min-h-0" 
           style={{ height: "100%" }}
         >
           {/* New page: brand selection prompt (global, before blocks) */}
@@ -2090,7 +2175,28 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
                 }}
               />
 
-              <Separator />
+              {/* Animation Inspector */}
+              <div className="mt-6 pt-6 border-t border-border">
+                <h3 className="text-sm font-semibold mb-4">Animationen</h3>
+                <AnimationInspector
+                  config={(((selectedBlock.props as Record<string, unknown>)?.section as unknown) as BlockSectionProps | undefined)?.animation || {
+                    enabled: false,
+                  }}
+                  onChange={(nextAnimation) => {
+                    const currentSection = ((selectedBlock.props as Record<string, unknown>)?.section as unknown) as BlockSectionProps | undefined
+                    const nextSection: BlockSectionProps = {
+                      layout: currentSection?.layout ?? { width: "contained", paddingY: "lg" },
+                      background: currentSection?.background ?? { type: "none", parallax: false },
+                      animation: nextAnimation,
+                    }
+                    const nextProps = {
+                      ...(selectedBlock.props as Record<string, unknown>),
+                      section: nextSection,
+                    } as CMSBlock["props"]
+                    updateSelectedProps(nextProps)
+                  }}
+                />
+              </div>              <Separator />
 
               {/* Generic Inspector from Registry */}
               <div className="space-y-4">
@@ -2256,6 +2362,17 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
                             <div className="rounded-md border border-border bg-muted/20 p-3 space-y-3">
                               <div className="text-xs font-semibold">Farben</div>
                               <div className="grid grid-cols-1 gap-3">
+                                <div className="space-y-1.5">
+                                  <Label className="text-xs">Hero Hintergrund</Label>
+                                  <ColorField
+                                    value={String(props.heroBgColor || "")}
+                                    onChange={(v) => handleHeroRootFieldChange("heroBgColor", v)}
+                                    placeholder="#rrggbb"
+                                    inputRef={(el) => {
+                                      fieldRefs.current[`${selectedBlock.id}.heroBgColor`] = el
+                                    }}
+                                  />
+                                </div>
                                 <div className="space-y-1.5">
                                   <Label className="text-xs">Headline Farbe</Label>
                                   <ColorField
@@ -3150,6 +3267,7 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
                             value={accordionValue || selectedElementId || undefined}
                             onValueChange={setAccordionValue}
                             className="w-full"
+                            suppressHydrationWarning
                           >
                             {typographyElements.map((element) => (
                               <div 
@@ -3174,223 +3292,384 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
                   return null
                 })()}
 
-                {/* Render array items with controls for featureGrid, faq, team, contactForm */}
-                {selectedBlock.type === "testimonials" && renderArrayItemsControls(
-                  selectedBlock,
-                  "items",
-                  "Testimonial",
-                  (item, index) => {
-                    const it = item as unknown as Record<string, unknown>
-                    const name = String(it.name || "")
-                    return `${index + 1}. ${name || "Testimonial"}`
-                  },
-                  createTestimonialItem,
-                  [
-                    { key: "quote", label: "Zitat", type: "textarea" as const, required: true },
-                    { key: "quoteColor", label: "Zitat Farbe (optional)", type: "color" as const, placeholder: "#111111" },
-                    { key: "name", label: "Name", type: "text" as const, required: true },
-                    { key: "nameColor", label: "Name Farbe (optional)", type: "color" as const, placeholder: "#111111" },
-                    { key: "role", label: "Rolle (optional)", type: "text" as const },
-                    { key: "roleColor", label: "Rolle Farbe (optional)", type: "color" as const, placeholder: "#666666" },
-                    {
-                      key: "rating",
-                      label: "Rating (optional)",
-                      type: "select" as const,
-                      options: [
-                        { value: "", label: "—" },
-                        { value: "5", label: "★★★★★ (5)" },
-                        { value: "4", label: "★★★★☆ (4)" },
-                        { value: "3", label: "★★★☆☆ (3)" },
-                        { value: "2", label: "★★☆☆☆ (2)" },
-                        { value: "1", label: "★☆☆☆☆ (1)" },
-                      ],
-                    },
-                  ],
-                  1,
-                  12
-                )}
-                {selectedBlock.type === "gallery" && renderArrayItemsControls(
-                  selectedBlock,
-                  "images",
-                  "Bild",
-                  (_img, index) => `Bild ${index + 1}`,
-                  createGalleryImage,
-                  [
-                    { key: "url", label: "URL", type: "url" as const, required: true },
-                    { key: "alt", label: "Alt-Text", type: "text" as const, required: true },
-                    { key: "caption", label: "Caption (optional)", type: "text" as const },
-                    { key: "captionColor", label: "Caption Farbe (optional)", type: "color" as const, placeholder: "#666666" },
-                  ],
-                  3,
-                  18
-                )}
-                {selectedBlock.type === "imageSlider" && renderArrayItemsControls(
-                  selectedBlock,
-                  "slides",
-                  "Slide",
-                  (slide, index) => {
-                    const s = slide as unknown as Record<string, unknown>
-                    const title = String(s.title || "")
-                    return `${index + 1}. ${title || "Slide"}`
-                  },
-                  createImageSlide,
-                  [
-                    { key: "url", label: "Bild URL", type: "url" as const, required: true },
-                    { key: "alt", label: "Alt-Text", type: "text" as const, required: true },
-                    { key: "title", label: "Titel (optional)", type: "text" as const },
-                    { key: "text", label: "Text (optional)", type: "textarea" as const },
-                    { key: "titleColor", label: "Titel Farbe", type: "color" as const, placeholder: "#111111" },
-                    { key: "textColor", label: "Text Farbe", type: "color" as const, placeholder: "#666666" },
-                  ],
-                  1,
-                  12
-                )}
-                {selectedBlock.type === "openingHours" && renderArrayItemsControls(
-                  selectedBlock,
-                  "hours",
-                  "Zeile",
-                  (row, index) => {
-                    const r = row as unknown as Record<string, unknown>
-                    const label = String(r.label || "")
-                    return `${index + 1}. ${label || "Tag"}`
-                  },
-                  createOpeningHour,
-                  [
-                    { key: "label", label: "Label", type: "text" as const, required: true },
-                    { key: "labelColor", label: "Label Farbe (optional)", type: "color" as const, placeholder: "#111111" },
-                    { key: "value", label: "Wert", type: "text" as const, required: true },
-                    { key: "valueColor", label: "Wert Farbe (optional)", type: "color" as const, placeholder: "#666666" },
-                  ],
-                  1,
-                  10
-                )}
-                {selectedBlock.type === "featureGrid" && renderArrayItemsControls(
-                  selectedBlock,
-                  "features",
-                  "Feature",
-                  (feature, index) => `Feature ${index + 1}`,
-                  createFeatureItem,
-                  [
-                    { key: "title", label: "Titel", type: "text" as const },
-                    { key: "titleColor", label: "Titel Farbe (optional)", type: "color" as const, placeholder: "#111111" },
-                    { key: "description", label: "Beschreibung", type: "textarea" as const },
-                    { key: "descriptionColor", label: "Beschreibung Farbe (optional)", type: "color" as const, placeholder: "#666666" },
-                    { key: "icon", label: "Icon", type: "text" as const },
-                    { key: "iconColor", label: "Icon Farbe (optional)", type: "color" as const, placeholder: "#111111" },
-                    { key: "cardBgColor", label: "Card Hintergrund (optional)", type: "color" as const, placeholder: "#ffffff" },
-                    { key: "cardBorderColor", label: "Card Border (optional)", type: "color" as const, placeholder: "#e5e7eb" },
-                  ]
-                )}
-                {selectedBlock.type === "faq" && renderArrayItemsControls(
-                  selectedBlock,
-                  "items",
-                  "FAQ",
-                  (item, index) => `FAQ ${index + 1}`,
-                  createFaqItem,
-                  [
-                    { key: "question", label: "Frage", type: "text" as const },
-                    { key: "questionColor", label: "Frage Farbe (optional)", type: "color" as const, placeholder: "#111111" },
-                    { key: "answer", label: "Antwort", type: "textarea" as const },
-                    { key: "answerColor", label: "Antwort Farbe (optional)", type: "color" as const, placeholder: "#666666" },
-                  ]
-                )}
-                {selectedBlock.type === "team" && renderArrayItemsControls(
-                  selectedBlock,
-                  "members",
-                  "Mitglied",
-                  (member, index) => `Mitglied ${index + 1}`,
-                  createTeamMember,
-                  [
-                    { key: "name", label: "Name", type: "text" as const },
-                    { key: "nameColor", label: "Name Farbe (optional)", type: "color" as const, placeholder: "#111111" },
-                    { key: "role", label: "Rolle", type: "text" as const },
-                    { key: "roleColor", label: "Rolle Farbe (optional)", type: "color" as const, placeholder: "#666666" },
-                    { key: "imageUrl", label: "Bild URL", type: "url" as const },
-                    { key: "imageAlt", label: "Bild Alt-Text", type: "text" as const },
-                    { key: "ctaText", label: "CTA Text", type: "text" as const },
-                    { key: "ctaColor", label: "CTA Farbe (optional)", type: "color" as const, placeholder: "#111111" },
-                    { key: "ctaHref", label: "CTA Link", type: "url" as const },
-                    { key: "cardBgColor", label: "Card Hintergrund (optional)", type: "color" as const, placeholder: "#ffffff" },
-                    { key: "cardBorderColor", label: "Card Border (optional)", type: "color" as const, placeholder: "#e5e7eb" },
-                  ]
-                )}
-
-                {selectedBlock.type === "contactForm" && renderArrayItemsControls(
-                  selectedBlock,
-                  "fields",
-                  "Feld",
-                  (field, index) => {
-                    const f = field as unknown as Record<string, unknown>
-                    const t = String(f.type || "")
-                    const label = String(f.label || "")
-                    return `${index + 1}. ${label || t || "Feld"}`
-                  },
-                  () => createContactFormField("subject"),
-                  [
-                    { key: "type", label: "Typ", type: "select" as const },
-                    { key: "label", label: "Label", type: "text" as const },
-                    { key: "placeholder", label: "Placeholder", type: "text" as const },
-                    { key: "required", label: "Required", type: "boolean" as const },
-                  ]
-                )}
-
-                {/* Render other inspector fields normally */}
-                {getBlockDefinition(selectedBlock.type).inspectorFields
-                  .filter((field) => {
-                    // Filter out array item fields - they're rendered above
-                    if (selectedBlock.type === "hero" && field.key.startsWith("trustItems.")) return false
-                    if (selectedBlock.type === "featureGrid" && field.key.startsWith("features.")) return false
-                    if (selectedBlock.type === "servicesGrid" && field.key.startsWith("cards.")) return false
-                    if (selectedBlock.type === "faq" && field.key.startsWith("items.")) return false
-                    if (selectedBlock.type === "team" && field.key.startsWith("members.")) return false
-                    if (selectedBlock.type === "contactForm" && field.key.startsWith("fields.")) return false
-                    // Filter out legacy hero fields - they're now in brandContent tabs
-                    if (selectedBlock.type === "hero" && (
-                      field.key === "mediaUrl" ||
-                      field.key === "mediaType" ||
-                      field.key === "showMedia" ||
-                      field.key === "headline" ||
-                      field.key === "subheadline" ||
-                      field.key === "ctaText" ||
-                      field.key === "ctaHref" ||
-                      field.key === "badgeText" ||
-                      field.key === "playText" ||
-                      field.key === "floatingTitle" ||
-                      field.key === "floatingValue" ||
-                      field.key === "floatingLabel"
-                    )) return false
-                    return true
-                  })
-                  .map((field) => renderInspectorField(field, selectedBlock))}
-
-                {/* Services cards should appear AFTER headline/subheadline */}
-                {selectedBlock.type === "servicesGrid" && (
+                {/* Global Element Shadow Inspector */}
+                {selectedElementId && (
                   <>
+                    <div className="space-y-3">
+                      <ShadowInspector
+                        config={
+                          ((selectedBlock.props as Record<string, unknown>)?.elements as Record<string, ElementConfig> | undefined)?.[selectedElementId]?.style?.shadow
+                        }
+                        onChange={(shadowConfig) => {
+                          const currentElements = ((selectedBlock.props as Record<string, unknown>)?.elements ?? {}) as Record<string, ElementConfig>
+                          const currentElement = currentElements[selectedElementId] ?? { style: {} }
+                          const nextElement: ElementConfig = {
+                            ...currentElement,
+                            style: {
+                              ...currentElement.style,
+                              shadow: shadowConfig,
+                            },
+                          }
+                          const nextElements = {
+                            ...currentElements,
+                            [selectedElementId]: nextElement,
+                          }
+                          const updatedProps = setByPath(selectedBlock.props as Record<string, unknown>, "elements", nextElements) as CMSBlock["props"]
+                          updateSelectedProps(updatedProps)
+                        }}
+                        onClose={() => setSelectedElementId(null)}
+                      />
+                    </div>
                     <Separator />
-                    {renderArrayItemsControls(
-                      selectedBlock,
-                      "cards",
-                      "Card",
-                      (card, index) => `Card ${index + 1}`,
-                      createServiceCard,
-                      [
-                        { key: "icon", label: "Icon", type: "select" as const },
-                        { key: "iconColor", label: "Icon Farbe (optional)", type: "color" as const, placeholder: "#111111" },
-                        { key: "iconBgColor", label: "Icon Hintergrund (optional)", type: "color" as const, placeholder: "#e5e7eb" },
-                        { key: "title", label: "Titel", type: "text" as const },
-                        { key: "titleColor", label: "Titel Farbe (optional)", type: "color" as const, placeholder: "#111111" },
-                        { key: "text", label: "Text", type: "textarea" as const },
-                        { key: "textColor", label: "Text Farbe (optional)", type: "color" as const, placeholder: "#666666" },
-                        { key: "ctaText", label: "CTA Text", type: "text" as const },
-                        { key: "ctaColor", label: "CTA Farbe (optional)", type: "color" as const, placeholder: "#111111" },
-                        { key: "ctaHref", label: "CTA Link", type: "url" as const },
-                        { key: "cardBgColor", label: "Card Hintergrund (optional)", type: "color" as const, placeholder: "#ffffff" },
-                        { key: "cardBorderColor", label: "Card Border (optional)", type: "color" as const, placeholder: "#e5e7eb" },
-                      ]
-                    )}
                   </>
                 )}
-                </div>
+
+                {/* Render array items with controls for featureGrid, faq, team, contactForm */}
+                
+{(() => {
+  const def = getBlockDefinition(selectedBlock.type)
+  const fields = def.inspectorFields ?? []
+
+  const primaryKeys = new Set(["headline", "subheadline", "title", "subtitle"])
+  const lateKeys = new Set(["autoplay", "interval", "showArrows", "showDots"])
+
+  const isArrayItemField = (key: string) => {
+    if (selectedBlock.type === "hero" && key.startsWith("trustItems.")) return true
+    if (selectedBlock.type === "featureGrid" && key.startsWith("features.")) return true
+    if (selectedBlock.type === "servicesGrid" && key.startsWith("cards.")) return true
+    if (selectedBlock.type === "faq" && key.startsWith("items.")) return true
+    if (selectedBlock.type === "team" && key.startsWith("members.")) return true
+    if (selectedBlock.type === "contactForm" && key.startsWith("fields.")) return true
+    if (selectedBlock.type === "testimonials" && key.startsWith("items.")) return true
+    if (selectedBlock.type === "testimonialSlider" && key.startsWith("items.")) return true
+    if (selectedBlock.type === "gallery" && key.startsWith("images.")) return true
+    if (selectedBlock.type === "imageSlider" && key.startsWith("slides.")) return true
+    if (selectedBlock.type === "openingHours" && key.startsWith("hours.")) return true
+    return false
+  }
+
+  const isLegacyHeroField = (key: string) => {
+    if (selectedBlock.type !== "hero") return false
+    return (
+      key === "mediaUrl" ||
+      key === "mediaType" ||
+      key === "showMedia" ||
+      key === "headline" ||
+      key === "subheadline" ||
+      key === "ctaText" ||
+      key === "ctaHref" ||
+      key === "badgeText" ||
+      key === "playText" ||
+      key === "floatingTitle" ||
+      key === "floatingValue" ||
+      key === "floatingLabel"
+    )
+  }
+
+  const normalFields = fields.filter((field) => {
+    if (isArrayItemField(field.key)) return false
+    if (isLegacyHeroField(field.key)) return false
+    return true
+  })
+
+  const primaryFields = normalFields.filter((f) => {
+    if (primaryKeys.has(f.key)) return true
+    // Slider: background soll direkt bei Head/Subline stehen
+    if (selectedBlock.type === "testimonialSlider" && f.key === "background") return true
+    return false
+  })
+
+  const restFields = normalFields.filter((f) => !primaryFields.some((p) => p.key === f.key))
+  const midFields = restFields.filter((f) => !lateKeys.has(f.key))
+  const lateFields = restFields.filter((f) => lateKeys.has(f.key))
+
+  return (
+    <>
+      {/* 1) Head/Subline (und ggf. Background) */}
+      {primaryFields.map((field) => renderInspectorField(field, selectedBlock))}
+
+      {/* 2) Items/Arrays */}
+      {selectedBlock.type === "servicesGrid" && (
+        <>
+          <Separator />
+          {renderArrayItemsControls(
+            selectedBlock,
+            "cards",
+            "Card",
+            (card, index) => `Card ${index + 1}`,
+            createServiceCard,
+            [
+              { key: "icon", label: "Icon", type: "select" as const },
+              { key: "iconColor", label: "Icon Farbe (optional)", type: "color" as const, placeholder: "#111111" },
+              { key: "iconBgColor", label: "Icon Hintergrund (optional)", type: "color" as const, placeholder: "#e5e7eb" },
+              { key: "title", label: "Titel", type: "text" as const },
+              { key: "titleColor", label: "Titel Farbe (optional)", type: "color" as const, placeholder: "#111111" },
+              { key: "text", label: "Text", type: "textarea" as const },
+              { key: "textColor", label: "Text Farbe (optional)", type: "color" as const, placeholder: "#666666" },
+              { key: "ctaText", label: "CTA Text", type: "text" as const },
+              { key: "ctaColor", label: "CTA Farbe (optional)", type: "color" as const, placeholder: "#111111" },
+              { key: "ctaHref", label: "CTA Link", type: "url" as const },
+              { key: "cardBgColor", label: "Card Hintergrund (optional)", type: "color" as const, placeholder: "#ffffff" },
+              { key: "cardBorderColor", label: "Card Border (optional)", type: "color" as const, placeholder: "#e5e7eb" },
+            ]
+          )}
+        </>
+      )}
+
+      {selectedBlock.type === "testimonials" && (
+        <>
+          <Separator />
+          {renderArrayItemsControls(
+            selectedBlock,
+            "items",
+            "Testimonial",
+            (item, index) => {
+              const it = item as unknown as Record<string, unknown>
+              const name = String(it.name || "")
+              return `${index + 1}. ${name || "Testimonial"}`
+            },
+            createTestimonialItem,
+            [
+              { key: "quote", label: "Zitat", type: "textarea" as const, required: true },
+              { key: "quoteColor", label: "Zitat Farbe (optional)", type: "color" as const, placeholder: "#111111" },
+              { key: "name", label: "Name", type: "text" as const, required: true },
+              { key: "nameColor", label: "Name Farbe (optional)", type: "color" as const, placeholder: "#111111" },
+              { key: "role", label: "Rolle (optional)", type: "text" as const },
+              { key: "roleColor", label: "Rolle Farbe (optional)", type: "color" as const, placeholder: "#666666" },
+              {
+                key: "rating",
+                label: "Rating (optional)",
+                type: "select" as const,
+                options: [
+                  { value: "none", label: "—" },
+                  { value: "5", label: "★★★★★ (5)" },
+                  { value: "4", label: "★★★★☆ (4)" },
+                  { value: "3", label: "★★★☆☆ (3)" },
+                  { value: "2", label: "★★☆☆☆ (2)" },
+                  { value: "1", label: "★☆☆☆☆ (1)" },
+                ],
+              },
+            ],
+            1,
+            12
+          )}
+        </>
+      )}
+
+      {selectedBlock.type === "testimonialSlider" && (
+        <>
+          <Separator />
+          {renderArrayItemsControls(
+            selectedBlock,
+            "items",
+            "Testimonial",
+            (item, index) => {
+              const it = item as unknown as Record<string, unknown>
+              const name = String(it.name || "")
+              return `${index + 1}. ${name || "Testimonial"}`
+            },
+            createTestimonialItem,
+            [
+              { key: "quote", label: "Zitat", type: "textarea" as const, required: true },
+              { key: "name", label: "Name", type: "text" as const, required: true },
+              { key: "role", label: "Rolle (optional)", type: "text" as const },
+              {
+                key: "rating",
+                label: "Rating (optional)",
+                type: "select" as const,
+                options: [
+                  { value: "none", label: "—" },
+                  { value: "5", label: "★★★★★ (5)" },
+                  { value: "4", label: "★★★★☆ (4)" },
+                  { value: "3", label: "★★★☆☆ (3)" },
+                  { value: "2", label: "★★☆☆☆ (2)" },
+                  { value: "1", label: "★☆☆☆☆ (1)" },
+                ],
+              },
+            ],
+            1,
+            12
+          )}
+        </>
+      )}
+
+      {selectedBlock.type === "gallery" && (
+        <>
+          <Separator />
+          {renderArrayItemsControls(
+            selectedBlock,
+            "images",
+            "Bild",
+            (_img, index) => `Bild ${index + 1}`,
+            createGalleryImage,
+            [
+              { key: "url", label: "URL", type: "url" as const, required: true },
+              { key: "alt", label: "Alt-Text", type: "text" as const, required: true },
+              { key: "caption", label: "Caption (optional)", type: "text" as const },
+              { key: "captionColor", label: "Caption Farbe (optional)", type: "color" as const, placeholder: "#666666" },
+            ],
+            3,
+            18
+          )}
+        </>
+      )}
+
+      {selectedBlock.type === "imageSlider" && (
+        <>
+          <Separator />
+          {renderArrayItemsControls(
+            selectedBlock,
+            "slides",
+            "Slide",
+            (slide, index) => {
+              const s = slide as unknown as Record<string, unknown>
+              const title = String(s.title || "")
+              return `${index + 1}. ${title || "Slide"}`
+            },
+            createImageSlide,
+            [
+              { key: "url", label: "Bild URL", type: "url" as const, required: true },
+              { key: "alt", label: "Alt-Text", type: "text" as const, required: true },
+              { key: "title", label: "Titel (optional)", type: "text" as const },
+              { key: "text", label: "Text (optional)", type: "textarea" as const },
+              { key: "titleColor", label: "Titel Farbe", type: "color" as const, placeholder: "#111111" },
+              { key: "textColor", label: "Text Farbe", type: "color" as const, placeholder: "#666666" },
+            ],
+            1,
+            12
+          )}
+        </>
+      )}
+
+      {selectedBlock.type === "openingHours" && (
+        <>
+          <Separator />
+          {renderArrayItemsControls(
+            selectedBlock,
+            "hours",
+            "Zeile",
+            (row, index) => {
+              const r = row as unknown as Record<string, unknown>
+              const label = String(r.label || "")
+              return `${index + 1}. ${label || "Tag"}`
+            },
+            createOpeningHour,
+            [
+              { key: "label", label: "Label", type: "text" as const, required: true },
+              { key: "labelColor", label: "Label Farbe (optional)", type: "color" as const, placeholder: "#111111" },
+              { key: "value", label: "Wert", type: "text" as const, required: true },
+              { key: "valueColor", label: "Wert Farbe (optional)", type: "color" as const, placeholder: "#666666" },
+            ],
+            1,
+            10
+          )}
+        </>
+      )}
+
+      {selectedBlock.type === "featureGrid" && (
+        <>
+          <Separator />
+          {renderArrayItemsControls(
+            selectedBlock,
+            "features",
+            "Feature",
+            (feature, index) => `Feature ${index + 1}`,
+            createFeatureItem,
+            [
+              { key: "title", label: "Titel", type: "text" as const },
+              { key: "titleColor", label: "Titel Farbe (optional)", type: "color" as const, placeholder: "#111111" },
+              { key: "description", label: "Beschreibung", type: "textarea" as const },
+              { key: "descriptionColor", label: "Beschreibung Farbe (optional)", type: "color" as const, placeholder: "#666666" },
+              { key: "icon", label: "Icon", type: "text" as const },
+              { key: "iconColor", label: "Icon Farbe (optional)", type: "color" as const, placeholder: "#111111" },
+              { key: "cardBgColor", label: "Card Hintergrund (optional)", type: "color" as const, placeholder: "#ffffff" },
+              { key: "cardBorderColor", label: "Card Border (optional)", type: "color" as const, placeholder: "#e5e7eb" },
+            ]
+          )}
+        </>
+      )}
+
+      {selectedBlock.type === "faq" && (
+        <>
+          <Separator />
+          {renderArrayItemsControls(
+            selectedBlock,
+            "items",
+            "FAQ",
+            (item, index) => `FAQ ${index + 1}`,
+            createFaqItem,
+            [
+              { key: "question", label: "Frage", type: "text" as const },
+              { key: "questionColor", label: "Frage Farbe (optional)", type: "color" as const, placeholder: "#111111" },
+              { key: "answer", label: "Antwort", type: "textarea" as const },
+              { key: "answerColor", label: "Antwort Farbe (optional)", type: "color" as const, placeholder: "#666666" },
+            ]
+          )}
+        </>
+      )}
+
+      {selectedBlock.type === "team" && (
+        <>
+          <Separator />
+          {renderArrayItemsControls(
+            selectedBlock,
+            "members",
+            "Mitglied",
+            (member, index) => `Mitglied ${index + 1}`,
+            createTeamMember,
+            [
+              { key: "name", label: "Name", type: "text" as const },
+              { key: "nameColor", label: "Name Farbe (optional)", type: "color" as const, placeholder: "#111111" },
+              { key: "role", label: "Rolle", type: "text" as const },
+              { key: "roleColor", label: "Rolle Farbe (optional)", type: "color" as const, placeholder: "#666666" },
+              { key: "imageUrl", label: "Bild URL", type: "url" as const },
+              { key: "imageAlt", label: "Bild Alt-Text", type: "text" as const },
+              { key: "ctaText", label: "CTA Text", type: "text" as const },
+              { key: "ctaColor", label: "CTA Farbe (optional)", type: "color" as const, placeholder: "#111111" },
+              { key: "ctaHref", label: "CTA Link", type: "url" as const },
+              { key: "cardBgColor", label: "Card Hintergrund (optional)", type: "color" as const, placeholder: "#ffffff" },
+              { key: "cardBorderColor", label: "Card Border (optional)", type: "color" as const, placeholder: "#e5e7eb" },
+            ]
+          )}
+        </>
+      )}
+
+      {selectedBlock.type === "contactForm" && (
+        <>
+          <Separator />
+          {renderArrayItemsControls(
+            selectedBlock,
+            "fields",
+            "Feld",
+            (field, index) => {
+              const f = field as unknown as Record<string, unknown>
+              const t = String(f.type || "")
+              const label = String(f.label || "")
+              return `${index + 1}. ${label || t || "Feld"}`
+            },
+            () => createContactFormField("subject"),
+            [
+              { key: "type", label: "Typ", type: "select" as const },
+              { key: "label", label: "Label", type: "text" as const },
+              { key: "placeholder", label: "Placeholder", type: "text" as const },
+              { key: "required", label: "Required", type: "boolean" as const },
+            ]
+          )}
+        </>
+      )}
+
+      {/* 3) Restliche Felder (Settings kommen ans Ende) */}
+      {midFields.map((field) => renderInspectorField(field, selectedBlock))}
+
+      {lateFields.length > 0 && (
+        <>
+          <Separator />
+          {lateFields.map((field) => renderInspectorField(field, selectedBlock))}
+        </>
+      )}
+    </>
+  )
+})()}</div>
             </div>
           )}
         </div>

@@ -9,43 +9,28 @@ import { Editable } from "@/components/editor/Editable"
 import { getTypographyClassName } from "@/lib/typography"
 import type { TypographySettings } from "@/lib/typography"
 import Image from "next/image"
+import { usePathname, useRouter } from "next/navigation"
+import { AnimatedBlock } from "@/components/blocks/AnimatedBlock"
 
-import type { BrandKey } from "@/components/brand/brandAssets";
-import type { HeroBlock, MediaValue } from "@/types/cms";
-import { useBrandOptional } from "@/components/brand/BrandProvider";
+import type { HeroBlock, MediaValue } from "@/types/cms"
+import type { BrandKey } from "@/components/brand/brandAssets"
 
-export type HeroMood = BrandKey;
-
-/**
- * Helper to resolve media URL from MediaValue
- * For now, we use the URL directly. In the future, we could resolve mediaId from the media table.
- */
 function resolveMediaUrl(mediaValue?: MediaValue, fallbackUrl?: string): string | undefined {
   if (!mediaValue) return fallbackUrl
   if ("url" in mediaValue) return mediaValue.url
   if ("mediaId" in mediaValue) {
-    // TODO: Resolve mediaId from media table
-    // For now, return undefined to use fallback
     return fallbackUrl
   }
   return fallbackUrl
 }
 
-/**
- * Maps image variant to Tailwind CSS classes for aspect ratio and responsive behavior
- * Build-safe: only uses fixed Tailwind classes, no dynamic string interpolation
- */
 function getHeroImageAspectClasses(variant: "landscape" | "portrait" = "landscape"): string {
   if (variant === "portrait") {
     return "aspect-[3/4] max-h-[60vh] sm:max-h-[70vh]"
   }
-  // landscape (default)
   return "aspect-video max-h-[55vh] sm:max-h-[60vh]"
 }
 
-/**
- * Maps image focus to Tailwind object-position classes
- */
 function getImageFocusClass(focus: "center" | "top" | "bottom" = "center"): string {
   const focusMap: Record<"center" | "top" | "bottom", string> = {
     center: "object-center",
@@ -55,208 +40,12 @@ function getImageFocusClass(focus: "center" | "top" | "bottom" = "center"): stri
   return focusMap[focus]
 }
 
-/**
- * Maps image fit to Tailwind object-fit classes
- */
 function getImageFitClass(fit: "cover" | "contain" = "cover"): string {
   const fitMap: Record<"cover" | "contain", string> = {
     cover: "object-cover",
     contain: "object-contain",
   }
   return fitMap[fit]
-}
-
-/**
- * Gets grid column span for image based on variant and fit
- */
-function getImageGridSpan(variant: "landscape" | "portrait" = "landscape", fit: "cover" | "contain" = "cover"): string {
-  if (variant === "portrait") {
-    return "lg:col-span-6"
-  }
-  // Landscape: wider for cover, standard for contain
-  if (fit === "cover") {
-    return "lg:col-span-7"
-  }
-  return "lg:col-span-6"
-}
-
-/**
- * Helper to extract brand-specific content from Hero props
- * Supports both legacy flat structure and new brandContent structure
- */
-function getBrandContent(
-  props: HeroBlock["props"],
-  activeBrand: BrandKey
-): {
-  headline?: string
-  subheadline?: string
-  headlineColor?: string
-  subheadlineColor?: string
-  ctaText?: string
-  ctaHref?: string
-  ctaColor?: string
-  ctaBgColor?: string
-  ctaHoverBgColor?: string
-  ctaBorderColor?: string
-  secondaryCtaText?: string
-  secondaryCtaHref?: string
-  badgeText?: string
-  badgeColor?: string
-  badgeBgColor?: string
-  playText?: string
-  playTextColor?: string
-  playBorderColor?: string
-  playBgColor?: string
-  playHoverBgColor?: string
-  trustItems?: string[]
-  trustItemsColor?: string
-  trustDotColor?: string
-  floatingTitle?: string
-  floatingTitleColor?: string
-  floatingValue?: string
-  floatingValueColor?: string
-  floatingLabel?: string
-  floatingLabelColor?: string
-  imageUrl?: string
-  imageAlt?: string
-  imageVariant?: "landscape" | "portrait"
-  imageFit?: "cover" | "contain"
-  imageFocus?: "center" | "top" | "bottom"
-  containBackground?: "none" | "blur"
-} {
-  // If brandContent exists, use it
-  if (props.brandContent?.[activeBrand]) {
-    const brandContent = props.brandContent[activeBrand]
-    return {
-      headline: brandContent.headline,
-      subheadline: brandContent.subheadline,
-      headlineColor: brandContent.headlineColor,
-      subheadlineColor: brandContent.subheadlineColor,
-      ctaText: brandContent.ctaText,
-      ctaHref: brandContent.ctaHref,
-      ctaColor: brandContent.ctaColor,
-      ctaBgColor: (brandContent as Record<string, unknown>).ctaBgColor as string | undefined,
-      ctaHoverBgColor: (brandContent as Record<string, unknown>).ctaHoverBgColor as string | undefined,
-      ctaBorderColor: (brandContent as Record<string, unknown>).ctaBorderColor as string | undefined,
-      secondaryCtaText: brandContent.secondaryCtaText,
-      secondaryCtaHref: brandContent.secondaryCtaHref,
-      badgeText: brandContent.badgeText,
-      badgeColor: brandContent.badgeColor,
-      badgeBgColor: (brandContent as Record<string, unknown>).badgeBgColor as string | undefined,
-      playText: brandContent.playText,
-      playTextColor: brandContent.playTextColor,
-      playBorderColor: (brandContent as Record<string, unknown>).playBorderColor as string | undefined,
-      playBgColor: (brandContent as Record<string, unknown>).playBgColor as string | undefined,
-      playHoverBgColor: (brandContent as Record<string, unknown>).playHoverBgColor as string | undefined,
-      trustItems: brandContent.trustItems,
-      trustItemsColor: brandContent.trustItemsColor,
-      trustDotColor: (brandContent as Record<string, unknown>).trustDotColor as string | undefined,
-      floatingTitle: brandContent.floatingTitle,
-      floatingValue: brandContent.floatingValue,
-      floatingLabel: brandContent.floatingLabel,
-      floatingTitleColor: brandContent.floatingTitleColor,
-      floatingValueColor: brandContent.floatingValueColor,
-      floatingLabelColor: brandContent.floatingLabelColor,
-      imageUrl: resolveMediaUrl(brandContent.image, "/placeholder.svg"),
-      imageAlt: brandContent.imageAlt,
-      imageVariant: brandContent.imageVariant ?? "landscape",
-      imageFit: brandContent.imageFit ?? "cover",
-      imageFocus: brandContent.imageFocus ?? "center",
-      containBackground: brandContent.containBackground ?? "blur",
-    }
-  }
-
-  // Fallback to legacy flat structure
-  return {
-    headline: props.headline,
-    subheadline: props.subheadline,
-    ctaText: props.ctaText,
-    ctaHref: props.ctaHref,
-    badgeText: props.badgeText,
-    playText: props.playText,
-    trustItems: props.trustItems,
-    floatingTitle: props.floatingTitle,
-    floatingValue: props.floatingValue,
-    floatingLabel: props.floatingLabel,
-    imageUrl: props.mediaUrl || "/placeholder.svg",
-    imageAlt: undefined,
-    imageVariant: "landscape",
-    imageFit: "cover",
-    imageFocus: "center",
-    containBackground: "blur",
-  }
-}
-
-interface HeroSectionProps {
-  mood?: HeroMood
-  // Legacy props (for backward compatibility)
-  headline?: string
-  subheadline?: string
-  ctaText?: string
-  ctaHref?: string
-  showMedia?: boolean
-  mediaType?: "image" | "video"
-  mediaUrl?: string
-  onCtaClick?: () => void
-  // CMS/Inline Edit Props
-  editable?: boolean
-  blockId?: string
-  onEditField?: (blockId: string, fieldPath: string, anchorRect?: DOMRect) => void
-  onElementClick?: (blockId: string, elementId: string) => void
-  selectedElementId?: string | null
-  // Typography per element
-  typography?: Record<string, TypographySettings>
-  // Legacy CMS-editable props
-  badgeText?: string
-  playText?: string
-  trustItems?: string[]
-  floatingTitle?: string
-  floatingValue?: string
-  floatingLabel?: string
-  // New: Full props for brandContent support
-  props?: HeroBlock["props"]
-  // Brand toggle (for homepage)
-  showBrandToggle?: boolean
-  onBrandChange?: (brand: BrandKey) => void
-  // Editor: active brand from inspector tab
-  activeBrand?: BrandKey
-}
-
-const defaultContent: Record<HeroMood, { 
-  headline: string
-  subheadline: string
-  ctaText: string
-  badgeText: string
-  playText: string
-  trustItems: string[]
-  floatingTitle: string
-  floatingValue: string
-  floatingLabel?: string
-}> = {
-  physiotherapy: {
-    headline: "Ihre Gesundheit in besten Händen",
-    subheadline:
-      "Professionelle Physiotherapie mit ganzheitlichem Ansatz. Wir begleiten Sie auf dem Weg zu mehr Wohlbefinden und Lebensqualität.",
-    ctaText: "Termin vereinbaren",
-    badgeText: "Vertrauen & Fürsorge",
-    playText: "Video ansehen",
-    trustItems: ["Über 15 Jahre Erfahrung", "Alle Kassen", "Modernste Therapien"],
-    floatingTitle: "Patientenzufriedenheit",
-    floatingValue: "98%",
-    floatingLabel: undefined,
-  },
-  "physio-konzept": {
-    headline: "Push Your Limits",
-    subheadline:
-      "Erreiche dein volles Potenzial mit individueller Trainingsbetreuung und sportphysiotherapeutischer Expertise.",
-    ctaText: "Jetzt starten",
-    badgeText: "Performance & Erfolg",
-    playText: "Video ansehen",
-    trustItems: [],
-    floatingTitle: "Nächstes Training",
-    floatingValue: "Heute, 18:00",
-    floatingLabel: undefined,
-  },
 }
 
 function normalizeStringArray(v: unknown): string[] {
@@ -274,9 +63,32 @@ function normalizeStringArray(v: unknown): string[] {
   return []
 }
 
+interface HeroSectionProps {
+  headline?: string
+  subheadline?: string
+  ctaText?: string
+  ctaHref?: string
+  showMedia?: boolean
+  mediaType?: "image" | "video"
+  mediaUrl?: string
+  onCtaClick?: () => void
+  editable?: boolean
+  blockId?: string
+  onEditField?: (blockId: string, fieldPath: string, anchorRect?: DOMRect) => void
+  onElementClick?: (blockId: string, elementId: string) => void
+  selectedElementId?: string | null
+  typography?: Record<string, TypographySettings>
+  badgeText?: string
+  playText?: string
+  trustItems?: string[]
+  floatingTitle?: string
+  floatingValue?: string
+  floatingLabel?: string
+  props?: HeroBlock["props"]
+  showBrandToggle?: boolean
+}
+
 export function HeroSection({
-  mood = "physiotherapy",
-  // Legacy props (for backward compatibility)
   headline,
   subheadline,
   ctaText,
@@ -297,36 +109,31 @@ export function HeroSection({
   onElementClick,
   selectedElementId,
   typography,
-  // New: Full props for brandContent support
   props: heroProps,
   showBrandToggle = false,
-  onBrandChange,
-  activeBrand: editorActiveBrand,
   ...restProps
 }: HeroSectionProps) {
   const [ctaHovered, setCtaHovered] = useState(false)
   const [playHovered, setPlayHovered] = useState(false)
-  const brandContext = useBrandOptional()
+  const pathname = usePathname()
+  const router = useRouter()
+
+  const showBrandToggleNav = showBrandToggle && (pathname === "/" || pathname === "/konzept")
   
-  // Priority: editorActiveBrand (from inspector) > brandContext > mood > default
-  const activeBrand = editorActiveBrand || brandContext?.brand || mood || "physiotherapy"
-  const isCalm = activeBrand === "physiotherapy"
+  // Determine activeBrand: prefer from props (mood), fallback to pathname
+  // In Admin, heroProps.mood is set by PageEditor to current.brand
+  // On Public, use pathname to detect brand
+  let activeBrand: BrandKey = "physiotherapy"
   
-  // Handler for brand toggle that updates both context and prop callback
-  const handleBrandChange = (newBrand: BrandKey) => {
-    // Update context if available
-    if (brandContext) {
-      brandContext.setBrand(newBrand)
-    }
-    // Call prop callback if provided
-    if (onBrandChange) {
-      onBrandChange(newBrand)
-    }
+  if (heroProps?.mood && (heroProps.mood === "physiotherapy" || heroProps.mood === "physio-konzept")) {
+    activeBrand = heroProps.mood
+  } else {
+    activeBrand = pathname.startsWith("/konzept") ? "physio-konzept" : "physiotherapy"
   }
   
-  // Build props object from legacy props or use heroProps
+  const isCalm = activeBrand === "physiotherapy"
+
   const props: HeroBlock["props"] = heroProps || {
-    mood: activeBrand,
     headline,
     subheadline,
     ctaText,
@@ -342,60 +149,56 @@ export function HeroSection({
     floatingLabel,
   }
 
-  // Get brand-specific content
-  const brandContent = getBrandContent(props, activeBrand)
-  const content = defaultContent[activeBrand]
-  
-  // Resolve props with brand-specific content and fallback to defaults
-  const resolvedHeadline = brandContent.headline ?? headline ?? content.headline
-  const resolvedSubheadline = brandContent.subheadline ?? subheadline ?? content.subheadline
-  const resolvedCtaText = brandContent.ctaText ?? ctaText ?? content.ctaText
-  const resolvedCtaHref = brandContent.ctaHref ?? ctaHref ?? "#contact"
-  const resolvedBadgeText = brandContent.badgeText ?? badgeText ?? content.badgeText
-  const resolvedPlayText = brandContent.playText ?? playText ?? content.playText
-  const resolvedTrustItems = normalizeStringArray(
-    brandContent.trustItems ?? trustItems ?? content.trustItems
-  )
-  const resolvedFloatingTitle = brandContent.floatingTitle ?? floatingTitle ?? content.floatingTitle
-  const resolvedFloatingValue = brandContent.floatingValue ?? floatingValue ?? content.floatingValue
-  const resolvedFloatingLabel = brandContent.floatingLabel ?? floatingLabel ?? content.floatingLabel
-  const resolvedImageUrl = brandContent.imageUrl ?? mediaUrl ?? "/placeholder.svg"
-  const resolvedImageAlt = brandContent.imageAlt ?? (isCalm
+  const activeBrandContent = props.brandContent?.[activeBrand] ?? {}
+
+  // Helper: Only non-empty string, else undefined
+  const opt = (v?: string) => (v && typeof v === "string" && v.trim() ? v.trim() : undefined)
+
+  const resolvedHeadline = activeBrandContent.headline ?? props.headline ?? headline ?? ""
+  const resolvedSubheadline = activeBrandContent.subheadline ?? props.subheadline ?? subheadline ?? ""
+  const resolvedCtaText = activeBrandContent.ctaText ?? props.ctaText ?? ctaText ?? ""
+  const resolvedCtaHref = activeBrandContent.ctaHref ?? props.ctaHref ?? ctaHref ?? "#contact"
+  const resolvedBadgeText = activeBrandContent.badgeText ?? props.badgeText ?? badgeText ?? ""
+  const resolvedPlayText = activeBrandContent.playText ?? props.playText ?? playText ?? ""
+  const resolvedTrustItems = normalizeStringArray(activeBrandContent.trustItems ?? props.trustItems ?? trustItems ?? [])
+  const resolvedFloatingTitle = activeBrandContent.floatingTitle ?? props.floatingTitle ?? floatingTitle ?? ""
+  const resolvedFloatingValue = activeBrandContent.floatingValue ?? props.floatingValue ?? floatingValue ?? ""
+  const resolvedFloatingLabel = activeBrandContent.floatingLabel ?? props.floatingLabel ?? floatingLabel ?? ""
+  const resolvedImageUrl = resolveMediaUrl(activeBrandContent.image) ?? props.mediaUrl ?? mediaUrl ?? "/placeholder.svg"
+  const resolvedImageAlt = activeBrandContent.imageAlt ?? (isCalm
     ? "Professional physiotherapy treatment in a calm, welcoming environment"
     : "Athlete training with focused determination and energy")
-  const resolvedImageVariant = brandContent.imageVariant ?? "landscape"
-  const resolvedImageFit = brandContent.imageFit ?? "cover"
-  const resolvedImageFocus = brandContent.imageFocus ?? "center"
-  const resolvedContainBackground = brandContent.containBackground ?? "blur"
+  const resolvedImageVariant = activeBrandContent.imageVariant ?? "landscape"
+  const resolvedImageFit: "cover" | "contain" =
+    activeBrandContent.imageFit ?? (props as any)?.imageFit ?? "cover"
+  const resolvedImageFocus = activeBrandContent.imageFocus ?? "center"
+  const resolvedContainBackground = activeBrandContent.containBackground ?? "blur"
 
-  // Brand-specific color overrides (optional)
-  const defaultHeadlineColor = !isCalm ? "oklch(0.98 0 0)" : "oklch(0.25 0.02 160)"
-  const defaultSubheadlineColor = !isCalm ? "oklch(0.98 0 0)" : "oklch(0.5 0.02 160)"
-  const resolvedHeadlineColor = brandContent.headlineColor ?? defaultHeadlineColor
-  const resolvedSubheadlineColor = brandContent.subheadlineColor ?? defaultSubheadlineColor
-  const resolvedCtaColor = brandContent.ctaColor
-  const resolvedCtaBgColor = brandContent.ctaBgColor
-  const resolvedCtaHoverBgColor = brandContent.ctaHoverBgColor
-  const resolvedCtaBorderColor = brandContent.ctaBorderColor
-  const resolvedBadgeColor = brandContent.badgeColor
-  const resolvedBadgeBgColor = brandContent.badgeBgColor
-  const resolvedPlayTextColor = brandContent.playTextColor
-  const resolvedPlayBorderColor = brandContent.playBorderColor
-  const resolvedPlayBgColor = brandContent.playBgColor
-  const resolvedPlayHoverBgColor = brandContent.playHoverBgColor
-  const resolvedTrustItemsColor = brandContent.trustItemsColor
-  const resolvedTrustDotColor = brandContent.trustDotColor
-  const resolvedFloatingTitleColor = brandContent.floatingTitleColor
-  const resolvedFloatingValueColor = brandContent.floatingValueColor
-  const resolvedFloatingLabelColor = brandContent.floatingLabelColor
+  // Farben (nur gesetzt falls in brandContent belegt, sonst undefined)
+  const resolvedHeadlineColor = opt(activeBrandContent.headlineColor)
+  const resolvedSubheadlineColor = opt(activeBrandContent.subheadlineColor)
+  const resolvedCtaColor = opt(activeBrandContent.ctaColor)
+  const resolvedCtaBgColor = opt(activeBrandContent.ctaBgColor)
+  const resolvedCtaHoverBgColor = opt(activeBrandContent.ctaHoverBgColor)
+  const resolvedCtaBorderColor = opt(activeBrandContent.ctaBorderColor)
+  const resolvedBadgeColor = opt(activeBrandContent.badgeColor)
+  const resolvedBadgeBgColor = opt(activeBrandContent.badgeBgColor)
+  const resolvedPlayTextColor = opt(activeBrandContent.playTextColor)
+  const resolvedPlayBorderColor = opt(activeBrandContent.playBorderColor)
+  const resolvedPlayBgColor = opt(activeBrandContent.playBgColor)
+  const resolvedPlayHoverBgColor = opt(activeBrandContent.playHoverBgColor)
+  const resolvedTrustItemsColor = opt(activeBrandContent.trustItemsColor)
+  const resolvedTrustDotColor = opt(activeBrandContent.trustDotColor)
+  const resolvedFloatingTitleColor = opt(activeBrandContent.floatingTitleColor)
+  const resolvedFloatingValueColor = opt(activeBrandContent.floatingValueColor)
+  const resolvedFloatingLabelColor = opt(activeBrandContent.floatingLabelColor)
+  const resolvedHeroBgColor = opt(props.heroBgColor)
 
-  // Get typography for elements
   const typographyRecord = typography || {}
   const headlineTypography = typographyRecord["headline"]
   const subheadlineTypography = typographyRecord["subheadline"]
   const ctaTypography = typographyRecord["cta"]
 
-  // Inline edit helper
   const handleInlineEdit = (e: React.MouseEvent, fieldPath: string) => {
     if (!editable || !blockId || !onEditField) return
     e.preventDefault()
@@ -405,65 +208,66 @@ export function HeroSection({
   }
 
   return (
-    <section
+    <AnimatedBlock config={props.section?.animation}>
+      <section
       className={cn(
         "relative min-h-[90vh] w-full overflow-hidden",
         !isCalm && "physio-konzept"
       )}
       aria-labelledby="hero-headline"
-      style={!isCalm ? {
-        // Apply Physio-Konzept theme variables directly to section
-        backgroundColor: "oklch(0.12 0 0)", // --hero-bg for physio-konzept (black)
-      } : {
-        // Ensure Physiotherapy has light background
-        backgroundColor: "oklch(0.97 0.008 150)", // --hero-bg for physiotherapy (light)
-      }}
+      style={{ 
+        background: resolvedHeroBgColor || "var(--hero-background, var(--background))",
+        "--hero-bg": resolvedHeroBgColor || undefined,
+      } as React.CSSProperties}
+
     >
       {/* Background Layer */}
       <div 
-        className="absolute inset-0 -z-10 bg-hero-bg" 
+        className="absolute inset-0 -z-10" 
         aria-hidden="true"
-        style={!isCalm ? {
-          backgroundColor: "oklch(0.12 0 0)", // --hero-bg for physio-konzept
-        } : {
-          backgroundColor: "oklch(0.97 0.008 150)", // --hero-bg for physiotherapy (light)
-        }}
+        style={{ background: "var(--hero-background, var(--background))" } as React.CSSProperties}
+
       >
-        {/* Decorative elements with animations */}
-        {/* Decorative elements */}
-        <HeroDecoration brand={mood} />
+        <HeroDecoration brand={isCalm ? "physiotherapy" : "physio-konzept"} />
       </div>
 
       <div className="container mx-auto flex min-h-[90vh] flex-col items-center justify-center gap-8 px-4 py-16 lg:flex-row lg:gap-12 lg:py-24">
-        {/* Brand Toggle Switcher - only shown when showBrandToggle is true */}
-        {showBrandToggle && (
+        {showBrandToggleNav && (
           <nav
             className="absolute top-8 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 rounded-full bg-white p-1.5 shadow-lg"
             aria-label="Brand selection"
           >
             <button
-              onClick={() => handleBrandChange("physiotherapy")}
               type="button"
+              aria-pressed={isCalm}
+              aria-label="Wechsel zu Physiotherapie"
               className={cn(
-                "px-6 py-2 rounded-full text-sm font-medium transition-all duration-200",
+                "px-6 py-2 rounded-full text-sm font-medium transition-all duration-200 focus:outline-none",
                 isCalm
-                  ? "bg-primary text-white shadow-sm"
-                  : "bg-transparent text-gray-700 hover:text-gray-900 hover:bg-gray-100"
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "bg-transparent text-primary hover:bg-muted/60"
               )}
+              onClick={() => {
+                if (!isCalm) router.push("/");
+              }}
             >
               Physiotherapie
             </button>
             <button
-              onClick={() => handleBrandChange("physio-konzept")}
               type="button"
+              aria-pressed={!isCalm}
+              aria-label="Wechsel zu Physio-Konzept"
               className={cn(
-                "px-6 py-2 rounded-full text-sm font-medium transition-all duration-200",
+                "px-6 py-2 rounded-full text-sm font-medium transition-all duration-200 focus:outline-none",
                 !isCalm
                   ? "bg-primary text-primary-foreground shadow-sm"
-                  : "bg-transparent text-gray-700 hover:text-gray-900 hover:bg-gray-100"
+                  : "bg-transparent text-primary hover:bg-muted/60"
               )}
+              onClick={() => {
+                if (isCalm) router.push("/konzept");
+              }}
             >
-              PhysioKonzept
+              Physio-Konzept
             </button>
           </nav>
         )}
@@ -479,9 +283,13 @@ export function HeroSection({
           <div
             className={cn(
               "hero-badge inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium animate-fade-in-up",
-              isCalm ? "bg-primary/10 text-primary" : "bg-primary/20 text-primary",
+              "bg-primary/10 text-primary"
             )}
-            style={resolvedBadgeBgColor ? ({ backgroundColor: resolvedBadgeBgColor } as React.CSSProperties) : undefined}
+            style={
+              resolvedBadgeBgColor
+                ? ({ backgroundColor: resolvedBadgeBgColor } as React.CSSProperties)
+                : undefined
+            }
           >
             {isCalm ? (
               <>
@@ -491,7 +299,11 @@ export function HeroSection({
                   className={cn(
                     editable && blockId && onEditField && "cursor-pointer rounded px-1 transition-colors hover:bg-primary/20"
                   )}
-                  style={resolvedBadgeColor ? ({ color: resolvedBadgeColor } as React.CSSProperties) : undefined}
+                  style={
+                    resolvedBadgeColor
+                      ? ({ color: resolvedBadgeColor } as React.CSSProperties)
+                      : undefined
+                  }
                 >
                   {resolvedBadgeText}
                 </span>
@@ -504,7 +316,11 @@ export function HeroSection({
                   className={cn(
                     editable && blockId && onEditField && "cursor-pointer rounded px-1 transition-colors hover:bg-primary/20"
                   )}
-                  style={resolvedBadgeColor ? ({ color: resolvedBadgeColor } as React.CSSProperties) : undefined}
+                  style={
+                    resolvedBadgeColor
+                      ? ({ color: resolvedBadgeColor } as React.CSSProperties)
+                      : undefined
+                  }
                 >
                   {resolvedBadgeText}
                 </span>
@@ -522,15 +338,12 @@ export function HeroSection({
             isSelected={selectedElementId === "headline"}
             as="h1"
             className={cn(
-              "hero-headline text-balance animate-fade-in-up animate-delay-200",
-              // Always keep the base responsive sizing.
-              // Typography overrides are applied selectively via mergeTypographyClasses
-              // (only the explicitly configured properties remove/replace base classes).
+              "hero-headline text-balance animate-fade-in-up animate-delay-200 text-foreground",
               isCalm
                 ? "font-serif text-4xl font-semibold tracking-tight md:text-5xl lg:text-6xl"
                 : "font-sans text-4xl font-bold uppercase tracking-tight md:text-5xl lg:text-7xl"
             )}
-            style={{ color: resolvedHeadlineColor }}
+            style={resolvedHeadlineColor ? { color: resolvedHeadlineColor } : undefined}
           >
             <span onClick={(e) => handleInlineEdit(e, "headline")}>
               {resolvedHeadline}
@@ -548,9 +361,9 @@ export function HeroSection({
             as="p"
             className={cn(
               "hero-subheadline max-w-xl text-pretty leading-relaxed animate-fade-in-up animate-delay-300",
-              isCalm ? "text-lg text-muted-foreground md:text-xl" : "text-lg md:text-xl"
+              "text-lg md:text-xl text-muted-foreground" // Standard über Klasse
             )}
-            style={{ color: resolvedSubheadlineColor }}
+            style={resolvedSubheadlineColor ? { color: resolvedSubheadlineColor } : undefined}
           >
             <span onClick={(e) => handleInlineEdit(e, "subheadline")}>
               {resolvedSubheadline}
@@ -573,41 +386,53 @@ export function HeroSection({
                   "group gap-2 text-base font-semibold",
                   isCalm ? "rounded-full px-8" : "rounded-md px-8 uppercase tracking-wide",
                 )}
-                style={{
-                  color: resolvedCtaColor || undefined,
-                  backgroundColor: resolvedCtaBgColor
-                    ? (ctaHovered && resolvedCtaHoverBgColor ? resolvedCtaHoverBgColor : resolvedCtaBgColor)
-                    : undefined,
-                  borderColor: resolvedCtaBorderColor || undefined,
-                }}
+                style={
+                  resolvedCtaColor ||
+                  resolvedCtaBgColor ||
+                  resolvedCtaBorderColor ||
+                  (ctaHovered && resolvedCtaHoverBgColor)
+                    ? {
+                        ...(resolvedCtaColor ? { color: resolvedCtaColor } : {}),
+                        ...(resolvedCtaBgColor || (ctaHovered && resolvedCtaHoverBgColor)
+                          ? {
+                              backgroundColor:
+                                (ctaHovered && resolvedCtaHoverBgColor) ? resolvedCtaHoverBgColor : resolvedCtaBgColor
+                            }
+                          : {}),
+                        ...(resolvedCtaBorderColor
+                          ? { borderColor: resolvedCtaBorderColor }
+                          : {}),
+                      }
+                    : undefined
+                }
                 onMouseEnter={() => setCtaHovered(true)}
                 onMouseLeave={() => setCtaHovered(false)}
                 onClick={editable && blockId && onEditField ? (e) => handleInlineEdit(e, "ctaText") : onCtaClick}
                 asChild={!editable && !!ctaHref}
               >
-              {!editable && resolvedCtaHref ? (
-                <a href={resolvedCtaHref}>
-                  {resolvedCtaText}
-                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" aria-hidden="true" />
-                </a>
-              ) : (
-                <>
-                  <span
-                    onClick={(e) => {
-                      if (editable && blockId && onEditField) {
-                        e.stopPropagation()
-                        handleInlineEdit(e, "ctaText")
-                      }
-                    }}
-                    className={cn(
-                      editable && blockId && onEditField && "cursor-pointer"
-                    )}
-                  >
+                {!editable && resolvedCtaHref ? (
+                  <a href={resolvedCtaHref}>
                     {resolvedCtaText}
-                  </span>
-                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" aria-hidden="true" />
-                </>
-              )}
+                    <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" aria-hidden="true" />
+                  </a>
+                ) : (
+                  <>
+                    <span
+                      onClick={(e) => {
+                        if (editable && blockId && onEditField) {
+                          e.stopPropagation()
+                          handleInlineEdit(e, "ctaText")
+                        }
+                      }}
+                      className={cn(
+                        editable && blockId && onEditField && "cursor-pointer"
+                      )}
+                    >
+                      {resolvedCtaText}
+                    </span>
+                    <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" aria-hidden="true" />
+                  </>
+                )}
               </Button>
             </Editable>
 
@@ -616,13 +441,27 @@ export function HeroSection({
                 variant="outline"
                 size="lg"
                 className="group gap-2 rounded-md border-border/50 bg-transparent text-base uppercase tracking-wide text-foreground hover:bg-secondary hover:text-secondary-foreground"
-                style={{
-                  color: resolvedPlayTextColor || undefined,
-                  backgroundColor: resolvedPlayBgColor
-                    ? (playHovered && resolvedPlayHoverBgColor ? resolvedPlayHoverBgColor : resolvedPlayBgColor)
-                    : undefined,
-                  borderColor: resolvedPlayBorderColor || undefined,
-                }}
+                style={
+                  resolvedPlayTextColor ||
+                  resolvedPlayBgColor ||
+                  resolvedPlayBorderColor ||
+                  (playHovered && resolvedPlayHoverBgColor)
+                    ? {
+                        ...(resolvedPlayTextColor ? { color: resolvedPlayTextColor } : {}),
+                        ...(resolvedPlayBgColor || (playHovered && resolvedPlayHoverBgColor)
+                          ? {
+                              backgroundColor:
+                                (playHovered && resolvedPlayHoverBgColor)
+                                  ? resolvedPlayHoverBgColor
+                                  : resolvedPlayBgColor
+                            }
+                          : {}),
+                        ...(resolvedPlayBorderColor
+                          ? { borderColor: resolvedPlayBorderColor }
+                          : {}),
+                      }
+                    : undefined
+                }
                 onMouseEnter={() => setPlayHovered(true)}
                 onMouseLeave={() => setPlayHovered(false)}
                 onClick={editable && blockId && onEditField ? (e) => handleInlineEdit(e, "playText") : undefined}
@@ -846,6 +685,7 @@ export function HeroSection({
           />
         </div>
       </div>
-    </section>
+      </section>
+    </AnimatedBlock>
   )
 }

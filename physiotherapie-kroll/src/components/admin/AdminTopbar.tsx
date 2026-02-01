@@ -1,8 +1,10 @@
 "use client"
 
+import * as React from "react"
 import { useRouter } from "next/navigation"
-import { Bell, LogOut, Moon, Sun, Home } from "lucide-react"
-import { useTheme } from "next-themes"
+import { Bell, LogOut, Home } from "lucide-react"
+import type { User } from "@supabase/supabase-js"
+
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import {
@@ -13,7 +15,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import type { User } from "@supabase/supabase-js"
+import { AdminThemeToggle } from "./AdminThemeToggle"
 
 type AdminTopbarProps = {
   /**
@@ -24,8 +26,6 @@ type AdminTopbarProps = {
 }
 
 export function AdminTopbar({ user }: AdminTopbarProps) {
-  const { theme, setTheme } = useTheme()
-  const isDark = theme === "dark"
   const router = useRouter()
 
   const handleLogout = async () => {
@@ -56,19 +56,14 @@ export function AdminTopbar({ user }: AdminTopbarProps) {
           variant="outline"
           size="sm"
           onClick={() => router.push("/")}
-          className="gap-2"
+          className="gap-2 hover:text-accent"
         >
           <Home className="h-4 w-4" />
           <span>Zur Website</span>
         </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setTheme(isDark ? "light" : "dark")}
-          aria-label="Toggle theme"
-        >
-          {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-        </Button>
+
+        {/* Admin Theme Toggle - scoped to admin area only */}
+        {/* <AdminThemeToggle /> */}
 
         <Button variant="ghost" size="icon" aria-label="Notifications">
           <Bell className="h-4 w-4" />
@@ -83,6 +78,7 @@ export function AdminTopbar({ user }: AdminTopbarProps) {
               </Avatar>
             </Button>
           </DropdownMenuTrigger>
+
           <DropdownMenuContent className="w-56" align="end" forceMount>
             <DropdownMenuLabel className="font-normal">
               <div className="flex flex-col space-y-1">
@@ -94,7 +90,9 @@ export function AdminTopbar({ user }: AdminTopbarProps) {
                 </p>
               </div>
             </DropdownMenuLabel>
+
             <DropdownMenuSeparator />
+
             <DropdownMenuItem onClick={handleLogout}>
               <LogOut className="mr-2 h-4 w-4" />
               <span>Abmelden</span>

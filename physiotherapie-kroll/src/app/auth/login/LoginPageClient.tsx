@@ -35,6 +35,7 @@ export function LoginPageClient() {
     setError(null);
 
     try {
+      // Nutze den neuen Browser-Client auf Basis von @supabase/ssr
       const supabase = createSupabaseBrowserClient();
       const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email,

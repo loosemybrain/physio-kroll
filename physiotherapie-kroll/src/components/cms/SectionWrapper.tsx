@@ -4,6 +4,7 @@ import * as React from "react"
 import type { BlockSectionProps, SectionBackground, SectionLayout } from "@/types/cms"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
+import { useResponsiveParallax } from "@/lib/parallax/useResponsiveParallax"
 
 const mediaUrlCache = new Map<string, string | null>()
 
@@ -53,10 +54,24 @@ function useMediaUrl(mediaId: string | null | undefined) {
     ;(async () => {
       try {
         const supabase = getSupabaseBrowserClient()
-        const { data, error } = await supabase.from("media").select("url").eq("id", mediaId).single()
-        const nextUrl = !error && data?.url ? String(data.url) : null
-        mediaUrlCache.set(mediaId, nextUrl)
-        if (!cancelled) setUrl(nextUrl)
+        // Query media_assets (nicht "media") um object_key zu bekommen
+        const { data, error } = await supabase
+          .from("media_assets")
+          .select("object_key")
+          .eq("id", mediaId)
+          .single()
+
+        if (error || !data?.object_key) {
+          mediaUrlCache.set(mediaId, null)
+          if (!cancelled) setUrl(null)
+          return
+        }
+
+        // Generiere Public URL aus object_key
+        const { data: urlData } = supabase.storage.from("media").getPublicUrl(data.object_key)
+        const publicUrl = urlData?.publicUrl ?? null
+        mediaUrlCache.set(mediaId, publicUrl)
+        if (!cancelled) setUrl(publicUrl)
       } catch {
         mediaUrlCache.set(mediaId, null)
         if (!cancelled) setUrl(null)
@@ -249,15 +264,21 @@ export function SectionWrapper(props: {
   const posterUrl = useMediaUrl(background.type === "video" ? background.video?.posterMediaId : null)
 
   const parallaxEnabled = !!background.parallax && (background.type === "image" || background.type === "video")
-  useParallax({
+  
+  // Responsive Parallax für Images
+  useResponsiveParallax({
     enabled: parallaxEnabled && background.type === "image" && !!imageUrl,
     containerRef,
     targetRef: bgLayerRef,
+    strength: background.parallaxStrength,
   })
-  useParallax({
+  
+  // Responsive Parallax für Videos (gleiche Logik)
+  useResponsiveParallax({
     enabled: parallaxEnabled && background.type === "video" && !!videoUrl,
     containerRef,
     targetRef: videoRef as unknown as React.RefObject<HTMLElement | null>,
+    strength: background.parallaxStrength,
   })
 
   const bgIsFullBleed = layout.width === "full"
@@ -288,8 +309,8 @@ export function SectionWrapper(props: {
     }
   }
 
-  // Parallax translate only on bg layer (and video element)
-  const parallaxTransform = "translate3d(0, var(--section-parallax-y, 0px), 0)"
+  // Parallax translate and scale on bg layer (and video element)
+  const parallaxTransform = "translate3d(0, var(--section-parallax-y, 0px), 0) scale(var(--section-parallax-scale, 1))"
 
   const overlay =
     background.type === "color"
@@ -312,6 +333,7 @@ export function SectionWrapper(props: {
       ref={containerRef}
       className={cn(
         "relative overflow-hidden",
+        "bg-background",
         removeTopGap ? "pt-0" : pad.pt,
         pad.pb,
         minHeightClass(layout.minHeight),
@@ -330,6 +352,7 @@ export function SectionWrapper(props: {
               background.type === "image"
                 ? `${parallaxTransform} ${(baseBgStyle.transform as string | undefined) ?? ""}`.trim()
                 : (baseBgStyle.transform as string | undefined),
+            willChange: "transform",
           }}
         />
       )}
@@ -341,7 +364,8 @@ export function SectionWrapper(props: {
           className={cn(bgFrameClass, "h-full object-cover")}
           style={{
             ...bgFrameStyle,
-            transform: `${parallaxTransform} scale(1.02)`,
+            transform: `${parallaxTransform}`,
+            willChange: "transform",
           }}
           src={videoUrl}
           autoPlay

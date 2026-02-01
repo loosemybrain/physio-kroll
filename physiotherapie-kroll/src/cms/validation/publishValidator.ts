@@ -372,6 +372,58 @@ function validateBlock(block: CMSBlock): PublishIssue[] {
         break
       }
 
+      case "contactForm": {
+        const props = block.props as Record<string, unknown>
+        
+        // Validate heading
+        const heading = (asString(props.heading) ?? "").trim()
+        if (heading.length < 3) {
+          issues.push({
+            blockId: block.id,
+            blockType: block.type,
+            fieldPath: "heading",
+            message: "Überschrift muss mindestens 3 Zeichen lang sein",
+          })
+        }
+
+        // Validate submitLabel
+        const submitLabel = (asString(props.submitLabel) ?? "").trim()
+        if (submitLabel.length < 2) {
+          issues.push({
+            blockId: block.id,
+            blockType: block.type,
+            fieldPath: "submitLabel",
+            message: "Button-Text muss mindestens 2 Zeichen lang sein",
+          })
+        }
+
+        // Validate fields array
+        const fields = Array.isArray(props.fields) ? props.fields : []
+        if (fields.length === 0) {
+          issues.push({
+            blockId: block.id,
+            blockType: block.type,
+            fieldPath: "fields",
+            message: "Mindestens ein Formularfeld erforderlich",
+          })
+        }
+
+        // Validate requireConsent and consentLabel
+        const requireConsent = props.requireConsent === true
+        if (requireConsent) {
+          const consentLabel = (asString(props.consentLabel) ?? "").trim()
+          if (consentLabel.length === 0) {
+            issues.push({
+              blockId: block.id,
+              blockType: block.type,
+              fieldPath: "consentLabel",
+              message: "Zustimmungs-Text erforderlich, wenn Zustimmung erforderlich ist",
+            })
+          }
+        }
+        break
+      }
+
       // Other block types (imageText, featureGrid, cta) - no validation for MVP
       default:
         break

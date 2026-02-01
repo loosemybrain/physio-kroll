@@ -40,6 +40,8 @@ import {
 import { Save, RotateCcw, Search, MoreVertical, Copy, Trash2, Edit, Check, Loader2, Plus } from "lucide-react"
 import type { ThemePreset } from "@/lib/supabase/themePresets"
 import { ALLOWED_THEME_TOKENS, filterThemeTokens } from "@/lib/theme/themePresetTokens"
+import { useRouter } from "next/navigation"
+
 
 type BrandState = {
   presets: ThemePreset[]
@@ -129,6 +131,7 @@ function applyPreviewTokens(el: HTMLElement, tokens: unknown) {
 export function ThemePresetSettings({ initial }: ThemePresetSettingsProps) {
   const { toast } = useToast()
   const [activeBrand, setActiveBrand] = React.useState<BrandKey>("physiotherapy")
+  const router = useRouter()
 
   // Ensure initial has valid structure
   const safeInitial: Record<BrandKey, BrandState> = {
@@ -284,7 +287,7 @@ export function ThemePresetSettings({ initial }: ThemePresetSettingsProps) {
 
       // Reload from DB to confirm (prevents ghost states)
       await reloadBrand(activeBrand)
-
+      router.refresh()
       toast({
         title: "Preset aktiviert",
         description: `Aktives Preset für ${activeBrand === "physio-konzept" ? "Physio‑Konzept" : "Physiotherapie"} aktualisiert.`,

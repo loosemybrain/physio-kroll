@@ -1,13 +1,11 @@
-"use client";
+"use client"
 
-import * as React from "react";
-import { uploadMedia, listMedia, deleteMedia, type MediaRow } from "@/lib/cms/mediaStore";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, Trash2 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import * as React from "react"
+import type { BrandKey } from "@/components/brand/brandAssets"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,212 +15,702 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+} from "@/components/ui/alert-dialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
+  Folder,
+  FolderPlus,
+  MoreVertical,
+  Trash2,
+  Edit,
+  Upload,
+  Move,
+  Search,
+  Loader2,
+  AlertCircle,
+} from "lucide-react"
+import { cn } from "@/lib/utils"
+import { useToast } from "@/hooks/use-toast"
+import type { MediaFolder, MediaAsset } from "@/lib/supabase/mediaLibrary"
+import { createSupabaseBrowserClient } from "@/lib/supabase/client"
 
-export function MediaLibrary(props: {
-  onSelect?: (item: MediaRow) => void; // optional: wenn du Bild in Block setzen willst
-  selectMode?: boolean; // wenn true: click selects statt navigation
-}) {
-  const [items, setItems] = React.useState<MediaRow[]>([]);
-  const [loading, setLoading] = React.useState(true);
-  const [uploading, setUploading] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = React.useState("");
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = React.useState(false);
-  const [deleteTarget, setDeleteTarget] = React.useState<MediaRow | null>(null);
-  const [deleting, setDeleting] = React.useState(false);
-  const fileRef = React.useRef<HTMLInputElement | null>(null);
+type MediaLibraryProps = {
+  onSelect?: (asset: MediaAsset) => void
+  selectMode?: boolean
+}
 
-  async function refresh() {
-    setLoading(true);
-    setError(null);
+export function MediaLibrary(props: MediaLibraryProps) {
+  const { toast } = useToast()
+  const [activeBrand, setActiveBrand] = React.useState<BrandKey>("physiotherapy")
+  const [selectedFolderId, setSelectedFolderId] = React.useState<string | null>(null)
+  const [folders, setFolders] = React.useState<MediaFolder[]>([])
+  const [assets, setAssets] = React.useState<MediaAsset[]>([])
+  const [loading, setLoading] = React.useState(true)
+  const [uploading, setUploading] = React.useState(false)
+  const [error, setError] = React.useState<string | null>(null)
+  const [searchQuery, setSearchQuery] = React.useState("")
+  const [deleteAssetDialogOpen, setDeleteAssetDialogOpen] = React.useState<string | null>(null)
+  const [deleteFolderDialogOpen, setDeleteFolderDialogOpen] = React.useState<string | null>(null)
+  const [createFolderDialogOpen, setCreateFolderDialogOpen] = React.useState(false)
+  const [renameFolderDialogOpen, setRenameFolderDialogOpen] = React.useState<string | null>(null)
+  const [moveAssetDialogOpen, setMoveAssetDialogOpen] = React.useState<string | null>(null)
+  const [moveTargetFolderId, setMoveTargetFolderId] = React.useState<string | "none">("none")
+  const [newFolderName, setNewFolderName] = React.useState("")
+  const [renameFolderName, setRenameFolderName] = React.useState("")
+  const [actionLoading, setActionLoading] = React.useState<string | null>(null)
+  const fileRef = React.useRef<HTMLInputElement | null>(null)
+
+  const loadFolders = React.useCallback(async (brand: BrandKey) => {
     try {
-      const data = await listMedia();
-      setItems(data);
+      const res = await fetch(`/api/admin/media/folders?brand=${encodeURIComponent(brand)}`, {
+        cache: "no-store",
+        credentials: "include",
+      })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(body?.error || "Folders konnten nicht geladen werden")
+      setFolders((body?.folders ?? []) as MediaFolder[])
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Fehler beim Laden der Medien");
-    } finally {
-      setLoading(false);
+      console.error("[MediaLibrary] Failed to load folders:", e)
     }
-  }
+  }, [])
+
+  const loadAssets = React.useCallback(async (brand: BrandKey, folderId: string | null) => {
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await fetch(
+        `/api/admin/media/assets?brand=${encodeURIComponent(brand)}&folderId=${folderId || "null"}`,
+        {
+          cache: "no-store",
+          credentials: "include",
+        }
+      )
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(body?.error || "Assets konnten nicht geladen werden")
+      setAssets((body?.assets ?? []) as MediaAsset[])
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Fehler beim Laden"
+      setError(msg)
+      toast({ title: "Fehler", description: msg, variant: "destructive" })
+    } finally {
+      setLoading(false)
+    }
+  }, [toast])
 
   React.useEffect(() => {
-    refresh();
-  }, []);
+    loadFolders(activeBrand)
+  }, [activeBrand, loadFolders])
 
-  async function onUploadClick() {
-    fileRef.current?.click();
-  }
+  React.useEffect(() => {
+    loadAssets(activeBrand, selectedFolderId)
+  }, [activeBrand, selectedFolderId, loadAssets])
 
-  async function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setUploading(true);
-    setError(null);
-    try {
-      await uploadMedia({ file });
-      await refresh();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Fehler beim Hochladen");
-    } finally {
-      setUploading(false);
-      e.target.value = "";
+  const handleCreateFolder = React.useCallback(async () => {
+    if (!newFolderName.trim()) {
+      toast({ title: "Fehler", description: "Ordnername darf nicht leer sein.", variant: "destructive" })
+      return
     }
-  }
 
-  const filteredItems = React.useMemo(() => {
-    if (!searchQuery.trim()) return items;
-    const query = searchQuery.toLowerCase();
-    return items.filter((item) =>
-      item.filename.toLowerCase().includes(query)
-    );
-  }, [items, searchQuery]);
-
-  const handleDeleteClick = (item: MediaRow, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setDeleteTarget(item);
-    setDeleteConfirmOpen(true);
-  };
-
-  const handleDeleteConfirm = async () => {
-    if (!deleteTarget) return;
-
-    setDeleting(true);
-    setError(null);
+    setActionLoading("create-folder")
+    setError(null)
     try {
-      await deleteMedia(deleteTarget.id, deleteTarget.path);
-      await refresh();
-      setDeleteConfirmOpen(false);
-      setDeleteTarget(null);
+      const res = await fetch("/api/admin/media/folders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          brand: activeBrand,
+          name: newFolderName.trim(),
+          parentId: selectedFolderId,
+        }),
+        credentials: "include",
+      })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(body?.error || "Konnte nicht erstellen")
+
+      await loadFolders(activeBrand)
+      setCreateFolderDialogOpen(false)
+      setNewFolderName("")
+      toast({ title: "Ordner erstellt", description: "Der Ordner wurde erfolgreich erstellt." })
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Fehler beim Löschen");
+      const msg = e instanceof Error ? e.message : "Unbekannter Fehler"
+      setError(msg)
+      toast({ title: "Fehler", description: msg, variant: "destructive" })
     } finally {
-      setDeleting(false);
+      setActionLoading(null)
     }
-  };
+  }, [activeBrand, selectedFolderId, newFolderName, loadFolders, toast])
+
+  const handleRenameFolder = React.useCallback(
+    async (folderId: string) => {
+      if (!renameFolderName.trim()) {
+        toast({ title: "Fehler", description: "Ordnername darf nicht leer sein.", variant: "destructive" })
+        return
+      }
+
+      setActionLoading(folderId)
+      setError(null)
+      try {
+        const res = await fetch("/api/admin/media/folders", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: folderId, name: renameFolderName.trim() }),
+          credentials: "include",
+        })
+        const body = await res.json().catch(() => ({}))
+        if (!res.ok) throw new Error(body?.error || "Konnte nicht umbenennen")
+
+        await loadFolders(activeBrand)
+        setRenameFolderDialogOpen(null)
+        setRenameFolderName("")
+        toast({ title: "Ordner umbenannt", description: "Der Ordner wurde erfolgreich umbenannt." })
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : "Unbekannter Fehler"
+        setError(msg)
+        toast({ title: "Fehler", description: msg, variant: "destructive" })
+      } finally {
+        setActionLoading(null)
+      }
+    },
+    [activeBrand, renameFolderName, loadFolders, toast]
+  )
+
+  const handleDeleteFolder = React.useCallback(
+    async (folderId: string) => {
+      setActionLoading(folderId)
+      setError(null)
+      try {
+        const res = await fetch(`/api/admin/media/folders?id=${encodeURIComponent(folderId)}`, {
+          method: "DELETE",
+          credentials: "include",
+        })
+        const body = await res.json().catch(() => ({}))
+        if (!res.ok) throw new Error(body?.error || "Konnte nicht löschen")
+
+        await loadFolders(activeBrand)
+        if (selectedFolderId === folderId) {
+          setSelectedFolderId(null)
+        }
+        setDeleteFolderDialogOpen(null)
+        toast({ title: "Ordner gelöscht", description: "Der Ordner wurde erfolgreich gelöscht." })
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : "Unbekannter Fehler"
+        setError(msg)
+        toast({ title: "Fehler", description: msg, variant: "destructive" })
+      } finally {
+        setActionLoading(null)
+      }
+    },
+    [activeBrand, selectedFolderId, loadFolders, toast]
+  )
+
+  const handleUpload = React.useCallback(
+    async (file: File) => {
+      setUploading(true)
+      setError(null)
+      try {
+        const formData = new FormData()
+        formData.append("file", file)
+        formData.append("brand", activeBrand)
+        if (selectedFolderId) {
+          formData.append("folderId", selectedFolderId)
+        }
+
+        const res = await fetch("/api/admin/media/upload", {
+          method: "POST",
+          body: formData,
+          credentials: "include",
+        })
+        const body = await res.json().catch(() => ({}))
+        if (!res.ok) throw new Error(body?.error || "Konnte nicht hochladen")
+
+        await loadAssets(activeBrand, selectedFolderId)
+        toast({ title: "Datei hochgeladen", description: "Die Datei wurde erfolgreich hochgeladen." })
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : "Unbekannter Fehler"
+        setError(msg)
+        toast({ title: "Fehler", description: msg, variant: "destructive" })
+      } finally {
+        setUploading(false)
+      }
+    },
+    [activeBrand, selectedFolderId, loadAssets, toast]
+  )
+
+  const handleMoveAsset = React.useCallback(
+    async (assetId: string, targetFolderId: string | null) => {
+      setActionLoading(assetId)
+      setError(null)
+      try {
+        const res = await fetch("/api/admin/media/assets", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: assetId, folderId: targetFolderId }),
+          credentials: "include",
+        })
+        const body = await res.json().catch(() => ({}))
+        if (!res.ok) throw new Error(body?.error || "Konnte nicht verschieben")
+
+        await loadAssets(activeBrand, selectedFolderId)
+        setMoveAssetDialogOpen(null)
+        toast({ title: "Datei verschoben", description: "Die Datei wurde erfolgreich verschoben." })
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : "Unbekannter Fehler"
+        setError(msg)
+        toast({ title: "Fehler", description: msg, variant: "destructive" })
+      } finally {
+        setActionLoading(null)
+      }
+    },
+    [activeBrand, selectedFolderId, loadAssets, toast]
+  )
+
+  const handleDeleteAsset = React.useCallback(
+    async (assetId: string) => {
+      setActionLoading(assetId)
+      setError(null)
+      try {
+        const res = await fetch(`/api/admin/media/assets?id=${encodeURIComponent(assetId)}`, {
+          method: "DELETE",
+          credentials: "include",
+        })
+        const body = await res.json().catch(() => ({}))
+        if (!res.ok) throw new Error(body?.error || "Konnte nicht löschen")
+
+        await loadAssets(activeBrand, selectedFolderId)
+        setDeleteAssetDialogOpen(null)
+        toast({ title: "Datei gelöscht", description: "Die Datei wurde erfolgreich gelöscht." })
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : "Unbekannter Fehler"
+        setError(msg)
+        toast({ title: "Fehler", description: msg, variant: "destructive" })
+      } finally {
+        setActionLoading(null)
+      }
+    },
+    [activeBrand, selectedFolderId, loadAssets, toast]
+  )
+
+  const rootFolders = folders.filter((f) => f.parent_id === null)
+  const getPublicUrl = React.useCallback((objectKey: string) => {
+    const supabase = createSupabaseBrowserClient()
+    const { data } = supabase.storage.from("media").getPublicUrl(objectKey)
+    return data.publicUrl
+  }, [])
+
+  const filteredAssets = React.useMemo(() => {
+    if (!searchQuery.trim()) return assets
+    const query = searchQuery.toLowerCase()
+    return assets.filter((a) => a.filename.toLowerCase().includes(query))
+  }, [assets, searchQuery])
+
+  const selectedFolder = folders.find((f) => f.id === selectedFolderId)
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between gap-2">
-        <CardTitle>{props.selectMode ? "Medium wählen" : "Medien"}</CardTitle>
-        <div className="flex items-center gap-2">
-          {!props.selectMode && (
-            <>
-              <Input
-                ref={fileRef}
-                type="file"
-                accept="image/*,video/*"
-                onChange={onFileChange}
-                className="hidden"
-              />
-              <Button onClick={onUploadClick} disabled={uploading}>
-                {uploading ? "Lade hoch…" : "Upload"}
-              </Button>
-              <Button variant="outline" onClick={refresh} disabled={loading || uploading}>
-                Refresh
-              </Button>
-            </>
-          )}
+    <div className="flex h-[calc(100vh-12rem)] gap-4">
+      {/* Left Sidebar: Folders */}
+      <div className="w-64 shrink-0 border-r border-border bg-card p-4 flex flex-col">
+        <div className="mb-4 flex items-center justify-between gap-2">
+          <h2 className="text-sm font-semibold text-foreground">Ordner</h2>
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="h-7 w-7"
+            onClick={() => {
+              setNewFolderName("")
+              setCreateFolderDialogOpen(true)
+            }}
+            title="Neuer Ordner"
+          >
+            <FolderPlus className="h-4 w-4" />
+          </Button>
         </div>
-      </CardHeader>
 
-      <CardContent className="space-y-4">
+        <div className="flex-1 overflow-y-auto space-y-1">
+          <button
+            type="button"
+            onClick={() => setSelectedFolderId(null)}
+            className={cn(
+              "w-full text-left px-2 py-1.5 rounded-md text-sm transition-colors",
+              selectedFolderId === null
+                ? "bg-primary text-primary-foreground"
+                : "hover:bg-muted text-foreground"
+            )}
+          >
+            Alle Dateien
+          </button>
+          {rootFolders.map((folder) => (
+            <div
+              key={folder.id}
+              role="button"
+              tabIndex={0}
+              onClick={() => setSelectedFolderId(folder.id)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault()
+                  setSelectedFolderId(folder.id)
+                }
+              }}
+              className={cn(
+                "w-full text-left px-2 py-1.5 rounded-md text-sm transition-colors flex items-center gap-2 group",
+                selectedFolderId === folder.id
+                  ? "bg-primary text-primary-foreground"
+                  : "hover:bg-muted text-foreground"
+              )}
+            >
+              <Folder className="h-4 w-4 shrink-0" />
+              <span className="flex-1 truncate">{folder.name}</span>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 opacity-0 group-hover:opacity-100 shrink-0"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <MoreVertical className="h-3 w-3" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      const f = folders.find((f) => f.id === folder.id)
+                      if (f) {
+                        setRenameFolderName(f.name)
+                        setRenameFolderDialogOpen(f.id)
+                      }
+                    }}
+                  >
+                    <Edit className="mr-2 h-4 w-4" />
+                    Umbenennen
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setDeleteFolderDialogOpen(folder.id)
+                    }}
+                    className="text-destructive focus:text-destructive"
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Löschen
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Main Panel: Assets */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Brand Switcher + Search + Upload */}
+        <div className="mb-4 flex items-center justify-between gap-4">
+          <Tabs value={activeBrand} onValueChange={(v) => setActiveBrand(v as BrandKey)}>
+            <TabsList>
+              <TabsTrigger value="physiotherapy">Physiotherapie</TabsTrigger>
+              <TabsTrigger value="physio-konzept">Physio‑Konzept</TabsTrigger>
+            </TabsList>
+          </Tabs>
+
+          <div className="flex items-center gap-2 flex-1 max-w-md">
+            <div className="relative flex-1">
+              <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder="Dateien durchsuchen..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-8"
+              />
+            </div>
+            <Input
+              ref={fileRef}
+              type="file"
+              accept="image/*,video/*"
+              onChange={(e) => {
+                const file = e.target.files?.[0]
+                if (file) handleUpload(file)
+                e.target.value = ""
+              }}
+              className="hidden"
+            />
+            <Button onClick={() => fileRef.current?.click()} disabled={uploading}>
+              {uploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
+              Hochladen
+            </Button>
+          </div>
+        </div>
+
         {error && (
-          <Alert variant="destructive">
+          <Alert variant="destructive" className="mb-4">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
 
-        {!props.selectMode && (
-          <Input
-            type="text"
-            placeholder="Nach Dateiname suchen..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full"
-          />
-        )}
+        {/* Assets Grid */}
+        <div className="flex-1 overflow-y-auto">
+          {loading ? (
+            <div className="text-sm text-muted-foreground">Lade Dateien…</div>
+          ) : filteredAssets.length === 0 ? (
+            <div className="text-sm text-muted-foreground">
+              {searchQuery ? "Keine Ergebnisse gefunden." : selectedFolder ? `Keine Dateien in "${selectedFolder.name}".` : "Noch keine Dateien hochgeladen."}
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+              {filteredAssets.map((asset) => {
+                const url = getPublicUrl(asset.object_key)
+                const isVideo = asset.content_type?.startsWith("video/")
+                return (
+                  <div key={asset.id} className="relative group rounded-md overflow-hidden border border-border">
+                    <button
+                      type="button"
+                      onClick={() => props.onSelect?.(asset)}
+                      className="w-full text-left"
+                      title={asset.filename}
+                    >
+                      {isVideo ? (
+                        <video src={url} className="w-full h-32 object-cover" muted playsInline preload="metadata" />
+                      ) : (
+                        <img src={url} alt={asset.filename} className="w-full h-32 object-cover" loading="lazy" />
+                      )}
+                      <div className="p-2 text-xs truncate">{asset.filename}</div>
+                    </button>
+                    {!props.selectMode && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="absolute top-2 right-2 h-7 w-7 opacity-0 group-hover:opacity-100"
+                          >
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => setMoveAssetDialogOpen(asset.id)}>
+                            <Move className="mr-2 h-4 w-4" />
+                            Verschieben
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={() => setDeleteAssetDialogOpen(asset.id)}
+                            className="text-destructive focus:text-destructive"
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Löschen
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      </div>
 
-        {loading ? (
-          <div className="text-sm opacity-70">Lade Medien…</div>
-        ) : filteredItems.length === 0 ? (
-          <div className="text-sm opacity-70">
-            {searchQuery ? "Keine Ergebnisse gefunden." : "Noch keine Medien hochgeladen."}
+      {/* Create Folder Dialog */}
+      <Dialog open={createFolderDialogOpen} onOpenChange={setCreateFolderDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Neuer Ordner</DialogTitle>
+            <DialogDescription>Erstellen Sie einen neuen Ordner für {activeBrand === "physio-konzept" ? "Physio‑Konzept" : "Physiotherapie"}.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <Input
+              value={newFolderName}
+              onChange={(e) => setNewFolderName(e.target.value)}
+              placeholder="Ordnername"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleCreateFolder()
+              }}
+            />
           </div>
-        ) : (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {filteredItems.map((m) => (
-              <div
-                key={m.id}
-                className={cn(
-                  "relative group rounded-md overflow-hidden border",
-                  props.selectMode && "cursor-pointer hover:ring-2 hover:ring-primary"
-                )}
-              >
-                <button
-                  type="button"
-                  onClick={() => props.onSelect?.(m)}
-                  className="w-full text-left"
-                  title={m.filename}
-                >
-                  {m.type?.startsWith("video/") ? (
-                    <video
-                      src={m.url}
-                      className="w-full h-32 object-cover"
-                      muted
-                      playsInline
-                      preload="metadata"
-                    />
-                  ) : (
-                    <img
-                      src={m.url}
-                      alt={m.alt ?? ""}
-                      className="w-full h-32 object-cover"
-                      loading="lazy"
-                    />
-                  )}
-                  <div className="p-2 text-xs truncate">{m.filename}</div>
-                </button>
-                {!props.selectMode && (
-                  <Button
-                    variant="destructive"
-                    size="icon"
-                    className="absolute top-2 right-2 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
-                    onClick={(e) => handleDeleteClick(m, e)}
-                    title="Löschen"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </CardContent>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setCreateFolderDialogOpen(false)}>
+              Abbrechen
+            </Button>
+            <Button type="button" onClick={handleCreateFolder} disabled={!newFolderName.trim() || actionLoading === "create-folder"}>
+              {actionLoading === "create-folder" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Erstellen
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+      {/* Rename Folder Dialog */}
+      <Dialog open={renameFolderDialogOpen !== null} onOpenChange={(open) => !open && setRenameFolderDialogOpen(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Ordner umbenennen</DialogTitle>
+            <DialogDescription>Geben Sie einen neuen Namen für den Ordner ein.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <Input
+              value={renameFolderName}
+              onChange={(e) => setRenameFolderName(e.target.value)}
+              placeholder="Ordnername"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && renameFolderDialogOpen) handleRenameFolder(renameFolderDialogOpen)
+              }}
+            />
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setRenameFolderDialogOpen(null)}>
+              Abbrechen
+            </Button>
+            <Button
+              type="button"
+              onClick={() => renameFolderDialogOpen && handleRenameFolder(renameFolderDialogOpen)}
+              disabled={!renameFolderName.trim() || actionLoading === renameFolderDialogOpen}
+            >
+              {actionLoading === renameFolderDialogOpen ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Umbenennen
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Move Asset Dialog */}
+      <Dialog
+        open={moveAssetDialogOpen !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setMoveAssetDialogOpen(null)
+          } else if (moveAssetDialogOpen) {
+            // Find the asset being moved to determine its current folder
+            const asset = assets.find((a) => a.id === moveAssetDialogOpen)
+            setMoveTargetFolderId(asset?.folder_id ?? "none")
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Datei verschieben</DialogTitle>
+            <DialogDescription>Wählen Sie den Zielordner aus.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <Select
+              value={moveTargetFolderId}
+              onValueChange={(v) => {
+                setMoveTargetFolderId(v)
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Ordner wählen" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Kein Ordner</SelectItem>
+                {rootFolders.map((f) => (
+                  <SelectItem key={f.id} value={f.id}>
+                    {f.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setMoveAssetDialogOpen(null)}
+            >
+              Abbrechen
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                if (moveAssetDialogOpen) {
+                  handleMoveAsset(
+                    moveAssetDialogOpen,
+                    moveTargetFolderId === "none" ? null : moveTargetFolderId
+                  )
+                  setMoveAssetDialogOpen(null)
+                }
+              }}
+              disabled={actionLoading === moveAssetDialogOpen}
+            >
+              {actionLoading === moveAssetDialogOpen ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : null}
+              Verschieben
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Folder Dialog */}
+      <AlertDialog open={deleteFolderDialogOpen !== null} onOpenChange={(open) => !open && setDeleteFolderDialogOpen(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Medium löschen?</AlertDialogTitle>
+            <AlertDialogTitle>Ordner löschen?</AlertDialogTitle>
             <AlertDialogDescription>
-              Möchten Sie &quot;{deleteTarget?.filename}&quot; wirklich löschen?
-              Diese Aktion kann nicht rückgängig gemacht werden.
+              Möchten Sie diesen Ordner wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleting}>Abbrechen</AlertDialogCancel>
+            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
             <AlertDialogAction
-              onClick={handleDeleteConfirm}
-              disabled={deleting}
-              className="bg-destructive text-white hover:bg-destructive/90"
+              onClick={() => deleteFolderDialogOpen && handleDeleteFolder(deleteFolderDialogOpen)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={actionLoading === deleteFolderDialogOpen}
             >
-              {deleting ? "Wird gelöscht..." : "Löschen"}
+              {actionLoading === deleteFolderDialogOpen ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Löschen
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </Card>
-  );
+
+      {/* Delete Asset Dialog */}
+      <AlertDialog open={deleteAssetDialogOpen !== null} onOpenChange={(open) => !open && setDeleteAssetDialogOpen(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Datei löschen?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Möchten Sie diese Datei wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteAssetDialogOpen && handleDeleteAsset(deleteAssetDialogOpen)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={actionLoading === deleteAssetDialogOpen}
+            >
+              {actionLoading === deleteAssetDialogOpen ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Löschen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  )
 }

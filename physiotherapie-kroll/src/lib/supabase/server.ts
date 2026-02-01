@@ -2,8 +2,8 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
 /**
- * Creates a Supabase client for server-side operations with session management
- * Uses cookies for authentication state
+ * Erstellt einen Supabase-Client für SSR/App Router mit Next.js-Cookie-Integration.
+ * Auth-State wird automatisch über next/headers-cookies gemanagt.
  */
 export async function createSupabaseServerClient() {
   const cookieStore = await cookies();
@@ -18,13 +18,11 @@ export async function createSupabaseServerClient() {
         },
         setAll(cookiesToSet) {
           try {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
-            );
-          } catch {
-            // The `setAll` method was called from a Server Component.
-            // This can be ignored if you have middleware refreshing
-            // user sessions.
+            cookiesToSet.forEach(({ name, value, options }) => {
+              cookieStore.set(name, value, options);
+            });
+          } catch (e) {
+            // setAll aufgerufen aus z.B. Server Component → ignorierbar
           }
         },
       },
@@ -33,8 +31,8 @@ export async function createSupabaseServerClient() {
 }
 
 /**
- * Legacy export for backward compatibility (admin operations with service role)
- * Note: This bypasses RLS. Use createSupabaseServerClient() for user-scoped operations.
+ * Legacy-Export für Service-Role-Client (umgeht RLS!).
+ * Für Admin-Tasks – NICHT für Endnutzer-Interaktion verwenden.
  */
 export async function getSupabaseAdmin() {
   const { createClient } = await import("@supabase/supabase-js");

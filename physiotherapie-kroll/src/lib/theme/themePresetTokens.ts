@@ -43,6 +43,7 @@ export const ALLOWED_THEME_TOKENS = [
   "--sidebar-border",
   "--sidebar-ring",
   "--hero-bg",
+  "--hero-bg-subtle",
   "--hero-accent",
   "--hero-highlight",
 ] as const
@@ -87,8 +88,14 @@ export function tokensToCss(selector: string, tokens: Partial<Record<AllowedThem
   const entries = Object.entries(tokens).filter(([, v]) => typeof v === "string" && v.length > 0)
   if (entries.length === 0) return ""
 
-  // Use !important so presets override defaults even if CSS order differs.
-  const body = entries.map(([k, v]) => `${k}: ${v} !important;`).join("")
+  // Wrap HSL triplets in hsl() function. Triplets look like "210 45% 50%"
+  const body = entries.map(([k, v]) => {
+    // If value looks like "H S% L%" (HSL triplet), wrap in hsl()
+    if (/^\d+\s+\d+%\s+\d+%$/.test(v.trim())) {
+      return `${k}: hsl(${v});` // Removed !important - inline styles have higher specificity
+    }
+    return `${k}: ${v};` // Removed !important
+  }).join("")
   return `${selector}{${body}}`
 }
 

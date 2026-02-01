@@ -3,73 +3,25 @@ import { NextResponse, type NextRequest } from "next/server";
 
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
+  const brandParam = request.nextUrl.searchParams.get("brand");
 
-  // Resolve brand robustly for public pages:
-  // - Legacy: /konzept/... -> physio-konzept
-  // - Default: physiotherapy
-  // - For slug pages (/{slug}): look up pages.brand in DB (slug is globally unique)
-  let brand: "physiotherapy" | "physio-konzept" =
-    pathname === "/konzept" || pathname.startsWith("/konzept/")
-      ? "physio-konzept"
-      : "physiotherapy";
-
-  const isPublicSlugRoute =
-    brand === "physiotherapy" &&
-    pathname !== "/" &&
-    !pathname.startsWith("/admin") &&
-    !pathname.startsWith("/api") &&
-    !pathname.startsWith("/auth") &&
-    !pathname.startsWith("/preview") &&
-    pathname.split("/").filter(Boolean).length === 1;
-
-  if (isPublicSlugRoute) {
-    const slug = pathname.replace(/^\/+|\/+$/g, "");
-    try {
-      const supabasePublic = createServerClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-        {
-          cookies: {
-            getAll() {
-              return [];
-            },
-            setAll() {
-              // no-op
-            },
-          },
-        }
-      );
-
-      const { data } = await supabasePublic
-        .from("pages")
-        .select("brand")
-        .eq("slug", slug)
-        .eq("status", "published")
-        .maybeSingle();
-
-      if (process.env.NODE_ENV === "development") {
-        console.log("[middleware] brand lookup", {
-          pathname,
-          slug,
-          dbBrand: data?.brand ?? null,
-        });
-      }
-
-      if (data?.brand === "physio-konzept") {
-        brand = "physio-konzept";
-      } else if (data?.brand === "physiotherapy") {
-        brand = "physiotherapy";
-      }
-    } catch {
-      // If lookup fails, keep default brand
-      if (process.env.NODE_ENV === "development") {
-        console.log("[middleware] brand lookup failed", { pathname });
-      }
-    }
+  // Determine brand using brand param (for /preview), otherwise fallback to path rules
+  let brand: "physiotherapy" | "physio-konzept";
+  if (
+    pathname.startsWith("/preview") &&
+    (brandParam === "physiotherapy" || brandParam === "physio-konzept")
+  ) {
+    brand = brandParam;
+  } else {
+    brand =
+      pathname === "/konzept" || pathname.startsWith("/konzept/")
+        ? "physio-konzept"
+        : "physiotherapy";
   }
 
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-brand", brand);
+
   // Theme presets should only affect the public website (not the admin UI).
   // We still allow them on /preview to match website rendering.
   const themeScope =
@@ -111,16 +63,16 @@ export async function middleware(request: NextRequest) {
 
     // Refresh session to ensure it's valid
     const {
-      data: { session },
+      data: { user },
       error,
-    } = await supabase.auth.getSession();
+    } = await supabase.auth.getUser();
 
     if (error && process.env.NODE_ENV === "development") {
       // Avoid noisy production logs (which may include request context in some platforms).
       console.error("Middleware auth error:", error.message);
     }
 
-    if (!session) {
+    if (error ||!user) {
       // For API routes, return 401 instead of redirect
       if (pathname.startsWith("/api/admin")) {
         return NextResponse.json(
@@ -147,7 +99,8 @@ export const config = {
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
      * - public folder
+     * - static asset extensions (extensible)
      */
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|css|js|json|xml|txt|ico|map|woff|woff2)$).*)",
   ],
 };

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import type { BrandKey } from "@/components/brand/brandAssets"
+import { createSupabaseServerClient } from "@/lib/supabase/server"
 import { getBrandPresets, saveBrandPresets } from "@/lib/supabase/sectionPresets.server"
 
 /**
@@ -9,6 +10,12 @@ import { getBrandPresets, saveBrandPresets } from "@/lib/supabase/sectionPresets
  */
 export async function GET(request: Request) {
   try {
+    const supabase = await createSupabaseServerClient()
+    const { data: userData, error: authError } = await supabase.auth.getUser()
+    if (authError || !userData.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
     const { searchParams } = new URL(request.url)
     const brand = (searchParams.get("brand") || "physiotherapy") as BrandKey
     if (brand !== "physiotherapy" && brand !== "physio-konzept") {
@@ -31,6 +38,12 @@ export async function GET(request: Request) {
  */
 export async function POST(request: Request) {
   try {
+    const supabase = await createSupabaseServerClient()
+    const { data: userData, error: authError } = await supabase.auth.getUser()
+    if (authError || !userData.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
     const body = await request.json()
     const brand = body?.brand as BrandKey
     if (!brand || (brand !== "physiotherapy" && brand !== "physio-konzept")) {

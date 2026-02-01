@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { createSupabaseServerClient } from "@/lib/supabase/server"
 import { deleteThemePreset } from "@/lib/supabase/themePresets"
 
 /**
@@ -10,6 +11,12 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const supabase = await createSupabaseServerClient()
+    const { data: userData, error: authError } = await supabase.auth.getUser()
+    if (authError || !userData.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
     const { id } = await params
     if (!id || typeof id !== "string") {
       return NextResponse.json({ error: "Invalid preset ID" }, { status: 400 })

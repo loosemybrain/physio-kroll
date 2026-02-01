@@ -6,6 +6,7 @@ export type { ConsentCategory, ConsentState } from "./types"
 
 /**
  * Parse consent cookie from document.cookie (client-side)
+ * Handles migration from 'functional' to 'externalMedia'
  */
 export function getConsentFromDocumentCookie(): ConsentState | null {
   if (typeof document === "undefined") return null
@@ -25,6 +26,12 @@ export function getConsentFromDocumentCookie(): ConsentState | null {
 
     // Validate with Zod
     const validated = consentStateSchema.parse(parsed)
+    
+    // Migration: if externalMedia is not set, use functional or default to false
+    if (validated.externalMedia === undefined) {
+      validated.externalMedia = validated.functional ?? false
+    }
+    
     return validated
   } catch (error) {
     console.warn("Failed to parse consent cookie:", error)
@@ -98,11 +105,14 @@ export function hasConsent(consent: ConsentState | null, category: ConsentCatego
     case "necessary":
       return true // Always true
     case "functional":
-      return consent.functional
+      // Backward compat: functional falls back to externalMedia
+      return consent.functional ?? consent.externalMedia ?? false
+    case "externalMedia":
+      return consent.externalMedia ?? false
     case "analytics":
-      return consent.analytics
+      return consent.analytics ?? false
     case "marketing":
-      return consent.marketing
+      return consent.marketing ?? false
     default:
       return false
   }

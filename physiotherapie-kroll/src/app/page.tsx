@@ -6,16 +6,18 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 /**
- * Homepage route - loads CMS page with slug "home" or falls back to default
+ * Homepage route - physiotherapy only
+ * Loads CMS page with slug "home" and brand "physiotherapy"
  */
 export default async function HomePage() {
   const supabasePublic = await getSupabasePublic();
 
-  // Try to load a page with slug "home" first
+  // Load a page with slug "home" and brand "physiotherapy"
   const { data: page, error: pageErr } = await supabasePublic
     .from("pages")
     .select("id, title, slug, status")
     .eq("slug", "home")
+    .eq("brand", "physiotherapy")
     .eq("status", "published")
     .single();
 
@@ -26,6 +28,7 @@ export default async function HomePage() {
       .from("pages")
       .select("id, title, slug, status")
       .eq("slug", "")
+      .eq("brand", "physiotherapy")
       .eq("status", "published")
       .single();
     

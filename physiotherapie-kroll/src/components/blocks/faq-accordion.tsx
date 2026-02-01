@@ -78,7 +78,7 @@ export function FaqAccordion({
         )}
 
         {/* Accordion */}
-        <Accordion type="single" collapsible className="w-full">
+        <Accordion type="single" collapsible className="w-full" suppressHydrationWarning>
           {items.map((item, index) => (
             <AccordionItem key={item.id} value={item.id}>
               <AccordionTrigger

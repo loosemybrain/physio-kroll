@@ -1,0 +1,12 @@
+---
+name: mode-execution-only
+description: workflow for AI
+---
+
+execution-only
+no-agent
+no-refactor
+no-unrelated-changes
+no-explanations
+edit-only-requested-files
+stop-after-change

@@ -1,53 +1,137 @@
 "use client"
 
-import { useState } from "react"
+import * as React from "react"
+import Image from "next/image"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { ArrowRight } from "lucide-react"
-import Image from "next/image"
+import { AnimatedBlock } from "@/components/blocks/AnimatedBlock"
+import type { BlockSectionProps } from "@/types/cms"
 
 interface ImageTextBlockProps {
-  section?: unknown
+  section?: BlockSectionProps
   typography?: unknown
+
+  // Content
+  eyebrow?: string
+  headline?: string
+  content: string
+
+  // Image
   imageUrl: string
   imageAlt: string
   imagePosition?: "left" | "right"
-  headline?: string
-  content: string
+
+  // CTA (⚠️ falls eure Keys anders heißen: unten bei FIELD PATHS anpassen)
   ctaText?: string
   ctaHref?: string
+
+  // Styling
+  background?: "none" | "muted" | "gradient"
+  backgroundColor?: string
+  eyebrowColor?: string
   headlineColor?: string
   contentColor?: string
   ctaTextColor?: string
   ctaBgColor?: string
   ctaHoverBgColor?: string
   ctaBorderColor?: string
+
+  // CMS/Inline Edit Props
+  editable?: boolean
+  blockId?: string
+  onEditField?: (blockId: string, fieldPath: string, anchorRect?: DOMRect) => void
 }
 
-export function ImageTextBlock({
-  imageUrl,
-  imageAlt,
-  imagePosition = "left",
-  headline,
-  content,
-  ctaText,
-  ctaHref,
-  headlineColor,
-  contentColor,
-  ctaTextColor,
-  ctaBgColor,
-  ctaHoverBgColor,
-  ctaBorderColor,
-}: ImageTextBlockProps) {
-  const isImageLeft = imagePosition === "left"
-  const [ctaHovered, setCtaHovered] = useState(false)
+export function ImageTextBlock(props: ImageTextBlockProps) {
+  const {
+    section,
+    eyebrow,
+    headline,
+    content,
 
-  return (
-    <section className="py-16 px-4">
+    imageUrl,
+    imageAlt,
+    imagePosition = "left",
+
+    ctaText,
+    ctaHref,
+
+    background = "none",
+    backgroundColor,
+    eyebrowColor,
+    headlineColor,
+    contentColor,
+    ctaTextColor,
+    ctaBgColor,
+    ctaHoverBgColor,
+    ctaBorderColor,
+
+    editable = false,
+    blockId,
+    onEditField,
+  } = props
+
+  const canInlineEdit = Boolean(editable && blockId && onEditField)
+  const isImageLeft = imagePosition === "left"
+  const [ctaHovered, setCtaHovered] = React.useState(false)
+
+  // FIELD PATHS (nur hier anpassen, falls eure ImageText-Keys anders heißen)
+  const FP = {
+    eyebrow: "eyebrow",
+    headline: "headline",
+    content: "content",
+    ctaText: "ctaText", // <- ggf. auf "primaryCtaText" oder "buttonText" etc. ändern
+    ctaHref: "ctaHref", // <- ggf. auf "primaryCtaHref" oder "buttonHref" etc. ändern
+  } as const
+
+  function handleInlineEdit(e: React.SyntheticEvent, fieldPath: string) {
+    if (!canInlineEdit || !blockId || !onEditField) return
+
+    e.preventDefault()
+    e.stopPropagation()
+
+    const el = e.currentTarget as HTMLElement | null
+    const rect = el?.getBoundingClientRect?.()
+    onEditField(blockId, fieldPath, rect)
+  }
+
+  const bgClass =
+    background === "muted"
+      ? "bg-muted/30"
+      : background === "gradient"
+        ? "bg-gradient-to-b from-muted/20 to-background"
+        : ""
+
+  const sectionStyle: React.CSSProperties | undefined = backgroundColor
+    ? { backgroundColor }
+    : undefined
+
+  const ctaStyle: React.CSSProperties = {
+    color: ctaTextColor || undefined,
+    backgroundColor: ctaBgColor
+      ? ctaHovered && ctaHoverBgColor
+        ? ctaHoverBgColor
+        : ctaBgColor
+      : undefined,
+    borderColor: ctaBorderColor || undefined,
+  }
+
+  const dataBlockId = editable ? (blockId ?? undefined) : undefined
+  const dataEditable = editable ? "true" : undefined
+  
+    return (
+      <AnimatedBlock config={section?.animation}>
+        <section
+        className={cn("py-16 px-4", bgClass)}
+        style={sectionStyle}
+        data-block-id={dataBlockId}
+        data-editable={dataEditable}
+      >
       <div className="container mx-auto">
         <div
           className={cn(
-            "flex flex-col gap-8 items-center",
+            "flex flex-col gap-10 items-center",
             "lg:flex-row lg:gap-12",
             !isImageLeft && "lg:flex-row-reverse"
           )}
@@ -61,58 +145,104 @@ export function ImageTextBlock({
                 fill
                 className="object-cover"
                 sizes="(max-width: 768px) 100vw, 50vw"
+                priority={false}
               />
             </div>
           </div>
 
-          {/* Content */}
+          {/* Text */}
           <div className="flex-1 flex flex-col gap-6">
+            {eyebrow && (
+              <div
+                className={cn(
+                  "text-sm font-medium tracking-wide uppercase text-muted-foreground",
+                  canInlineEdit && "cursor-pointer"
+                )}
+                style={eyebrowColor ? ({ color: eyebrowColor } as React.CSSProperties) : undefined}
+                onClick={canInlineEdit ? (e) => handleInlineEdit(e, FP.eyebrow) : undefined}
+              >
+                {eyebrow}
+              </div>
+            )}
+
             {headline && (
               <h2
-                className="text-3xl font-bold tracking-tight text-foreground md:text-4xl"
+                className={cn(
+                  "text-3xl font-bold tracking-tight text-foreground md:text-4xl",
+                  canInlineEdit && "cursor-pointer"
+                )}
                 style={headlineColor ? ({ color: headlineColor } as React.CSSProperties) : undefined}
+                onClick={canInlineEdit ? (e) => handleInlineEdit(e, FP.headline) : undefined}
               >
                 {headline}
               </h2>
             )}
+
+            {/* Content clickable wrapper (wichtig für Live Preview Selection) */}
             <div
-              className="prose prose-neutral dark:prose-invert max-w-none text-muted-foreground"
-              style={
-                contentColor
-                  ? ({
-                      ["--tw-prose-body" as unknown as string]: contentColor,
-                      color: contentColor,
-                    } as React.CSSProperties)
-                  : undefined
-              }
-              dangerouslySetInnerHTML={{ __html: content }}
-            />
-            {ctaText && ctaHref && (
-              <div>
-                <Button
-                  asChild
-                  size="lg"
-                  className="gap-2"
-                  style={{
-                    color: ctaTextColor || undefined,
-                    backgroundColor: ctaBgColor
-                      ? (ctaHovered && ctaHoverBgColor ? ctaHoverBgColor : ctaBgColor)
-                      : undefined,
-                    borderColor: ctaBorderColor || undefined,
-                  }}
-                  onMouseEnter={() => setCtaHovered(true)}
-                  onMouseLeave={() => setCtaHovered(false)}
-                >
-                  <a href={ctaHref}>
-                    {ctaText}
+              className={cn(canInlineEdit && "cursor-pointer")}
+              onClick={canInlineEdit ? (e) => handleInlineEdit(e, FP.content) : undefined}
+            >
+              <div
+                className="prose prose-neutral dark:prose-invert max-w-none text-muted-foreground"
+                style={contentColor ? ({ color: contentColor } as React.CSSProperties) : undefined}
+                dangerouslySetInnerHTML={{ __html: content }}
+              />
+            </div>
+
+            {/* CTA */}
+            {(ctaText || canInlineEdit) && (
+              <div className="flex items-center gap-3">
+                {/* Admin Preview: Button darf nicht navigieren, sondern Inline-Edit öffnen */}
+                {canInlineEdit ? (
+                  <Button
+                    type="button"
+                    size="lg"
+                    className="gap-2"
+                    style={ctaStyle}
+                    onMouseEnter={() => setCtaHovered(true)}
+                    onMouseLeave={() => setCtaHovered(false)}
+                    onClick={(e) => handleInlineEdit(e, FP.ctaText)}
+                  >
+                    {ctaText || "CTA"}
                     <ArrowRight className="h-4 w-4" />
-                  </a>
-                </Button>
+                  </Button>
+                ) : (
+                  // Public: normales Link-Verhalten
+                  ctaText &&
+                  ctaHref && (
+                    <Button
+                      asChild
+                      size="lg"
+                      className="gap-2"
+                      style={ctaStyle}
+                      onMouseEnter={() => setCtaHovered(true)}
+                      onMouseLeave={() => setCtaHovered(false)}
+                    >
+                      <a href={ctaHref}>
+                        {ctaText}
+                        <ArrowRight className="h-4 w-4" />
+                      </a>
+                    </Button>
+                  )
+                )}
+
+                {/* Optional: Link separat editierbar machen (nur Preview) */}
+                {canInlineEdit && (
+                  <button
+                    type="button"
+                    className="text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground"
+                    onClick={(e) => handleInlineEdit(e, FP.ctaHref)}
+                  >
+                    Link bearbeiten
+                  </button>
+                )}
               </div>
             )}
           </div>
         </div>
       </div>
-    </section>
-  )
-}
+      </section>
+      </AnimatedBlock>
+    )
+  }

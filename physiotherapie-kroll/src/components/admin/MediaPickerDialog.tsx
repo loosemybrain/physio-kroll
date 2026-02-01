@@ -9,7 +9,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { MediaLibrary } from "./MediaLibrary";
-import type { MediaRow } from "@/lib/cms/mediaStore";
+import type { MediaAsset } from "@/lib/supabase/mediaLibrary";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 interface MediaPickerDialogProps {
   open: boolean;
@@ -22,8 +23,10 @@ export function MediaPickerDialog({
   onOpenChange,
   onPick,
 }: MediaPickerDialogProps) {
-  const handleSelect = (item: MediaRow) => {
-    onPick(item.url, item.id);
+  const handleSelect = (asset: MediaAsset) => {
+    const supabase = createSupabaseBrowserClient();
+    const { data } = supabase.storage.from(asset.bucket).getPublicUrl(asset.object_key);
+    onPick(data.publicUrl, asset.id);
     onOpenChange(false);
   };
 
@@ -42,7 +45,7 @@ export function MediaPickerDialog({
             Wählen Sie ein Medium (Bild/Video) aus Ihrer Mediensammlung aus.
           </DialogDescription>
         </DialogHeader>
-        <MediaLibrary onSelect={handleSelect} selectMode />
+        <MediaLibrary onSelect={handleSelect} />
       </DialogContent>
     </Dialog>
   );

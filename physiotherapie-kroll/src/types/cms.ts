@@ -1,4 +1,34 @@
 import type { BrandKey } from "@/components/brand/brandAssets"
+import type { BlockAnimationConfig } from "@/lib/animations/types"
+
+/**
+ * Shadow configuration for elements (global system)
+ */
+export interface ElementShadow {
+  enabled?: boolean
+  preset?: "none" | "xs" | "sm" | "md" | "lg" | "xl" | "glow" | "custom"
+  inset?: boolean
+  x?: number
+  y?: number
+  blur?: number
+  spread?: number
+  color?: string
+  opacity?: number
+}
+
+/**
+ * Style overrides for individual elements within blocks
+ */
+export interface ElementStyle {
+  shadow?: ElementShadow
+}
+
+/**
+ * Per-element configuration (keyed by elementId)
+ */
+export interface ElementConfig {
+  style?: ElementStyle
+}
 
 /**
  * Base block interface that all CMS blocks must extend
@@ -18,6 +48,7 @@ export type BlockType =
   | "featureGrid"
   | "cta"
   | "section"
+  | "testimonialSlider"
   | "servicesGrid"
   | "faq"
   | "team"
@@ -26,6 +57,15 @@ export type BlockType =
   | "gallery"
   | "openingHours"
   | "imageSlider"
+  | "testimonialSlider"
+
+/**
+ * Common props shape for all blocks with element styling support
+ */
+export interface CommonBlockProps {
+  /** Global element styles (keyed by elementId from data-element-id) */
+  elements?: Record<string, ElementConfig>
+}
 
 export type BackgroundType = "none" | "color" | "gradient" | "image" | "video"
 export type GradientKind = "linear" | "radial" | "conic"
@@ -58,6 +98,11 @@ export type BackgroundSettings = {
    * Renderer should gracefully ignore for unsupported types.
    */
   parallax?: boolean
+  /**
+   * Parallax strength multiplier (0.5 to 2.0, default 1.0).
+   * Scales the factor in useResponsiveParallax.
+   */
+  parallaxStrength?: number
 
   color?: {
     value: string
@@ -98,6 +143,7 @@ export type SectionLayout = {
 export type BlockSectionProps = {
   layout: SectionLayout
   background: SectionBackground
+  animation?: BlockAnimationConfig // Neu: Animation Config
 }
 
 /**
@@ -178,6 +224,8 @@ export interface HeroBlock extends BaseBlock {
     floatingTitle?: string
     floatingValue?: string
     floatingLabel?: string
+    // Hero background color override (for theme presets or manual override)
+    heroBgColor?: string
     // New brand-specific content structure
     brandContent?: {
       physiotherapy?: HeroBrandContent
@@ -442,7 +490,7 @@ export interface ContactFormBlock extends BaseBlock {
     requireConsent: boolean
     consentLabel?: string
     consentRequiredText?: string
-    layout?: "stack" | "split"
+    layout?: "stack" | "stacked" | "split"
     headingColor?: string
     textColor?: string
     labelColor?: string
@@ -486,6 +534,30 @@ export interface TestimonialsBlock extends BaseBlock {
       rating?: 1 | 2 | 3 | 4 | 5
     }>
     columns?: 1 | 2 | 3
+    background?: "none" | "muted" | "gradient"
+  }
+}
+
+/**
+ * Testimonial Slider block configuration
+ */
+export interface TestimonialSliderBlock extends BaseBlock {
+  type: "testimonialSlider"
+  props: {
+    section?: BlockSectionProps
+    headline?: string
+    subheadline?: string
+    items: Array<{
+      id: string
+      quote: string
+      name: string
+      role?: string
+      image?: string
+    }>
+    autoplay?: boolean
+    interval?: number
+    showArrows?: boolean
+    showDots?: boolean
     background?: "none" | "muted" | "gradient"
   }
 }
@@ -597,6 +669,7 @@ export type CMSBlock =
   | TeamBlock
   | ContactFormBlock
   | TestimonialsBlock
+  | TestimonialSliderBlock
   | GalleryBlock
   | OpeningHoursBlock
   | ImageSliderBlock

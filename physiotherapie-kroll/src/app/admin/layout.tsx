@@ -1,7 +1,10 @@
 import type React from "react"
 import type { Metadata } from "next"
+import { redirect } from "next/navigation"
 import { AdminLayout } from "@/components/admin/AdminLayout"
+import { AdminRootProvider } from "@/components/admin/AdminRootProvider"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
+import "@/styles/admin-theme.css"
 
 export const metadata: Metadata = {
   title: "Physio Kroll - Admin",
@@ -11,10 +14,16 @@ export const metadata: Metadata = {
 
 export default async function Layout({ children }: { children: React.ReactNode }) {
   const supabase = await createSupabaseServerClient()
-  const { data } = await supabase.auth.getUser()
+  const { data: userData } = await supabase.auth.getUser()
 
-  return <AdminLayout user={data.user ?? null}>{children}</AdminLayout>
+  if (!userData.user) {
+    redirect("/auth/login?next=" + encodeURIComponent("/admin/pages"))
+  }
+
+  return (
+    <AdminRootProvider>
+      <AdminLayout user={userData.user}>{children}</AdminLayout>
+    </AdminRootProvider>
+  )
 }
-
-
 

@@ -8,10 +8,13 @@ import { HeaderWrapper } from "@/components/navigation/HeaderWrapper"
 import { FooterWrapper } from "@/components/layout/FooterWrapper"
 import { CookieProvider } from "@/components/consent/CookieProvider"
 import { CookieBanner } from "@/components/consent/CookieBanner"
+import { CookieFloatingButton } from "@/components/consent/CookieFloatingButton"
 import { CookieSettingsDialog } from "@/components/consent/CookieSettingsDialog"
 import { getThemePresetInlineVars } from "@/lib/theme/themePresetCss.server"
 import type { BrandKey } from "@/components/brand/brandAssets"
 import { headers } from "next/headers"
+import CustomCursor from "@/components/ui/customCursor"
+
 import "../styles/globals.css";
 
 export const dynamic = "force-dynamic";
@@ -64,31 +67,18 @@ export default async function RootLayout({
       style={htmlStyle}
     >
       <head>
-        {/* Set brand class immediately to prevent hydration mismatch */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              (function() {
-                var pathname = window.location.pathname;
-                var root = document.documentElement;
-                // Prefer SSR-provided brand (middleware -> x-brand -> data-brand on <html>)
-                var brand = root.dataset.brand || (
-                  pathname === "/konzept" || pathname.startsWith("/konzept/") 
-                    ? "physio-konzept" 
-                    : "physiotherapy"
-                );
-                // Remove dark mode class to ensure light theme
-                root.classList.remove("dark");
-                // Apply brand class for token-based theming (e.g. .physio-konzept { --background: ... })
-                root.classList.toggle("physio-konzept", brand === "physio-konzept");
-                root.dataset.brand = brand;
-              })();
-            `,
-          }}
-        />
+        {/* 
+          Head-Script für brand-Klasse entfernt.
+          Warum: Segment layouts (/konzept/layout.tsx) setzen brand jetzt serverseitig.
+          Client-Navigation triggert Segment-Re-Render, wodurch brand konsistent bleibt.
+        */}
       </head>
       <body className="antialiased" suppressHydrationWarning>
-        <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
+        {/* 
+          ThemeProvider: Entfernt defaultTheme="light" um Physio-Konzept Presets nicht zu überschreiben.
+          Segment layouts (/konzept) setzen korrekte Theme via data-brand/klasse.
+        */}
+        <ThemeProvider attribute="class" enableSystem={false} storageKey="pk-theme">
           <CookieProvider>
             <BrandShell>
               <BrandProvider>
@@ -99,10 +89,13 @@ export default async function RootLayout({
               </BrandProvider>
             </BrandShell>
             <CookieBanner />
+            <CookieFloatingButton />
             <CookieSettingsDialog />
             <Toaster />
           </CookieProvider>
         </ThemeProvider>
+        {themeScope === "public" ? <CustomCursor /> : null}
+
       </body>
     </html>
   )

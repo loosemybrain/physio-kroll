@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-@custom-variant dark (&:is(.dark *));
+/* @custom-variant dark (&:is(.dark *));  */
 
 /* Local Fonts - GDPR compliant (no external requests) */
 @font-face {
@@ -36,9 +36,10 @@
   font-display: swap;
 }
 
+
 /* Physiotherapy Theme - Calm, Medical, Trustworthy */
 :root {
-  --background: oklch(0.985 0.005 150);
+  --background: oklch(1 0 0);
   --foreground: oklch(0.25 0.02 160);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.25 0.02 160);
@@ -53,8 +54,8 @@
   --accent: oklch(0.55 0.1 160);
   --accent-foreground: oklch(0.99 0 0);
   --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.577 0.245 27.325);
-  --border: oklch(0.92 0.01 150);
+  --destructive-foreground: oklch(100% 0.00011 271.152);
+  --border: oklch(0.9 0.01 240);
   --input: oklch(0.92 0.01 150);
   --ring: oklch(0.45 0.12 160);
   --chart-1: oklch(0.45 0.12 160);
@@ -78,70 +79,48 @@
   --hero-highlight: oklch(0.92 0.03 150);
 }
 
-/* PhysioKonzept Theme - Energetic, Sporty, Motivational */
-.physio-konzept {
-  --background: oklch(0.15 0 0);
-  --foreground: oklch(0.98 0 0);
-  --card: oklch(0.18 0 0);
-  --card-foreground: oklch(0.98 0 0);
-  --popover: oklch(0.18 0 0);
-  --popover-foreground: oklch(0.98 0 0);
-  --primary: oklch(0.7 0.18 45);
-  --primary-foreground: oklch(0.12 0 0);
-  --secondary: oklch(0.25 0 0);
-  --secondary-foreground: oklch(0.98 0 0);
-  --muted: oklch(0.22 0 0);
-  --muted-foreground: oklch(0.7 0 0);
-  --accent: oklch(0.7 0.18 45);
-  --accent-foreground: oklch(0.12 0 0);
-  --border: oklch(0.28 0 0);
-  --input: oklch(0.22 0 0);
-  --ring: oklch(0.7 0.18 45);
+/* dark mode overrides ALL brands */
+.dark,
+.dark.physio-konzept {
+  --background: oklch(0.14 0.01 285);
+  --foreground: oklch(0.97 0.01 285);
 
-  /* Custom hero tokens for PhysioKonzept */
-  --hero-bg: oklch(0.12 0 0);
-  --hero-accent: oklch(0.7 0.18 45);
-  --hero-highlight: oklch(0.2 0 0);
+  --card: oklch(0.18 0.01 285);
+  --card-foreground: oklch(0.97 0.01 285);
+
+  --popover: oklch(0.18 0.01 285);
+  --popover-foreground: oklch(0.97 0.01 285);
+
+  --muted: oklch(0.22 0.01 285);
+  --muted-foreground: oklch(0.70 0.01 285);
+
+  --secondary: oklch(0.20 0.01 285);
+  --secondary-foreground: oklch(0.96 0.01 285);
+
+  --border: oklch(0.28 0.01 285);
+  --input: oklch(0.24 0.01 285);
+  --ring: oklch(0.62 0.12 160);
+
+  --primary: oklch(0.62 0.14 160);
+  --primary-foreground: oklch(0.14 0.01 285);
+
+  --accent: oklch(0.60 0.12 160);
+  --accent-foreground: oklch(0.14 0.01 285);
+
+  --sidebar: oklch(0.17 0.01 285);
+  --sidebar-foreground: oklch(0.96 0.01 285);
+  --sidebar-accent: oklch(0.22 0.01 285);
+  --sidebar-accent-foreground: oklch(0.96 0.01 285);
+  --sidebar-border: oklch(0.28 0.01 285);
+
+  --hero-bg: oklch(0.12 0.01 285);
+  --hero-accent: oklch(0.62 0.14 160);
+  --hero-highlight: oklch(0.20 0.01 285);
+
+  color-scheme: dark;
 }
 
-/* Dark mode support */
-.dark {
-  --background: oklch(0.15 0.01 160);
-  --foreground: oklch(0.98 0.01 160);
-  --card: oklch(0.18 0.01 160);
-  --card-foreground: oklch(0.98 0.01 160);
-  --popover: oklch(0.18 0.01 160);
-  --popover-foreground: oklch(0.98 0.01 160);
-  --primary: oklch(0.55 0.15 160);
-  --primary-foreground: oklch(0.98 0.01 160);
-  --secondary: oklch(0.25 0.01 160);
-  --secondary-foreground: oklch(0.98 0.01 160);
-  --muted: oklch(0.22 0.01 160);
-  --muted-foreground: oklch(0.65 0.01 160);
-  --accent: oklch(0.6 0.12 160);
-  --accent-foreground: oklch(0.98 0.01 160);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.98 0.01 160);
-  --border: oklch(0.28 0.01 160);
-  --input: oklch(0.25 0.01 160);
-  --ring: oklch(0.55 0.15 160);
-  --chart-1: oklch(0.55 0.15 160);
-  --chart-2: oklch(0.6 0.12 180);
-  --chart-3: oklch(0.5 0.1 220);
-  --chart-4: oklch(0.7 0.15 80);
-  --chart-5: oklch(0.65 0.12 60);
-  --sidebar: oklch(0.18 0.01 160);
-  --sidebar-foreground: oklch(0.98 0.01 160);
-  --sidebar-primary: oklch(0.55 0.15 160);
-  --sidebar-primary-foreground: oklch(0.98 0.01 160);
-  --sidebar-accent: oklch(0.25 0.01 160);
-  --sidebar-accent-foreground: oklch(0.98 0.01 160);
-  --sidebar-border: oklch(0.28 0.01 160);
-  --sidebar-ring: oklch(0.55 0.15 160);
-  --hero-bg: oklch(0.12 0.01 160);
-  --hero-accent: oklch(0.55 0.15 160);
-  --hero-highlight: oklch(0.2 0.01 160);
-}
+
 
 @theme inline {
   /* Local fonts - GDPR compliant (no external requests to Google Fonts) */
@@ -328,3 +307,104 @@
   opacity: 0;
 }
 
+/* global interactive cursor */
+button,
+a,
+[role="button"],
+input[type="submit"],
+input[type="button"],
+.cursor-pointer {
+  cursor: pointer;
+}
+
+button,
+a,
+[role="button"] {
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+button:hover,
+a:hover,
+[role="button"]:hover {
+  transform: translateY(-0.5px);
+}
+/* ===== Custom Cursor (dot + ring) ===== */
+:root {
+  --cursor-dot-size: 6px;
+  --cursor-ring-size: 34px;
+  --cursor-ease: 140ms;
+  --cursor-ring-blur: 0px;
+}
+
+/* hide native cursor only on devices that actually have hover */
+@media (hover: hover) and (pointer: fine) {
+  html.has-custom-cursor,
+  html.has-custom-cursor * {
+    cursor: none !important;
+  }
+}
+
+.cursor-dot,
+.cursor-ring {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 999999;
+  pointer-events: none;
+  transform: translate3d(-100px, -100px, 0);
+  opacity: 0;
+}
+
+.cursor-dot {
+  width: var(--cursor-dot-size);
+  height: var(--cursor-dot-size);
+  border-radius: 999px;
+  background: var(--primary); /* Direktes Binding an aktiven --primary Token */
+}
+
+.cursor-ring {
+  width: var(--cursor-ring-size);
+  height: var(--cursor-ring-size);
+  border-radius: 999px;
+  border: 1px solid var(--primary); /* Direktes Binding an aktiven --primary Token */
+  filter: blur(var(--cursor-ring-blur));
+  background: transparent;
+}
+
+.cursor-dot,
+.cursor-ring {
+  transition:
+    opacity 150ms ease,
+    transform var(--cursor-ease) ease,
+    width 180ms ease,
+    height 180ms ease;
+}
+
+html.cursor-hover .cursor-ring {
+  width: 48px;
+  height: 48px;
+  transform: translate3d(var(--cx, -100px), var(--cy, -100px), 0) scale(1.05);
+  opacity: 0.9;
+}
+
+html.cursor-hover .cursor-dot {
+  opacity: 1;
+}
+
+html.cursor-down .cursor-ring {
+  width: 42px;
+  height: 42px;
+  opacity: 1;
+}
+
+html.cursor-down .cursor-dot {
+  transform: translate3d(var(--dx, -100px), var(--dy, -100px), 0) scale(0.85);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cursor-dot,
+  .cursor-ring {
+    transition: opacity 120ms ease;
+  }
+}

@@ -1,18 +1,34 @@
 import { z } from "zod"
-import type { CMSBlock, BlockType, HeroBlock, TextBlock, ImageTextBlock, FeatureGridBlock, CtaBlock, SectionBlock, ServicesGridBlock, FaqBlock, TeamBlock, ContactFormBlock, TestimonialsBlock, GalleryBlock, OpeningHoursBlock, ImageSliderBlock } from "@/types/cms"
+import type { CMSBlock, BlockType, HeroBlock, TextBlock, ImageTextBlock, FeatureGridBlock, CtaBlock, SectionBlock, ServicesGridBlock, FaqBlock, TeamBlock, ContactFormBlock, TestimonialsBlock, GalleryBlock, OpeningHoursBlock, ImageSliderBlock, } from "@/types/cms"
 import type { BrandKey } from "@/components/brand/brandAssets"
 import { uuid } from "@/lib/cms/arrayOps"
 import { typographySchema, elementTypographySchema } from "@/lib/typography"
 import type { EditableElementDef } from "@/lib/editableElements"
 
-/**
- * Field types for inspector inputs
- */
-export type InspectorFieldType = "text" | "textarea" | "select" | "url" | "image" | "number" | "boolean" | "color"
+// ---- TestimonialSlider Extension Types (temporary, until in types/cms) ----
+export type TestimonialSliderBlock = {
+  type: "testimonialSlider"
+  props: {
+    headline?: string
+    subheadline?: string
+    background?: "none" | "muted" | "gradient"
+    autoplay?: boolean
+    interval?: number
+    showArrows?: boolean
+    showDots?: boolean
+    items: Array<{
+      id: string
+      quote: string
+      name: string
+      role?: string
+      image?: string
+    }>
+  }
+}
 
-/**
- * Inspector field definition
- */
+// Add InspectorFieldType union for "toggle" (needed for testimonialSlider's inspectorFields; fallback to "boolean" if not supported elsewhere)
+export type InspectorFieldType = "text" | "textarea" | "select" | "url" | "image" | "number" | "boolean" | "color" | "toggle"
+
 export interface InspectorField {
   key: string
   label: string
@@ -23,9 +39,6 @@ export interface InspectorField {
   helpText?: string
 }
 
-/**
- * Block definition with schema, defaults, and inspector configuration
- */
 export interface BlockDefinition<T extends CMSBlock = CMSBlock> {
   type: T["type"]
   label: string
@@ -33,26 +46,16 @@ export interface BlockDefinition<T extends CMSBlock = CMSBlock> {
   zodSchema: z.ZodType<T["props"]>
   inspectorFields: InspectorField[]
   allowInlineEdit?: boolean
-  /** Optional list of editable elements within this block */
   elements?: EditableElementDef[]
 }
 
-/**
- * Brand key schema
- */
 const brandKeySchema = z.enum(["physiotherapy", "physio-konzept"])
 
-/**
- * Media value schema: either mediaId or url
- */
 const mediaValueSchema = z.union([
   z.object({ mediaId: z.string() }),
   z.object({ url: z.string() }),
 ])
 
-/**
- * Brand-specific content schema for Hero
- */
 const heroBrandContentSchema = z.object({
   headline: z.string().default(""),
   subheadline: z.string().default(""),
@@ -91,10 +94,6 @@ const heroBrandContentSchema = z.object({
   containBackground: z.enum(["none", "blur"]).optional(),
 })
 
-/**
- * Hero block schema
- * Supports both legacy flat structure and new brandContent structure
- */
 const heroPropsSchema = z.object({
   // Legacy props (for backward compatibility)
   mood: brandKeySchema.optional(),
@@ -119,9 +118,6 @@ const heroPropsSchema = z.object({
   typography: elementTypographySchema,
 })
 
-/**
- * Text block schema
- */
 const textPropsSchema = z.object({
   content: z.string(),
   alignment: z.enum(["left", "center", "right"]).optional(),
@@ -133,9 +129,6 @@ const textPropsSchema = z.object({
   typography: elementTypographySchema,
 })
 
-/**
- * Image text block schema
- */
 const imageTextPropsSchema = z.object({
   imageUrl: z.string(),
   imageAlt: z.string(),
@@ -153,9 +146,6 @@ const imageTextPropsSchema = z.object({
   typography: elementTypographySchema,
 })
 
-/**
- * Feature grid block schema
- */
 const featureGridPropsSchema = z.object({
   features: z.array(
     z.object({
@@ -184,9 +174,6 @@ const featureGridPropsSchema = z.object({
   typography: elementTypographySchema,
 })
 
-/**
- * CTA block schema
- */
 const ctaPropsSchema = z.object({
   headline: z.string(),
   subheadline: z.string().optional(),
@@ -209,9 +196,6 @@ const ctaPropsSchema = z.object({
   typography: elementTypographySchema,
 })
 
-/**
- * Section block schema
- */
 const sectionPropsSchema = z.object({
   typography: typographySchema,
   eyebrow: z.string().optional(),
@@ -233,12 +217,6 @@ const sectionPropsSchema = z.object({
   ctaBorderColor: z.string().optional(),
 })
 
-/**
- * Services Grid block schema
- * Note: title and text allow empty strings during editing to prevent validation errors
- * that would trigger normalizeBlock to fall back to defaults. Required validation
- * is handled UI-side (inspectorFields.required) and will be enforced on publish/save.
- */
 const servicesGridPropsSchema = z.object({
   headline: z.string().optional(),
   subheadline: z.string().optional(),
@@ -278,12 +256,6 @@ const servicesGridPropsSchema = z.object({
   typography: elementTypographySchema,
 })
 
-/**
- * FAQ block schema
- * Note: question and answer allow empty strings during editing to prevent validation errors
- * that would trigger normalizeBlock to fall back to defaults. Required validation
- * is handled UI-side (inspectorFields.required) and will be enforced on publish/save.
- */
 const faqPropsSchema = z.object({
   headline: z.string().optional(),
   headlineColor: z.string().optional(),
@@ -302,12 +274,6 @@ const faqPropsSchema = z.object({
   typography: elementTypographySchema,
 })
 
-/**
- * Team block schema
- * Note: name and role allow empty strings during editing to prevent validation errors
- * that would trigger normalizeBlock to fall back to defaults. Required validation
- * is handled UI-side (inspectorFields.required) and will be enforced on publish/save.
- */
 const teamPropsSchema = z.object({
   headline: z.string().optional(),
   subheadline: z.string().optional(),
@@ -342,9 +308,6 @@ const teamPropsSchema = z.object({
     .optional(),
 })
 
-/**
- * Contact form block schema
- */
 const contactFormPropsSchema = z.object({
   heading: z.string(),
   text: z.string().optional(),
@@ -389,10 +352,6 @@ const contactFormPropsSchema = z.object({
   layout: z.enum(["stack", "split"]).optional(),
 })
 
-/**
- * Testimonials block schema
- * Note: quote/name allow empty strings during editing; required validation happens UI-side.
- */
 const testimonialsPropsSchema = z.object({
   headline: z.string().optional(),
   subheadline: z.string().optional(),
@@ -431,10 +390,28 @@ const testimonialsPropsSchema = z.object({
     .max(12),
 })
 
-/**
- * Gallery block schema
- * Note: imageAlt allows empty strings during editing; required validation happens UI-side.
- */
+// --- TestimonialSlider Block: Zod schema, defaults, factory ---
+
+const testimonialSliderPropsSchema = z.object({
+  headline: z.string().optional(),
+  subheadline: z.string().optional(),
+  background: z.enum(["none","muted","gradient"]).optional(),
+  autoplay: z.boolean().optional(),
+  interval: z.preprocess(
+    (v)=> (v === "" || v === null || typeof v === "undefined" ? undefined : v),
+    z.coerce.number().int().min(1000).max(30000)
+  ).optional(),
+  showArrows: z.boolean().optional(),
+  showDots: z.boolean().optional(),
+  items: z.array(z.object({
+    id: z.string(),
+    quote: z.string(),
+    name: z.string(),
+    role: z.string().optional(),
+    image: z.string().optional(),
+  })).min(1).max(12),
+})
+
 const galleryPropsSchema = z.object({
   headline: z.string().optional(),
   subheadline: z.string().optional(),
@@ -465,10 +442,6 @@ const galleryPropsSchema = z.object({
     .max(18),
 })
 
-/**
- * Image slider block schema
- * Note: strings allow empty during editing; publish validation is stricter.
- */
 const imageSliderPropsSchema = z.object({
   headline: z.string().optional(),
   subheadline: z.string().optional(),
@@ -507,10 +480,6 @@ const imageSliderPropsSchema = z.object({
     .max(12),
 })
 
-/**
- * Opening hours block schema
- * Note: label/value allow empty strings during editing; required validation happens UI-side.
- */
 const openingHoursPropsSchema = z.object({
   headline: z.string().optional(),
   subheadline: z.string().optional(),
@@ -538,9 +507,6 @@ const openingHoursPropsSchema = z.object({
     .max(10),
 })
 
-/**
- * Default props for each block type
- */
 function getDefaultBrand(): BrandKey {
   return "physiotherapy"
 }
@@ -748,6 +714,25 @@ export function createFeatureItem(): FeatureGridBlock["props"]["features"][0] {
   }
 }
 
+// ------------ TestimonialSlider: Defaults + Factory ---------------
+const testimonialSliderDefaults: TestimonialSliderBlock["props"] = {
+  headline: "Vertrauen, das man spürt",
+  subheadline: "Das sagen unsere Patienten",
+  background: "none",
+  autoplay: false,
+  interval: 6000,
+  showArrows: true,
+  showDots: true,
+  items: [
+    { id: generateUniqueId("testimonialSlider",0), quote:"...", name:"Julia M.", role:"Patientin", image:"" },
+    { id: generateUniqueId("testimonialSlider",1), quote:"...", name:"Michael K.", role:"Patient", image:"" },
+  ],
+}
+
+export function createTestimonialSliderItem(): TestimonialSliderBlock["props"]["items"][0] {
+  return { id: uuid(), quote: "", name: "", role: "", image: "" }
+}
+
 const servicesGridDefaults: ServicesGridBlock["props"] = {
   headline: "Angebote & Kurse",
   subheadline: "Therapie, Training und Kurse – alles an einem Ort.",
@@ -809,6 +794,7 @@ const contactFormDefaults: ContactFormBlock["props"] = {
     href: "/datenschutz",
   },
   requireConsent: false,
+  consentLabel: "Ich akzeptiere die Datenschutzerklärung",
   layout: "stack",
 }
 
@@ -921,8 +907,16 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
         supportsTypography: true,
         group: "Call-to-Action",
       },
+      {
+        id: "secondaryCtaText",
+        label: "Sekundäre CTA",
+        path: "secondaryCtaText",
+        supportsTypography: true,
+        group: "Call-to-Action",
+      },
     ],
     inspectorFields: [
+      // Brand/Mood
       {
         key: "mood",
         label: "Brand/Mood",
@@ -932,6 +926,7 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
           { value: "physio-konzept", label: "Physio-Konzept" },
         ],
       },
+      // Texte & CTAs
       {
         key: "headline",
         label: "Headline",
@@ -943,6 +938,18 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
         label: "Subheadline",
         type: "textarea",
         placeholder: "Unterüberschrift eingeben",
+      },
+      {
+        key: "headlineColor",
+        label: "Headline Farbe",
+        type: "color",
+        placeholder: "#111111",
+      },
+      {
+        key: "subheadlineColor",
+        label: "Subheadline Farbe",
+        type: "color",
+        placeholder: "#888888",
       },
       {
         key: "ctaText",
@@ -957,25 +964,43 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
         placeholder: "/kontakt",
       },
       {
-        key: "showMedia",
-        label: "Media anzeigen",
-        type: "boolean",
+        key: "ctaColor",
+        label: "CTA Textfarbe",
+        type: "color",
+        placeholder: "#FFFFFF",
       },
       {
-        key: "mediaType",
-        label: "Media Typ",
-        type: "select",
-        options: [
-          { value: "image", label: "Bild" },
-          { value: "video", label: "Video" },
-        ],
+        key: "ctaBgColor",
+        label: "CTA Hintergrundfarbe",
+        type: "color",
+        placeholder: "#308973",
       },
       {
-        key: "mediaUrl",
-        label: "Media URL",
-        type: "image",
-        placeholder: "/placeholder.svg",
+        key: "ctaHoverBgColor",
+        label: "CTA Hover Hintergrundfarbe",
+        type: "color",
+        placeholder: "#276D5A",
       },
+      {
+        key: "ctaBorderColor",
+        label: "CTA Rahmenfarbe",
+        type: "color",
+        placeholder: "#276D5A",
+      },
+      {
+        key: "secondaryCtaText",
+        label: "Sekundäre CTA Text",
+        type: "text",
+        placeholder: "2. Button-Text",
+      },
+      {
+        key: "secondaryCtaHref",
+        label: "Sekundäre CTA Link",
+        type: "url",
+        placeholder: "/zweiter-link",
+      },
+
+      // Badge
       {
         key: "badgeText",
         label: "Badge Text",
@@ -983,11 +1008,51 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
         placeholder: "Badge-Text",
       },
       {
+        key: "badgeColor",
+        label: "Badge Textfarbe",
+        type: "color",
+        placeholder: "#FFFFFF",
+      },
+      {
+        key: "badgeBgColor",
+        label: "Badge Hintergrundfarbe",
+        type: "color",
+        placeholder: "#308973",
+      },
+
+      // Play Button für Video
+      {
         key: "playText",
         label: "Video Button Text",
         type: "text",
         placeholder: "Video ansehen",
       },
+      {
+        key: "playTextColor",
+        label: "Play-Button Textfarbe",
+        type: "color",
+        placeholder: "#FFFFFF",
+      },
+      {
+        key: "playBorderColor",
+        label: "Play-Button Rahmen",
+        type: "color",
+        placeholder: "#308973",
+      },
+      {
+        key: "playBgColor",
+        label: "Play-Button Hintergrund",
+        type: "color",
+        placeholder: "#276D5A",
+      },
+      {
+        key: "playHoverBgColor",
+        label: "Play-Button Hover",
+        type: "color",
+        placeholder: "#1F5342",
+      },
+
+      // Trust Items
       {
         key: "trustItems.0",
         label: "Trust Item 1",
@@ -1007,10 +1072,30 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
         placeholder: "Modernste Therapien",
       },
       {
+        key: "trustItemsColor",
+        label: "Trust Items Textfarbe",
+        type: "color",
+        placeholder: "#222",
+      },
+      {
+        key: "trustDotColor",
+        label: "Trust Dot Farbe",
+        type: "color",
+        placeholder: "#308973",
+      },
+
+      // Floating Card
+      {
         key: "floatingTitle",
         label: "Floating Card Titel",
         type: "text",
         placeholder: "Patientenzufriedenheit",
+      },
+      {
+        key: "floatingTitleColor",
+        label: "Floating Titel-Farbe",
+        type: "color",
+        placeholder: "#222",
       },
       {
         key: "floatingValue",
@@ -1019,10 +1104,95 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
         placeholder: "98%",
       },
       {
+        key: "floatingValueColor",
+        label: "Floating Wert-Farbe",
+        type: "color",
+        placeholder: "#308973",
+      },
+      {
         key: "floatingLabel",
         label: "Floating Card Label (optional)",
         type: "text",
         placeholder: "Optionaler Untertext",
+      },
+      {
+        key: "floatingLabelColor",
+        label: "Floating Label-Farbe",
+        type: "color",
+        placeholder: "#888",
+      },
+
+      // Media/Legacy Media section
+      {
+        key: "showMedia",
+        label: "Media anzeigen (Legacy)",
+        type: "boolean",
+      },
+      {
+        key: "mediaType",
+        label: "Media Typ (Legacy)",
+        type: "select",
+        options: [
+          { value: "image", label: "Bild" },
+          { value: "video", label: "Video" },
+        ],
+      },
+      {
+        key: "mediaUrl",
+        label: "Media URL (Legacy)",
+        type: "image",
+        placeholder: "/placeholder.svg",
+      },
+
+      // Bild/Medien modern (brandContent Feature Set)
+      {
+        key: "image",
+        label: "Bilddatei",
+        type: "image",
+        placeholder: "/placeholder.svg",
+      },
+      {
+        key: "imageAlt",
+        label: "Bild Alt-Text",
+        type: "text",
+        placeholder: "Bildbeschreibung",
+      },
+      {
+        key: "imageVariant",
+        label: "Bild-Format",
+        type: "select",
+        options: [
+          { value: "landscape", label: "Querformat" },
+          { value: "portrait", label: "Hochformat" },
+        ],
+      },
+      {
+        key: "imageFit",
+        label: "Bild Füllung",
+        type: "select",
+        options: [
+          { value: "cover", label: "Cover (ausfüllen)" },
+          { value: "contain", label: "Contain (einpassen)" },
+        ],
+      },
+      {
+        key: "imageFocus",
+        label: "Bildfokus",
+        type: "select",
+        options: [
+          { value: "center", label: "Zentriert" },
+          { value: "top", label: "Oben" },
+          { value: "bottom", label: "Unten" },
+        ],
+      },
+      {
+        key: "containBackground",
+        label: "Bild-Hintergrund",
+        type: "select",
+        options: [
+          { value: "none", label: "Kein Blur" },
+          { value: "blur", label: "Weichzeichnen" },
+        ],
       },
     ],
   },
@@ -1142,138 +1312,15 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
       { key: "ctaBorderColor", label: "CTA Border", type: "color", placeholder: "#111111" },
     ],
   },
-  featureGrid: {
-    type: "featureGrid",
-    label: "Feature Grid",
-    defaults: featureGridDefaults,
-    zodSchema: featureGridPropsSchema,
-    allowInlineEdit: true,
-    inspectorFields: [
-      {
-        key: "columns",
-        label: "Spalten",
-        type: "select",
-        options: [
-          { value: "2", label: "2 Spalten" },
-          { value: "3", label: "3 Spalten" },
-          { value: "4", label: "4 Spalten" },
-        ],
-      },
-      { key: "titleColor", label: "Titel Farbe (global)", type: "color", placeholder: "#111111" },
-      { key: "descriptionColor", label: "Beschreibung Farbe (global)", type: "color", placeholder: "#666666" },
-      { key: "iconColor", label: "Icon Farbe (global)", type: "color", placeholder: "#111111" },
-      { key: "cardBgColor", label: "Card Hintergrund (global)", type: "color", placeholder: "#ffffff" },
-      { key: "cardBorderColor", label: "Card Border (global)", type: "color", placeholder: "#e5e7eb" },
-      // Features (first 3 for MVP in inspector)
-      { key: "features.0.title", label: "Feature 1 Titel", type: "text", placeholder: "Feature 1", required: true },
-      { key: "features.0.description", label: "Feature 1 Beschreibung", type: "textarea", placeholder: "Beschreibung...", required: true },
-      { key: "features.0.icon", label: "Feature 1 Icon", type: "text", placeholder: "Icon-Name (optional)" },
-
-      { key: "features.1.title", label: "Feature 2 Titel", type: "text", placeholder: "Feature 2", required: true },
-      { key: "features.1.description", label: "Feature 2 Beschreibung", type: "textarea", placeholder: "Beschreibung...", required: true },
-      { key: "features.1.icon", label: "Feature 2 Icon", type: "text", placeholder: "Icon-Name (optional)" },
-
-      { key: "features.2.title", label: "Feature 3 Titel", type: "text", placeholder: "Feature 3", required: true },
-      { key: "features.2.description", label: "Feature 3 Beschreibung", type: "textarea", placeholder: "Beschreibung...", required: true },
-      { key: "features.2.icon", label: "Feature 3 Icon", type: "text", placeholder: "Icon-Name (optional)" },
-    ],
-  },
-  cta: {
-    type: "cta",
-    label: "Call-to-Action",
-    defaults: ctaDefaults,
-    zodSchema: ctaPropsSchema,
-    allowInlineEdit: true,
-    inspectorFields: [
-      {
-        key: "headline",
-        label: "Headline",
-        type: "text",
-        placeholder: "Überschrift",
-        required: true,
-      },
-      {
-        key: "subheadline",
-        label: "Subheadline",
-        type: "textarea",
-        placeholder: "Unterüberschrift",
-      },
-      {
-        key: "primaryCtaText",
-        label: "Primärer CTA Text",
-        type: "text",
-        placeholder: "Button-Text",
-        required: true,
-      },
-      {
-        key: "primaryCtaHref",
-        label: "Primärer CTA Link",
-        type: "url",
-        placeholder: "/kontakt",
-        required: true,
-      },
-      {
-        key: "secondaryCtaText",
-        label: "Sekundärer CTA Text",
-        type: "text",
-        placeholder: "Button-Text",
-      },
-      {
-        key: "secondaryCtaHref",
-        label: "Sekundärer CTA Link",
-        type: "url",
-        placeholder: "/",
-      },
-      {
-        key: "variant",
-        label: "Variante",
-        type: "select",
-        options: [
-          { value: "default", label: "Standard" },
-          { value: "centered", label: "Zentriert" },
-          { value: "split", label: "Geteilt" },
-        ],
-      },
-      { key: "backgroundColor", label: "Block Hintergrund", type: "color", placeholder: "#f3f4f6" },
-      { key: "headlineColor", label: "Headline Farbe", type: "color", placeholder: "#111111" },
-      { key: "subheadlineColor", label: "Subheadline Farbe", type: "color", placeholder: "#666666" },
-      { key: "primaryCtaTextColor", label: "Primär CTA Text", type: "color", placeholder: "#ffffff" },
-      { key: "primaryCtaBgColor", label: "Primär CTA Hintergrund", type: "color", placeholder: "#111111" },
-      { key: "primaryCtaHoverBgColor", label: "Primär CTA Hover", type: "color", placeholder: "#000000" },
-      { key: "primaryCtaBorderColor", label: "Primär CTA Border", type: "color", placeholder: "#111111" },
-      { key: "secondaryCtaTextColor", label: "Sekundär CTA Text", type: "color", placeholder: "#111111" },
-      { key: "secondaryCtaBgColor", label: "Sekundär CTA Hintergrund", type: "color", placeholder: "#ffffff" },
-      { key: "secondaryCtaHoverBgColor", label: "Sekundär CTA Hover", type: "color", placeholder: "#f3f4f6" },
-      { key: "secondaryCtaBorderColor", label: "Sekundär CTA Border", type: "color", placeholder: "#111111" },
-    ],
-  },
   section: {
     type: "section",
     label: "Section",
     defaults: sectionDefaults,
     zodSchema: sectionPropsSchema,
-    allowInlineEdit: true,
     inspectorFields: [
-      {
-        key: "eyebrow",
-        label: "Eyebrow",
-        type: "text",
-        placeholder: "Kleiner Text über der Headline",
-      },
-      {
-        key: "headline",
-        label: "Headline",
-        type: "text",
-        placeholder: "Überschrift",
-        required: true,
-      },
-      {
-        key: "content",
-        label: "Inhalt",
-        type: "textarea",
-        placeholder: "Textinhalt (HTML möglich)",
-        required: true,
-      },
+      { key: "eyebrow", label: "Eyebrow", type: "text", placeholder: "Über uns" },
+      { key: "headline", label: "Headline", type: "text", placeholder: "Willkommen bei Physiotherapie Kroll", required: true },
+      { key: "content", label: "Inhalt", type: "textarea", placeholder: "Textinhalt (HTML möglich)", required: true },
       {
         key: "align",
         label: "Ausrichtung",
@@ -1294,24 +1341,12 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
         ],
       },
       {
-        key: "primaryCtaText",
-        label: "CTA Text",
-        type: "text",
-        placeholder: "Button-Text",
-      },
-      {
-        key: "primaryCtaHref",
-        label: "CTA Link",
-        type: "url",
-        placeholder: "/kontakt",
-      },
-      {
         key: "variant",
-        label: "Variante",
+        label: "Variant",
         type: "select",
         options: [
           { value: "default", label: "Standard" },
-          { value: "soft", label: "Weich" },
+          { value: "soft", label: "Soft" },
         ],
       },
       {
@@ -1319,19 +1354,65 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
         label: "Hintergrund",
         type: "select",
         options: [
-          { value: "none", label: "Keiner" },
-          { value: "muted", label: "Gedämpft" },
-          { value: "gradient", label: "Gradient" },
+          { value: "none", label: "Kein Hintergrund" },
+          { value: "muted", label: "Grau (Muted)" },
+          { value: "gradient", label: "Farbverlauf" },
         ],
       },
-      { key: "backgroundColor", label: "Background Override", type: "color", placeholder: "#ffffff" },
-      { key: "eyebrowColor", label: "Eyebrow Farbe", type: "color", placeholder: "#2563eb" },
-      { key: "headlineColor", label: "Headline Farbe", type: "color", placeholder: "#111111" },
+      { key: "primaryCtaText", label: "Primärer CTA Text", type: "text", placeholder: "Mehr erfahren" },
+      { key: "primaryCtaHref", label: "Primärer CTA Link", type: "url", placeholder: "/kontakt" },
+
+      { key: "backgroundColor", label: "Hintergrundfarbe (Custom)", type: "color", placeholder: "#ffffff" },
+      { key: "eyebrowColor", label: "Eyebrow Farbe", type: "color", placeholder: "#8f8f8f" },
+      { key: "headlineColor", label: "Headline Farbe", type: "color", placeholder: "#222222" },
       { key: "contentColor", label: "Inhalt Farbe", type: "color", placeholder: "#666666" },
       { key: "ctaTextColor", label: "CTA Text Farbe", type: "color", placeholder: "#ffffff" },
       { key: "ctaBgColor", label: "CTA Hintergrund", type: "color", placeholder: "#111111" },
-      { key: "ctaHoverBgColor", label: "CTA Hover", type: "color", placeholder: "#000000" },
-      { key: "ctaBorderColor", label: "CTA Border", type: "color", placeholder: "#111111" },
+      { key: "ctaHoverBgColor", label: "CTA Hover Hintergrund", type: "color", placeholder: "#000000" },
+      { key: "ctaBorderColor", label: "CTA Border Farbe", type: "color", placeholder: "#111111" },
+    ],
+  },
+  featureGrid: {
+    type: "featureGrid",
+    label: "Feature Grid",
+    defaults: featureGridDefaults,
+    zodSchema: featureGridPropsSchema,
+    inspectorFields: [],
+  },
+  cta: {
+    type: "cta",
+    label: "Call to Action",
+    defaults: ctaDefaults,
+    zodSchema: ctaPropsSchema,
+    allowInlineEdit: true,
+    inspectorFields: [
+      { key: "headline", label: "Headline", type: "text", placeholder: "Überschrift", required: true },
+      { key: "subheadline", label: "Subheadline", type: "text", placeholder: "Optionaler Untertext" },
+      { key: "primaryCtaText", label: "Primärer CTA Text", type: "text", placeholder: "Button Text", required: true },
+      { key: "primaryCtaHref", label: "Primärer CTA Link", type: "url", placeholder: "https://...", required: true },
+      { key: "secondaryCtaText", label: "Sekundärer CTA Text", type: "text", placeholder: "Optionaler zweiter Button" },
+      { key: "secondaryCtaHref", label: "Sekundärer CTA Link", type: "url", placeholder: "https://..." },
+      {
+        key: "variant",
+        label: "Layout",
+        type: "select",
+        options: [
+          { value: "centered", label: "Zentriert" },
+          { value: "split", label: "Geteilt" },
+          { value: "default", label: "Standard" },
+        ],
+      },
+      { key: "backgroundColor", label: "Hintergrundfarbe", type: "color" },
+      { key: "headlineColor", label: "Headline Farbe", type: "color" },
+      { key: "subheadlineColor", label: "Subheadline Farbe", type: "color" },
+      { key: "primaryCtaTextColor", label: "Primärer CTA Text Farbe", type: "color" },
+      { key: "primaryCtaBgColor", label: "Primärer CTA Hintergrund", type: "color" },
+      { key: "primaryCtaHoverBgColor", label: "Primärer CTA Hover Hintergrund", type: "color" },
+      { key: "primaryCtaBorderColor", label: "Primärer CTA Border", type: "color" },
+      { key: "secondaryCtaTextColor", label: "Sekundärer CTA Text Farbe", type: "color" },
+      { key: "secondaryCtaBgColor", label: "Sekundärer CTA Hintergrund", type: "color" },
+      { key: "secondaryCtaHoverBgColor", label: "Sekundärer CTA Hover Hintergrund", type: "color" },
+      { key: "secondaryCtaBorderColor", label: "Sekundärer CTA Border", type: "color" },
     ],
   },
   servicesGrid: {
@@ -1341,228 +1422,39 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
     zodSchema: servicesGridPropsSchema,
     allowInlineEdit: true,
     inspectorFields: [
-      {
-        key: "headline",
-        label: "Headline",
-        type: "text",
-        placeholder: "Überschrift",
-      },
-      {
-        key: "subheadline",
-        label: "Subheadline",
-        type: "text",
-        placeholder: "Unterüberschrift",
-      },
-      { key: "headlineColor", label: "Headline Farbe", type: "color", placeholder: "#111111" },
-      { key: "subheadlineColor", label: "Subheadline Farbe", type: "color", placeholder: "#666666" },
-      { key: "iconColor", label: "Icon Farbe (global)", type: "color", placeholder: "#111111" },
-      { key: "iconBgColor", label: "Icon Hintergrund (global)", type: "color", placeholder: "#e5e7eb" },
-      { key: "titleColor", label: "Card Titel Farbe (global)", type: "color", placeholder: "#111111" },
-      { key: "textColor", label: "Card Text Farbe (global)", type: "color", placeholder: "#666666" },
-      { key: "ctaColor", label: "Card CTA Farbe (global)", type: "color", placeholder: "#111111" },
-      { key: "cardBgColor", label: "Card Hintergrund (global)", type: "color", placeholder: "#ffffff" },
-      { key: "cardBorderColor", label: "Card Border (global)", type: "color", placeholder: "#e5e7eb" },
+      { key: "headline", label: "Headline", type: "text", placeholder: "Überschrift", required: false },
+      { key: "subheadline", label: "Subheadline", type: "text", placeholder: "Kurzer Text", required: false },
       {
         key: "columns",
         label: "Spalten",
         type: "select",
         options: [
-          { value: "2", label: "2 Spalten" },
-          { value: "3", label: "3 Spalten" },
-          { value: "4", label: "4 Spalten" },
+          { value: "2", label: "2" },
+          { value: "3", label: "3" },
+          { value: "4", label: "4" },
         ],
+        required: false,
       },
+      { key: "headlineColor", label: "Headline Farbe", type: "color", placeholder: "#111111" },
+      { key: "subheadlineColor", label: "Subheadline Farbe", type: "color", placeholder: "#666666" },
+      { key: "iconColor", label: "Icon Farbe", type: "color", placeholder: "#111111" },
+      { key: "iconBgColor", label: "Icon Hintergrund", type: "color", placeholder: "#EEEEEE" },
+      { key: "titleColor", label: "Titel Farbe", type: "color", placeholder: "#111111" },
+      { key: "textColor", label: "Text Farbe", type: "color", placeholder: "#666666" },
+      { key: "ctaColor", label: "CTA Farbe", type: "color", placeholder: "#111111" },
+      { key: "cardBgColor", label: "Karte Hintergrund", type: "color", placeholder: "#FFFFFF" },
+      { key: "cardBorderColor", label: "Karte Border", type: "color", placeholder: "#E5E7EB" },
       {
         key: "background",
-        label: "Hintergrund",
+        label: "Block Hintergrund",
         type: "select",
         options: [
-          { value: "none", label: "Keiner" },
-          { value: "muted", label: "Gedämpft" },
-          { value: "gradient", label: "Gradient" },
-        ],
-      },
-      // Card fields for first 6 cards
-      {
-        key: "cards.0.icon",
-        label: "Card 1 Icon",
-        type: "text",
-        placeholder: "HeartPulse",
-      },
-      {
-        key: "cards.0.title",
-        label: "Card 1 Titel",
-        type: "text",
-        placeholder: "Titel",
-      },
-      {
-        key: "cards.0.text",
-        label: "Card 1 Text",
-        type: "textarea",
-        placeholder: "Beschreibung",
-      },
-      {
-        key: "cards.0.ctaText",
-        label: "Card 1 CTA Text",
-        type: "text",
-        placeholder: "Button-Text",
-      },
-      {
-        key: "cards.0.ctaHref",
-        label: "Card 1 CTA Link",
-        type: "url",
-        placeholder: "/link",
-      },
-      {
-        key: "cards.1.icon",
-        label: "Card 2 Icon",
-        type: "text",
-        placeholder: "Dumbbell",
-      },
-      {
-        key: "cards.1.title",
-        label: "Card 2 Titel",
-        type: "text",
-        placeholder: "Titel",
-      },
-      {
-        key: "cards.1.text",
-        label: "Card 2 Text",
-        type: "textarea",
-        placeholder: "Beschreibung",
-      },
-      {
-        key: "cards.1.ctaText",
-        label: "Card 2 CTA Text",
-        type: "text",
-        placeholder: "Button-Text",
-      },
-      {
-        key: "cards.1.ctaHref",
-        label: "Card 2 CTA Link",
-        type: "url",
-        placeholder: "/link",
-      },
-      {
-        key: "cards.2.icon",
-        label: "Card 3 Icon",
-        type: "text",
-        placeholder: "Activity",
-      },
-      {
-        key: "cards.2.title",
-        label: "Card 3 Titel",
-        type: "text",
-        placeholder: "Titel",
-      },
-      {
-        key: "cards.2.text",
-        label: "Card 3 Text",
-        type: "textarea",
-        placeholder: "Beschreibung",
-      },
-      {
-        key: "cards.2.ctaText",
-        label: "Card 3 CTA Text",
-        type: "text",
-        placeholder: "Button-Text",
-      },
-      {
-        key: "cards.2.ctaHref",
-        label: "Card 3 CTA Link",
-        type: "url",
-        placeholder: "/link",
-      },
-      {
-        key: "cards.3.icon",
-        label: "Card 4 Icon",
-        type: "text",
-        placeholder: "Users",
-      },
-      {
-        key: "cards.3.title",
-        label: "Card 4 Titel",
-        type: "text",
-        placeholder: "Titel",
-      },
-      {
-        key: "cards.3.text",
-        label: "Card 4 Text",
-        type: "textarea",
-        placeholder: "Beschreibung",
-      },
-      {
-        key: "cards.3.ctaText",
-        label: "Card 4 CTA Text",
-        type: "text",
-        placeholder: "Button-Text",
-      },
-      {
-        key: "cards.3.ctaHref",
-        label: "Card 4 CTA Link",
-        type: "url",
-        placeholder: "/link",
-      },
-      {
-        key: "cards.4.icon",
-        label: "Card 5 Icon",
-        type: "text",
-        placeholder: "Timer",
-      },
-      {
-        key: "cards.4.title",
-        label: "Card 5 Titel",
-        type: "text",
-        placeholder: "Titel",
-      },
-      {
-        key: "cards.4.text",
-        label: "Card 5 Text",
-        type: "textarea",
-        placeholder: "Beschreibung",
-      },
-      {
-        key: "cards.4.ctaText",
-        label: "Card 5 CTA Text",
-        type: "text",
-        placeholder: "Button-Text",
-      },
-      {
-        key: "cards.4.ctaHref",
-        label: "Card 5 CTA Link",
-        type: "url",
-        placeholder: "/link",
-      },
-      {
-        key: "cards.5.icon",
-        label: "Card 6 Icon",
-        type: "text",
-        placeholder: "Sparkles",
-      },
-      {
-        key: "cards.5.title",
-        label: "Card 6 Titel",
-        type: "text",
-        placeholder: "Titel",
-      },
-      {
-        key: "cards.5.text",
-        label: "Card 6 Text",
-        type: "textarea",
-        placeholder: "Beschreibung",
-      },
-      {
-        key: "cards.5.ctaText",
-        label: "Card 6 CTA Text",
-        type: "text",
-        placeholder: "Button-Text",
-      },
-      {
-        key: "cards.5.ctaHref",
-        label: "Card 6 CTA Link",
-        type: "url",
-        placeholder: "/link",
-      },
+          { value: "none", label: "Kein Hintergrund" },
+          { value: "muted", label: "Dezent" },
+          { value: "gradient", label: "Verlauf" },
+        ]
+      }
+      
     ],
   },
   faq: {
@@ -1570,38 +1462,7 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
     label: "FAQ",
     defaults: faqDefaults,
     zodSchema: faqPropsSchema,
-    allowInlineEdit: true,
-    inspectorFields: [
-      {
-        key: "headline",
-        label: "Headline",
-        type: "text",
-        placeholder: "Häufige Fragen",
-      },
-      { key: "headlineColor", label: "Headline Farbe", type: "color", placeholder: "#111111" },
-      { key: "questionColor", label: "Frage Farbe (global)", type: "color", placeholder: "#111111" },
-      { key: "answerColor", label: "Antwort Farbe (global)", type: "color", placeholder: "#666666" },
-      {
-        key: "variant",
-        label: "Variante",
-        type: "select",
-        options: [
-          { value: "default", label: "Standard" },
-          { value: "soft", label: "Soft" },
-        ],
-      },
-      // FAQ Items (first 5 for MVP in inspector)
-      { key: "items.0.question", label: "Frage 1", type: "text", placeholder: "Wie lange dauert eine Behandlung?", required: true },
-      { key: "items.0.answer", label: "Antwort 1", type: "textarea", placeholder: "Eine Behandlungseinheit dauert...", required: true },
-      { key: "items.1.question", label: "Frage 2", type: "text", placeholder: "Werden die Kosten übernommen?", required: true },
-      { key: "items.1.answer", label: "Antwort 2", type: "textarea", placeholder: "Ja, wir arbeiten mit...", required: true },
-      { key: "items.2.question", label: "Frage 3", type: "text", placeholder: "Brauche ich eine Überweisung?", required: true },
-      { key: "items.2.answer", label: "Antwort 3", type: "textarea", placeholder: "Für die meisten Behandlungen...", required: true },
-      { key: "items.3.question", label: "Frage 4", type: "text", placeholder: "Wie kann ich einen Termin vereinbaren?", required: true },
-      { key: "items.3.answer", label: "Antwort 4", type: "textarea", placeholder: "Sie können einen Termin...", required: true },
-      { key: "items.4.question", label: "Frage 5", type: "text", placeholder: "Was sollte ich mitbringen?", required: true },
-      { key: "items.4.answer", label: "Antwort 5", type: "textarea", placeholder: "Bitte bringen Sie...", required: true },
-    ],
+    inspectorFields: [],
   },
   team: {
     type: "team",
@@ -1610,56 +1471,25 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
     zodSchema: teamPropsSchema,
     allowInlineEdit: true,
     inspectorFields: [
-      {
-        key: "headline",
-        label: "Headline",
-        type: "text",
-        placeholder: "Unser Team",
-      },
-      {
-        key: "subheadline",
-        label: "Subheadline",
-        type: "textarea",
-        placeholder: "Erfahrene Therapeuten für Ihre Gesundheit.",
-      },
-      { key: "headlineColor", label: "Headline Farbe", type: "color", placeholder: "#111111" },
-      { key: "subheadlineColor", label: "Subheadline Farbe", type: "color", placeholder: "#666666" },
-      { key: "nameColor", label: "Name Farbe (global)", type: "color", placeholder: "#111111" },
-      { key: "roleColor", label: "Rolle Farbe (global)", type: "color", placeholder: "#666666" },
-      { key: "ctaColor", label: "CTA Farbe (global)", type: "color", placeholder: "#111111" },
-      { key: "cardBgColor", label: "Card Hintergrund (global)", type: "color", placeholder: "#ffffff" },
-      { key: "cardBorderColor", label: "Card Border (global)", type: "color", placeholder: "#e5e7eb" },
+      { key: "headline", label: "Headline", type: "text", placeholder: "Überschrift", required: false },
+      { key: "subheadline", label: "Subheadline", type: "text", placeholder: "Kurzer Text" },
       {
         key: "columns",
         label: "Spalten",
         type: "select",
         options: [
-          { value: "2", label: "2 Spalten" },
-          { value: "3", label: "3 Spalten" },
-          { value: "4", label: "4 Spalten" },
+          { value: "2", label: "2" },
+          { value: "3", label: "3" },
+          { value: "4", label: "4" },
         ],
       },
-      // Team Members (first 3 for MVP in inspector)
-      { key: "members.0.name", label: "Mitglied 1 Name", type: "text", placeholder: "Max Mustermann", required: true },
-      { key: "members.0.role", label: "Mitglied 1 Rolle", type: "text", placeholder: "Physiotherapeut", required: true },
-      { key: "members.0.imageUrl", label: "Mitglied 1 Bild URL", type: "image", placeholder: "/placeholder.svg", required: true },
-      { key: "members.0.imageAlt", label: "Mitglied 1 Bild Alt", type: "text", placeholder: "Max Mustermann", required: true },
-      { key: "members.0.ctaText", label: "Mitglied 1 CTA Text", type: "text", placeholder: "Profil ansehen" },
-      { key: "members.0.ctaHref", label: "Mitglied 1 CTA Link", type: "url", placeholder: "/team/max-mustermann" },
-
-      { key: "members.1.name", label: "Mitglied 2 Name", type: "text", placeholder: "Anna Schmidt", required: true },
-      { key: "members.1.role", label: "Mitglied 2 Rolle", type: "text", placeholder: "Sportphysiotherapeutin", required: true },
-      { key: "members.1.imageUrl", label: "Mitglied 2 Bild URL", type: "image", placeholder: "/placeholder.svg", required: true },
-      { key: "members.1.imageAlt", label: "Mitglied 2 Bild Alt", type: "text", placeholder: "Anna Schmidt", required: true },
-      { key: "members.1.ctaText", label: "Mitglied 2 CTA Text", type: "text", placeholder: "Profil ansehen" },
-      { key: "members.1.ctaHref", label: "Mitglied 2 CTA Link", type: "url", placeholder: "/team/anna-schmidt" },
-
-      { key: "members.2.name", label: "Mitglied 3 Name", type: "text", placeholder: "Thomas Weber", required: true },
-      { key: "members.2.role", label: "Mitglied 3 Rolle", type: "text", placeholder: "Reha-Spezialist", required: true },
-      { key: "members.2.imageUrl", label: "Mitglied 3 Bild URL", type: "image", placeholder: "/placeholder.svg", required: true },
-      { key: "members.2.imageAlt", label: "Mitglied 3 Bild Alt", type: "text", placeholder: "Thomas Weber", required: true },
-      { key: "members.2.ctaText", label: "Mitglied 3 CTA Text", type: "text", placeholder: "Profil ansehen" },
-      { key: "members.2.ctaHref", label: "Mitglied 3 CTA Link", type: "url", placeholder: "/team/thomas-weber" },
+      { key: "headlineColor", label: "Headline Farbe", type: "color", placeholder: "#111111" },
+      { key: "subheadlineColor", label: "Subheadline Farbe", type: "color", placeholder: "#666666" },
+      { key: "nameColor", label: "Name Farbe", type: "color", placeholder: "#111111" },
+      { key: "roleColor", label: "Rolle Farbe", type: "color", placeholder: "#666666" },
+      { key: "ctaColor", label: "CTA Farbe", type: "color", placeholder: "#111111" },
+      { key: "cardBgColor", label: "Karte Hintergrund", type: "color" },
+      { key: "cardBorderColor", label: "Karte Border", type: "color" },
     ],
   },
   contactForm: {
@@ -1667,106 +1497,54 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
     label: "Kontaktformular",
     defaults: contactFormDefaults,
     zodSchema: contactFormPropsSchema,
-    allowInlineEdit: false,
+    allowInlineEdit: true,
     inspectorFields: [
-      {
-        key: "heading",
-        label: "Überschrift",
-        type: "text",
-        placeholder: "Kontaktieren Sie uns",
-        required: true,
-      },
-      {
-        key: "text",
-        label: "Beschreibung",
-        type: "textarea",
-        placeholder: "Wir freuen uns auf Ihre Nachricht...",
-      },
-      { key: "headingColor", label: "Überschrift Farbe", type: "color", placeholder: "#111111" },
-      { key: "textColor", label: "Beschreibung Farbe", type: "color", placeholder: "#666666" },
-      { key: "labelColor", label: "Label Farbe", type: "color", placeholder: "#111111" },
-      { key: "inputTextColor", label: "Input Text Farbe", type: "color", placeholder: "#111111" },
-      { key: "inputBgColor", label: "Input Hintergrund", type: "color", placeholder: "#ffffff" },
-      { key: "inputBorderColor", label: "Input Border", type: "color", placeholder: "#e5e7eb" },
-      { key: "privacyTextColor", label: "Datenschutz Text Farbe", type: "color", placeholder: "#666666" },
-      { key: "privacyLinkColor", label: "Datenschutz Link Farbe", type: "color", placeholder: "#2563eb" },
-      { key: "consentLabelColor", label: "Einwilligung Label Farbe", type: "color", placeholder: "#111111" },
-      { key: "buttonTextColor", label: "Button Text Farbe", type: "color", placeholder: "#ffffff" },
-      { key: "buttonBgColor", label: "Button Hintergrund", type: "color", placeholder: "#111111" },
-      { key: "buttonHoverBgColor", label: "Button Hover Hintergrund", type: "color", placeholder: "#000000" },
-      { key: "buttonBorderColor", label: "Button Border", type: "color", placeholder: "#111111" },
-      {
-        key: "submitLabel",
-        label: "Button-Text",
-        type: "text",
-        placeholder: "Nachricht senden",
-        required: true,
-      },
-      {
-        key: "successTitle",
-        label: "Erfolgs-Titel",
-        type: "text",
-        placeholder: "Nachricht gesendet",
-        required: true,
-      },
-      {
-        key: "successText",
-        label: "Erfolgs-Text",
-        type: "textarea",
-        placeholder: "Vielen Dank für Ihre Nachricht...",
-        required: true,
-      },
-      {
-        key: "errorText",
-        label: "Fehler-Text",
-        type: "textarea",
-        placeholder: "Es ist ein Fehler aufgetreten...",
-        required: true,
-      },
-      {
-        key: "privacyText",
-        label: "Datenschutz-Text",
-        type: "textarea",
-        placeholder: "Wir verwenden Ihre Angaben...",
-        required: true,
-      },
+      { key: "heading", label: "Überschrift", type: "text", placeholder: "Kontaktieren Sie uns" },
+      { key: "text", label: "Intro-Text", type: "textarea", placeholder: "Beschreibungstext..." },
+      { key: "submitLabel", label: "Button-Text", type: "text", placeholder: "Nachricht senden" },
+      { key: "successTitle", label: "Erfolgs-Titel", type: "text", placeholder: "Nachricht gesendet" },
+      { key: "successText", label: "Erfolgs-Nachricht", type: "textarea", placeholder: "Danke-Nachricht..." },
+      { key: "errorText", label: "Fehler-Nachricht", type: "textarea", placeholder: "Fehler-Text..." },
+      { key: "privacyText", label: "Datenschutz-Text", type: "textarea", placeholder: "Wir verwenden..." },
+      { key: "backgroundColor", label: "Hintergrundfarbe", type: "color", placeholder: "#ffffff" },
       {
         key: "privacyLink.label",
-        label: "Datenschutz-Link Text",
+        label: "Datenschutz-Link Label",
         type: "text",
         placeholder: "Datenschutzerklärung",
-        required: true,
       },
       {
         key: "privacyLink.href",
         label: "Datenschutz-Link URL",
-        type: "url",
-        placeholder: "/datenschutz",
-        required: true,
-      },
-      {
-        key: "requireConsent",
-        label: "Einwilligung erforderlich",
-        type: "boolean",
-      },
-      {
-        key: "consentLabel",
-        label: "Einwilligungs-Text",
         type: "text",
-        placeholder: "Ich habe die Datenschutzerklärung gelesen...",
+        placeholder: "/datenschutz",
       },
+      { key: "requireConsent", label: "Zustimmung erforderlich", type: "boolean" },
+      { key: "consentLabel", label: "Zustimmungs-Text", type: "textarea", placeholder: "Ich akzeptiere..." },
       {
         key: "layout",
         label: "Layout",
         type: "select",
         options: [
           { value: "stack", label: "Gestapelt" },
-          { value: "split", label: "Geteilt" },
+          { value: "split", label: "Zweispaltig" },
         ],
+      },
+      { key: "headingColor", label: "Überschrift Farbe", type: "color", placeholder: "#000000" },
+      { key: "textColor", label: "Text Farbe", type: "color", placeholder: "#666666" },
+      { key: "inputTextColor", label: "Input Text Farbe", type: "color", placeholder: "#000000" },
+      { key: "inputBgColor", label: "Input Hintergrund", type: "color", placeholder: "#ffffff" },
+      { key: "inputBorderColor", label: "Input Border", type: "color", placeholder: "#cccccc" },
+      { key: "buttonTextColor", label: "Button Text Farbe", type: "color", placeholder: "#ffffff" },
+      { key: "buttonBgColor", label: "Button Hintergrund", type: "color", placeholder: "#000000" },
+      {
+        key: "buttonHoverBgColor",
+        label: "Button Hover Hintergrund",
+        type: "color",
+        placeholder: "#333333",
       },
     ],
   },
-
   testimonials: {
     type: "testimonials",
     label: "Testimonials",
@@ -1812,7 +1590,27 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
       },
     ],
   },
+  testimonialSlider: {
+    type: "testimonialSlider",
+    label: "Testimonial Slider",
+    defaults: testimonialSliderDefaults,
+    zodSchema: testimonialSliderPropsSchema,
+    allowInlineEdit: true,
+    inspectorFields: [
+      { key:"headline", label:"Headline", type:"text", placeholder:"Überschrift" },
+      { key:"subheadline", label:"Subheadline", type:"textarea", placeholder:"Kurzer Text" },
+      { key:"background", label:"Background", type:"select", options:[
+        { value:"none", label:"None" },
+        { value:"muted", label:"Muted" },
+        { value:"gradient", label:"Gradient" },
+      ]},
+      { key:"autoplay", label:"Autoplay", type:"boolean" },
+      { key:"interval", label:"Intervall (ms)", type:"text", placeholder:"6000" },
+      { key:"showArrows", label:"Arrows", type:"boolean" },
+      { key:"showDots", label:"Dots", type:"boolean" },
 
+    ],
+  },
   gallery: {
     type: "gallery",
     label: "Galerie",
@@ -1858,7 +1656,6 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
       },
     ],
   },
-
   imageSlider: {
     type: "imageSlider",
     label: "Bild-Slider",
@@ -1902,7 +1699,6 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
       },
     ],
   },
-
   openingHours: {
     type: "openingHours",
     label: "Öffnungszeiten",
@@ -1955,4 +1751,16 @@ export function getBlockDefinition<T extends BlockType>(type: T): BlockDefinitio
  */
 export function getAllBlockTypes(): BlockType[] {
   return Object.keys(blockRegistry) as BlockType[]
+}
+
+/**
+ * Helper function to add global shadow inspector section to a block definition
+ * This allows any block to have element-level shadow styling
+ */
+export function withGlobalElementShadow<T extends CMSBlock = CMSBlock>(
+  definition: BlockDefinition<T>
+): BlockDefinition<T> {
+  // Return the definition as-is; shadow handling is done in PageEditor via ShadowInspector
+  // This is a marker function for clarity in code
+  return definition
 }

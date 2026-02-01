@@ -6,25 +6,28 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function CMSPageRoute({ params }: { params: Promise<{ slug: string }> }) {
+  // physiotherapy only
   const resolvedParams = await params;
   const slug = resolvedParams.slug;
   const supabasePublic = await getSupabasePublic();
 
-  // First, try to find the page without status filter to see if it exists
+  // First, try to find the page without status filter to see if it exists (brand="physiotherapy")
   const { data: allPages, error: checkErr } = await supabasePublic
     .from("pages")
     .select("id, title, slug, status")
-    .eq("slug", slug);
+    .eq("slug", slug)
+    .eq("brand", "physiotherapy");
 
   if (checkErr) {
     console.error("Error checking page existence:", checkErr);
   }
 
-  // Now get the published page
+  // Now get the published page (brand="physiotherapy")
   const { data: page, error: pageErr } = await supabasePublic
     .from("pages")
     .select("id, title, slug, status")
     .eq("slug", slug)
+    .eq("brand", "physiotherapy")
     .eq("status", "published")
     .single();
 

@@ -1,8 +1,10 @@
 import * as React from "react"
 import { cn } from "@/lib/utils"
+import { AnimatedBlock } from "@/components/blocks/AnimatedBlock"
+import type { BlockSectionProps } from "@/types/cms"
 
 interface TextBlockProps {
-  section?: unknown
+  section?: BlockSectionProps
   typography?: unknown
   content: string
   alignment?: "left" | "center" | "right"
@@ -36,6 +38,7 @@ const alignmentMap = {
 }
 
 export function TextBlock({
+  section,
   content,
   alignment = "left",
   maxWidth = "xl",
@@ -51,7 +54,8 @@ export function TextBlock({
   } as React.CSSProperties
 
   return (
-    <section className="py-12">
+    <AnimatedBlock config={section?.animation}>
+      <section className="py-12">
       <div className={cn("mx-auto px-4", maxWidthMap[maxWidth])}>
         <div
           className={cn(
@@ -65,6 +69,7 @@ export function TextBlock({
           dangerouslySetInnerHTML={{ __html: content }}
         />
       </div>
-    </section>
+      </section>
+    </AnimatedBlock>
   )
 }

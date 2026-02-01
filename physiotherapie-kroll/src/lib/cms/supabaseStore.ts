@@ -68,12 +68,13 @@ export function titleToSlug(title: string): string {
 /**
  * Generates a unique slug in DB space (no LocalStorage, no guessing).
  * Uses a prefix query and picks the next free counter.
+ * Filters pages by brand to ensure uniqueness within brand scope only.
  */
-export async function generateUniqueSlug(title: string, excludePageId?: string) {
+export async function generateUniqueSlug(title: string, excludePageId?: string, brand?: string) {
   const baseSlug = titleToSlug(title) || "seite";
   // Server-owned session (HttpOnly cookies): admin must go through API routes.
   // We reuse listPages() and compute the next free slug client-side.
-  const pages = await listPages();
+  const pages = await listPages(brand);
   const taken = new Set(
     pages
       .filter((p) => !excludePageId || p.id !== excludePageId)
@@ -87,9 +88,20 @@ export async function generateUniqueSlug(title: string, excludePageId?: string) 
   return `${baseSlug}-${counter}`;
 }
 
-export async function listPages(): Promise<AdminPageSummary[]> {
-  const res = await fetch("/api/admin/pages", { cache: "no-store" });
+export async function listPages(brand?: string): Promise<AdminPageSummary[]> {
+  const url = new URL("/api/admin/pages", typeof window !== "undefined" ? window.location.origin : "http://localhost");
+  if (brand) {
+    url.searchParams.set("brand", brand);
+  }
+
+  const res = await fetch(url.toString(), { cache: "no-store" });
   if (!res.ok) {
+    if (res.status === 401 && typeof window !== "undefined") {
+      const next = window.location.pathname + window.location.search;
+      window.location.href = `/auth/login?next=${encodeURIComponent(next)}`;
+      // Returning an empty array prevents UI crash after redirect attempt
+      return [];
+    }
     const body = await res.json().catch(() => ({}));
     throw new Error(body?.error || `Failed to load pages (${res.status})`);
   }

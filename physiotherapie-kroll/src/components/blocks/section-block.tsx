@@ -44,6 +44,7 @@ const backgroundMap = {
 }
 
 export function SectionBlock({
+  section,
   eyebrow,
   headline,
   content,
@@ -69,6 +70,9 @@ export function SectionBlock({
   const isSoft = variant === "soft"
   const [ctaHovered, setCtaHovered] = useState(false)
 
+  // ✅ Full Background Flag (defensiv, da section unknown ist)
+  const fullBackground = Boolean((section as any)?.fullBackground)
+
   // Inline edit helper
   const handleInlineEdit = (e: React.MouseEvent, fieldPath: string) => {
     if (!editable || !blockId || !onEditField) return
@@ -81,13 +85,26 @@ export function SectionBlock({
   return (
     <section
       className={cn(
-        "py-16 px-4",
+        // base vertical spacing
+        variant === "soft" ? "py-20" : "py-16",
+
+        // background preset
         backgroundMap[background],
-        isSoft && "py-20"
+
+        // ✅ only apply outer horizontal padding when NOT full-bleed
+        !fullBackground && "px-4",
+
+        // ✅ full-bleed escape (works even inside a container wrapper)
+        fullBackground && "relative left-1/2 right-1/2 w-screen -ml-[50vw] -mr-[50vw]"
       )}
       style={backgroundColor ? ({ backgroundColor } as React.CSSProperties) : undefined}
     >
-      <div className="container mx-auto">
+      {/* 
+        IMPORTANT:
+        - If fullBackground: this inner container defines the "normal block width"
+        - If not fullBackground: behaves similar to before, but still consistent
+      */}
+      <div className={cn(fullBackground ? "mx-auto w-full max-w-7xl px-4" : "container mx-auto")}>
         <div
           className={cn(
             "mx-auto",
@@ -166,9 +183,7 @@ export function SectionBlock({
                           handleInlineEdit(e, "primaryCtaText")
                         }
                       }}
-                      className={cn(
-                        editable && blockId && onEditField && "cursor-pointer"
-                      )}
+                      className={cn(editable && blockId && onEditField && "cursor-pointer")}
                     >
                       {primaryCtaText}
                     </span>
