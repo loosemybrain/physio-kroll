@@ -74,9 +74,12 @@ export function BlockRenderer({
           heroTypographyValue && typeof heroTypographyValue === "object"
             ? (heroTypographyValue as Record<string, TypographySettings>)
             : undefined
+        const elementsValue = extras.elements
+        const elements = elementsValue as Record<string, any> | undefined
         return (
           <HeroSection
             {...heroProps}
+            elements={elements}
             props={heroProps}
             editable={editable}
             blockId={block.id}
@@ -180,9 +183,12 @@ export function BlockRenderer({
 
       case "contactForm": {
         const props = block.props
+        const elementsValue = (props as Record<string, unknown>).elements
+        const elements = elementsValue as Record<string, any> | undefined
         return (
           <ContactFormBlock
             {...props}
+            elements={elements}
             blockId={block.id}
             pageSlug={pageSlug}
             editable={editable}
