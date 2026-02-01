@@ -508,10 +508,9 @@ export interface ContactFormBlock extends BaseBlock {
     // Contact Info Cards (for split layout)
     contactInfoCards?: Array<{
       id: string
-      icon: "mail" | "phone" | "clock" | "mapPin"
+      icon: "clock" | "phone" | "mapPin" | "mail"
       title: string
       value: string
-      href?: string
     }>
   }
 }

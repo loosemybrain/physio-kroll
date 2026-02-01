@@ -26,6 +26,12 @@ type ContactFormBlockProps = ContactFormBlock["props"] & CommonBlockProps & {
   selectedElementId?: string | null
 }
 
+const DEFAULT_CONTACT_INFO_CARDS: ContactFormBlock["props"]["contactInfoCards"] = [
+  { id: "hours", icon: "clock", title: "Schnelle Antwort", value: "Innerhalb von 24 Stunden" },
+  { id: "consultation", icon: "phone", title: "Kostenlose Beratung", value: "Unverbindliches Erstgespräch" },
+  { id: "location", icon: "mapPin", title: "Lokale Betreuung", value: "Persönlich vor Ort für Sie da" },
+]
+
 /**
  * Builds Zod schema from form field definitions
  */
@@ -484,6 +490,8 @@ export function ContactFormBlock({
     })
     
     const { contactInfoCards } = propsFromBlock
+    
+    const effectiveCards = contactInfoCards?.length ? contactInfoCards : DEFAULT_CONTACT_INFO_CARDS
 
     return (
       <section className="relative w-full overflow-hidden py-12 px-4">
@@ -537,58 +545,36 @@ export function ContactFormBlock({
 
               {/* Contact Info Cards */}
               <div className="mt-12 space-y-4">
-                {(() => {
-                  // Default cards (fallback wenn contactInfoCards nicht definiert)
-                  const defaults: typeof contactInfoCards = [
-                    { id: "hours", icon: "clock", title: "Schnelle Antwort", value: "Innerhalb von 24 Stunden" },
-                    { id: "consultation", icon: "phone", title: "Kostenlose Beratung", value: "Unverbindliches Erstgespräch" },
-                    { id: "location", icon: "mapPin", title: "Lokale Betreuung", value: "Persönlich vor Ort für Sie da" },
-                  ]
-                  const cards = contactInfoCards || defaults
-                  
-                  return cards?.map((card) => {
-                    const cardElementId = `contact-info-card-${card.id}`
-                    const cardShadow = useElementShadowStyle({
-                      elementId: cardElementId,
-                      elementConfig: (elements ?? {})[cardElementId],
-                    })
-                    
-                    const IconComponent = card.icon === "mail" ? Mail 
-                      : card.icon === "phone" ? Phone 
-                      : card.icon === "clock" ? Clock 
-                      : MapPin
-                    
-                    const content = (
-                      <>
-                        <div className="flex size-12 shrink-0 items-center justify-center rounded-lg bg-primary/10 transition-colors group-hover:bg-primary/20">
-                          <IconComponent className="size-5 text-primary" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-foreground">{card.title}</p>
-                          <p className="text-sm text-muted-foreground">{card.value}</p>
-                        </div>
-                      </>
-                    )
-                    
-                    return (
-                      <div 
-                        key={card.id}
-                        data-element-id={cardElementId}
-                        style={cardShadow as any}
-                        onClick={() => onElementClick?.(blockId || "", cardElementId)}
-                        className="group flex items-center gap-4 rounded-xl border border-border/30 bg-card/40 p-4 backdrop-blur-sm transition-all duration-300 hover:border-border/60 hover:bg-card/60 cursor-pointer"
-                      >
-                        {card.href ? (
-                          <a href={card.href} rel="noreferrer" target="_blank" className="flex items-center gap-4 w-full">
-                            {content}
-                          </a>
-                        ) : (
-                          content
-                        )}
-                      </div>
-                    )
+                {effectiveCards.map((card) => {
+                  const cardElementId = `contact-info-${card.id}`
+                  const cardShadow = useElementShadowStyle({
+                    elementId: cardElementId,
+                    elementConfig: (elements ?? {})[cardElementId],
                   })
-                })()}
+                  
+                  const IconComponent = card.icon === "mail" ? Mail 
+                    : card.icon === "phone" ? Phone 
+                    : card.icon === "clock" ? Clock 
+                    : MapPin
+                  
+                  return (
+                    <div 
+                      key={card.id}
+                      data-element-id={cardElementId}
+                      style={cardShadow as any}
+                      onClick={() => onElementClick?.(blockId || "", cardElementId)}
+                      className="group flex items-center gap-4 rounded-xl border border-border/30 bg-card/40 p-4 backdrop-blur-sm transition-all duration-300 hover:border-border/60 hover:bg-card/60 cursor-pointer"
+                    >
+                      <div className="flex size-12 shrink-0 items-center justify-center rounded-lg bg-primary/10 transition-colors group-hover:bg-primary/20">
+                        <IconComponent className="size-5 text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-foreground">{card.title}</p>
+                        <p className="text-sm text-muted-foreground">{card.value}</p>
+                      </div>
+                    </div>
+                  )
+                })}
               </div>
             </div>
 
