@@ -220,8 +220,14 @@ export function HeroSection({
   const ctaTypography = typographyRecord["cta"]
   const playTypography = typographyRecord["play"] || typographyRecord["cta"]
 
-  const handleInlineEdit = (e: React.MouseEvent, fieldPath: string) => {
+  const handleInlineEdit = (e: React.MouseEvent, fieldPath: string, elementId?: string) => {
     if (!editable || !blockId || !onEditField) return
+    
+    // Trigger element selection first (for shadow inspector)
+    if (elementId && onElementClick) {
+      onElementClick(blockId, elementId)
+    }
+    
     e.preventDefault()
     e.stopPropagation()
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
@@ -370,7 +376,7 @@ export function HeroSection({
             }}
             data-element-id="hero-headline"
           >
-            <span onClick={(e) => handleInlineEdit(e, "headline")}>
+            <span onClick={(e) => handleInlineEdit(e, "headline", "hero-headline")}>
               {resolvedHeadline}
             </span>
           </Editable>
@@ -394,7 +400,7 @@ export function HeroSection({
             }}
             data-element-id="hero-subheadline"
           >
-            <span onClick={(e) => handleInlineEdit(e, "subheadline")}>
+            <span onClick={(e) => handleInlineEdit(e, "subheadline", "hero-subheadline")}>
               {resolvedSubheadline}
             </span>
           </Editable>
