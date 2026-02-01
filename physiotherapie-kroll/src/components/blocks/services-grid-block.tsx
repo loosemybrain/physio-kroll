@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { ArrowRight } from "lucide-react"
 import * as LucideIcons from "lucide-react"
+import { useElementShadowStyle } from "@/lib/shadow"
 
 interface ServicesGridBlockProps {
   section?: unknown

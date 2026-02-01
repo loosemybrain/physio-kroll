@@ -504,6 +504,15 @@ export interface ContactFormBlock extends BaseBlock {
     buttonBgColor?: string
     buttonHoverBgColor?: string
     buttonBorderColor?: string
+    
+    // Contact Info Cards (for split layout)
+    contactInfoCards?: Array<{
+      id: string
+      icon: "mail" | "phone" | "clock" | "mapPin"
+      title: string
+      value: string
+      href?: string
+    }>
   }
 }
 

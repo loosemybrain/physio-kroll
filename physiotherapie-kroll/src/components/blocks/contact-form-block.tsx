@@ -482,6 +482,8 @@ export function ContactFormBlock({
       elementId: "contactCard",
       elementConfig: (propsFromBlock as any)?.elements?.["contactCard"],
     })
+    
+    const { contactInfoCards } = propsFromBlock
 
     return (
       <section className="relative w-full overflow-hidden py-12 px-4">
@@ -535,47 +537,58 @@ export function ContactFormBlock({
 
               {/* Contact Info Cards */}
               <div className="mt-12 space-y-4">
-                {/* Card 1: Schnelle Antwort */}
-                <div 
-                  data-element-id="contactCard"
-                  style={contactCardShadow as any}
-                  className="group flex items-center gap-4 rounded-xl border border-border/30 bg-card/40 p-4 backdrop-blur-sm transition-all duration-300 hover:border-border/60 hover:bg-card/60">
-                  <div className="flex size-12 shrink-0 items-center justify-center rounded-lg bg-primary/10 transition-colors group-hover:bg-primary/20">
-                    <Clock className="size-5 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-foreground">Schnelle Antwort</p>
-                    <p className="text-sm text-muted-foreground">Innerhalb von 24 Stunden</p>
-                  </div>
-                </div>
-
-                {/* Card 2: Kostenlose Beratung */}
-                <div 
-                  data-element-id="contactCard"
-                  style={contactCardShadow as any}
-                  className="group flex items-center gap-4 rounded-xl border border-border/30 bg-card/40 p-4 backdrop-blur-sm transition-all duration-300 hover:border-border/60 hover:bg-card/60">
-                  <div className="flex size-12 shrink-0 items-center justify-center rounded-lg bg-primary/10 transition-colors group-hover:bg-primary/20">
-                    <Phone className="size-5 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-foreground">Kostenlose Beratung</p>
-                    <p className="text-sm text-muted-foreground">Unverbindliches Erstgespräch</p>
-                  </div>
-                </div>
-
-                {/* Card 3: Lokale Betreuung */}
-                <div 
-                  data-element-id="contactCard"
-                  style={contactCardShadow as any}
-                  className="group flex items-center gap-4 rounded-xl border border-border/30 bg-card/40 p-4 backdrop-blur-sm transition-all duration-300 hover:border-border/60 hover:bg-card/60">
-                  <div className="flex size-12 shrink-0 items-center justify-center rounded-lg bg-primary/10 transition-colors group-hover:bg-primary/20">
-                    <MapPin className="size-5 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-foreground">Lokale Betreuung</p>
-                    <p className="text-sm text-muted-foreground">Persönlich vor Ort für Sie da</p>
-                  </div>
-                </div>
+                {(() => {
+                  // Default cards (fallback wenn contactInfoCards nicht definiert)
+                  const defaults: typeof contactInfoCards = [
+                    { id: "hours", icon: "clock", title: "Schnelle Antwort", value: "Innerhalb von 24 Stunden" },
+                    { id: "consultation", icon: "phone", title: "Kostenlose Beratung", value: "Unverbindliches Erstgespräch" },
+                    { id: "location", icon: "mapPin", title: "Lokale Betreuung", value: "Persönlich vor Ort für Sie da" },
+                  ]
+                  const cards = contactInfoCards || defaults
+                  
+                  return cards?.map((card) => {
+                    const cardElementId = `contact-info-card-${card.id}`
+                    const cardShadow = useElementShadowStyle({
+                      elementId: cardElementId,
+                      elementConfig: (elements ?? {})[cardElementId],
+                    })
+                    
+                    const IconComponent = card.icon === "mail" ? Mail 
+                      : card.icon === "phone" ? Phone 
+                      : card.icon === "clock" ? Clock 
+                      : MapPin
+                    
+                    const content = (
+                      <>
+                        <div className="flex size-12 shrink-0 items-center justify-center rounded-lg bg-primary/10 transition-colors group-hover:bg-primary/20">
+                          <IconComponent className="size-5 text-primary" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-foreground">{card.title}</p>
+                          <p className="text-sm text-muted-foreground">{card.value}</p>
+                        </div>
+                      </>
+                    )
+                    
+                    return (
+                      <div 
+                        key={card.id}
+                        data-element-id={cardElementId}
+                        style={cardShadow as any}
+                        onClick={() => onElementClick?.(blockId || "", cardElementId)}
+                        className="group flex items-center gap-4 rounded-xl border border-border/30 bg-card/40 p-4 backdrop-blur-sm transition-all duration-300 hover:border-border/60 hover:bg-card/60 cursor-pointer"
+                      >
+                        {card.href ? (
+                          <a href={card.href} rel="noreferrer" target="_blank" className="flex items-center gap-4 w-full">
+                            {content}
+                          </a>
+                        ) : (
+                          content
+                        )}
+                      </div>
+                    )
+                  })
+                })()}
               </div>
             </div>
 
