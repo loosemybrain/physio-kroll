@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { ArrowRight } from "lucide-react"
 import { AnimatedBlock } from "@/components/blocks/AnimatedBlock"
 import type { BlockSectionProps } from "@/types/cms"
+import { useElementShadowStyle } from "@/lib/shadow"
 
 interface ImageTextBlockProps {
   section?: BlockSectionProps
@@ -75,7 +76,24 @@ export function ImageTextBlock(props: ImageTextBlockProps) {
     editable = false,
     blockId,
     onEditField,
+    elements,
+    onElementClick,
+    selectedElementId,
   } = props
+
+  // Element shadows
+  const headlineShadow = useElementShadowStyle({
+    elementId: "headline",
+    elementConfig: (elements ?? {})["headline"],
+  })
+  const contentShadow = useElementShadowStyle({
+    elementId: "content",
+    elementConfig: (elements ?? {})["content"],
+  })
+  const ctaShadow = useElementShadowStyle({
+    elementId: "cta",
+    elementConfig: (elements ?? {})["cta"],
+  })
 
   const canInlineEdit = Boolean(editable && blockId && onEditField)
   const isImageLeft = imagePosition === "left"
@@ -90,8 +108,12 @@ export function ImageTextBlock(props: ImageTextBlockProps) {
     ctaHref: "ctaHref", // <- ggf. auf "primaryCtaHref" oder "buttonHref" etc. ändern
   } as const
 
-  function handleInlineEdit(e: React.SyntheticEvent, fieldPath: string) {
+  function handleInlineEdit(e: React.SyntheticEvent, fieldPath: string, elementId?: string) {
     if (!canInlineEdit || !blockId || !onEditField) return
+
+    if (elementId && onElementClick) {
+      onElementClick(blockId, elementId)
+    }
 
     e.preventDefault()
     e.stopPropagation()
@@ -176,8 +198,12 @@ export function ImageTextBlock(props: ImageTextBlockProps) {
                   "text-3xl font-bold tracking-tight text-foreground md:text-4xl",
                   canInlineEdit && "cursor-pointer"
                 )}
-                style={headlineColor ? ({ color: headlineColor } as React.CSSProperties) : undefined}
-                onClick={canInlineEdit ? (e) => handleInlineEdit(e, FP.headline) : undefined}
+                style={{
+                  ...headlineShadow,
+                  ...(headlineColor ? { color: headlineColor } : {}),
+                }}
+                data-element-id="headline"
+                onClick={canInlineEdit ? (e) => handleInlineEdit(e, FP.headline, "headline") : undefined}
               >
                 {headline}
               </h2>
@@ -186,7 +212,9 @@ export function ImageTextBlock(props: ImageTextBlockProps) {
             {/* Content clickable wrapper (wichtig für Live Preview Selection) */}
             <div
               className={cn(canInlineEdit && "cursor-pointer")}
-              onClick={canInlineEdit ? (e) => handleInlineEdit(e, FP.content) : undefined}
+              style={contentShadow as any}
+              data-element-id="content"
+              onClick={canInlineEdit ? (e) => handleInlineEdit(e, FP.content, "content") : undefined}
             >
               <div
                 className="prose prose-neutral dark:prose-invert max-w-none text-muted-foreground"
@@ -197,7 +225,7 @@ export function ImageTextBlock(props: ImageTextBlockProps) {
 
             {/* CTA */}
             {(ctaText || canInlineEdit) && (
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3" data-element-id="cta" style={ctaShadow as any}>
                 {/* Admin Preview: Button darf nicht navigieren, sondern Inline-Edit öffnen */}
                 {canInlineEdit ? (
                   <Button
@@ -207,7 +235,7 @@ export function ImageTextBlock(props: ImageTextBlockProps) {
                     style={ctaStyle}
                     onMouseEnter={() => setCtaHovered(true)}
                     onMouseLeave={() => setCtaHovered(false)}
-                    onClick={(e) => handleInlineEdit(e, FP.ctaText)}
+                    onClick={(e) => handleInlineEdit(e, FP.ctaText, "cta")}
                   >
                     {ctaText || "CTA"}
                     <ArrowRight className="h-4 w-4" />

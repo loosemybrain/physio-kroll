@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { ArrowRight } from "lucide-react"
 import { AnimatedBlock } from "@/components/blocks/AnimatedBlock"
 import type { BlockSectionProps } from "@/types/cms"
+import { useElementShadowStyle } from "@/lib/shadow"
 
 interface CtaBlockProps {
   section?: BlockSectionProps
@@ -65,11 +66,32 @@ export function CtaBlock({
   editable = false,
   blockId,
   onEditField,
+  elements,
+  onElementClick,
+  selectedElementId,
 }: CtaBlockProps) {
   const isCentered = variant === "centered"
   const isSplit = variant === "split"
   const [primaryHover, setPrimaryHover] = React.useState(false)
   const [secondaryHover, setSecondaryHover] = React.useState(false)
+
+  // Element shadows
+  const headlineShadow = useElementShadowStyle({
+    elementId: "headline",
+    elementConfig: (elements ?? {})["headline"],
+  })
+  const subheadlineShadow = useElementShadowStyle({
+    elementId: "subheadline",
+    elementConfig: (elements ?? {})["subheadline"],
+  })
+  const primaryCtaShadow = useElementShadowStyle({
+    elementId: "primaryCta",
+    elementConfig: (elements ?? {})["primaryCta"],
+  })
+  const secondaryCtaShadow = useElementShadowStyle({
+    elementId: "secondaryCta",
+    elementConfig: (elements ?? {})["secondaryCta"],
+  })
   
   const canInlineEdit = Boolean(editable && blockId && onEditField)
   
@@ -83,8 +105,12 @@ export function CtaBlock({
     secondaryCtaHref: "secondaryCtaHref",
   } as const
   
-  function handleInlineEdit(e: React.SyntheticEvent, fieldPath: string) {
+  function handleInlineEdit(e: React.SyntheticEvent, fieldPath: string, elementId?: string) {
     if (!canInlineEdit || !blockId || !onEditField) return
+    
+    if (elementId && onElementClick) {
+      onElementClick(blockId, elementId)
+    }
     
     e.preventDefault()
     e.stopPropagation()
@@ -119,8 +145,12 @@ export function CtaBlock({
                 "text-3xl font-bold tracking-tight text-foreground md:text-4xl",
                 canInlineEdit && "cursor-pointer"
               )}
-              style={headlineColor ? ({ color: headlineColor } as React.CSSProperties) : undefined}
-              onClick={canInlineEdit ? (e) => handleInlineEdit(e, FP.headline) : undefined}
+              style={{
+                ...headlineShadow,
+                ...(headlineColor ? { color: headlineColor } : {}),
+              }}
+              data-element-id="headline"
+              onClick={canInlineEdit ? (e) => handleInlineEdit(e, FP.headline, "headline") : undefined}
             >
               {headline}
             </h2>
@@ -130,8 +160,12 @@ export function CtaBlock({
                   "mt-4 text-lg text-muted-foreground",
                   canInlineEdit && "cursor-pointer"
                 )}
-                style={subheadlineColor ? ({ color: subheadlineColor } as React.CSSProperties) : undefined}
-                onClick={canInlineEdit ? (e) => handleInlineEdit(e, FP.subheadline) : undefined}
+                style={{
+                  ...subheadlineShadow,
+                  ...(subheadlineColor ? { color: subheadlineColor } : {}),
+                }}
+                data-element-id="subheadline"
+                onClick={canInlineEdit ? (e) => handleInlineEdit(e, FP.subheadline, "subheadline") : undefined}
               >
                 {subheadline || "(Subheadline)"}
               </p>
@@ -143,6 +177,8 @@ export function CtaBlock({
               isCentered && "justify-center",
               isSplit && "lg:shrink-0"
             )}
+            data-element-id="primaryCta"
+            style={primaryCtaShadow as any}
           >
             {/* Primary CTA */}
             {canInlineEdit ? (

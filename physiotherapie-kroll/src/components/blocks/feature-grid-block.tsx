@@ -3,6 +3,7 @@
 import { useCallback } from "react"
 import { cn } from "@/lib/utils"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { useElementShadowStyle } from "@/lib/shadow"
 
 interface Feature {
   id: string
@@ -51,29 +52,47 @@ export function FeatureGridBlock({
   editable = false,
   blockId,
   onEditField,
+  elements,
+  onElementClick,
+  selectedElementId,
 }: FeatureGridBlockProps) {
   const handleInlineEdit = useCallback(
-    (e: React.MouseEvent, fieldPath: string) => {
+    (e: React.MouseEvent, fieldPath: string, elementId?: string) => {
       if (!editable || !blockId || !onEditField) return
+      if (elementId && onElementClick) {
+        onElementClick(blockId, elementId)
+      }
       e.preventDefault()
       e.stopPropagation()
       const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
       onEditField(blockId, fieldPath, rect)
     },
-    [editable, blockId, onEditField],
+    [editable, blockId, onEditField, onElementClick],
   )
 
   return (
     <section className="py-16 px-4">
       <div className="container mx-auto">
         <div className={cn("grid gap-6", columnsMap[columns])}>
-          {features.map((feature, index) => (
+          {features.map((feature, index) => {
+            const cardShadow = useElementShadowStyle({
+              elementId: `card-${feature.id}`,
+              elementConfig: (elements ?? {})[`card-${feature.id}`],
+            })
+            return (
             <Card
               key={feature.id}
               className="h-full"
+              data-element-id={`card-${feature.id}`}
               style={{
+                ...(cardShadow as any),
                 backgroundColor: feature.cardBgColor || cardBgColor || undefined,
                 borderColor: feature.cardBorderColor || cardBorderColor || undefined,
+              }}
+              onClick={(e) => {
+                if ((e.target as HTMLElement).closest("[data-element-id]") === e.currentTarget && onElementClick) {
+                  onElementClick(blockId || "", `card-${feature.id}`)
+                }
               }}
             >
               <CardHeader>
@@ -107,7 +126,8 @@ export function FeatureGridBlock({
                 </CardDescription>
               </CardContent>
             </Card>
-          ))}
+            )
+          })}
         </div>
       </div>
     </section>

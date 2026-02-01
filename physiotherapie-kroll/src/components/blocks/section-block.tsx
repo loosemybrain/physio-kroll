@@ -4,6 +4,7 @@ import { useState } from "react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { ArrowRight } from "lucide-react"
+import { useElementShadowStyle } from "@/lib/shadow"
 
 interface SectionBlockProps {
   section?: unknown
@@ -69,17 +70,37 @@ export function SectionBlock({
   editable = false,
   blockId,
   onEditField,
+  elements,
+  onElementClick,
+  selectedElementId,
 }: SectionBlockProps) {
   const isCentered = align === "center"
   const isSoft = variant === "soft"
   const [ctaHovered, setCtaHovered] = useState(false)
 
+  // Element shadows
+  const headlineShadow = useElementShadowStyle({
+    elementId: "headline",
+    elementConfig: (elements ?? {})["headline"],
+  })
+  const contentShadow = useElementShadowStyle({
+    elementId: "content",
+    elementConfig: (elements ?? {})["content"],
+  })
+  const ctaShadow = useElementShadowStyle({
+    elementId: "primaryCta",
+    elementConfig: (elements ?? {})["primaryCta"],
+  })
+
   // ✅ Full Background Flag (defensiv, da section unknown ist)
   const fullBackground = Boolean((section as any)?.fullBackground)
 
   // Inline edit helper
-  const handleInlineEdit = (e: React.MouseEvent, fieldPath: string) => {
+  const handleInlineEdit = (e: React.MouseEvent, fieldPath: string, elementId?: string) => {
     if (!editable || !blockId || !onEditField) return
+    if (elementId && onElementClick) {
+      onElementClick(blockId, elementId)
+    }
     e.preventDefault()
     e.stopPropagation()
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
@@ -132,32 +153,40 @@ export function SectionBlock({
 
           {/* Headline */}
           <h2
-            onClick={(e) => handleInlineEdit(e, "headline")}
+            onClick={(e) => handleInlineEdit(e, "headline", "headline")}
             className={cn(
               "text-3xl font-bold tracking-tight text-foreground md:text-4xl",
               isCentered && "mx-auto",
               editable && blockId && onEditField && "cursor-pointer rounded px-1 transition-colors hover:bg-primary/10"
             )}
-            style={headlineColor ? ({ color: headlineColor } as React.CSSProperties) : undefined}
+            style={{
+              ...headlineShadow,
+              ...(headlineColor ? { color: headlineColor } : {}),
+            }}
+            data-element-id="headline"
           >
             {headline}
           </h2>
 
           {/* Content */}
           <div
-            onClick={(e) => handleInlineEdit(e, "content")}
+            onClick={(e) => handleInlineEdit(e, "content", "content")}
             className={cn(
               "mt-6 text-lg leading-relaxed text-muted-foreground",
               isCentered && "mx-auto",
               editable && blockId && onEditField && "cursor-pointer rounded px-1 transition-colors hover:bg-primary/10"
             )}
-            style={contentColor ? ({ color: contentColor } as React.CSSProperties) : undefined}
+            style={{
+              ...contentShadow,
+              ...(contentColor ? { color: contentColor } : {}),
+            }}
+            data-element-id="content"
             dangerouslySetInnerHTML={{ __html: content }}
           />
 
           {/* CTA Button */}
           {primaryCtaText && primaryCtaHref && (
-            <div className={cn("mt-8", isCentered && "flex justify-center")}>
+            <div className={cn("mt-8", isCentered && "flex justify-center")} data-element-id="primaryCta" style={ctaShadow as any}>
               <Button
                 size="lg"
                 className="gap-2"
@@ -170,7 +199,7 @@ export function SectionBlock({
                 }}
                 onMouseEnter={() => setCtaHovered(true)}
                 onMouseLeave={() => setCtaHovered(false)}
-                onClick={editable && blockId && onEditField ? (e) => handleInlineEdit(e, "primaryCtaText") : undefined}
+                onClick={editable && blockId && onEditField ? (e) => handleInlineEdit(e, "primaryCtaText", "primaryCta") : undefined}
                 asChild={!editable && !!primaryCtaHref}
               >
                 {!editable && primaryCtaHref ? (
