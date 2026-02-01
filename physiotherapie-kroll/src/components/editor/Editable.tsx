@@ -47,32 +47,24 @@ export function Editable({
   children,
   as: Component = "div",
 }: EditableProps) {
-  // Set selection in capture phase BEFORE any child can call stopPropagation
-  const handlePointerDownCapture = useCallback(
-    (e: React.PointerEvent) => {
-      if (editable && onElementClick) {
-        // Set selection in capture phase - this runs before any child handlers
+  // Handle element selection on click (both for editing AND for shadow inspector)
+  const handleClickCapture = useCallback(
+    (e: React.MouseEvent) => {
+      // Always trigger onElementClick if provided (for shadow inspector)
+      if (onElementClick) {
         onElementClick(blockId, elementId)
       }
-    },
-    [editable, onElementClick, blockId, elementId]
-  )
-
-  const handleClick = useCallback(
-    (e: React.MouseEvent) => {
+      
+      // Prevent default only in edit mode for links
       if (editable) {
-        // Only prevent default for links to avoid navigation
         const target = e.target as HTMLElement
         const link = target.closest("a")
         if (link) {
           e.preventDefault()
         }
-        
-        // Don't stop propagation here - selection is already set in capture phase
-        // This allows child handlers (like popups) to work normally
       }
     },
-    [editable]
+    [editable, onElementClick, blockId, elementId]
   )
 
   const handleKeyDown = useCallback(
@@ -110,8 +102,7 @@ export function Editable({
     <Component
       data-block-id={blockId}
       data-element-id={elementId}
-      onPointerDownCapture={handlePointerDownCapture}
-      onClick={handleClick}
+      onClickCapture={handleClickCapture}
       onKeyDown={handleKeyDown}
       className={cn(
         mergedClasses,
