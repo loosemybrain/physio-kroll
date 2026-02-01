@@ -747,10 +747,8 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
     
     // Also update inspector selection
     setSelectedBlockId(blockId)
-    // Important: clicking editable text also triggers element-selection (capture phase).
-    // When we actually edit a field, we want the Inspector to scroll/focus the field input,
-    // not the element-accordion (typography). Clearing selectedElementId prevents that jump.
-    setSelectedElementId(null)
+    // Don't clear selectedElementId - let it persist for shadow inspector
+    // This allows users to select an element for shadows, then click on it to edit the text
     setActiveFieldPath(fieldPath)
 
     // Ensure the Inspector scrolls to the corresponding field even if it was already active.
