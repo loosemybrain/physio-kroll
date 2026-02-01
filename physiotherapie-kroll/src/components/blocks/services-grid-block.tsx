@@ -41,6 +41,10 @@ interface ServicesGridBlockProps {
   editable?: boolean
   blockId?: string
   onEditField?: (blockId: string, fieldPath: string, anchorRect?: DOMRect) => void
+  // Shadow/Element Props
+  elements?: Record<string, any>
+  onElementClick?: (blockId: string, elementId: string) => void
+  selectedElementId?: string | null
 }
 
 const columnsMap = {

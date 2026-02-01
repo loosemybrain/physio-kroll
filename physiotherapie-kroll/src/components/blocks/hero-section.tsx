@@ -122,20 +122,20 @@ export function HeroSection({
 
   // Element shadows
   const heroHeadlineShadow = useElementShadowStyle({
-    elementId: "hero-headline",
-    elementConfig: (elements ?? {})["hero-headline"],
+    elementId: "headline",
+    elementConfig: (elements ?? {})["headline"],
   })
   const heroSubheadlineShadow = useElementShadowStyle({
-    elementId: "hero-subheadline",
-    elementConfig: (elements ?? {})["hero-subheadline"],
+    elementId: "subheadline",
+    elementConfig: (elements ?? {})["subheadline"],
   })
   const heroPrimaryCtaShadow = useElementShadowStyle({
-    elementId: "hero-primary-cta",
-    elementConfig: (elements ?? {})["hero-primary-cta"],
+    elementId: "primaryCta",
+    elementConfig: (elements ?? {})["primaryCta"],
   })
   const heroSecondaryCtaShadow = useElementShadowStyle({
-    elementId: "hero-secondary-cta",
-    elementConfig: (elements ?? {})["hero-secondary-cta"],
+    elementId: "secondaryCta",
+    elementConfig: (elements ?? {})["secondaryCta"],
   })
 
   const showBrandToggleNav = showBrandToggle && (pathname === "/" || pathname === "/konzept")
@@ -374,9 +374,9 @@ export function HeroSection({
               ...heroHeadlineShadow,
               ...(resolvedHeadlineColor ? { color: resolvedHeadlineColor } : {}),
             }}
-            data-element-id="hero-headline"
+            data-element-id="headline"
           >
-            <span onClick={(e) => handleInlineEdit(e, "headline", "hero-headline")}>
+            <span onClick={(e) => handleInlineEdit(e, "headline", "headline")}>
               {resolvedHeadline}
             </span>
           </Editable>
@@ -398,9 +398,9 @@ export function HeroSection({
               ...heroSubheadlineShadow,
               ...(resolvedSubheadlineColor ? { color: resolvedSubheadlineColor } : {}),
             }}
-            data-element-id="hero-subheadline"
+            data-element-id="subheadline"
           >
-            <span onClick={(e) => handleInlineEdit(e, "subheadline", "hero-subheadline")}>
+            <span onClick={(e) => handleInlineEdit(e, "subheadline", "subheadline")}>
               {resolvedSubheadline}
             </span>
           </Editable>
@@ -414,7 +414,7 @@ export function HeroSection({
               editable={editable}
               onElementClick={onElementClick}
               isSelected={selectedElementId === "hero-primary-cta"}
-              data-element-id="hero-primary-cta"
+              data-element-id="primaryCta"
             >
               <Button
                 size="lg"
@@ -481,7 +481,7 @@ export function HeroSection({
                 editable={editable}
                 onElementClick={onElementClick}
                 isSelected={selectedElementId === "hero-secondary-cta"}
-                data-element-id="hero-secondary-cta"
+                data-element-id="secondaryCta"
                 as="div"
               >
                 <Button

@@ -99,84 +99,126 @@ export function BlockRenderer({
 
       case "imageText": {
         const props = block.props
+        const extras = (block.props ?? {}) as Record<string, unknown>
+        const elementsValue = extras.elements
+        const elements = elementsValue as Record<string, any> | undefined
         return (
           <ImageTextBlock
             {...props}
+            elements={elements}
             editable={editable}
             blockId={block.id}
             onEditField={onEditField}
+            onElementClick={onElementClick}
+            selectedElementId={selectedElementId}
           />
         )
       }
 
       case "featureGrid": {
         const props = block.props
+        const extras = (block.props ?? {}) as Record<string, unknown>
+        const elementsValue = extras.elements
+        const elements = elementsValue as Record<string, any> | undefined
         return (
           <FeatureGridBlock
             {...props}
+            elements={elements}
             editable={editable}
             blockId={block.id}
             onEditField={onEditField}
+            onElementClick={onElementClick}
+            selectedElementId={selectedElementId}
           />
         )
       }
 
       case "cta": {
         const props = block.props
+        const extras = (block.props ?? {}) as Record<string, unknown>
+        const elementsValue = extras.elements
+        const elements = elementsValue as Record<string, any> | undefined
         return (
           <CtaBlock
             {...props}
+            elements={elements}
             editable={editable}
             blockId={block.id}
             onEditField={onEditField}
+            onElementClick={onElementClick}
+            selectedElementId={selectedElementId}
           />
         )
       }
 
       case "section": {
         const props = block.props
+        const extras = (block.props ?? {}) as Record<string, unknown>
+        const elementsValue = extras.elements
+        const elements = elementsValue as Record<string, any> | undefined
         return (
           <SectionBlock
             {...props}
+            elements={elements}
             editable={editable}
             blockId={block.id}
             onEditField={onEditField}
+            onElementClick={onElementClick}
+            selectedElementId={selectedElementId}
           />
         )
       }
 
       case "servicesGrid": {
         const props = block.props
+        const extras = (block.props ?? {}) as Record<string, unknown>
+        const elementsValue = extras.elements
+        const elements = elementsValue as Record<string, any> | undefined
         return (
           <ServicesGridBlock
             {...props}
+            elements={elements}
             editable={editable}
             blockId={block.id}
             onEditField={onEditField}
+            onElementClick={onElementClick}
+            selectedElementId={selectedElementId}
           />
         )
       }
 
       case "faq": {
         const props = block.props
+        const extras = (block.props ?? {}) as Record<string, unknown>
+        const elementsValue = extras.elements
+        const elements = elementsValue as Record<string, any> | undefined
         return (
           <FaqAccordion
             {...props}
+            elements={elements}
             editable={editable}
             blockId={block.id}
             onEditField={onEditField}
+            onElementClick={onElementClick}
+            selectedElementId={selectedElementId}
           />
         )
       }
 
       case "team": {
         const props = block.props
+        const extras = (block.props ?? {}) as Record<string, unknown>
+        const elementsValue = extras.elements
+        const elements = elementsValue as Record<string, any> | undefined
         return (
           <TeamGridBlock
             {...props}
+            elements={elements}
             editable={editable}
             blockId={block.id}
             onEditField={onEditField}
+            onElementClick={onElementClick}
+            selectedElementId={selectedElementId}
           />
         )
       }
@@ -201,58 +243,93 @@ export function BlockRenderer({
 
       case "testimonials": {
         const props = block.props
+        const extras = (block.props ?? {}) as Record<string, unknown>
+        const elementsValue = extras.elements
+        const elements = elementsValue as Record<string, any> | undefined
         return (
           <TestimonialsBlock
             {...props}
+            elements={elements}
             editable={editable}
             blockId={block.id}
             onEditField={onEditField}
+            onElementClick={onElementClick}
+            selectedElementId={selectedElementId}
           />
         )
       }
 
       case "testimonialSlider": {
         const props = block.props
+        const extras = (block.props ?? {}) as Record<string, unknown>
+        const elementsValue = extras.elements
+        const elements = elementsValue as Record<string, any> | undefined
         return (
           <TestimonialSliderBlock
-          data={block.props}
-          brand={brand}
-          editable={editable}
-          blockId={block.id}
-          onEditField={onEditField}
-          onElementClick={onElementClick}
-          selectedElementId={selectedElementId}
+            data={block.props}
+            brand={brand}
+            elements={elements}
+            editable={editable}
+            blockId={block.id}
+            onEditField={onEditField}
+            onElementClick={onElementClick}
+            selectedElementId={selectedElementId}
           />
         )
       }
 
       case "gallery": {
         const props = block.props
+        const extras = (block.props ?? {}) as Record<string, unknown>
+        const elementsValue = extras.elements
+        const elements = elementsValue as Record<string, any> | undefined
         return (
           <GalleryBlock
             {...props}
+            elements={elements}
             editable={editable}
             blockId={block.id}
             onEditField={onEditField}
+            onElementClick={onElementClick}
+            selectedElementId={selectedElementId}
           />
         )
       }
 
       case "openingHours": {
         const props = block.props
+        const extras = (block.props ?? {}) as Record<string, unknown>
+        const elementsValue = extras.elements
+        const elements = elementsValue as Record<string, any> | undefined
         return (
           <OpeningHoursBlock
             {...props}
+            elements={elements}
             editable={editable}
             blockId={block.id}
             onEditField={onEditField}
+            onElementClick={onElementClick}
+            selectedElementId={selectedElementId}
           />
         )
       }
 
       case "imageSlider": {
         const props = block.props
-        return <ImageSliderBlock {...props} />
+        const extras = (block.props ?? {}) as Record<string, unknown>
+        const elementsValue = extras.elements
+        const elements = elementsValue as Record<string, any> | undefined
+        return (
+          <ImageSliderBlock
+            {...props}
+            elements={elements}
+            editable={editable}
+            blockId={block.id}
+            onEditField={onEditField}
+            onElementClick={onElementClick}
+            selectedElementId={selectedElementId}
+          />
+        )
       }
 
       default: {

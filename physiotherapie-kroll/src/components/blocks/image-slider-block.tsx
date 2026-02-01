@@ -36,6 +36,13 @@ export interface ImageSliderBlockProps {
   peek?: boolean
 
   background?: "none" | "muted" | "gradient"
+  // Shadow/Element Props
+  elements?: Record<string, any>
+  onElementClick?: (blockId: string, elementId: string) => void
+  selectedElementId?: string | null
+  blockId?: string
+  editable?: boolean
+  onEditField?: (blockId: string, fieldPath: string, anchorRect?: DOMRect) => void
 }
 
 const backgroundMap: Record<NonNullable<ImageSliderBlockProps["background"]>, string> = {

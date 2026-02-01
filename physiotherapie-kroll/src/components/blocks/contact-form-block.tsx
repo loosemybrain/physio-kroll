@@ -467,20 +467,20 @@ export function ContactFormBlock({
   // Split Layout
   if (normalizedLayout === "split") {
     const formCardShadow = useElementShadowStyle({
-      elementId: "form-card",
-      elementConfig: (propsFromBlock as any)?.elements?.["form-card"],
+      elementId: "formCard",
+      elementConfig: (propsFromBlock as any)?.elements?.["formCard"],
     })
     const formHeadingShadow = useElementShadowStyle({
-      elementId: "form-heading",
-      elementConfig: (propsFromBlock as any)?.elements?.["form-heading"],
+      elementId: "heading",
+      elementConfig: (propsFromBlock as any)?.elements?.["heading"],
     })
     const submitButtonShadow = useElementShadowStyle({
-      elementId: "submit-button",
-      elementConfig: (propsFromBlock as any)?.elements?.["submit-button"],
+      elementId: "submitButton",
+      elementConfig: (propsFromBlock as any)?.elements?.["submitButton"],
     })
     const contactCardShadow = useElementShadowStyle({
-      elementId: "contact-card",
-      elementConfig: (propsFromBlock as any)?.elements?.["contact-card"],
+      elementId: "contactCard",
+      elementConfig: (propsFromBlock as any)?.elements?.["contactCard"],
     })
 
     return (
@@ -504,7 +504,7 @@ export function ContactFormBlock({
               {/* Headline */}
               <h2 
                 data-cms-field="heading"
-                data-element-id="form-heading"
+                data-element-id="heading"
                 className={cn(
                   "text-balance text-3xl font-bold tracking-tight text-foreground md:text-4xl lg:text-5xl",
                   editable && blockId && onEditField && "cursor-pointer rounded px-1 transition-colors hover:bg-primary/10"
@@ -537,7 +537,7 @@ export function ContactFormBlock({
               <div className="mt-12 space-y-4">
                 {/* Card 1: Schnelle Antwort */}
                 <div 
-                  data-element-id="contact-card"
+                  data-element-id="contactCard"
                   style={contactCardShadow as any}
                   className="group flex items-center gap-4 rounded-xl border border-border/30 bg-card/40 p-4 backdrop-blur-sm transition-all duration-300 hover:border-border/60 hover:bg-card/60">
                   <div className="flex size-12 shrink-0 items-center justify-center rounded-lg bg-primary/10 transition-colors group-hover:bg-primary/20">
@@ -551,7 +551,7 @@ export function ContactFormBlock({
 
                 {/* Card 2: Kostenlose Beratung */}
                 <div 
-                  data-element-id="contact-card"
+                  data-element-id="contactCard"
                   style={contactCardShadow as any}
                   className="group flex items-center gap-4 rounded-xl border border-border/30 bg-card/40 p-4 backdrop-blur-sm transition-all duration-300 hover:border-border/60 hover:bg-card/60">
                   <div className="flex size-12 shrink-0 items-center justify-center rounded-lg bg-primary/10 transition-colors group-hover:bg-primary/20">
@@ -565,7 +565,7 @@ export function ContactFormBlock({
 
                 {/* Card 3: Lokale Betreuung */}
                 <div 
-                  data-element-id="contact-card"
+                  data-element-id="contactCard"
                   style={contactCardShadow as any}
                   className="group flex items-center gap-4 rounded-xl border border-border/30 bg-card/40 p-4 backdrop-blur-sm transition-all duration-300 hover:border-border/60 hover:bg-card/60">
                   <div className="flex size-12 shrink-0 items-center justify-center rounded-lg bg-primary/10 transition-colors group-hover:bg-primary/20">
@@ -582,7 +582,7 @@ export function ContactFormBlock({
             {/* Right Side - Form Card (3 columns) */}
             <div className="relative lg:col-span-3">
               <div 
-                data-element-id="form-card"
+                data-element-id="formCard"
                 style={formCardShadow as any}
                 className="relative rounded-3xl border border-border/40 bg-card p-8 shadow-2xl shadow-primary/5 lg:p-12">
                 {/* Error Alert */}
@@ -716,7 +716,7 @@ export function ContactFormBlock({
                   </div>
 
                   {/* Premium Submit Button with shimmer */}
-                  <div className="pt-4" data-element-id="submit-button" style={submitButtonShadow as any}>
+                  <div className="pt-4" data-element-id="submitButton" style={submitButtonShadow as any}>
                     <Button
                       type="submit"
                       disabled={isSubmitting || formState === "loading"}
@@ -763,16 +763,16 @@ export function ContactFormBlock({
 
   // Stacked Layout (Default)
   const stackedHeadingShadow = useElementShadowStyle({
-    elementId: "stacked-heading",
-    elementConfig: (propsFromBlock as any)?.elements?.["stacked-heading"],
+    elementId: "stackedHeading",
+    elementConfig: (propsFromBlock as any)?.elements?.["stackedHeading"],
   })
   const formCardStackedShadow = useElementShadowStyle({
-    elementId: "form-card-stacked",
-    elementConfig: (propsFromBlock as any)?.elements?.["form-card-stacked"],
+    elementId: "formCardStacked",
+    elementConfig: (propsFromBlock as any)?.elements?.["formCardStacked"],
   })
   const stackedSubmitButtonShadow = useElementShadowStyle({
-    elementId: "stacked-submit-button",
-    elementConfig: (propsFromBlock as any)?.elements?.["stacked-submit-button"],
+    elementId: "stackedSubmitButton",
+    elementConfig: (propsFromBlock as any)?.elements?.["stackedSubmitButton"],
   })
 
   return (
@@ -781,7 +781,7 @@ export function ContactFormBlock({
         {/* Header */}
         <div className="mb-10 text-center">
           <h2 
-            data-element-id="stacked-heading"
+            data-element-id="stackedHeading"
             className={cn(
               "text-balance text-3xl font-semibold tracking-tight text-foreground md:text-4xl",
               editable && blockId && onEditField && "cursor-pointer rounded px-1 transition-colors hover:bg-primary/10"
@@ -812,7 +812,7 @@ export function ContactFormBlock({
 
         {/* Form Card */}
         <div 
-          data-element-id="form-card-stacked"
+            data-element-id="formCardStacked"
           style={formCardStackedShadow as any}
           className="rounded-2xl border border-border/40 bg-card/80 p-8 shadow-sm backdrop-blur-sm">
           {/* Error Alert */}
@@ -938,7 +938,7 @@ export function ContactFormBlock({
             </div>
 
             {/* Premium Submit Button with shimmer */}
-            <div className="pt-4" data-element-id="stacked-submit-button" style={stackedSubmitButtonShadow as any}>
+            <div className="pt-4" data-element-id="stackedSubmitButton" style={stackedSubmitButtonShadow as any}>
               <Button
                 type="submit"
                 disabled={isSubmitting || formState === "loading"}

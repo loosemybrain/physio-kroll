@@ -58,6 +58,9 @@ type Props = {
   // optional (not needed for inline edit, but consistent with other blocks)
   onElementClick?: (blockId: string, elementId: string) => void
   selectedElementId?: string | null
+  
+  // Shadow/Element Props
+  elements?: Record<string, any>
 }
 
 function getRect(el: EventTarget | null): DOMRect | undefined {
