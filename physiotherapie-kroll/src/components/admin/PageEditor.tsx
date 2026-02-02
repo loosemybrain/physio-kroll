@@ -18,7 +18,7 @@ import { usePage } from "@/lib/cms/useLocalCms"
 import { createEmptyPage, generateUniqueSlug, type AdminPage } from "@/lib/cms/supabaseStore"
 import type { BrandKey } from "@/components/brand/brandAssets"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { blockRegistry, getBlockDefinition, createServiceCard, createFaqItem, createTeamMember, createFeatureItem, createContactFormField, createTestimonialItem, createGalleryImage, createImageSlide, createOpeningHour } from "@/cms/blocks/registry"
+import { blockRegistry, getBlockDefinition, createServiceCard, createFaqItem, createTeamMember, createFeatureItem, createContactFormField, createTestimonialItem, createGalleryImage, createImageSlide, createOpeningHour, createContactInfoCard } from "@/cms/blocks/registry"
 import { normalizeBlock } from "@/cms/blocks/normalize"
 import type { InspectorField, InspectorFieldType } from "@/cms/blocks/registry"
 import { arrayRemove, arrayMove, arrayInsert } from "@/lib/cms/arrayOps"
@@ -3409,6 +3409,34 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
               { key: "ctaHref", label: "CTA Link", type: "url" as const },
               { key: "cardBgColor", label: "Card Hintergrund (optional)", type: "color" as const, placeholder: "#ffffff" },
               { key: "cardBorderColor", label: "Card Border (optional)", type: "color" as const, placeholder: "#e5e7eb" },
+            ]
+          )}
+          
+          {/* Contact Info Cards */}
+          {renderArrayItemsControls(
+            selectedBlock,
+            "contactInfoCards",
+            "Info-Card",
+            (card, index) => {
+              const c = card as unknown as Record<string, unknown>
+              const title = String(c.title || "")
+              return `${index + 1}. ${title || "Card"}`
+            },
+            createContactInfoCard,
+            [
+              { key: "title", label: "Titel", type: "text" as const, required: true },
+              { key: "value", label: "Wert", type: "text" as const, required: true },
+              {
+                key: "icon",
+                label: "Icon",
+                type: "select" as const,
+                options: [
+                  { value: "clock", label: "Uhr (Schnelle Antwort)" },
+                  { value: "phone", label: "Telefon (Kostenlose Beratung)" },
+                  { value: "mapPin", label: "Map-Pin (Lokale Betreuung)" },
+                  { value: "mail", label: "Mail (E-Mail)" },
+                ],
+              },
             ]
           )}
         </>

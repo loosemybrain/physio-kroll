@@ -665,6 +665,20 @@ export function createContactFormField(type: ContactFormBlock["props"]["fields"]
   }
 }
 
+export function createContactInfoCard(): {
+  id: string
+  icon: "clock" | "phone" | "mapPin" | "mail"
+  title: string
+  value: string
+} {
+  return {
+    id: uuid(),
+    icon: "mail",
+    title: "Neue Info",
+    value: "Wert eingeben",
+  }
+}
+
 export function createHeroTrustItem(): string {
   return "Neuer Vorteil"
 }

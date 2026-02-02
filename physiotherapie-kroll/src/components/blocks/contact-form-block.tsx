@@ -491,7 +491,10 @@ export function ContactFormBlock({
     
     const { contactInfoCards } = propsFromBlock
     
-    const effectiveCards = contactInfoCards?.length ? contactInfoCards : DEFAULT_CONTACT_INFO_CARDS
+    const effectiveCards: Array<{ id: string; icon: "clock" | "phone" | "mapPin" | "mail"; title: string; value: string }> = 
+      (contactInfoCards && contactInfoCards.length > 0) 
+        ? contactInfoCards 
+        : DEFAULT_CONTACT_INFO_CARDS
 
     return (
       <section className="relative w-full overflow-hidden py-12 px-4">
