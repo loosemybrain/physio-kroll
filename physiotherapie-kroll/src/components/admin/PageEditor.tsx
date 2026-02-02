@@ -3338,6 +3338,7 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
     if (selectedBlock.type === "faq" && key.startsWith("items.")) return true
     if (selectedBlock.type === "team" && key.startsWith("members.")) return true
     if (selectedBlock.type === "contactForm" && key.startsWith("fields.")) return true
+    if (selectedBlock.type === "contactForm" && key.startsWith("contactInfoCards.")) return true
     if (selectedBlock.type === "testimonials" && key.startsWith("items.")) return true
     if (selectedBlock.type === "testimonialSlider" && key.startsWith("items.")) return true
     if (selectedBlock.type === "gallery" && key.startsWith("images.")) return true
@@ -3409,34 +3410,6 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
               { key: "ctaHref", label: "CTA Link", type: "url" as const },
               { key: "cardBgColor", label: "Card Hintergrund (optional)", type: "color" as const, placeholder: "#ffffff" },
               { key: "cardBorderColor", label: "Card Border (optional)", type: "color" as const, placeholder: "#e5e7eb" },
-            ]
-          )}
-          
-          {/* Contact Info Cards */}
-          {renderArrayItemsControls(
-            selectedBlock,
-            "contactInfoCards",
-            "Info-Card",
-            (card, index) => {
-              const c = card as unknown as Record<string, unknown>
-              const title = String(c.title || "")
-              return `${index + 1}. ${title || "Card"}`
-            },
-            createContactInfoCard,
-            [
-              { key: "title", label: "Titel", type: "text" as const, required: true },
-              { key: "value", label: "Wert", type: "text" as const, required: true },
-              {
-                key: "icon",
-                label: "Icon",
-                type: "select" as const,
-                options: [
-                  { value: "clock", label: "Uhr (Schnelle Antwort)" },
-                  { value: "phone", label: "Telefon (Kostenlose Beratung)" },
-                  { value: "mapPin", label: "Map-Pin (Lokale Betreuung)" },
-                  { value: "mail", label: "Mail (E-Mail)" },
-                ],
-              },
             ]
           )}
         </>
@@ -3679,6 +3652,34 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
               { key: "label", label: "Label", type: "text" as const },
               { key: "placeholder", label: "Placeholder", type: "text" as const },
               { key: "required", label: "Required", type: "boolean" as const },
+            ]
+          )}
+          
+          {/* Contact Info Cards */}
+          {renderArrayItemsControls(
+            selectedBlock,
+            "contactInfoCards",
+            "Info-Card",
+            (card, index) => {
+              const c = card as unknown as Record<string, unknown>
+              const title = String(c.title || "")
+              return `${index + 1}. ${title || "Card"}`
+            },
+            createContactInfoCard,
+            [
+              { key: "title", label: "Titel", type: "text" as const, required: true },
+              { key: "value", label: "Wert", type: "text" as const, required: true },
+              {
+                key: "icon",
+                label: "Icon",
+                type: "select" as const,
+                options: [
+                  { value: "clock", label: "Uhr (Schnelle Antwort)" },
+                  { value: "phone", label: "Telefon (Kostenlose Beratung)" },
+                  { value: "mapPin", label: "Map-Pin (Lokale Betreuung)" },
+                  { value: "mail", label: "Mail (E-Mail)" },
+                ],
+              },
             ]
           )}
         </>
