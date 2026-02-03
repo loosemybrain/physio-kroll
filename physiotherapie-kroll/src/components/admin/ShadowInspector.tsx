@@ -35,6 +35,21 @@ export function ShadowInspector({ config = {}, onChange, onClose }: ShadowInspec
     opacity: config.opacity ?? 1,
   })
 
+  // Synchronize localConfig when config prop changes (element selection changed)
+  React.useEffect(() => {
+    setLocalConfig({
+      enabled: config.enabled ?? false,
+      preset: config.preset ?? "none",
+      inset: config.inset ?? false,
+      x: config.x ?? 0,
+      y: config.y ?? 4,
+      blur: config.blur ?? 6,
+      spread: config.spread ?? -1,
+      color: config.color ?? "rgba(0, 0, 0, 0.1)",
+      opacity: config.opacity ?? 1,
+    })
+  }, [config])
+
   const handleChange = (updates: Partial<ElementShadow>) => {
     const newConfig = { ...localConfig, ...updates }
     setLocalConfig(newConfig)

@@ -26,11 +26,19 @@ type ContactFormBlockProps = ContactFormBlock["props"] & CommonBlockProps & {
   selectedElementId?: string | null
 }
 
-const DEFAULT_CONTACT_INFO_CARDS: ContactFormBlock["props"]["contactInfoCards"] = [
+type ContactInfoCard = {
+  id: string
+  icon: "clock" | "phone" | "mapPin" | "mail"
+  title: string
+  value: string
+}
+
+const DEFAULT_CONTACT_INFO_CARDS: ContactInfoCard[] = [
   { id: "hours", icon: "clock", title: "Schnelle Antwort", value: "Innerhalb von 24 Stunden" },
   { id: "consultation", icon: "phone", title: "Kostenlose Beratung", value: "Unverbindliches Erstgespräch" },
   { id: "location", icon: "mapPin", title: "Lokale Betreuung", value: "Persönlich vor Ort für Sie da" },
 ]
+
 
 /**
  * Builds Zod schema from form field definitions
@@ -294,6 +302,7 @@ export function ContactFormBlock({
   consentLabel,
   layout = "stack",
   elements,
+  contactInfoCards,
   blockId,
   pageSlug,
   editable = false,
@@ -471,6 +480,11 @@ export function ContactFormBlock({
   }
 
   // Split Layout
+  // Prepare cards (used in split layout)
+  const effectiveCards: ContactInfoCard[] = Array.isArray(contactInfoCards) ? (contactInfoCards as ContactInfoCard[]) : []
+  const isUsingDefaults = effectiveCards.length === 0
+  const cardsToRender: ContactInfoCard[] = isUsingDefaults ? DEFAULT_CONTACT_INFO_CARDS : effectiveCards
+
   if (normalizedLayout === "split") {
     const formCardShadow = useElementShadowStyle({
       elementId: "formCard",
@@ -487,14 +501,7 @@ export function ContactFormBlock({
     const contactCardShadow = useElementShadowStyle({
       elementId: "contactCard",
       elementConfig: (propsFromBlock as any)?.elements?.["contactCard"],
-    })
-    
-    const { contactInfoCards } = propsFromBlock
-    
-    const effectiveCards: Array<{ id: string; icon: "clock" | "phone" | "mapPin" | "mail"; title: string; value: string }> = 
-      (contactInfoCards && contactInfoCards.length > 0) 
-        ? contactInfoCards 
-        : DEFAULT_CONTACT_INFO_CARDS
+    })    
 
     return (
       <section className="relative w-full overflow-hidden py-12 px-4">
@@ -526,7 +533,7 @@ export function ContactFormBlock({
                   ...(formHeadingShadow as any),
                   ...(headingColor ? { color: headingColor } : {}),
                 }}
-                onClick={handleInlineEdit("props.heading")}
+                onClick={handleInlineEdit("heading")}
               >
                 {heading}
               </h2>
@@ -540,7 +547,7 @@ export function ContactFormBlock({
                     editable && blockId && onEditField && "cursor-pointer rounded px-1 transition-colors hover:bg-primary/10"
                   )}
                   style={textColor ? ({ color: textColor } as React.CSSProperties) : undefined}
-                  onClick={handleInlineEdit("props.text")}
+                  onClick={handleInlineEdit("text")}
                 >
                   {text}
                 </p>
@@ -548,37 +555,74 @@ export function ContactFormBlock({
 
               {/* Contact Info Cards */}
               <div className="mt-12 space-y-4">
-                {effectiveCards.map((card) => {
+                {cardsToRender.map((card, renderIndex) => {
                   const cardElementId = `contact-info-${card.id}`
+
                   const cardShadow = useElementShadowStyle({
                     elementId: cardElementId,
                     elementConfig: (elements ?? {})[cardElementId],
                   })
-                  
-                  const IconComponent = card.icon === "mail" ? Mail 
-                    : card.icon === "phone" ? Phone 
-                    : card.icon === "clock" ? Clock 
-                    : MapPin
-                  
+
+                  const IconComponent =
+                    card.icon === "mail"
+                      ? Mail
+                      : card.icon === "phone"
+                        ? Phone
+                        : card.icon === "clock"
+                          ? Clock
+                          : MapPin
+
+                  const editIndex = renderIndex
+
                   return (
-                    <div 
+                    <div
                       key={card.id}
                       data-element-id={cardElementId}
                       style={cardShadow as any}
                       onClick={() => onElementClick?.(blockId || "", cardElementId)}
                       className="group flex items-center gap-4 rounded-xl border border-border/30 bg-card/40 p-4 backdrop-blur-sm transition-all duration-300 hover:border-border/60 hover:bg-card/60 cursor-pointer"
                     >
-                      <div className="flex size-12 shrink-0 items-center justify-center rounded-lg bg-primary/10 transition-colors group-hover:bg-primary/20">
+                      {/* Icon – inline edit */}
+                      <div
+                        className={cn(
+                          "flex size-12 shrink-0 items-center justify-center rounded-lg bg-primary/10 transition-colors group-hover:bg-primary/20",
+                          editable && blockId && onEditField && "cursor-pointer",
+                        )}
+                        onClick={handleInlineEdit(`contactInfoCards.${editIndex}.icon`)}
+                      >
                         <IconComponent className="size-5 text-primary" />
                       </div>
+
                       <div>
-                        <p className="text-sm font-medium text-foreground">{card.title}</p>
-                        <p className="text-sm text-muted-foreground">{card.value}</p>
+                        {/* Title – inline edit */}
+                        <p
+                          className={cn(
+                            "text-sm font-medium text-foreground",
+                            editable && blockId && onEditField &&
+                              "cursor-pointer rounded px-1 transition-colors hover:bg-primary/10",
+                          )}
+                          onClick={handleInlineEdit(`contactInfoCards.${editIndex}.title`)}
+                        >
+                          {card.title}
+                        </p>
+
+                        {/* Value – inline edit */}
+                        <p
+                          className={cn(
+                            "text-sm text-muted-foreground",
+                            editable && blockId && onEditField &&
+                              "cursor-pointer rounded px-1 transition-colors hover:bg-primary/10",
+                          )}
+                          onClick={handleInlineEdit(`contactInfoCards.${editIndex}.value`)}
+                        >
+                          {card.value}
+                        </p>
                       </div>
                     </div>
                   )
                 })}
               </div>
+
             </div>
 
             {/* Right Side - Form Card (3 columns) */}
@@ -670,7 +714,7 @@ export function ContactFormBlock({
                         editable && blockId && onEditField && "cursor-pointer rounded px-1 transition-colors hover:bg-primary/10"
                       )}
                       style={privacyTextColor ? ({ color: privacyTextColor } as React.CSSProperties) : undefined}
-                      onClick={handleInlineEdit("props.privacyText")}
+                      onClick={handleInlineEdit("privacyText")}
                     >
                       {privacyText}{" "}
                       <a

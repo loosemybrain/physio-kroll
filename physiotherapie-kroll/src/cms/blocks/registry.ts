@@ -1544,13 +1544,6 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
           { value: "split", label: "Zweispaltig" },
         ],
       },
-      {
-        key: "contactInfoCards",
-        label: "Info-Karten (Click auf Card im Preview zum Bearbeiten)",
-        type: "text",
-        placeholder: "Klicke im Live-Preview auf eine Info-Card um sie zu bearbeiten",
-        helpText: "Die Kontakt-Info-Cards werden über die Inspector-Selection bearbeitet. Klick auf eine Card im Preview zur Bearbeitung.",
-      },
       { key: "headingColor", label: "Überschrift Farbe", type: "color", placeholder: "#000000" },
       { key: "textColor", label: "Text Farbe", type: "color", placeholder: "#666666" },
       { key: "inputTextColor", label: "Input Text Farbe", type: "color", placeholder: "#000000" },

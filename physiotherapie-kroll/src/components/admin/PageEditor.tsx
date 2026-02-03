@@ -777,17 +777,33 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
   // Handle inline editor change
   const handleInlineChange = (next: string) => {
     if (!inlineBlockId || !inlineFieldPath) return
-    
-    // Use functional update with prev.blocks to avoid stale state
+
     setPage((prev) => {
       if (!prev) return prev
       const block = prev.blocks.find((b) => b.id === inlineBlockId)
       if (!block) return prev
-      
+
       const actualFieldPath = mapHeroFieldPathForActiveBrand(block, inlineFieldPath, activeBrandTab)
-      
+
+      // --- SEED contactInfoCards on first edit (ContactForm only) ---
+      let baseProps = block.props as Record<string, unknown>
+
+      if (block.type === "contactForm" && actualFieldPath.startsWith("contactInfoCards.")) {
+        const cur = (baseProps as any).contactInfoCards
+        const isEmpty = !Array.isArray(cur) || cur.length === 0
+
+        if (isEmpty) {
+          baseProps = setByPath(baseProps, "contactInfoCards", [
+            { id: "hours", icon: "clock", title: "Schnelle Antwort", value: "Innerhalb von 24 Stunden" },
+            { id: "consultation", icon: "phone", title: "Kostenlose Beratung", value: "Unverbindliches Erstgespräch" },
+            { id: "location", icon: "mapPin", title: "Lokale Betreuung", value: "Persönlich vor Ort für Sie da" },
+          ]) as Record<string, unknown>
+        }
+      }
+      // --- END seed ---
+
       const updatedProps = setByPath(
-        block.props as Record<string, unknown>,
+        baseProps,
         actualFieldPath,
         next
       ) as CMSBlock["props"]
@@ -800,6 +816,7 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
       }
     })
   }
+
   
   // Handle inline editor close
   const handleInlineClose = () => {
