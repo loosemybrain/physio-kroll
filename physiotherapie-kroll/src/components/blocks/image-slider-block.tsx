@@ -69,8 +69,8 @@ export function ImageSliderBlock({
   background = "none",
 }: ImageSliderBlockProps) {
   return (
-    <section className={cn("py-16 px-4", backgroundMap[background])} aria-label={headline || "Slider"}>
-      <div className="container mx-auto">
+    <section className={cn("py-16", backgroundMap[background])} aria-label={headline || "Slider"}>
+      <div>
         {(headline || subheadline) && (
           <header className="mb-10 text-center">
             {headline && (

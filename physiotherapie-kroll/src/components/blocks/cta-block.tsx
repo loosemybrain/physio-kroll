@@ -126,12 +126,12 @@ export function CtaBlock({
   return (
     <AnimatedBlock config={section?.animation}>
       <section
-      className="py-16 px-4 bg-muted/50"
+      className="py-16 bg-muted/50"
       style={backgroundColor ? ({ backgroundColor } as React.CSSProperties) : undefined}
       data-block-id={dataBlockId}
       data-editable={dataEditable}
     >
-      <div className="container mx-auto">
+      <div>
         <div
           className={cn(
             "flex flex-col gap-6",

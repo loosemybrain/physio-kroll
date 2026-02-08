@@ -41,6 +41,8 @@ import { LivePreviewTheme } from "./LivePreviewTheme"
 import { ShadowInspector } from "./ShadowInspector"
 import { resolveBoxShadow } from "@/lib/shadow/resolveBoxShadow"
 import type { ElementShadow, ElementConfig } from "@/types/cms"
+import { resolveMediaClient } from "@/lib/cms/resolveMediaClient"
+
 
 interface PageEditorProps {
   pageId: string | null
@@ -1358,26 +1360,34 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
                         )
                       }
                       
-                      // Generic select with provided options
-                      if (itemField.options && itemField.options.length > 0) {
+                      const options = itemField.options ?? []
+
+                      if (options.length > 0) {
                         return (
                           <div key={itemField.key} className="space-y-1.5">
                             <Label htmlFor={itemFieldId} className="text-xs">
                               {itemField.label}
                             </Label>
+
                             <Select
                               value={itemFieldValue == null || itemFieldValue === "" ? "none" : String(itemFieldValue)}
-                              onValueChange={(v) => handleItemFieldChange(v === "none" ? "" : v)}
+                              onValueChange={(v) => {
+                                if (v === "none") {
+                                  handleItemFieldChange(undefined)
+                                } else {
+                                  handleItemFieldChange(Number(v))
+                                }
+                              }}
                             >
-
                               <SelectTrigger
                                 id={itemFieldId}
                                 className={cn("h-8 text-sm", isActive && "ring-2 ring-primary")}
                               >
                                 <SelectValue placeholder={itemField.placeholder || "Auswählen"} />
                               </SelectTrigger>
+
                               <SelectContent>
-                                {itemField.options.map((opt) => (
+                                {options.map((opt) => (
                                   <SelectItem key={opt.value} value={opt.value}>
                                     {opt.label}
                                   </SelectItem>
@@ -1904,7 +1914,7 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
                 <div
                   // IDs come from persisted content; if legacy data contains duplicates,
                   // React keys must still be unique to avoid rendering bugs.
-                  key={`${block.id}-${index}`}
+                  key={block.id}
                   data-block-id={block.id}
                   className={cn(
                     "relative cursor-pointer transition-colors",
@@ -1919,7 +1929,7 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
                 >
                   {/* Block Controls Overlay */}
                   <div
-                    className="absolute top-2 right-2 z-10 flex items-center gap-1 rounded-md bg-background/95 backdrop-blur-sm border border-border shadow-lg p-1"
+                    className="absolute top-2 right-2 z-10 flex items-center gap-1 rounded-md bg-[#0f0f10]/90 text-white border border-white/10 shadow-xl backdrop-blur-sm p-1"
                     onClick={(e) => {
                       e.preventDefault()
                       e.stopPropagation()
@@ -2076,7 +2086,7 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
 
                   return (
                     <div
-                      key={`${block.id}-${index}`}
+                      key={block.id}
                       className={cn(
                         "flex items-center justify-between rounded-md px-2 py-1.5 text-sm transition-colors",
                         selectedBlockId === block.id
@@ -3307,6 +3317,46 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
                   return null
                 })()}
 
+                {/* Dynamic Element Selector (e.g., for trust items) */}
+                {selectedBlock.type === "hero" && (() => {
+                  const props = selectedBlock.props as HeroBlock["props"]
+                  const trustItems = normalizeStringArray(props.trustItems ?? [])
+                  if (trustItems.length === 0) return null
+                  
+                  return (
+                    <div className="space-y-2 rounded-md border border-border bg-muted/20 p-3">
+                      <Label className="text-xs font-semibold">Trust Items</Label>
+                      <div className="flex flex-wrap gap-2">
+                        {trustItems.map((_, index) => {
+                          const itemId = `trustItems.${index}`
+                          const isSelected = selectedElementId === itemId
+                          return (
+                            <Button
+                              key={index}
+                              variant={isSelected ? "default" : "outline"}
+                              size="sm"
+                              className="text-xs"
+                              onClick={() => setSelectedElementId(itemId)}
+                            >
+                              Item {index + 1}
+                            </Button>
+                          )
+                        })}
+                      </div>
+                      {selectedElementId && selectedElementId.startsWith("trustItems.") && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="w-full text-xs"
+                          onClick={() => setSelectedElementId(null)}
+                        >
+                          Deselect
+                        </Button>
+                      )}
+                    </div>
+                  )
+                })()}
+
                 {/* Global Element Shadow Inspector */}
                 {selectedElementId && (
                   <>
@@ -3366,20 +3416,57 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
 
   const isLegacyHeroField = (key: string) => {
     if (selectedBlock.type !== "hero") return false
-    return (
-      key === "mediaUrl" ||
-      key === "mediaType" ||
-      key === "showMedia" ||
-      key === "headline" ||
-      key === "subheadline" ||
-      key === "ctaText" ||
-      key === "ctaHref" ||
-      key === "badgeText" ||
-      key === "playText" ||
-      key === "floatingTitle" ||
-      key === "floatingValue" ||
-      key === "floatingLabel"
-    )
+    // Fields handled via Brand Tabs (content)
+    const brandTabFields = [
+      // Media fields
+      "mediaUrl",
+      "mediaType",
+      "showMedia",
+      "image",
+      "imageFit",
+      "containBackground",
+      "imageAlt",
+      "imageVariant",
+      "imageFocus",
+      // Text content
+      "headline",
+      "subheadline",
+      "ctaText",
+      "ctaHref",
+      "badgeText",
+      "playText",
+      "floatingTitle",
+      "floatingValue",
+      "floatingLabel",
+      // Brand/Mood
+      "mood",
+      // Brand-specific color fields
+      "headlineColor",
+      "subheadlineColor",
+      "ctaColor",
+      "ctaBgColor",
+      "ctaHoverBgColor",
+      "ctaBorderColor",
+      "badgeColor",
+      "badgeBgColor",
+      "playTextColor",
+      "playBgColor",
+      "playBorderColor",
+      "playHoverBgColor",
+      "trustItemsColor",
+      "trustDotColor",
+      "floatingTitleColor",
+      "floatingValueColor",
+      "floatingLabelColor",
+      // Secondary CTA fields
+      "secondaryCtaText",
+      "secondaryCtaHref",
+      "secondaryCtaColor",
+      "secondaryCtaBgColor",
+      "secondaryCtaHoverBgColor",
+      "secondaryCtaBorderColor",
+    ]
+    return brandTabFields.includes(key)
   }
 
   const normalFields = fields.filter((field) => {
@@ -3408,6 +3495,177 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
       {selectedBlock.type === "servicesGrid" && (
         <>
           <Separator />
+
+          {/* Block-Level Controls: Variant, Background, Columns, Autoplay, Interval */}
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Variante</Label>
+              <Select
+                value={selectedBlock.props?.variant || "grid"}
+                onValueChange={(v) => {
+                  if (!selectedBlock) return
+                  const currentProps = selectedBlock.props as Record<string, unknown>
+                  const updatedProps = { ...currentProps, variant: v } as CMSBlock["props"]
+                  updateSelectedProps(updatedProps)
+                }}
+              >
+                <SelectTrigger className="h-8 text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="grid">Grid</SelectItem>
+                  <SelectItem value="slider">Slider</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs">Hintergrund</Label>
+              <Select
+                value={selectedBlock.props?.background || "none"}
+                onValueChange={(v) => {
+                  if (!selectedBlock) return
+                  const currentProps = selectedBlock.props as Record<string, unknown>
+                  const updatedProps = { ...currentProps, background: v } as CMSBlock["props"]
+                  updateSelectedProps(updatedProps)
+                }}
+              >
+                <SelectTrigger className="h-8 text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Keine</SelectItem>
+                  <SelectItem value="muted">Muted</SelectItem>
+                  <SelectItem value="gradient">Gradient</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {selectedBlock.props?.variant === "grid" && (
+              <div className="space-y-1.5">
+                <Label className="text-xs">Spalten</Label>
+                <Select
+                  value={String(selectedBlock.props?.columns || 3)}
+                  onValueChange={(v) => {
+                    if (!selectedBlock) return
+                    const currentProps = selectedBlock.props as Record<string, unknown>
+                    const updatedProps = { ...currentProps, columns: Number(v) } as CMSBlock["props"]
+                    updateSelectedProps(updatedProps)
+                  }}
+                >
+                  <SelectTrigger className="h-8 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="2">2</SelectItem>
+                    <SelectItem value="3">3</SelectItem>
+                    <SelectItem value="4">4</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {selectedBlock.props?.variant === "slider" && (
+              <>
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs">Autoplay</Label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!selectedBlock) return
+                      const currentProps = selectedBlock.props as Record<string, unknown>
+                      const updatedProps = { ...currentProps, autoplay: !currentProps.autoplay } as CMSBlock["props"]
+                      updateSelectedProps(updatedProps)
+                    }}
+                    className={cn(
+                      "h-6 w-11 rounded-full border border-border transition-colors",
+                      selectedBlock.props?.autoplay ? "bg-primary" : "bg-muted"
+                    )}
+                  >
+                    <div
+                      className={cn(
+                        "h-5 w-5 rounded-full bg-white transition-transform",
+                        selectedBlock.props?.autoplay ? "translate-x-5" : "translate-x-0.5"
+                      )}
+                    />
+                  </button>
+                </div>
+
+                {selectedBlock.props?.autoplay && (
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Interval (Sekunden)</Label>
+                    <Select
+                      value={String(selectedBlock.props?.interval || 6000)}
+                      onValueChange={(v) => {
+                        if (!selectedBlock) return
+                        const currentProps = selectedBlock.props as Record<string, unknown>
+                        const updatedProps = { ...currentProps, interval: Number(v) } as CMSBlock["props"]
+                        updateSelectedProps(updatedProps)
+                      }}
+                    >
+                      <SelectTrigger className="h-8 text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="3000">3 Sekunden</SelectItem>
+                        <SelectItem value="4500">4,5 Sekunden</SelectItem>
+                        <SelectItem value="6000">6 Sekunden</SelectItem>
+                        <SelectItem value="8000">8 Sekunden</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Slider Ausrichtung</Label>
+                  <Select
+                    value={selectedBlock.props?.sliderAlign || "center"}
+                    onValueChange={(v) => {
+                      if (!selectedBlock) return
+                      const currentProps = selectedBlock.props as Record<string, unknown>
+                      const updatedProps = { ...currentProps, sliderAlign: v } as CMSBlock["props"]
+                      updateSelectedProps(updatedProps)
+                    }}
+                  >
+                    <SelectTrigger className="h-8 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="center">Zentriert</SelectItem>
+                      <SelectItem value="left">Links</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs">Steuerelemente</Label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!selectedBlock) return
+                      const currentProps = selectedBlock.props as Record<string, unknown>
+                      const updatedProps = { ...currentProps, showControls: !currentProps.showControls } as CMSBlock["props"]
+                      updateSelectedProps(updatedProps)
+                    }}
+                    className={cn(
+                      "h-6 w-11 rounded-full border border-border transition-colors",
+                      selectedBlock.props?.showControls ? "bg-primary" : "bg-muted"
+                    )}
+                  >
+                    <div
+                      className={cn(
+                        "h-5 w-5 rounded-full bg-white transition-transform",
+                        selectedBlock.props?.showControls ? "translate-x-5" : "translate-x-0.5"
+                      )}
+                    />
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+
+          <Separator />
+
           {renderArrayItemsControls(
             selectedBlock,
             "cards",
@@ -3415,7 +3673,35 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
             (card, index) => `Card ${index + 1}`,
             createServiceCard,
             [
-              { key: "icon", label: "Icon", type: "select" as const },
+              {
+                key: "icon",
+                label: "Icon",
+                type: "select" as const,
+                options: [
+                  { value: "Activity", label: "Activity" },
+                  { value: "Heart", label: "Heart" },
+                  { value: "Brain", label: "Brain" },
+                  { value: "Bone", label: "Bone" },
+                  { value: "Dumbbell", label: "Dumbbell" },
+                  { value: "Stethoscope", label: "Stethoscope" },
+                  { value: "Zap", label: "Zap" },
+                  { value: "Shield", label: "Shield" },
+                  { value: "Users", label: "Users" },
+                  { value: "Clock", label: "Clock" },
+                  { value: "Star", label: "Star" },
+                  { value: "Award", label: "Award" },
+                  { value: "Target", label: "Target" },
+                  { value: "TrendingUp", label: "TrendingUp" },
+                  { value: "HandHeart", label: "HandHeart" },
+                  { value: "Sparkles", label: "Sparkles" },
+                  { value: "Flame", label: "Flame" },
+                  { value: "Wind", label: "Wind" },
+                  { value: "Waves", label: "Waves" },
+                  { value: "Footprints", label: "Footprints" },
+                  { value: "Circle", label: "Circle" },
+                  { value: "HeartPulse", label: "HeartPulse" },
+                ],
+              },
               { key: "iconColor", label: "Icon Farbe (optional)", type: "color" as const, placeholder: "#111111" },
               { key: "iconBgColor", label: "Icon Hintergrund (optional)", type: "color" as const, placeholder: "#e5e7eb" },
               { key: "title", label: "Titel", type: "text" as const },
@@ -3435,6 +3721,61 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
       {selectedBlock.type === "testimonials" && (
         <>
           <Separator />
+          
+          {/* Block-Level Controls: Autoplay & Interval (nur für Slider-Variante) */}
+          {selectedBlock.props?.variant === "slider" && (
+            <div className="space-y-3 border-b border-border pb-4 mb-4">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs">Autoplay</Label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!selectedBlock) return
+                    const currentProps = selectedBlock.props as Record<string, unknown>
+                    const updatedProps = { ...currentProps, autoplay: !currentProps.autoplay } as CMSBlock["props"]
+                    updateSelectedProps(updatedProps)
+                  }}
+                  className={cn(
+                    "h-6 w-11 rounded-full border border-border transition-colors",
+                    selectedBlock.props?.autoplay ? "bg-primary" : "bg-muted"
+                  )}
+                >
+                  <div
+                    className={cn(
+                      "h-5 w-5 rounded-full bg-white transition-transform",
+                      selectedBlock.props?.autoplay ? "translate-x-5" : "translate-x-0.5"
+                    )}
+                  />
+                </button>
+              </div>
+
+              {selectedBlock.props?.autoplay && (
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Interval (Sekunden)</Label>
+                  <Select
+                    value={String(selectedBlock.props?.interval || 6000)}
+                  onValueChange={(v) => {
+                    if (!selectedBlock) return
+                    const currentProps = selectedBlock.props as Record<string, unknown>
+                    const updatedProps = { ...currentProps, interval: Number(v) } as CMSBlock["props"]
+                    updateSelectedProps(updatedProps)
+                  }}
+                  >
+                    <SelectTrigger className="h-8 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="3000">3 Sekunden</SelectItem>
+                      <SelectItem value="4500">4,5 Sekunden</SelectItem>
+                      <SelectItem value="6000">6 Sekunden</SelectItem>
+                      <SelectItem value="8000">8 Sekunden</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
+          )}
+
           {renderArrayItemsControls(
             selectedBlock,
             "items",
@@ -3448,6 +3789,8 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
             [
               { key: "quote", label: "Zitat", type: "textarea" as const, required: true },
               { key: "quoteColor", label: "Zitat Farbe (optional)", type: "color" as const, placeholder: "#111111" },
+              { key: "avatar", label: "Avatar (optional)", type: "image" as const, placeholder: "/avatar.jpg" },
+              { key: "avatarColor", label: "Avatar Farbe (optional)", type: "color" as const, placeholder: "#111111" },
               { key: "name", label: "Name", type: "text" as const, required: true },
               { key: "nameColor", label: "Name Farbe (optional)", type: "color" as const, placeholder: "#111111" },
               { key: "role", label: "Rolle (optional)", type: "text" as const },

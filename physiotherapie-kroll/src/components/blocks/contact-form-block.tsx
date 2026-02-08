@@ -442,9 +442,9 @@ export function ContactFormBlock({
   }
 
   // Premium Success State
-  if (formState === "success") {
+    if (formState === "success") {
     return (
-      <section className="relative w-full overflow-hidden py-12 px-4">
+      <section className="relative w-full overflow-hidden py-12">
         {/* Decorative background blur */}
         <div className="pointer-events-none absolute inset-0 -z-10" aria-hidden="true">
           <div className="absolute left-1/4 top-1/4 size-64 rounded-full bg-green-500/10 blur-3xl" />
@@ -455,7 +455,7 @@ export function ContactFormBlock({
             {/* Animated checkmark container */}
             <div className="relative mb-8">
               <div className="absolute inset-0 animate-ping rounded-full bg-green-500/20" />
-              <div className="relative flex size-20 items-center justify-center rounded-full bg-gradient-to-br from-green-400/20 to-green-600/20 ring-1 ring-green-500/30">
+              <div className="relative flex size-20 items-center justify-center rounded-full bg-linear-to-br from-green-400/20 to-green-600/20 ring-1 ring-green-500/30">
                 <CheckCircle2 className="size-10 text-green-500" />
               </div>
             </div>
@@ -485,7 +485,7 @@ export function ContactFormBlock({
   const isUsingDefaults = effectiveCards.length === 0
   const cardsToRender: ContactInfoCard[] = isUsingDefaults ? DEFAULT_CONTACT_INFO_CARDS : effectiveCards
 
-  if (normalizedLayout === "split") {
+    if (normalizedLayout === "split") {
     const formCardShadow = useElementShadowStyle({
       elementId: "formCard",
       elementConfig: (propsFromBlock as any)?.elements?.["formCard"],
@@ -504,7 +504,7 @@ export function ContactFormBlock({
     })    
 
     return (
-      <section className="relative w-full overflow-hidden py-12 px-4">
+      <section className="relative w-full overflow-hidden py-12">
         {/* Decorative background elements - subtle ambient glow only */}
         <div className="pointer-events-none absolute inset-0 -z-20" aria-hidden="true">
           <div className="absolute -left-32 top-1/4 size-96 rounded-full bg-primary/2 blur-3xl" />
@@ -783,7 +783,7 @@ export function ContactFormBlock({
                       }}
                     >
                       {/* Shimmer effect */}
-                      <span className="absolute inset-0 -z-10 bg-[linear-gradient(110deg,transparent_25%,rgba(255,255,255,0.15)_50%,transparent_75%)] bg-[length:200%_100%] opacity-0 transition-opacity duration-500 group-hover:animate-shimmer group-hover:opacity-100" />
+                      <span className="absolute inset-0 -z-10 bg-[linear-gradient(110deg,transparent_25%,rgba(255,255,255,0.15)_50%,transparent_75%)] bg-size[length:200%_100%] opacity-0 transition-opacity duration-500 group-hover:animate-shimmer group-hover:opacity-100" />
 
                       {isSubmitting || formState === "loading" ? (
                         <span className="flex items-center justify-center gap-3">
@@ -822,7 +822,7 @@ export function ContactFormBlock({
   })
 
   return (
-    <section className="w-full py-12 px-4">
+    <section className="w-full py-12">
       <div className="mx-auto max-w-xl">
         {/* Header */}
         <div className="mb-10 text-center">
@@ -1005,7 +1005,7 @@ export function ContactFormBlock({
                 }}
               >
                 {/* Shimmer effect */}
-                <span className="absolute inset-0 -z-10 bg-[linear-gradient(110deg,transparent_25%,rgba(255,255,255,0.15)_50%,transparent_75%)] bg-[length:200%_100%] opacity-0 transition-opacity duration-500 group-hover:animate-shimmer group-hover:opacity-100" />
+                <span className="absolute inset-0 -z-10 bg-[linear-gradient(110deg,transparent_25%,rgba(255,255,255,0.15)_50%,transparent_75%)] bg-size[length:200%_100%] opacity-0 transition-opacity duration-500 group-hover:animate-shimmer group-hover:opacity-100" />
 
                 {isSubmitting || formState === "loading" ? (
                   <span className="flex items-center justify-center gap-3">

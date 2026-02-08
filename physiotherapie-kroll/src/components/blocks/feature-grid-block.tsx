@@ -71,9 +71,8 @@ export function FeatureGridBlock({
   )
 
   return (
-    <section className="py-16 px-4">
-      <div className="container mx-auto">
-        <div className={cn("grid gap-6", columnsMap[columns])}>
+    <section className="py-16">
+      <div className={cn("grid gap-6", columnsMap[columns])}>
           {features.map((feature, index) => {
             const cardShadow = useElementShadowStyle({
               elementId: `card-${feature.id}`,
@@ -129,7 +128,6 @@ export function FeatureGridBlock({
             )
           })}
         </div>
-      </div>
     </section>
   )
 }

@@ -183,7 +183,7 @@ export function TestimonialSliderBlock({
   )
 
   return (
-    <section className={cn("w-full px-6 py-16 md:px-10", bgClass || "bg-muted/30")}>
+    <section className={cn("w-full py-16", bgClass || "bg-muted/30")}>
       <div className="mx-auto max-w-5xl">
         {/* Top label + headline */}
         <div className="mb-12 text-center">

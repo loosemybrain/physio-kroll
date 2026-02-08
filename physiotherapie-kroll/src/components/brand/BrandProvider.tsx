@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useContext, useState, useCallback, type ReactNode } from "react"
+import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react"
 import { usePathname } from "next/navigation"
 import type { BrandKey } from "./brandAssets"
 
@@ -23,6 +23,11 @@ function brandFromPath(pathname: string): BrandKey {
  * Can be overridden by components (e.g., Hero toggle), but defaults to pathname-based brand
  */
 export function BrandProvider({ children }: { children: ReactNode }) {
+  // INSTRUMENTATION: BrandProvider render and mount
+  if (typeof window !== "undefined") {
+    console.count("BRANDPROVIDER RENDER")
+  }
+
   const pathname = usePathname()
   const pathBrand = brandFromPath(pathname || "/")
 
@@ -30,7 +35,22 @@ export function BrandProvider({ children }: { children: ReactNode }) {
   const [overrideBrand, setOverrideBrand] = useState<BrandKey | null>(null)
   const brand = overrideBrand ?? pathBrand
 
+  // INSTRUMENTATION: Log brand state changes
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      console.log("BRANDPROVIDER STATE", {
+        pathname,
+        pathBrand,
+        overrideBrand,
+        brand,
+      })
+    }
+  }, [pathname, pathBrand, overrideBrand, brand])
+
   const setBrand = useCallback((newBrand: BrandKey) => {
+    if (typeof window !== "undefined") {
+      console.log("BRANDPROVIDER setBrand called with:", newBrand)
+    }
     setOverrideBrand(newBrand)
   }, [])
 

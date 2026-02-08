@@ -76,8 +76,8 @@ export function TeamGridBlock({
   )
 
   return (
-    <section className="py-16 px-4">
-      <div className="container mx-auto">
+    <section className="py-16">
+      <div>
         {/* Headline & Subheadline */}
         {(headline || subheadline) && (
           <div className="mb-12 text-center">

@@ -1,4 +1,5 @@
 import { CMSRenderer } from "@/components/cms/BlockRenderer";
+import { StickyMiniToc } from "@/components/blog/StickyMiniToc";
 import { getSupabasePublic } from "@/lib/supabase/serverPublic";
 import type { CMSBlock } from "@/types/cms";
 
@@ -121,7 +122,14 @@ export default async function KonzeptCMSPageRoute({ params }: { params: Promise<
 
   return (
     <article>
-      <CMSRenderer blocks={cmsBlocks} pageSlug={slug} />
+      <div className="mx-auto grid w-full max-w-7xl grid-cols-1 gap-8 px-4 lg:grid-cols-[minmax(0,1fr)_240px]">
+        <div data-article>
+          <CMSRenderer blocks={cmsBlocks} pageSlug={slug} />
+        </div>
+        <aside className="hidden lg:block">
+          <StickyMiniToc />
+        </aside>
+      </div>
     </article>
   );
 }

@@ -62,11 +62,11 @@ export function FaqAccordion({
   return (
     <section
       className={cn(
-        "py-16 px-4",
+        "py-16",
         isSoft && "bg-muted/30"
       )}
     >
-      <div className="container mx-auto max-w-4xl">
+      <div className="mx-auto max-w-4xl">
         {/* Headline */}
         {headline && (
           <h2
@@ -82,7 +82,7 @@ export function FaqAccordion({
         )}
 
         {/* Accordion */}
-        <Accordion type="single" collapsible className="w-full" suppressHydrationWarning>
+        <Accordion type="single" collapsible className="w-full">
           {items.map((item, index) => (
             <AccordionItem key={item.id} value={item.id}>
               <AccordionTrigger

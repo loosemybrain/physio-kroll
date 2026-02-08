@@ -77,5 +77,5 @@ export default async function KonzeptHomePage() {
     props: (b.props ?? {}) as any,
   }));
 
-  return <HomePageClient blocks={cmsBlocks} />;
+  return <HomePageClient blocks={cmsBlocks} initialBrand="physio-konzept" showBrandToggle={true} />;
 }

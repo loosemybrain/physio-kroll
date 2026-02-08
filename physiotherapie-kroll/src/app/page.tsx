@@ -77,5 +77,5 @@ export default async function HomePage() {
     props: (b.props ?? {}) as any,
   }));
 
-  return <HomePageClient blocks={cmsBlocks} />;
+  return <HomePageClient blocks={cmsBlocks} initialBrand="physiotherapy" showBrandToggle={true} />;
 }

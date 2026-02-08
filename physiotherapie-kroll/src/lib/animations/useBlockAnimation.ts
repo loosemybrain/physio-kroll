@@ -43,6 +43,7 @@ export function useBlockAnimation({
   })
 
   const observerRef = useRef<IntersectionObserver | null>(null)
+  const hasAnimatedOnce = useRef(false) // Guard against double-animation after hydration
 
   // Enter Animation anwenden
   const applyAnimation = useCallback(
@@ -69,12 +70,15 @@ export function useBlockAnimation({
 
   // Setup Enter Animation
   useEffect(() => {
+    // Guard against double-animation after hydration
+    if (hasAnimatedOnce.current) return
     if (!config.enabled || !config.enter || state.enterTriggered) return
 
     const trigger = config.enter.trigger
 
     if (trigger === "onLoad") {
       // Sofort
+      hasAnimatedOnce.current = true
       setState((s) => ({ ...s, enterTriggered: true }))
       applyAnimation(config.enter, "enter")
     } else if (trigger === "onScroll") {
@@ -82,7 +86,8 @@ export function useBlockAnimation({
       if (!containerRef.current) return
 
       observerRef.current = createIntersectionObserver((isVisible) => {
-        if (isVisible && !state.enterTriggered) {
+        if (isVisible && !state.enterTriggered && !hasAnimatedOnce.current) {
+          hasAnimatedOnce.current = true
           setState((s) => ({ ...s, enterTriggered: true, isVisible: true }))
           applyAnimation(config.enter, "enter")
 
@@ -102,7 +107,7 @@ export function useBlockAnimation({
         observerRef.current?.disconnect()
       }
     }
-  }, [config.enabled, config.enter, state.enterTriggered, containerRef, applyAnimation])
+  }, [state.enterTriggered, containerRef, applyAnimation]) // Only re-run if animation was already triggered or container changed
 
   // Setup Hover Animation
   useEffect(() => {

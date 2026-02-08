@@ -13,6 +13,51 @@ export function resolveBoxShadow(shadowConfig?: ElementShadow): string | undefin
 
   // If preset is selected and not "custom", use the preset
   if (shadowConfig.preset && shadowConfig.preset !== "custom") {
+    if (shadowConfig.preset === "glow") {
+      // Parse color (hex or rgb/rgba), default if not provided
+      let color = shadowConfig.color ?? "#3b82f6"
+      let opacity = shadowConfig.opacity ?? 0.5
+      let rgbaColor = ""
+
+      // Helper function to convert hex to {r,g,b}
+      const hexToRgb = (hex: string): { r: number; g: number; b: number } | null => {
+        // Remove leading #
+        hex = hex.replace(/^#/, "")
+        if (hex.length === 3) {
+          return {
+            r: parseInt(hex[0] + hex[0], 16),
+            g: parseInt(hex[1] + hex[1], 16),
+            b: parseInt(hex[2] + hex[2], 16),
+          }
+        } else if (hex.length === 6) {
+          return {
+            r: parseInt(hex.slice(0, 2), 16),
+            g: parseInt(hex.slice(2, 4), 16),
+            b: parseInt(hex.slice(4, 6), 16),
+          }
+        }
+        return null
+      }
+
+      if (color.startsWith("rgba")) {
+        // Replace alpha value at the end
+        rgbaColor = color.replace(/rgba\((\d+),\s*(\d+),\s*(\d+),\s*[\d.]+\)/, `rgba($1, $2, $3, ${opacity})`)
+      } else if (color.startsWith("rgb")) {
+        // Convert rgb to rgba and add opacity
+        rgbaColor = color.replace(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/, `rgba($1, $2, $3, ${opacity})`)
+      } else {
+        // Assume hex
+        const rgb = hexToRgb(color)
+        if (rgb) {
+          rgbaColor = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${opacity})`
+        } else {
+          // fallback (unparsable): use default
+          rgbaColor = "rgba(59, 130, 246, 0.5)" // default for #3b82f6
+        }
+      }
+      return `0 0 20px ${rgbaColor}`
+    }
+
     if (isShadowPresetKey(shadowConfig.preset)) {
       return getShadowPreset(shadowConfig.preset)
     }

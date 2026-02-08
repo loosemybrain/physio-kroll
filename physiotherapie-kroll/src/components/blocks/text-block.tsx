@@ -1,6 +1,7 @@
 import * as React from "react"
 import { cn } from "@/lib/utils"
 import { AnimatedBlock } from "@/components/blocks/AnimatedBlock"
+import { RevealOnScroll } from "@/components/ui/RevealOnScroll"
 import type { BlockSectionProps } from "@/types/cms"
 
 interface TextBlockProps {
@@ -55,21 +56,23 @@ export function TextBlock({
 
   return (
     <AnimatedBlock config={section?.animation}>
-      <section className="py-12">
-      <div className={cn("mx-auto px-4", maxWidthMap[maxWidth])}>
-        <div
-          className={cn(
-            alignmentMap[alignment],
-            textSizeMap[textSize],
-            // Keep typography styles, but don't force a max-width here.
-            // Width is controlled by the outer wrapper via maxWidthMap.
-            "prose prose-neutral dark:prose-invert max-w-none"
-          )}
-          style={proseStyle}
-          dangerouslySetInnerHTML={{ __html: content }}
-        />
-      </div>
-      </section>
+      <RevealOnScroll>
+        <section className="py-12">
+          <div className={cn("mx-auto px-4", maxWidthMap[maxWidth])}>
+            <div
+              className={cn(
+                alignmentMap[alignment],
+                textSizeMap[textSize],
+                // Keep typography styles, but don't force a max-width here.
+                // Width is controlled by the outer wrapper via maxWidthMap.
+                "prose prose-neutral dark:prose-invert max-w-none"
+              )}
+              style={proseStyle}
+              dangerouslySetInnerHTML={{ __html: content }}
+            />
+          </div>
+        </section>
+      </RevealOnScroll>
     </AnimatedBlock>
   )
 }

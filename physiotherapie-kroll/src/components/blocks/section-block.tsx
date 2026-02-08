@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { ArrowRight } from "lucide-react"
 import { useElementShadowStyle } from "@/lib/shadow"
+import { RevealOnScroll } from "@/components/ui/RevealOnScroll"
 
 interface SectionBlockProps {
   section?: unknown
@@ -108,35 +109,24 @@ export function SectionBlock({
   }
 
   return (
-    <section
-      className={cn(
-        // base vertical spacing
-        variant === "soft" ? "py-20" : "py-16",
+    <RevealOnScroll>
+      <section
+        className={cn(
+          // base vertical spacing
+          variant === "soft" ? "py-20" : "py-16",
 
-        // background preset
-        backgroundMap[background],
-
-        // ✅ only apply outer horizontal padding when NOT full-bleed
-        !fullBackground && "px-4",
-
-        // ✅ full-bleed escape (works even inside a container wrapper)
-        fullBackground && "relative left-1/2 right-1/2 w-screen -ml-[50vw] -mr-[50vw]"
-      )}
-      style={backgroundColor ? ({ backgroundColor } as React.CSSProperties) : undefined}
-    >
-      {/* 
-        IMPORTANT:
-        - If fullBackground: this inner container defines the "normal block width"
-        - If not fullBackground: behaves similar to before, but still consistent
-      */}
-      <div className={cn(fullBackground ? "mx-auto w-full max-w-7xl px-4" : "container mx-auto")}>
-        <div
-          className={cn(
-            "mx-auto",
-            maxWidthMap[maxWidth],
-            isCentered && "text-center"
-          )}
-        >
+          // background preset
+          backgroundMap[background]
+        )}
+        style={backgroundColor ? ({ backgroundColor } as React.CSSProperties) : undefined}
+      >
+        <div>
+          <div
+            className={cn(
+              maxWidthMap[maxWidth],
+              isCentered && "text-center"
+            )}
+          >
           {/* Eyebrow */}
           {eyebrow && (
             <p
@@ -226,8 +216,9 @@ export function SectionBlock({
               </Button>
             </div>
           )}
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
+    </RevealOnScroll>
   )
 }

@@ -1,11 +1,10 @@
 "use client"
 
 import { cn } from "@/lib/utils"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { CardSurface } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { ArrowRight } from "lucide-react"
 import * as LucideIcons from "lucide-react"
-import { useElementShadowStyle } from "@/lib/shadow"
 
 interface ServicesGridBlockProps {
   section?: unknown
@@ -55,8 +54,8 @@ const columnsMap = {
 }
 
 const backgroundMap = {
-  none: "",
-  muted: "bg-muted/50",
+  none: "bg-background",
+  muted: "bg-muted/10",
   gradient: "bg-gradient-to-br from-primary/5 via-background to-background",
 }
 
@@ -83,6 +82,9 @@ export function ServicesGridBlock({
   editable = false,
   blockId,
   onEditField,
+  elements,
+  onElementClick,
+  selectedElementId,
 }: ServicesGridBlockProps) {
   // Inline edit helper
   const handleInlineEdit = (e: React.MouseEvent, fieldPath: string) => {
@@ -96,31 +98,19 @@ export function ServicesGridBlock({
   return (
     <section
       className={cn(
-        "py-16 px-4",
+        "relative py-20 md:py-28",
         backgroundMap[background]
       )}
     >
-      <div className="container mx-auto">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6">
         {/* Headline & Subheadline */}
         {(headline || subheadline) && (
-          <div className="mb-12 text-center">
-            {headline && (
-              <h2
-                onClick={(e) => handleInlineEdit(e, "headline")}
-                className={cn(
-                  "text-3xl font-bold tracking-tight text-foreground md:text-4xl",
-                  editable && blockId && onEditField && "cursor-pointer rounded px-1 transition-colors hover:bg-primary/10"
-                )}
-                style={headlineColor ? ({ color: headlineColor } as React.CSSProperties) : undefined}
-              >
-                {headline}
-              </h2>
-            )}
+          <header className="mb-16 text-center">
             {subheadline && (
               <p
                 onClick={(e) => handleInlineEdit(e, "subheadline")}
                 className={cn(
-                  "mt-4 text-lg text-muted-foreground max-w-2xl mx-auto",
+                  "mb-5 text-xs font-semibold uppercase tracking-[0.2em] text-primary",
                   editable && blockId && onEditField && "cursor-pointer rounded px-1 transition-colors hover:bg-primary/10"
                 )}
                 style={subheadlineColor ? ({ color: subheadlineColor } as React.CSSProperties) : undefined}
@@ -128,91 +118,138 @@ export function ServicesGridBlock({
                 {subheadline}
               </p>
             )}
-          </div>
+            {headline && (
+              <h2
+                onClick={(e) => handleInlineEdit(e, "headline")}
+                className={cn(
+                  "text-balance text-3xl font-bold tracking-tight text-foreground md:text-4xl lg:text-5xl",
+                  editable && blockId && onEditField && "cursor-pointer rounded px-1 transition-colors hover:bg-primary/10"
+                )}
+                style={headlineColor ? ({ color: headlineColor } as React.CSSProperties) : undefined}
+              >
+                {headline}
+              </h2>
+            )}
+          </header>
         )}
 
         {/* Cards Grid */}
-        <div className={cn("grid gap-6", columnsMap[columns])}>
+        <div className={cn("grid gap-6 lg:gap-8", columnsMap[columns])}>
           {cards.map((card, index) => {
+            // 1) Icon Badge Defaults
             const IconComponent = getIconComponent(card.icon)
+            const resolvedIconBg = card.iconBgColor ?? iconBgColor
+            const resolvedIconColor = card.iconColor ?? iconColor
+            const elementId = `card:${index}`
+            const isSelected = selectedElementId === elementId
+            const isPadded = columns === 2 || columns === 4
+
             return (
-              <Card
+              <CardSurface
                 key={card.id}
-                className="h-full flex flex-col"
+                onClick={(e) => {
+                  // 2) Editor Click Handling
+                  if (editable && blockId && onElementClick) {
+                    e.stopPropagation()
+                    onElementClick(blockId, elementId)
+                  }
+                }}
+                className={cn(
+                  "group relative flex h-full flex-col overflow-hidden rounded-2xl border border-border/50 bg-card",
+                  "shadow-[0_1px_3px_rgba(0,0,0,0.06),0_18px_50px_-20px_rgba(0,0,0,0.18)]",
+                  "transition-shadow duration-300 ease-out",
+                  "hover:shadow-[0_1px_3px_rgba(0,0,0,0.06),0_28px_60px_-16px_rgba(0,0,0,0.22)]",
+                  editable && blockId && onElementClick && "cursor-pointer",
+                  isSelected && "ring-2 ring-primary/60"
+                )}
                 style={{
                   backgroundColor: card.cardBgColor || cardBgColor || undefined,
                   borderColor: card.cardBorderColor || cardBorderColor || undefined,
                 }}
               >
-                <CardHeader>
+                {/* Top Accent Bar */}
+                <div className="h-1 w-full bg-linear-to-r from-primary/60 via-primary/30 to-transparent" />
+
+                {/* Card Body */}
+                <div className={cn(
+                  "relative flex flex-1 flex-col",
+                  isPadded ? "p-8 md:p-10" : "p-7"
+                )}>
+                  {/* Icon Badge */}
                   <div
-                    className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 text-primary"
+                    className={cn(
+                      "mb-5 flex h-14 w-14 items-center justify-center rounded-xl transition-transform duration-300",
+                      "group-hover:scale-110",
+                      !resolvedIconBg && "bg-primary/10"
+                    )}
                     style={{
-                      color: card.iconColor || iconColor || undefined,
-                      backgroundColor: card.iconBgColor || iconBgColor || undefined,
+                      ...(resolvedIconColor ? { color: resolvedIconColor } : {}),
+                      ...(resolvedIconBg ? { backgroundColor: resolvedIconBg } : {}),
                     }}
                   >
-                    <IconComponent className="h-6 w-6" />
+                    <IconComponent className={cn("h-7 w-7", !resolvedIconColor && "text-primary")} />
                   </div>
-                  <CardTitle
-                    onClick={(e) => handleInlineEdit(e, `cards.${index}.title`)}
+
+                  {/* Title */}
+                  <h3
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleInlineEdit(e, `cards.${index}.title`)
+                    }}
                     className={cn(
+                      "mb-3 text-lg font-semibold tracking-tight text-card-foreground",
                       editable && blockId && onEditField && "cursor-pointer rounded px-1 transition-colors hover:bg-primary/10"
                     )}
                     style={{ color: card.titleColor || titleColor || undefined }}
                   >
                     {card.title}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="flex-1">
+                  </h3>
+
+                  {/* Text */}
                   <p
-                    onClick={(e) => handleInlineEdit(e, `cards.${index}.text`)}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleInlineEdit(e, `cards.${index}.text`)
+                    }}
                     className={cn(
-                      "text-muted-foreground",
+                      "flex-1 text-base leading-relaxed text-muted-foreground",
                       editable && blockId && onEditField && "cursor-pointer rounded px-1 transition-colors hover:bg-primary/10"
                     )}
                     style={{ color: card.textColor || textColor || undefined }}
                   >
                     {card.text}
                   </p>
+
+                  {/* CTA Section */}
                   {card.ctaText && card.ctaHref && (
-                    <div className="mt-4">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="gap-2"
-                        style={{ color: card.ctaColor || ctaColor || undefined }}
-                        onClick={editable && blockId && onEditField ? (e) => handleInlineEdit(e, `cards.${index}.ctaText`) : undefined}
-                        asChild={!editable && !!card.ctaHref}
-                      >
-                        {!editable && card.ctaHref ? (
-                          <a href={card.ctaHref}>
-                            {card.ctaText}
-                            <ArrowRight className="h-4 w-4" />
-                          </a>
-                        ) : (
-                          <>
-                            <span
-                              onClick={(e) => {
-                                if (editable && blockId && onEditField) {
-                                  e.stopPropagation()
-                                  handleInlineEdit(e, `cards.${index}.ctaText`)
-                                }
-                              }}
-                              className={cn(
-                                editable && blockId && onEditField && "cursor-pointer"
-                              )}
-                            >
-                              {card.ctaText}
-                            </span>
-                            <ArrowRight className="h-4 w-4" />
-                          </>
-                        )}
-                      </Button>
+                    <div className="mt-6 border-t border-border/40 pt-5">
+                      {editable ? (
+                        <button
+                          type="button"
+                          className="group/cta inline-flex items-center gap-2 text-sm font-medium text-primary transition-colors hover:text-primary/80"
+                          style={{ color: card.ctaColor || ctaColor || undefined }}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleInlineEdit(e, `cards.${index}.ctaText`)
+                          }}
+                        >
+                          <span>{card.ctaText}</span>
+                          <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover/cta:translate-x-1" />
+                        </button>
+                      ) : (
+                        <a
+                          href={card.ctaHref}
+                          className="group/cta inline-flex items-center gap-2 text-sm font-medium text-primary transition-colors hover:text-primary/80"
+                          style={{ color: card.ctaColor || ctaColor || undefined }}
+                        >
+                          <span>{card.ctaText}</span>
+                          <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover/cta:translate-x-1" />
+                        </a>
+                      )}
                     </div>
                   )}
-                </CardContent>
-              </Card>
+                </div>
+              </CardSurface>
             )
           })}
         </div>

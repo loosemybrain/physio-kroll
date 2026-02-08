@@ -364,7 +364,7 @@ const testimonialsPropsSchema = z.object({
   columns: z
     .preprocess(
       (v) => (v === "" || v === null || typeof v === "undefined" ? undefined : v),
-      z.coerce.number().int().min(1).max(3)
+      z.coerce.number().int().min(1).max(4)
     )
     .optional(),
   background: z.enum(["none", "muted", "gradient"]).optional(),
@@ -384,6 +384,7 @@ const testimonialsPropsSchema = z.object({
             z.coerce.number().int().min(1).max(5)
           )
           .optional(),
+        avatar: mediaValueSchema.optional(),
       })
     )
     .min(1)
@@ -612,7 +613,9 @@ const sectionDefaults: SectionBlock["props"] = {
 }
 
 function generateUniqueId(prefix: string, index: number): string {
-  return `${prefix}-${index}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+  // Use deterministic IDs for default items (no Date.now, no Math.random)
+  // This ensures SSR and Client generate identical IDs for hydration parity
+  return `${prefix}-${index}`
 }
 
 /**
@@ -690,6 +693,7 @@ export function createTestimonialItem(): TestimonialsBlock["props"]["items"][0] 
     name: "Julia M.",
     role: "Patientin",
     rating: 5,
+    avatar: undefined,
   }
 }
 
@@ -751,14 +755,17 @@ const servicesGridDefaults: ServicesGridBlock["props"] = {
   headline: "Angebote & Kurse",
   subheadline: "Therapie, Training und Kurse – alles an einem Ort.",
   columns: 3,
+  variant: "grid",
   background: "none",
+  autoplay: false,
+  interval: 6000,
+  sliderAlign: "center",
+  showControls: true,
   cards: [
     { id: generateUniqueId("card", 0), icon: "HeartPulse", title: "Physiotherapie", text: "Individuelle Behandlung für Ihre Gesundheit und Wohlbefinden.", ctaText: "Mehr erfahren", ctaHref: "/physiotherapie" },
     { id: generateUniqueId("card", 1), icon: "Dumbbell", title: "Training", text: "Gezieltes Kraft- und Ausdauertraining für optimale Ergebnisse.", ctaText: "Mehr erfahren", ctaHref: "/training" },
     { id: generateUniqueId("card", 2), icon: "Activity", title: "Rehabilitation", text: "Professionelle Reha nach Verletzungen und Operationen.", ctaText: "Mehr erfahren", ctaHref: "/rehabilitation" },
     { id: generateUniqueId("card", 3), icon: "Users", title: "Gruppenkurse", text: "Gemeinsam trainieren und motiviert bleiben in der Gruppe.", ctaText: "Mehr erfahren", ctaHref: "/kurse" },
-    { id: generateUniqueId("card", 4), icon: "Timer", title: "Prävention", text: "Vorbeugende Maßnahmen für langfristige Gesundheit.", ctaText: "Mehr erfahren", ctaHref: "/praevention" },
-    { id: generateUniqueId("card", 5), icon: "Sparkles", title: "Wellness", text: "Entspannung und Regeneration für Körper und Geist.", ctaText: "Mehr erfahren", ctaHref: "/wellness" },
   ],
 }
 
@@ -818,6 +825,8 @@ const testimonialsDefaults: TestimonialsBlock["props"] = {
   variant: "grid",
   columns: 3,
   background: "none",
+  autoplay: false,
+  interval: 6000,
   items: [
     {
       id: generateUniqueId("testimonial", 0),
@@ -905,6 +914,7 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
         label: "Überschrift",
         path: "headline",
         supportsTypography: true,
+        supportsShadow: true,
         group: "Inhalt",
       },
       {
@@ -912,6 +922,14 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
         label: "Unterüberschrift",
         path: "subheadline",
         supportsTypography: true,
+        supportsShadow: true,
+        group: "Inhalt",
+      },
+      {
+        id: "badge",
+        label: "Badge/Auszeichnung",
+        path: "badgeText",
+        supportsShadow: true,
         group: "Inhalt",
       },
       {
@@ -919,6 +937,7 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
         label: "CTA Button",
         path: "ctaText",
         supportsTypography: true,
+        supportsShadow: true,
         group: "Call-to-Action",
       },
       {
@@ -926,7 +945,26 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
         label: "Sekundäre CTA",
         path: "secondaryCtaText",
         supportsTypography: true,
+        supportsShadow: true,
         group: "Call-to-Action",
+      },
+      {
+        id: "media",
+        label: "Bild/Media",
+        path: "image",
+        supportsShadow: true,
+        group: "Inhalt",
+      },
+      {
+        id: "trustItem",
+        label: "Vertrauens-Item",
+        path: "trustItems",
+        supportsShadow: true,
+        dynamic: true,
+        idTemplate: "trustItems.{index}",
+        labelTemplate: "Trust Item {index+1}",
+        itemCountPath: "trustItems",
+        group: "Inhalt",
       },
     ],
     inspectorFields: [
@@ -1585,6 +1623,7 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
           { value: "1", label: "1" },
           { value: "2", label: "2" },
           { value: "3", label: "3" },
+          { value: "4", label: "4" },
         ],
       },
       { key: "headlineColor", label: "Headline Farbe", type: "color", placeholder: "#111111" },

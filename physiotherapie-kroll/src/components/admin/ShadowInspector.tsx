@@ -97,7 +97,22 @@ export function ShadowInspector({ config = {}, onChange, onClose }: ShadowInspec
             </Label>
             <Select
               value={localConfig.preset || "none"}
-              onValueChange={(value) => handleChange({ preset: value as ShadowPresetKey })}
+              onValueChange={(value) => {
+                // Wenn auf "glow" gewechselt wird und color kein hex ist, Standard setzen
+                if (
+                  value === "glow" &&
+                  (!/^#[0-9A-Fa-f]{6}$/.test(localConfig.color ?? "") ||
+                    typeof localConfig.color !== "string")
+                ) {
+                  handleChange({
+                    preset: value as ShadowPresetKey,
+                    color: "#3b82f6",
+                    opacity: 0.5,
+                  })
+                } else {
+                  handleChange({ preset: value as ShadowPresetKey })
+                }
+              }}
             >
               <SelectTrigger id="shadow-preset" className="h-8">
                 <SelectValue placeholder="Select preset" />
@@ -111,6 +126,75 @@ export function ShadowInspector({ config = {}, onChange, onClose }: ShadowInspec
               </SelectContent>
             </Select>
           </div>
+
+          {/* Glow Shadow Settings */}
+          {localConfig.preset === "glow" && (
+            <div className="space-y-3 rounded-md border border-border/50 bg-muted/20 p-3">
+              <p className="text-xs font-semibold text-muted-foreground">Glow Einstellungen</p>
+              {/* Color Picker für Glow */}
+              <div className="space-y-1.5">
+                <Label htmlFor="glow-color" className="text-xs">
+                  Glow-Farbe
+                </Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    id="glow-color"
+                    type="color"
+                    value={
+                      // Nur Hexfarbwerte im Picker verwenden, sonst Default
+                      /^#[0-9A-Fa-f]{6}$/.test(localConfig.color ?? "")
+                        ? localConfig.color!
+                        : "#3b82f6"
+                    }
+                    onChange={(e) => handleChange({ color: e.target.value })}
+                    className="h-8 w-10 p-0 border border-border rounded"
+                    style={{ background: "none" }}
+                  />
+                  <Input
+                    type="text"
+                    value={localConfig.color ?? ""}
+                    onChange={(e) => handleChange({ color: e.target.value })}
+                    className="h-8 text-sm flex-1"
+                    placeholder="#3b82f6"
+                  />
+                </div>
+              </div>
+              {/* Opacity für Glow */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="glow-opacity" className="text-xs">
+                    Opazität
+                  </Label>
+                  <span className="text-xs font-medium text-muted-foreground">
+                    {typeof localConfig.opacity === "number"
+                      ? localConfig.opacity.toFixed(2)
+                      : "0.5"}
+                  </span>
+                </div>
+                {/* Slider can be used here for nice UX, keep Input for consistency */}
+                <Input
+                  id="glow-opacity"
+                  type="number"
+                  min="0"
+                  max="1"
+                  step="0.01"
+                  value={
+                    (typeof localConfig.opacity === "number"
+                      ? localConfig.opacity
+                      : 0.5)
+                  }
+                  onChange={(e) => {
+                    let next = parseFloat(e.target.value)
+                    if (isNaN(next)) next = 0.5
+                    if (next > 1) next = 1
+                    if (next < 0) next = 0
+                    handleChange({ opacity: next })
+                  }}
+                  className="h-8 text-sm"
+                />
+              </div>
+            </div>
+          )}
 
           {/* Custom Shadow Settings */}
           {isCustom && (

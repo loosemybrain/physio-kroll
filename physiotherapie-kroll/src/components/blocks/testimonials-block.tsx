@@ -1,17 +1,20 @@
 "use client"
 
+import * as React from "react"
+import { useCallback } from "react"
 import { cn } from "@/lib/utils"
+import { Star, ChevronLeft, ChevronRight, Quote } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
-import { Star, ChevronLeft, ChevronRight } from "lucide-react"
 import {
   Carousel,
-  CarouselDots,
-  CarouselNextButton,
-  CarouselPrevButton,
-  CarouselSlide,
   CarouselTrack,
-  useCarousel
+  CarouselSlide,
+  CarouselPrevButton,
+  CarouselNextButton,
+  useCarousel,
 } from "@/components/ui/carousel"
+import type { MediaValue } from "@/types/cms"
+import { resolveMediaClient } from "@/lib/cms/resolveMediaClient"
 
 export interface TestimonialsBlockProps {
   headline?: string
@@ -30,29 +33,204 @@ export interface TestimonialsBlockProps {
     role?: string
     roleColor?: string
     rating?: 1 | 2 | 3 | 4 | 5
+    avatar?: MediaValue
   }>
-  columns?: 1 | 2 | 3
+  columns?: 1 | 2 | 3 | 4
   variant?: "grid" | "slider"
   background?: "none" | "muted" | "gradient"
+  autoplay?: boolean
+  interval?: number
   editable?: boolean
   blockId?: string
   onEditField?: (blockId: string, fieldPath: string, anchorRect?: DOMRect) => void
-  // Shadow/Element Props
-  elements?: Record<string, any>
+  elements?: Record<string, unknown>
   onElementClick?: (blockId: string, elementId: string) => void
   selectedElementId?: string | null
 }
 
-const columnsMap: Record<1 | 2 | 3, string> = {
+const columnsMap: Record<1 | 2 | 3 | 4, string> = {
   1: "grid-cols-1",
   2: "grid-cols-1 md:grid-cols-2",
   3: "grid-cols-1 md:grid-cols-2 lg:grid-cols-3",
+  4: "grid-cols-1 md:grid-cols-2 lg:grid-cols-4",
 }
 
-const backgroundMap = {
-  none: "",
-  muted: "bg-muted/30",
-  gradient: "bg-gradient-to-b from-muted/20 to-background",
+const avatarPalette = [
+  "from-primary/80 to-primary/50",
+  "from-accent/80 to-accent/50",
+  "from-chart-1/80 to-chart-1/50",
+  "from-chart-2/80 to-chart-2/50",
+  "from-chart-3/80 to-chart-3/50",
+]
+
+function hashName(name: string) {
+  let h = 0
+  for (let i = 0; i < name.length; i++) h = ((h << 5) - h + name.charCodeAt(i)) | 0
+  return Math.abs(h)
+}
+
+function getInitials(name: string) {
+  return name
+    .split(" ")
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2)
+}
+
+function RatingStars({ rating }: { rating: number }) {
+  return (
+    <div className="flex items-center gap-1.5">
+      {Array.from({ length: 5 }).map((_, i) => (
+        <Star
+          key={i}
+          className={cn(
+            "h-5 w-5 transition-colors",
+            i < rating
+              ? "fill-primary text-primary drop-shadow-[0_0_6px_rgba(var(--primary),0.35)]"
+              : "fill-muted text-muted"
+          )}
+        />
+      ))}
+    </div>
+  )
+}
+
+function Avatar({ name, avatar }: { name: string; avatar?: MediaValue }) {
+  const idx = hashName(name) % avatarPalette.length
+  const initials = getInitials(name)
+  const url = resolveMediaClient(avatar)
+
+  if (url) {
+    return (
+      <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-full ring-2 ring-border/60 ring-offset-2 ring-offset-background">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={url} alt={name} className="h-full w-full object-cover" />
+      </div>
+    )
+  }
+
+  return (
+    <div
+      className={cn(
+        "flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-linear-to-br font-semibold text-primary-foreground ring-2 ring-border/60 ring-offset-2 ring-offset-background",
+        avatarPalette[idx]
+      )}
+    >
+      <span className="text-sm">{initials}</span>
+    </div>
+  )
+}
+
+/** Dots via your carousel context */
+function SliderDots({ items }: { items: TestimonialsBlockProps["items"] }) {
+  const { itemsCount, index, goTo } = useCarousel()
+  if (itemsCount <= 1) return null
+
+  return (
+    <div className="flex items-center gap-2.5">
+      {Array.from({ length: itemsCount }).map((_, i) => (
+        <button
+          key={items[i]?.id ?? i}
+          type="button"
+          aria-label={`Gehe zu Testimonial ${i + 1}`}
+          aria-current={i === index ? "true" : undefined}
+          onClick={(e) => {
+            e.preventDefault()
+            e.stopPropagation()
+            goTo(i)
+          }}
+          className={cn(
+            "rounded-full transition-all duration-300",
+            i === index
+              ? "h-3 w-8 bg-primary shadow-[0_0_12px_rgba(var(--primary),0.4)]"
+              : "h-3 w-3 bg-muted-foreground/20 hover:bg-muted-foreground/40"
+          )}
+        />
+      ))}
+    </div>
+  )
+}
+
+function TestimonialCard({
+  item,
+  index,
+  isSlider,
+  quoteColor,
+  nameColor,
+  roleColor,
+  onInlineEdit,
+}: {
+  item: TestimonialsBlockProps["items"][number]
+  index: number
+  isSlider: boolean
+  quoteColor?: string
+  nameColor?: string
+  roleColor?: string
+  onInlineEdit: (e: React.MouseEvent, fieldPath: string) => void
+}) {
+  const rating =
+    Number.isInteger(item.rating) && item.rating! >= 1 && item.rating! <= 5 ? item.rating! : null
+
+  return (
+    <Card
+      className={cn(
+        "group relative flex flex-col overflow-hidden rounded-2xl border border-border/50 bg-card",
+        "shadow-[0_1px_3px_rgba(0,0,0,0.04),0_8px_24px_-8px_rgba(0,0,0,0.08)]",
+        !isSlider && [
+          "transition-all duration-500 ease-out",
+          "hover:-translate-y-2 hover:border-primary/30",
+          "hover:shadow-[0_1px_3px_rgba(0,0,0,0.04),0_20px_48px_-12px_rgba(0,0,0,0.15)]",
+        ],
+        isSlider && "border-border/40"
+      )}
+    >
+      <div className="h-1 w-full bg-linear-to-r from-primary/60 via-primary/30 to-transparent" />
+
+      <CardContent className={cn("flex flex-1 flex-col", isSlider ? "p-8 md:p-10 lg:p-12" : "p-7")}>
+        <div className="mb-5 flex items-start justify-between">
+          <Quote className={cn("h-10 w-10 -scale-x-100 text-primary/15", isSlider && "h-12 w-12")} strokeWidth={1.5} />
+          {rating && <RatingStars rating={rating} />}
+        </div>
+
+        <blockquote
+          onClick={(e) => onInlineEdit(e, `items.${index}.quote`)}
+          className={cn(
+            "flex-1 text-pretty leading-relaxed text-card-foreground/85",
+            isSlider ? "text-lg leading-8 md:text-xl md:leading-9" : "text-base leading-7"
+          )}
+          style={item.quoteColor || quoteColor ? { color: item.quoteColor || quoteColor } : undefined}
+        >
+          {item.quote}
+        </blockquote>
+
+        <div className="my-6 h-px bg-linear-to-r from-border via-border/50 to-transparent" />
+
+        <footer className="flex items-center gap-4">
+          <Avatar name={item.name} avatar={item.avatar} />
+          <div className="min-w-0">
+            <div
+              onClick={(e) => onInlineEdit(e, `items.${index}.name`)}
+              className="truncate font-semibold tracking-tight text-card-foreground"
+              style={item.nameColor || nameColor ? { color: item.nameColor || nameColor } : undefined}
+            >
+              {item.name}
+            </div>
+
+            {item.role && (
+              <div
+                onClick={(e) => onInlineEdit(e, `items.${index}.role`)}
+                className="truncate text-sm text-muted-foreground"
+                style={item.roleColor || roleColor ? { color: item.roleColor || roleColor } : undefined}
+              >
+                {item.role}
+              </div>
+            )}
+          </div>
+        </footer>
+      </CardContent>
+    </Card>
+  )
 }
 
 export function TestimonialsBlock({
@@ -67,69 +245,59 @@ export function TestimonialsBlock({
   columns = 3,
   variant = "grid",
   background = "none",
+  autoplay = false,
+  interval = 6000,
   editable = false,
   blockId,
   onEditField,
 }: TestimonialsBlockProps) {
-  const handleInlineEdit = (e: React.MouseEvent, fieldPath: string) => {
-    if (!editable || !blockId || !onEditField) return
-    e.preventDefault()
-    e.stopPropagation()
-    onEditField(blockId, fieldPath, (e.currentTarget as HTMLElement).getBoundingClientRect())
-  }
-
-  // Slider-like dots (primary active) using Carousel context
-  const TestimonialsDots = () => {
-    // IMPORTANT: make sure this is exported from your carousel file:
-    // export function useCarousel() { ... }
-    const { itemsCount, index, goTo } = useCarousel()
-    if (itemsCount <= 1) return null
-
-    return (
-      <div className="flex items-center gap-2">
-        {Array.from({ length: itemsCount }).map((_, i) => {
-          const active = i === index
-          return (
-            <button
-              key={items[i]?.id ?? i}
-              type="button"
-              aria-label={`Gehe zu Testimonial ${i + 1}`}
-              aria-current={active ? "true" : undefined}
-              onClick={(e) => {
-                e.preventDefault()
-                e.stopPropagation()
-                goTo(i)
-              }}
-              className={cn(
-                "h-2.5 w-2.5 rounded-full transition",
-                active ? "bg-primary" : "bg-muted ring-1 ring-black/10 hover:bg-muted/70"
-              )}
-            />
-          )
-        })}
-      </div>
-    )
-  }
+  const handleInlineEdit = useCallback(
+    (e: React.MouseEvent, fieldPath: string) => {
+      if (!editable || !blockId || !onEditField) return
+      e.preventDefault()
+      e.stopPropagation()
+      onEditField(blockId, fieldPath, (e.currentTarget as HTMLElement).getBoundingClientRect())
+    },
+    [editable, blockId, onEditField]
+  )
 
   return (
-    <section className={cn("py-16 px-4", backgroundMap[background])} aria-label={headline || "Testimonials"}>
-      <div className="mx-auto max-w-5xl">
+    <section
+      className={cn(
+        "relative overflow-hidden py-20 md:py-28",
+        background === "none" && "bg-background",
+        background === "muted" && "bg-muted/30",
+        background === "gradient" && "bg-muted/20"
+      )}
+      aria-label={headline || "Testimonials"}
+    >
+      {background === "gradient" && (
+        <div className="pointer-events-none absolute inset-0" aria-hidden="true">
+          <div className="absolute left-1/2 top-1/2 h-[400px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/3 blur-3xl" />
+        </div>
+      )}
+
+      <div className="relative mx-auto max-w-6xl px-4 sm:px-6">
         {(headline || subheadline) && (
-          <header className="mb-12 text-center">
+          <header className="mb-16 text-center">
             {subheadline && (
-              <p
-                onClick={(e) => handleInlineEdit(e, "subheadline")}
-                className="mb-3 text-sm font-medium tracking-wide text-primary"
-                style={subheadlineColor ? { color: subheadlineColor } : undefined}
-              >
-                {subheadline}
-              </p>
+              <div className="mb-5 flex items-center justify-center gap-4">
+                <div className="h-px w-12 bg-linear-to-r from-transparent to-primary/40" />
+                <span
+                  onClick={(e) => handleInlineEdit(e, "subheadline")}
+                  className="text-xs font-semibold uppercase tracking-[0.2em] text-primary"
+                  style={subheadlineColor ? { color: subheadlineColor } : undefined}
+                >
+                  {subheadline}
+                </span>
+                <div className="h-px w-12 bg-linear-to-l from-transparent to-primary/40" />
+              </div>
             )}
 
             {headline && (
               <h2
                 onClick={(e) => handleInlineEdit(e, "headline")}
-                className="text-balance text-3xl font-bold tracking-tight text-foreground md:text-5xl"
+                className="mx-auto max-w-2xl text-balance text-3xl font-bold tracking-tight text-foreground md:text-4xl lg:text-5xl"
                 style={headlineColor ? { color: headlineColor } : undefined}
               >
                 {headline}
@@ -139,86 +307,41 @@ export function TestimonialsBlock({
         )}
 
         {variant === "slider" ? (
-          <Carousel itemsCount={items.length} loop draggable pauseOnHover>
-            <CarouselTrack className="items-stretch">
-              {items.map((t, index) => {
-                const rating =
-                  Number.isInteger(t.rating) && t.rating! >= 1 && t.rating! <= 5 ? t.rating! : null
-
-                return (
-                  <CarouselSlide key={t.id} index={index} className="basis-full">
-                    <Card className="h-full rounded-3xl bg-background shadow-xl ring-1 ring-black/5">
-                      <CardContent className="p-8 md:p-12">
-                        <div className="space-y-7">
-                          {rating && (
-                            <div className="flex items-center gap-1">
-                              {Array.from({ length: 5 }).map((_, i) => (
-                                <Star
-                                  key={i}
-                                  className={cn(
-                                    "h-4 w-4",
-                                    i < rating ? "fill-primary text-primary" : "text-muted-foreground/40"
-                                  )}
-                                />
-                              ))}
-                            </div>
-                          )}
-
-                          <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
-                            <span className="text-2xl leading-none">❝</span>
-                          </div>
-
-                          <blockquote
-                            onClick={(e) => handleInlineEdit(e, `items.${index}.quote`)}
-                            className="text-lg leading-relaxed text-foreground/80 md:text-xl"
-                            style={t.quoteColor || quoteColor ? { color: t.quoteColor || quoteColor } : undefined}
-                          >
-                            “{t.quote}”
-                          </blockquote>
-
-                          <div className="pt-2">
-                            <div
-                              onClick={(e) => handleInlineEdit(e, `items.${index}.name`)}
-                              className="font-semibold text-foreground"
-                              style={t.nameColor || nameColor ? { color: t.nameColor || nameColor } : undefined}
-                            >
-                              {t.name}
-                            </div>
-
-                            {typeof t.role !== "undefined" && (
-                              <div
-                                onClick={(e) => handleInlineEdit(e, `items.${index}.role`)}
-                                className="mt-1 text-sm text-muted-foreground"
-                                style={t.roleColor || roleColor ? { color: t.roleColor || roleColor } : undefined}
-                              >
-                                {t.role}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </CarouselSlide>
-                )
-              })}
+          <Carousel itemsCount={items.length} loop draggable pauseOnHover autoplay={autoplay && items.length > 1} autoplayDelayMs={Math.max(1500, Number(interval) || 6000)}>
+            <CarouselTrack className="-ml-6 items-stretch">
+              {items.map((t, i) => (
+                <CarouselSlide key={t.id} index={i} className="basis-full pl-6 md:basis-4/5 lg:basis-3/5">
+                  <TestimonialCard
+                    item={t}
+                    index={i}
+                    isSlider
+                    quoteColor={quoteColor}
+                    nameColor={nameColor}
+                    roleColor={roleColor}
+                    onInlineEdit={handleInlineEdit}
+                  />
+                </CarouselSlide>
+              ))}
             </CarouselTrack>
 
             {items.length > 1 && (
-              <div className="mt-8 flex items-center justify-center gap-6 pb-2 overflow-visible">
+              <div className="mt-10 flex overflow-visible items-center justify-center gap-8 pb-6">
                 <CarouselPrevButton
-                  variant="ghost"
+                  variant="outline"
                   size="icon"
-                  className="inline-flex h-10 w-10 rounded-full bg-background p-0 shadow-sm ring-1 ring-black/5 hover:bg-muted/50"
+                  className="h-12 w-12 rounded-full border-2 border-border/80 bg-card/50 shadow-lg backdrop-blur-sm transition-all duration-300 hover:scale-105 hover:border-primary/40 hover:bg-card hover:shadow-xl"
+                  aria-label="Vorheriges Testimonial"
                 >
                   <ChevronLeft className="h-5 w-5" />
                 </CarouselPrevButton>
 
-                <TestimonialsDots />
+                <SliderDots items={items} />
 
                 <CarouselNextButton
-                  variant="ghost"
+                  variant="outline"
                   size="icon"
-                  className="inline-flex h-10 w-10 rounded-full bg-background p-0 shadow-sm ring-1 ring-black/5 hover:bg-muted/50"
+                  className="h-12 w-12 rounded-full border-2 border-border/80 bg-card/50 shadow-lg backdrop-blur-sm transition-all duration-300 hover:scale-105 hover:border-primary/40 hover:bg-card hover:shadow-xl"
+                  aria-label="Nächstes Testimonial"
                 >
                   <ChevronRight className="h-5 w-5" />
                 </CarouselNextButton>
@@ -226,63 +349,19 @@ export function TestimonialsBlock({
             )}
           </Carousel>
         ) : (
-          <div className={cn("grid gap-6", columnsMap[columns])}>
-            {items.map((t, index) => {
-              const rating =
-                Number.isInteger(t.rating) && t.rating! >= 1 && t.rating! <= 5 ? t.rating! : null
-
-              return (
-                <Card key={t.id} className="rounded-3xl bg-background shadow-md ring-1 ring-black/5">
-                  <CardContent className="p-8 space-y-5">
-                    {rating && (
-                      <div className="flex items-center gap-1">
-                        {Array.from({ length: 5 }).map((_, i) => (
-                          <Star
-                            key={i}
-                            className={cn(
-                              "h-4 w-4",
-                              i < rating ? "fill-primary text-primary" : "text-muted-foreground/40"
-                            )}
-                          />
-                        ))}
-                      </div>
-                    )}
-
-                    <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
-                      <span className="text-2xl leading-none">❝</span>
-                    </div>
-
-                    <blockquote
-                      onClick={(e) => handleInlineEdit(e, `items.${index}.quote`)}
-                      className="text-foreground/80 leading-relaxed"
-                      style={t.quoteColor || quoteColor ? { color: t.quoteColor || quoteColor } : undefined}
-                    >
-                      “{t.quote}”
-                    </blockquote>
-
-                    <div>
-                      <div
-                        onClick={(e) => handleInlineEdit(e, `items.${index}.name`)}
-                        className="font-semibold text-foreground"
-                        style={t.nameColor || nameColor ? { color: t.nameColor || nameColor } : undefined}
-                      >
-                        {t.name}
-                      </div>
-
-                      {typeof t.role !== "undefined" && (
-                        <div
-                          onClick={(e) => handleInlineEdit(e, `items.${index}.role`)}
-                          className="text-sm text-muted-foreground"
-                          style={t.roleColor || roleColor ? { color: t.roleColor || roleColor } : undefined}
-                        >
-                          {t.role}
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              )
-            })}
+          <div className={cn("grid gap-6 lg:gap-8", columnsMap[columns])}>
+            {items.map((t, i) => (
+              <TestimonialCard
+                key={t.id}
+                item={t}
+                index={i}
+                isSlider={false}
+                quoteColor={quoteColor}
+                nameColor={nameColor}
+                roleColor={roleColor}
+                onInlineEdit={handleInlineEdit}
+              />
+            ))}
           </div>
         )}
       </div>

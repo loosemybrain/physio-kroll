@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { HeroDecoration } from "@/components/decorations/HeroDecoration"
@@ -9,12 +9,16 @@ import { Editable } from "@/components/editor/Editable"
 import { getTypographyClassName } from "@/lib/typography"
 import type { TypographySettings } from "@/lib/typography"
 import Image from "next/image"
-import { usePathname, useRouter } from "next/navigation"
+import { usePathname } from "next/navigation"
 import { AnimatedBlock } from "@/components/blocks/AnimatedBlock"
 
 import type { HeroBlock, MediaValue, CommonBlockProps } from "@/types/cms"
 import type { BrandKey } from "@/components/brand/brandAssets"
 import { useElementShadowStyle } from "@/lib/shadow"
+import { resolveDynamicElementId } from "@/lib/editableElements"
+import { BrandToggle } from "@/components/brand/BrandToggle"
+
+// No instrumentation in production
 
 function resolveMediaUrl(mediaValue?: MediaValue, fallbackUrl?: string): string | undefined {
   if (!mediaValue) return fallbackUrl
@@ -87,6 +91,7 @@ interface HeroSectionProps extends CommonBlockProps {
   floatingLabel?: string
   props?: HeroBlock["props"]
   showBrandToggle?: boolean
+  brandToggleValue?: BrandKey
 }
 
 export function HeroSection({
@@ -113,12 +118,20 @@ export function HeroSection({
   elements,
   props: heroProps,
   showBrandToggle = false,
+  brandToggleValue,
   ...restProps
 }: HeroSectionProps) {
+  // Hydration-safe mounted flag for micro-enter animations
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  const heroMountedRef = useRef(false)
+
   const [ctaHovered, setCtaHovered] = useState(false)
   const [playHovered, setPlayHovered] = useState(false)
   const pathname = usePathname()
-  const router = useRouter()
 
   // Element shadows
   const heroHeadlineShadow = useElementShadowStyle({
@@ -129,16 +142,41 @@ export function HeroSection({
     elementId: "subheadline",
     elementConfig: (elements ?? {})["subheadline"],
   })
+  const heroBadgeShadow = useElementShadowStyle({
+    elementId: "badge",
+    elementConfig: (elements ?? {})["badge"],
+  })
   const heroPrimaryCtaShadow = useElementShadowStyle({
-    elementId: "primaryCta",
-    elementConfig: (elements ?? {})["primaryCta"],
+    elementId: "cta",
+    elementConfig: (elements ?? {})["cta"],
   })
   const heroSecondaryCtaShadow = useElementShadowStyle({
-    elementId: "secondaryCta",
-    elementConfig: (elements ?? {})["secondaryCta"],
+    elementId: "secondaryCtaText",
+    elementConfig: (elements ?? {})["secondaryCtaText"],
+  })
+  const heroMediaShadow = useElementShadowStyle({
+    elementId: "media",
+    elementConfig: (elements ?? {})["media"],
+  })
+  const heroTrustShadow = useElementShadowStyle({
+    elementId: "trust",
+    elementConfig: (elements ?? {})["trust"],
+  })
+  // Floating element shadows
+  const heroFloatingTitleShadow = useElementShadowStyle({
+    elementId: "floatingTitle",
+    elementConfig: (elements ?? {})["floatingTitle"],
+  })
+  const heroFloatingValueShadow = useElementShadowStyle({
+    elementId: "floatingValue",
+    elementConfig: (elements ?? {})["floatingValue"],
+  })
+  const heroFloatingLabelShadow = useElementShadowStyle({
+    elementId: "floatingLabel",
+    elementConfig: (elements ?? {})["floatingLabel"],
   })
 
-  const showBrandToggleNav = showBrandToggle && (pathname === "/" || pathname === "/konzept")
+  const showBrandToggleNav = false // Toggle moved to HomePageClient/BrandToggle component
   
   // Determine activeBrand: prefer from props (mood), fallback to pathname
   // In Admin, heroProps.mood is set by PageEditor to current.brand
@@ -237,92 +275,62 @@ export function HeroSection({
   return (
     <AnimatedBlock config={props.section?.animation}>
       <section
-      className={cn(
-        "relative min-h-[90vh] w-full overflow-hidden",
-        !isCalm && "physio-konzept"
-      )}
-      aria-labelledby="hero-headline"
-      style={{ 
-        background: resolvedHeroBgColor || "var(--hero-background, var(--background))",
-        "--hero-bg": resolvedHeroBgColor || undefined,
-      } as React.CSSProperties}
-
-    >
-      {/* Background Layer */}
-      <div 
-        className="absolute inset-0 -z-10" 
-        aria-hidden="true"
-        style={{ background: "var(--hero-background, var(--background))" } as React.CSSProperties}
-
+        className={cn(
+          "relative min-h-[90vh] w-full",
+          !isCalm && "physio-konzept"
+        )}
+        aria-labelledby="hero-headline"
       >
-        <HeroDecoration brand={isCalm ? "physiotherapy" : "physio-konzept"} />
-      </div>
+        {/* Background Layer */}
+        <div 
+          className="absolute inset-0 -z-10 overflow-visible" 
+          aria-hidden="true"
+        >
+          <HeroDecoration brand={isCalm ? "physiotherapy" : "physio-konzept"} />
+        </div>
 
-      <div className="container mx-auto flex min-h-[90vh] flex-col items-center justify-center gap-8 px-4 py-16 lg:flex-row lg:gap-12 lg:py-24">
-        {showBrandToggleNav && (
-          <nav
-            className="absolute top-8 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 rounded-full bg-white p-1.5 shadow-lg"
-            aria-label="Brand selection"
-          >
-            <button
-              type="button"
-              aria-pressed={isCalm}
-              aria-label="Wechsel zu Physiotherapie"
-              className={cn(
-                "px-6 py-2 rounded-full text-sm font-medium transition-all duration-200 focus:outline-none",
-                isCalm
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "bg-transparent text-primary hover:bg-muted/60"
-              )}
-              onClick={() => {
-                if (!isCalm) router.push("/");
-              }}
-            >
-              Physiotherapie
-            </button>
-            <button
-              type="button"
-              aria-pressed={!isCalm}
-              aria-label="Wechsel zu Physio-Konzept"
-              className={cn(
-                "px-6 py-2 rounded-full text-sm font-medium transition-all duration-200 focus:outline-none",
-                !isCalm
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "bg-transparent text-primary hover:bg-muted/60"
-              )}
-              onClick={() => {
-                if (isCalm) router.push("/konzept");
-              }}
-            >
-              Physio-Konzept
-            </button>
-          </nav>
+        {/* Brand Toggle - Floating overlay at top center of Hero (responsive positioned) */}
+        {showBrandToggle && (
+          <div className="absolute top-4 sm:top-8 left-1/2 -translate-x-1/2 z-50 pointer-events-auto">
+            <BrandToggle value={brandToggleValue ?? activeBrand} showToggle={true} />
+          </div>
         )}
 
+      <div className="flex min-h-[90vh] flex-col items-center justify-center gap-8 py-16 lg:flex-row lg:gap-12 lg:py-24">
         {/* Content */}
         <header
           className={cn(
             "hero-content flex max-w-2xl flex-1 flex-col gap-6",
+            "pt-16 sm:pt-0", // Mobile padding to avoid Toggle collision
             isCalm ? "items-start text-left" : "items-center text-center lg:items-start lg:text-left",
           )}
         >
           {/* Badge */}
-          <div
+          <Editable
+            blockId={blockId || ""}
+            elementId="badge"
+            editable={editable}
+            onElementClick={onElementClick}
+            isSelected={selectedElementId === "badge"}
+            as="div"
             className={cn(
-              "hero-badge inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium animate-fade-in-up",
-              "bg-primary/10 text-primary"
+              "hero-badge inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium",
+              "bg-primary/10 text-primary cursor-pointer",
+              mounted && "animate-fade-in-up"
             )}
-            style={
-              resolvedBadgeBgColor
+            data-element-id="badge"
+            style={{
+              ...heroBadgeShadow,
+              ...(resolvedBadgeBgColor
                 ? ({ backgroundColor: resolvedBadgeBgColor } as React.CSSProperties)
-                : undefined
-            }
+                : {}),
+            }}
           >
             {isCalm ? (
               <>
                 <Heart className="h-4 w-4" aria-hidden="true" />
                 <span
-                  onClick={(e) => handleInlineEdit(e, "badgeText")}
+                  onClick={(e) => handleInlineEdit(e, "badgeText", "badge")}
                   className={cn(
                     editable && blockId && onEditField && "cursor-pointer rounded px-1 transition-colors hover:bg-primary/20"
                   )}
@@ -339,7 +347,7 @@ export function HeroSection({
               <>
                 <Zap className="h-4 w-4" aria-hidden="true" />
                 <span
-                  onClick={(e) => handleInlineEdit(e, "badgeText")}
+                  onClick={(e) => handleInlineEdit(e, "badgeText", "badge")}
                   className={cn(
                     editable && blockId && onEditField && "cursor-pointer rounded px-1 transition-colors hover:bg-primary/20"
                   )}
@@ -353,22 +361,23 @@ export function HeroSection({
                 </span>
               </>
             )}
-          </div>
+          </Editable>
 
           {/* Headline */}
           <Editable
             blockId={blockId || ""}
-            elementId="hero-headline"
+            elementId="headline"
             typography={headlineTypography}
             editable={editable}
             onElementClick={onElementClick}
-            isSelected={selectedElementId === "hero-headline"}
+            isSelected={selectedElementId === "headline"}
             as="h1"
             className={cn(
-              "hero-headline text-balance animate-fade-in-up animate-delay-200 text-foreground",
+              "hero-headline text-balance text-foreground",
               isCalm
                 ? "font-serif text-4xl font-semibold tracking-tight md:text-5xl lg:text-6xl"
-                : "font-sans text-4xl font-bold uppercase tracking-tight md:text-5xl lg:text-7xl"
+                : "font-sans text-4xl font-bold uppercase tracking-tight md:text-5xl lg:text-7xl",
+              mounted && "animate-fade-in-up animate-delay-200"
             )}
             style={{
               ...heroHeadlineShadow,
@@ -384,15 +393,16 @@ export function HeroSection({
           {/* Subheadline */}
           <Editable
             blockId={blockId || ""}
-            elementId="hero-subheadline"
+            elementId="subheadline"
             typography={subheadlineTypography}
             editable={editable}
             onElementClick={onElementClick}
-            isSelected={selectedElementId === "hero-subheadline"}
+            isSelected={selectedElementId === "subheadline"}
             as="p"
             className={cn(
-              "hero-subheadline max-w-xl text-pretty leading-relaxed animate-fade-in-up animate-delay-300",
-              "text-lg md:text-xl text-muted-foreground" // Standard über Klasse
+              "hero-subheadline max-w-xl text-pretty leading-relaxed",
+              "text-lg md:text-xl text-muted-foreground",
+              mounted && "animate-fade-in-up animate-delay-300"
             )}
             style={{
               ...heroSubheadlineShadow,
@@ -406,15 +416,14 @@ export function HeroSection({
           </Editable>
 
           {/* CTA */}
-          <div className="hero-cta mt-4 flex flex-wrap items-center gap-4 animate-fade-in-up animate-delay-400">
+          <div className={cn("hero-cta mt-4 flex flex-wrap items-center gap-4", mounted && "animate-fade-in-up animate-delay-400")}>
             <Editable
               blockId={blockId || ""}
-              elementId="hero-primary-cta"
+              elementId="cta"
               typography={ctaTypography}
               editable={editable}
               onElementClick={onElementClick}
-              isSelected={selectedElementId === "hero-primary-cta"}
-              data-element-id="primaryCta"
+              isSelected={selectedElementId === "cta"}
             >
               <Button
                 size="lg"
@@ -422,6 +431,7 @@ export function HeroSection({
                   "group gap-2 text-base font-semibold",
                   isCalm ? "rounded-full px-8" : "rounded-md px-8 uppercase tracking-wide",
                 )}
+                data-element-id="cta"
                 style={{
                   ...heroPrimaryCtaShadow,
                   ...(resolvedCtaColor ||
@@ -476,18 +486,18 @@ export function HeroSection({
             {!isCalm && (
               <Editable
                 blockId={blockId || ""}
-                elementId="hero-secondary-cta"
+                elementId="secondaryCtaText"
                 typography={playTypography}
                 editable={editable}
                 onElementClick={onElementClick}
-                isSelected={selectedElementId === "hero-secondary-cta"}
-                data-element-id="secondaryCta"
+                isSelected={selectedElementId === "secondaryCtaText"}
                 as="div"
               >
                 <Button
                   variant="outline"
                   size="lg"
                   className="group gap-2 rounded-md border-border/50 bg-transparent text-base uppercase tracking-wide text-foreground hover:bg-secondary hover:text-secondary-foreground"
+                  data-element-id="secondaryCtaText"
                   style={{
                     ...heroSecondaryCtaShadow,
                     ...(resolvedPlayTextColor ||
@@ -545,145 +555,280 @@ export function HeroSection({
 
           {/* Trust indicators for calm mood */}
           {isCalm && resolvedTrustItems.length > 0 && (
-            <div className="hero-trust mt-6 flex flex-wrap items-center gap-6 text-sm text-muted-foreground animate-fade-in-up animate-delay-500">
+            <div 
+              className={cn("hero-trust mt-6 flex flex-wrap items-center gap-6 text-sm text-muted-foreground", mounted && "animate-fade-in-up animate-delay-500")}
+              data-element-id="trust"
+              style={heroTrustShadow}
+              onClick={() => onElementClick?.(blockId || "", "trust")}
+            >
               {resolvedTrustItems.map((item, index) => (
-                <div
-                  key={index}
-                  className="flex items-center gap-2 animate-fade-in animate-delay-600"
-                >
-                  <div
-                    className="h-2 w-2 rounded-full bg-primary animate-pulse-slow"
-                    aria-hidden="true"
-                    style={resolvedTrustDotColor ? ({ backgroundColor: resolvedTrustDotColor } as React.CSSProperties) : undefined}
-                  />
-                  <span
-                    onClick={(e) => handleInlineEdit(e, `trustItems.${index}`)}
-                    className={cn(
-                      editable && blockId && onEditField && "cursor-pointer rounded px-1 transition-colors hover:bg-primary/10"
-                    )}
-                    style={resolvedTrustItemsColor ? ({ color: resolvedTrustItemsColor } as React.CSSProperties) : undefined}
-                  >
-                    {item}
-                  </span>
-                </div>
+                <HeroTrustItem
+                  key={item}
+                  item={item}
+                  index={index}
+                  elements={elements}
+                  blockId={blockId}
+                  onElementClick={onElementClick}
+                  resolvedTrustItemsColor={resolvedTrustItemsColor}
+                />
               ))}
             </div>
           )}
         </header>
 
         {/* Media Section */}
-        {showMedia && (
-          <figure className={cn("hero-media relative flex-1 animate-scale-in animate-delay-400", isCalm ? "max-w-lg" : "max-w-xl")}>
+          {showMedia && (
+            <figure className={cn("hero-media relative flex-1", isCalm ? "max-w-lg" : "max-w-xl", mounted && "animate-scale-in animate-delay-400")}>
             {mediaType === "video" && mediaUrl ? (
-              <div className="relative aspect-video overflow-hidden rounded-2xl shadow-2xl max-h-[60vh] lg:max-h-[70vh]">
-                <video
-                  src={mediaUrl}
-                  autoPlay
-                  muted
-                  loop
-                  playsInline
-                  className="h-full w-full object-cover object-center"
-                  aria-label="Physiotherapy treatment video"
-                />
+              <div
+                className={cn(
+                  "relative shadow-2xl", // shadow stays here
+                  getHeroImageAspectClasses(resolvedImageVariant),
+                  isCalm ? "rounded-3xl" : "rounded-2xl"
+                )}
+                style={heroMediaShadow}
+                data-element-id="media"
+                onClick={() => onElementClick?.(blockId || "", "media")}
+              >
+                <div
+                  className={cn(
+                    "relative overflow-hidden w-full h-full",
+                    isCalm ? "rounded-3xl" : "rounded-2xl"
+                  )}
+                  style={{ width: "100%", height: "100%" }}
+                >
+                  <div className="relative aspect-video max-h-[60vh] lg:max-h-[70vh] w-full h-full">
+                    <video
+                      src={mediaUrl}
+                      autoPlay
+                      muted
+                      loop
+                      playsInline
+                      className="h-full w-full object-cover object-center"
+                      aria-label="Physiotherapy treatment video"
+                    />
+                  </div>
+                  {/* Overlay decorations - only for cover mode */}
+                  {resolvedImageFit === "cover" && (
+                    <>
+                      {isCalm ? (
+                        <div className="absolute inset-0 bg-linear-to-t from-primary/10 to-transparent" />
+                      ) : (
+                        <div className="absolute inset-0 bg-linear-to-t from-background/60 via-transparent to-transparent" />
+                      )}
+                    </>
+                  )}
+
+                  {/* Floating card for PhysioKonzept */}
+                  {!isCalm && (resolvedFloatingTitle?.trim() || resolvedFloatingValue?.trim()) && (
+                    <div className={cn("absolute bottom-6 left-6 right-6 rounded-xl bg-card/90 p-4 backdrop-blur-sm animate-slide-in-left", mounted && "animate-delay-500")}>
+                      {resolvedFloatingTitle?.trim() && (
+                        <span
+                          data-element-id="floatingTitle"
+                          className={cn(
+                            "block text-sm font-semibold uppercase tracking-wide text-card-foreground",
+                            editable && blockId && onEditField && "cursor-pointer rounded px-1 transition-colors hover:bg-primary/10"
+                          )}
+                          style={{
+                            ...(heroFloatingTitleShadow || {}),
+                            ...(resolvedFloatingTitleColor
+                              ? { color: resolvedFloatingTitleColor }
+                              : undefined),
+                          }} 
+                          onClick={(e) => {
+                            if (onElementClick) onElementClick(blockId || "", "floatingTitle");
+                            handleInlineEdit(e, "floatingTitle");
+                          }}
+                        >
+                          {resolvedFloatingTitle}
+                        </span>
+                      )}
+                      {resolvedFloatingValue?.trim() && (
+                        <span
+                          data-element-id="floatingValue"
+                          className={cn(
+                            "block mt-1 text-2xl font-bold text-primary",
+                            editable && blockId && onEditField && "cursor-pointer rounded px-1 transition-colors hover:bg-primary/10"
+                          )}
+                          style={{
+                            ...(heroFloatingValueShadow || {}),
+                            ...(resolvedFloatingValueColor
+                              ? { color: resolvedFloatingValueColor }
+                              : undefined),
+                          }}
+                          onClick={(e) => {
+                            if (onElementClick) onElementClick(blockId || "", "floatingValue");
+                            handleInlineEdit(e, "floatingValue");
+                          }}
+                        >
+                          {resolvedFloatingValue}
+                        </span>
+                      )}
+                      {resolvedFloatingLabel && (
+                        <span
+                          data-element-id="floatingLabel"
+                          className={cn(
+                            "block mt-1 text-sm text-muted-foreground",
+                            editable && blockId && onEditField && "cursor-pointer rounded px-1 transition-colors hover:bg-primary/10"
+                          )}
+                          style={{
+                            ...(heroFloatingLabelShadow || {}),
+                            ...(resolvedFloatingLabelColor
+                              ? { color: resolvedFloatingLabelColor }
+                              : undefined),
+                          }}
+                          onClick={(e) => {
+                            if (onElementClick) onElementClick(blockId || "", "floatingLabel");
+                            handleInlineEdit(e, "floatingLabel");
+                          }}
+                        >
+                          {resolvedFloatingLabel}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
             ) : (
               <div
                 className={cn(
-                  "relative overflow-hidden shadow-2xl",
-                  getHeroImageAspectClasses(resolvedImageVariant),
-                  isCalm ? "rounded-3xl" : "rounded-2xl",
+                  "relative shadow-nonel overflow-x-clip overflow-y-clip", // outer wrapper: shadow + overflow handling
+                  getHeroImageAspectClasses(resolvedImageVariant)
                 )}
+                style={heroMediaShadow}
+                data-element-id="media"
+                onClick={() => onElementClick?.(blockId || "", "media")}
               >
-                {/* Blurred background for contain mode */}
+                {/* Blurred background placed outside inner clip wrapper to avoid being clipped */}
                 {resolvedImageFit === "contain" && resolvedContainBackground === "blur" && (
-                  <div className="absolute inset-0 -z-10">
+                  <div
+                    className={
+                      isCalm
+                        ? "absolute inset-0 -z-10"
+                        : "absolute inset-y-0 -inset-x-16 -z-10"
+                    }
+                  >
                     <Image
                       src={resolvedImageUrl}
                       alt=""
                       fill
-                      className="object-cover blur-2xl scale-110 opacity-70"
+                      className={cn(
+                        "object-cover blur-2xl scale-110 opacity-70",
+                        (() => {
+                          const resolvedImageFocus = activeBrandContent.imageFocus;
+                          const focusClass = resolvedImageFocus ? getImageFocusClass(resolvedImageFocus) : undefined;
+                          const heroObjectPos =
+                            (resolvedImageFit as string) === "cover"
+                              ? (focusClass ? focusClass : (!isCalm ? "object-[70%_50%]" : "object-center"))
+                              : (focusClass ? focusClass : "object-center");
+                          return heroObjectPos;
+                        })()
+                      )}
                       sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 40vw"
                       aria-hidden="true"
                     />
                   </div>
                 )}
 
-                {/* Main image */}
-                <div className={cn(
-                  "relative w-full h-full",
-                  resolvedImageFit === "contain" && "p-4 sm:p-6"
-                )}>
-                  <Image
-                    src={resolvedImageUrl}
-                    alt={resolvedImageAlt}
-                    fill
-                    className={cn(
-                      getImageFitClass(resolvedImageFit),
-                      resolvedImageFit === "cover" ? getImageFocusClass(resolvedImageFocus) : "object-center"
-                    )}
-                    sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 40vw"
-                    priority
-                  />
+                {/* INNER clip wrapper: rounded + overflow-hidden so main image and overlays are clipped */}
+                <div
+                  className={cn(
+                    "relative overflow-hidden w-full h-full",
+                    isCalm ? "rounded-3xl" : "rounded-2xl"
+                  )}
+                  style={{ width: "100%", height: "100%" }}
+                >
+                  {(() => {
+                    const resolvedImageFocus = activeBrandContent.imageFocus;
+                    const focusClass = resolvedImageFocus ? getImageFocusClass(resolvedImageFocus) : undefined;
+
+                    const heroObjectPos =
+                      (resolvedImageFit as string) === "cover"
+                        ? (focusClass ? focusClass : (!isCalm ? "object-[70%_50%]" : "object-center"))
+                        : (focusClass ? focusClass : "object-center");
+
+                    return (
+                      <>
+                        {/* Main image */}
+                        <div className={cn(
+                          "relative w-full h-full",
+                          resolvedImageFit === "contain" && "p-4 sm:p-6"
+                        )}>
+                          <Image
+                            src={resolvedImageUrl}
+                            alt={resolvedImageAlt}
+                            fill
+                            className={cn(
+                              getImageFitClass(resolvedImageFit),
+                              heroObjectPos
+                            )}
+                            sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 40vw"
+                            priority
+                          />
+                        </div>
+                      </>
+                    );
+                  })()}
+
+                  {/* Overlay decorations - only for cover mode */}
+                  {resolvedImageFit === "cover" && (
+                    <>
+                      {isCalm ? (
+                        <div className="absolute inset-0 bg-linear-to-t from-primary/10 to-transparent" />
+                      ) : (
+                        <div className="absolute inset-y-0 -inset-x-12 bg-linear-to-t from-background/60 via-transparent to-transparent" />
+                      )}
+                    </>
+                  )}
+
+                  {/* Floating card for PhysioKonzept */}
+                  {!isCalm && (resolvedFloatingTitle?.trim() || resolvedFloatingValue?.trim()) && (
+                    <div className={cn("absolute bottom-6 left-6 right-6 rounded-xl bg-card/90 p-4 backdrop-blur-sm animate-slide-in-left", mounted && "animate-delay-500")}>
+                      {resolvedFloatingTitle?.trim() && (
+                        <p
+                          className={cn(
+                            "text-sm font-semibold uppercase tracking-wide text-card-foreground",
+                            editable && blockId && onEditField && "cursor-pointer rounded px-1 transition-colors hover:bg-primary/10"
+                          )}
+                          style={resolvedFloatingTitleColor ? ({ color: resolvedFloatingTitleColor } as React.CSSProperties) : undefined}
+                          onClick={(e) => handleInlineEdit(e, "floatingTitle")}
+                        >
+                          {resolvedFloatingTitle}
+                        </p>
+                      )}
+                      {resolvedFloatingValue?.trim() && (
+                        <p
+                          className={cn(
+                            "mt-1 text-2xl font-bold text-primary",
+                            editable && blockId && onEditField && "cursor-pointer rounded px-1 transition-colors hover:bg-primary/10"
+                          )}
+                          style={resolvedFloatingValueColor ? ({ color: resolvedFloatingValueColor } as React.CSSProperties) : undefined}
+                          onClick={(e) => handleInlineEdit(e, "floatingValue")}
+                        >
+                          {resolvedFloatingValue}
+                        </p>
+                      )}
+                      {resolvedFloatingLabel && (
+                        <p
+                          className={cn(
+                            "mt-1 text-sm text-muted-foreground",
+                            editable && blockId && onEditField && "cursor-pointer rounded px-1 transition-colors hover:bg-primary/10"
+                          )}
+                          style={resolvedFloatingLabelColor ? ({ color: resolvedFloatingLabelColor } as React.CSSProperties) : undefined}
+                          onClick={(e) => handleInlineEdit(e, "floatingLabel")}
+                        >
+                          {resolvedFloatingLabel}
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
-
-                {/* Overlay decorations - only for cover mode */}
-                {resolvedImageFit === "cover" && (
-                  <>
-                    {isCalm ? (
-                      <div className="absolute inset-0 bg-linear-to-t from-primary/10 to-transparent" />
-                    ) : (
-                      <div className="absolute inset-0 bg-linear-to-t from-background/60 via-transparent to-transparent" />
-                    )}
-                  </>
-                )}
-
-                {/* Floating card for PhysioKonzept */}
-                {!isCalm && (resolvedFloatingTitle?.trim() || resolvedFloatingValue?.trim()) && (
-                  <div className="absolute bottom-6 left-6 right-6 rounded-xl bg-card/90 p-4 backdrop-blur-sm animate-slide-in-left animate-delay-500">
-                    {resolvedFloatingTitle?.trim() && (
-                      <p
-                        className={cn(
-                          "text-sm font-semibold uppercase tracking-wide text-card-foreground",
-                          editable && blockId && onEditField && "cursor-pointer rounded px-1 transition-colors hover:bg-primary/10"
-                        )}
-                        style={resolvedFloatingTitleColor ? ({ color: resolvedFloatingTitleColor } as React.CSSProperties) : undefined}
-                        onClick={(e) => handleInlineEdit(e, "floatingTitle")}
-                      >
-                        {resolvedFloatingTitle}
-                      </p>
-                    )}
-                    {resolvedFloatingValue?.trim() && (
-                      <p
-                        className={cn(
-                          "mt-1 text-2xl font-bold text-primary",
-                          editable && blockId && onEditField && "cursor-pointer rounded px-1 transition-colors hover:bg-primary/10"
-                        )}
-                        style={resolvedFloatingValueColor ? ({ color: resolvedFloatingValueColor } as React.CSSProperties) : undefined}
-                        onClick={(e) => handleInlineEdit(e, "floatingValue")}
-                      >
-                        {resolvedFloatingValue}
-                      </p>
-                    )}
-                    {resolvedFloatingLabel && (
-                      <p
-                        className={cn(
-                          "mt-1 text-sm text-muted-foreground",
-                          editable && blockId && onEditField && "cursor-pointer rounded px-1 transition-colors hover:bg-primary/10"
-                        )}
-                        style={resolvedFloatingLabelColor ? ({ color: resolvedFloatingLabelColor } as React.CSSProperties) : undefined}
-                        onClick={(e) => handleInlineEdit(e, "floatingLabel")}
-                      >
-                        {resolvedFloatingLabel}
-                      </p>
-                    )}
-                  </div>
-                )}
               </div>
             )}
 
             {/* Decorative floating element for calm mood */}
             {isCalm && (resolvedFloatingTitle?.trim() || resolvedFloatingValue?.trim()) && (
-              <div className="absolute -bottom-4 -right-4 rounded-2xl bg-card p-6 shadow-lg md:-bottom-6 md:-right-6 animate-float animate-delay-500">
+              <div className={cn("absolute -bottom-4 -right-4 rounded-2xl bg-card p-6 shadow-lg md:-bottom-6 md:-right-6 animate-float", mounted && "animate-delay-500")}>
                 {resolvedFloatingValue?.trim() && (
                   <p
                     className={cn(
@@ -736,5 +881,58 @@ export function HeroSection({
       </div>
       </section>
     </AnimatedBlock>
+  )
+}
+
+/**
+ * HeroTrustItem Component - Extracted to use Hooks properly (not in map)
+ */
+interface HeroTrustItemProps {
+  item: string
+  index: number
+  questionColor?: string
+  answerColor?: string
+  elements?: Record<string, any>
+  blockId?: string
+  onElementClick?: (blockId: string, elementId: string) => void
+  resolvedTrustItemsColor?: string
+  editable?: boolean
+  blockIdValue?: string
+  onEditField?: (blockId: string, fieldPath: string, anchorRect?: DOMRect) => void
+}
+
+function HeroTrustItem({
+  item,
+  index,
+  elements,
+  blockId,
+  onElementClick,
+  resolvedTrustItemsColor,
+}: HeroTrustItemProps) {
+  // Hook call is safe here (not in map)
+  const trustItemId = `trustItems.${index}`
+  const trustItemShadow = useElementShadowStyle({
+    elementId: trustItemId,
+    elementConfig: (elements ?? {})[trustItemId],
+  })
+
+  return (
+    <div
+      data-element-id={trustItemId}
+      className="flex items-center gap-2 rounded-lg p-2 cursor-pointer transition-colors hover:bg-primary/5"
+      style={trustItemShadow}
+      onClick={() => onElementClick?.(blockId || "", trustItemId)}
+    >
+      <div
+        className="h-2 w-2 rounded-full bg-primary animate-pulse-slow"
+        aria-hidden="true"
+        style={resolvedTrustItemsColor ? ({ backgroundColor: resolvedTrustItemsColor } as React.CSSProperties) : undefined}
+      />
+      <span
+        style={resolvedTrustItemsColor ? ({ color: resolvedTrustItemsColor } as React.CSSProperties) : undefined}
+      >
+        {item}
+      </span>
+    </div>
   )
 }

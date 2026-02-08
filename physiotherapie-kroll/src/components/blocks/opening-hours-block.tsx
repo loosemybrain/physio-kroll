@@ -67,8 +67,8 @@ export function OpeningHoursBlock({
   }
 
   return (
-    <section className={cn("py-16 px-4", backgroundMap[background])} aria-label={headline || "Öffnungszeiten"}>
-      <div className="container mx-auto max-w-3xl">
+    <section className={cn("py-16", backgroundMap[background])} aria-label={headline || "Öffnungszeiten"}>
+      <div className="mx-auto max-w-3xl">
         {(headline || subheadline) && (
           <header className="mb-10 text-center">
             {headline && (

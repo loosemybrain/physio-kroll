@@ -1,23 +1,38 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
-import { Button } from "@/components/ui/button"
+import { useState, useMemo } from "react"
 import { CMSRenderer } from "@/components/cms/BlockRenderer"
-import { cn } from "@/lib/utils"
 import type { CMSBlock } from "@/types/cms"
+import type { BrandKey } from "@/components/brand/brandAssets"
 import { useBrand } from "@/components/brand/BrandProvider"
 
 interface HomePageClientProps {
   blocks: CMSBlock[]
+  initialBrand: BrandKey
+  showBrandToggle?: boolean
 }
 
-export function HomePageClient({ blocks }: HomePageClientProps) {
-  const { brand: selectedBrand, setBrand: setSelectedBrand } = useBrand()
+export function HomePageClient({
+  blocks,
+  initialBrand,
+  showBrandToggle = false,
+}: HomePageClientProps) {
+  const { setBrand: setSelectedBrand } = useBrand()
 
-  // Don't set brand class on document root - it affects the entire page background
-  // Instead, let individual components handle their own brand styling
+  // Track user-driven brand override (only set by explicit user action)
+  const [brandOverride, setBrandOverride] = useState<BrandKey | null>(null)
 
-  // Update hero blocks with the selected brand/mood
+  // Effective brand: user override takes precedence, otherwise initial (from server)
+  const effectiveBrand = brandOverride ?? initialBrand
+
+  // Handle brand change (called from BrandToggle)
+  const handleBrandChange = (newBrand: BrandKey) => {
+    setBrandOverride(newBrand)
+    setSelectedBrand(newBrand)
+  }
+
+  // Update hero blocks with the effective brand/mood and toggle props
+  // This ONLY changes when user explicitly toggles, not on hydration
   const blocksWithBrand = useMemo(() => {
     return blocks.map((block) => {
       if (block.type === "hero") {
@@ -25,39 +40,21 @@ export function HomePageClient({ blocks }: HomePageClientProps) {
           ...block,
           props: {
             ...block.props,
-            mood: selectedBrand,
+            mood: effectiveBrand,
+            // Inject toggle into Hero props for floating overlay rendering
+            showBrandToggle,
+            brandToggleValue: effectiveBrand,
           },
         }
       }
       return block
     })
-  }, [blocks, selectedBrand])
-
-  // Find the first hero block and add toggle props
-  const blocksWithToggle = useMemo(() => {
-    let firstHeroFound = false
-    return blocksWithBrand.map((block) => {
-      if (block.type === "hero" && !firstHeroFound) {
-        firstHeroFound = true
-        return {
-          ...block,
-          props: {
-            ...block.props,
-            showBrandToggle: true,
-            onBrandChange: setSelectedBrand,
-          } as any,
-        }
-      }
-      return block
-    })
-  }, [blocksWithBrand, setSelectedBrand])
+  }, [blocks, effectiveBrand, showBrandToggle])
 
   return (
-    <>
-      {/* CMS Blocks */}
-      <main>
-        <CMSRenderer blocks={blocksWithToggle} />
-      </main>
-    </>
+    <main>
+      {/* CMS Blocks - Hero will render BrandToggle as floating overlay */}
+      <CMSRenderer blocks={blocksWithBrand} />
+    </main>
   )
 }

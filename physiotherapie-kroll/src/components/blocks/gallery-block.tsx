@@ -78,8 +78,8 @@ export function GalleryBlock({
   const useSlider = variant === "slider" || lightbox === true
 
   return (
-    <section className={cn("py-16 px-4", backgroundMap[background])} aria-label={headline || "Galerie"}>
-      <div className="container mx-auto">
+    <section className={cn("py-16", backgroundMap[background])} aria-label={headline || "Galerie"}>
+      <div>
         {(headline || subheadline) && (
           <header className="mb-10 text-center">
             {headline && (

@@ -37,7 +37,7 @@ export const brandAssets: Record<BrandKey, BrandAssets> = {
         },
         {
           className:
-            "absolute bottom-0 left-1/4 h-[300px] w-[600px] rounded-full bg-hero-accent/10 blur-2xl animate-float animate-delay-300",
+            "absolute bottom-1/4 left-1 h-[500px] w-[500px] rounded-full bg-hero-accent/10 blur-2xl animate-float animate-delay-300",
         },
       ],
     },

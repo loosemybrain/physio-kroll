@@ -367,6 +367,21 @@ export interface ServicesGridBlock extends BaseBlock {
     headline?: string
     subheadline?: string
     columns?: 2 | 3 | 4
+    variant?: "grid" | "slider"
+    autoplay?: boolean
+    interval?: number
+    sliderAlign?: "center" | "left"
+    showControls?: boolean
+    background?: "none" | "muted" | "gradient"
+    headlineColor?: string
+    subheadlineColor?: string
+    iconColor?: string
+    iconBgColor?: string
+    titleColor?: string
+    textColor?: string
+    ctaColor?: string
+    cardBgColor?: string
+    cardBorderColor?: string
     cards: Array<{
       id: string
       icon: string
@@ -382,16 +397,6 @@ export interface ServicesGridBlock extends BaseBlock {
       cardBgColor?: string
       cardBorderColor?: string
     }>
-    background?: "none" | "muted" | "gradient"
-    headlineColor?: string
-    subheadlineColor?: string
-    iconColor?: string
-    iconBgColor?: string
-    titleColor?: string
-    textColor?: string
-    ctaColor?: string
-    cardBgColor?: string
-    cardBorderColor?: string
   }
 }
 
@@ -530,6 +535,7 @@ export interface TestimonialsBlock extends BaseBlock {
     quoteColor?: string
     nameColor?: string
     roleColor?: string
+    elements?: Record<string, ElementConfig>
     items: Array<{
       id: string
       quote: string
@@ -540,9 +546,12 @@ export interface TestimonialsBlock extends BaseBlock {
       roleColor?: string
       /** 1–5 (optional) */
       rating?: 1 | 2 | 3 | 4 | 5
+      avatar?: MediaValue
     }>
-    columns?: 1 | 2 | 3
+    columns?: 1 | 2 | 3 | 4
     background?: "none" | "muted" | "gradient"
+    autoplay?: boolean
+    interval?: number
   }
 }
 

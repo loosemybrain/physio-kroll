@@ -431,7 +431,7 @@ export function CMSRenderer({ blocks, editable, onEditField, pageSlug, brand }: 
     <>
       {blocks.map((block, index) => (
         <BlockRenderer
-          key={`${block.id}-${index}`}
+          key={block.id}
           block={block}
           isFirst={index === 0}
           editable={editable}

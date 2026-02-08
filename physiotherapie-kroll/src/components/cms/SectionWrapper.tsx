@@ -400,8 +400,8 @@ export function SectionWrapper(props: {
         <div className={cn(bgFrameClass, "z-1")} style={{ ...bgFrameStyle, ...overlayCss }} />
       )}
 
-      {/* Content */}
-      <div className={cn("relative z-10", bgIsFullBleed ? "container mx-auto" : "", paddingXClass(layout.paddingX, layout.width))}>
+      {/* Content - single source of truth for width & horizontal padding */}
+      <div className="relative z-10 mx-auto w-full max-w-7xl px-4">
         {props.children}
       </div>
     </section>

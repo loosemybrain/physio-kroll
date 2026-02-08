@@ -6,7 +6,8 @@ import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { Menu, X, Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet"
+import * as VisuallyHidden from "@radix-ui/react-visually-hidden"
 import {
   CommandDialog,
   CommandEmpty,
@@ -305,6 +306,12 @@ export function HeaderClient({ brand, navConfig }: HeaderClientProps) {
                 theme.border
               )}
             >
+              {/* Accessible title for screen readers */}
+              <SheetHeader>
+                <VisuallyHidden.Root asChild>
+                  <SheetTitle>Navigation</SheetTitle>
+                </VisuallyHidden.Root>
+              </SheetHeader>
               <nav className="flex flex-col gap-4 mt-8" aria-label="Mobile navigation">
                 {visibleLinks.map((link) => {
                   const href = getLinkHref(link)
