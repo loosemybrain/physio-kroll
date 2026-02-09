@@ -332,7 +332,7 @@ export function CardBlock({
         transition: {
           duration: durationMs / 1000,
           delay: delayMs / 1000,
-          ease: [0.25, 0.1, 0.25, 1],
+          ease: [0.25, 0.1, 0.25, 1] as const,
         },
       }
 

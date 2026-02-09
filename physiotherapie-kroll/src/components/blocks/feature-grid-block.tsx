@@ -2,7 +2,7 @@
 
 import { useCallback } from "react"
 import { cn } from "@/lib/utils"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardSurface } from "@/components/ui/card"
 import { useElementShadowStyle } from "@/lib/shadow"
 
 interface Feature {
@@ -79,7 +79,7 @@ export function FeatureGridBlock({
               elementConfig: (elements ?? {})[`card-${feature.id}`],
             })
             return (
-            <Card
+            <CardSurface
               key={feature.id}
               className="h-full"
               data-element-id={`card-${feature.id}`}
@@ -124,7 +124,7 @@ export function FeatureGridBlock({
                   {feature.description || "Beschreibung eingeben..."}
                 </CardDescription>
               </CardContent>
-            </Card>
+            </CardSurface>
             )
           })}
         </div>

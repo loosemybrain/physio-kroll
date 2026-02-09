@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardSurface, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, Loader2, CheckCircle2 } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -60,10 +60,10 @@ export function LoginPageClient() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md">
+      <CardSurface className="w-full max-w-md">
         <CardHeader>
-          <CardTitle>Admin Login</CardTitle>
-          <CardDescription>Melden Sie sich an, um auf das CMS zuzugreifen</CardDescription>
+          <CardTitle>Physiotherapie Kroll Login</CardTitle>
+          <CardDescription>Melden Sie sich an, um auf das Backend zuzugreifen</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
@@ -127,7 +127,7 @@ export function LoginPageClient() {
             </div>
           </form>
         </CardContent>
-      </Card>
+      </CardSurface>
     </div>
   );
 }

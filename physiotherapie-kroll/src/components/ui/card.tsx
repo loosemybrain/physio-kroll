@@ -7,7 +7,7 @@ function Card({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="card"
       className={cn(
-        // ✅ neutral primitive: keine zwangs-border/shadow/padding/gap
+        // neutral primitive: keine zwangs-border/shadow/padding/gap
         "bg-card text-card-foreground rounded-xl",
         className,
       )}
