@@ -350,17 +350,27 @@ function MemberCard({
         )}
 
         {/* Tags */}
-        {member.tags && member.tags.length > 0 && (
-          <div className={cn("mt-3 flex flex-wrap gap-1.5", !isCompact && "justify-center")}>
-            {member.tags.map((tag) => (
-              <span
-                key={tag}
-                className="rounded-full border border-border/50 bg-muted/50 px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground"
-              >
-                {tag}
-              </span>
-            ))}
-          </div>
+        {member.tags && (
+          (() => {
+            const tagsArray = typeof member.tags === "string" 
+              ? (member.tags as string).split(",").map((t) => t.trim()).filter(Boolean)
+              : Array.isArray(member.tags) 
+                ? member.tags as string[]
+                : []
+            
+            return tagsArray.length > 0 ? (
+              <div className={cn("mt-3 flex flex-wrap gap-1.5", !isCompact && "justify-center")}>
+                {tagsArray.map((tag) => (
+                  <span
+                    key={tag}
+                    className="rounded-full border border-border/50 bg-muted/50 px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground"
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            ) : null
+          })()
         )}
 
         {/* Bio */}
