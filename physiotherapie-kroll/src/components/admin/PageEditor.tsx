@@ -4083,7 +4083,7 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
               { key: "nameColor", label: "Name Farbe (optional)", type: "color" as const, placeholder: "#111111" },
               { key: "role", label: "Rolle", type: "text" as const },
               { key: "roleColor", label: "Rolle Farbe (optional)", type: "color" as const, placeholder: "#666666" },
-              { key: "imageUrl", label: "Bild URL", type: "url" as const },
+              { key: "imageUrl", label: "Bild", type: "image" as const },
               { key: "imageAlt", label: "Bild Alt-Text", type: "text" as const },
               { key: "ctaText", label: "CTA Text", type: "text" as const },
               { key: "ctaColor", label: "CTA Farbe (optional)", type: "color" as const, placeholder: "#111111" },
