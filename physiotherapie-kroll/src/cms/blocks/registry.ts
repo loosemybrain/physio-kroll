@@ -718,16 +718,6 @@ export function createHeroAction(): HeroAction {
 }
 
 export function createTestimonialItem(): TestimonialsBlock["props"]["items"][0] {
-  // Select a random gradient from the avatar palette
-  const avatarPalette = [
-    "from-primary/80 to-primary/50",
-    "from-accent/80 to-accent/50",
-    "from-chart-1/80 to-chart-1/50",
-    "from-chart-2/80 to-chart-2/50",
-    "from-chart-3/80 to-chart-3/50",
-  ]
-  const randomGradient = avatarPalette[Math.floor(Math.random() * avatarPalette.length)]
-  
   return {
     id: uuid(),
     quote: "Sehr professionelle Behandlung – ich habe mich vom ersten Termin an gut aufgehoben gefühlt.",
@@ -735,7 +725,7 @@ export function createTestimonialItem(): TestimonialsBlock["props"]["items"][0] 
     role: "Patientin",
     rating: 5,
     avatar: undefined,
-    avatarGradient: randomGradient,
+    avatarGradient: "auto", // Default: auto
   }
 }
 
@@ -871,7 +861,7 @@ const testimonialsDefaults: TestimonialsBlock["props"] = {
       name: "Julia M.",
       role: "Patientin",
       rating: 5,
-      avatarGradient: "from-primary/80 to-primary/50",
+      avatarGradient: "g1",
     },
     {
       id: generateUniqueId("testimonial", 1),
@@ -879,7 +869,7 @@ const testimonialsDefaults: TestimonialsBlock["props"] = {
       name: "Thomas K.",
       role: "Patient",
       rating: 5,
-      avatarGradient: "from-accent/80 to-accent/50",
+      avatarGradient: "g2",
     },
     {
       id: generateUniqueId("testimonial", 2),
@@ -887,7 +877,7 @@ const testimonialsDefaults: TestimonialsBlock["props"] = {
       name: "Sarah L.",
       role: "Patientin",
       rating: 4,
-      avatarGradient: "from-chart-1/80 to-chart-1/50",
+      avatarGradient: "g3",
     },
   ],
 }

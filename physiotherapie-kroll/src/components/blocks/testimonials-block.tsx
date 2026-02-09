@@ -34,8 +34,8 @@ export interface TestimonialsBlockProps {
     roleColor?: string
     rating?: 1 | 2 | 3 | 4 | 5
     avatar?: MediaValue
-    /** Persisted gradient from palette (e.g., "from-primary/80 to-primary/50") */
-    avatarGradient?: string
+    /** Avatar gradient preset: "auto" | "g1"..."g10" (default: "auto") */
+    avatarGradient?: "auto" | "g1" | "g2" | "g3" | "g4" | "g5" | "g6" | "g7" | "g8" | "g9" | "g10"
   }>
   columns?: 1 | 2 | 3 | 4
   variant?: "grid" | "slider"
@@ -57,6 +57,24 @@ const columnsMap: Record<1 | 2 | 3 | 4, string> = {
   4: "grid-cols-1 md:grid-cols-2 lg:grid-cols-4",
 }
 
+/** Central avatar gradient mapping (10 predefined + auto fallback) */
+export const AVATAR_GRADIENTS = {
+  auto: "from-primary/80 to-primary/50", // Fallback/default
+  g1: "from-primary/80 to-primary/50",
+  g2: "from-accent/80 to-accent/50",
+  g3: "from-chart-1/80 to-chart-1/50",
+  g4: "from-chart-2/80 to-chart-2/50",
+  g5: "from-chart-3/80 to-chart-3/50",
+  g6: "from-blue-500/80 to-blue-400/50",
+  g7: "from-purple-500/80 to-purple-400/50",
+  g8: "from-green-500/80 to-green-400/50",
+  g9: "from-rose-500/80 to-rose-400/50",
+  g10: "from-amber-500/80 to-amber-400/50",
+} as const
+
+export type AvatarGradientKey = keyof typeof AVATAR_GRADIENTS
+
+/** Fallback palette for backwards compatibility (legacy items without avatarGradient) */
 const avatarPalette = [
   "from-primary/80 to-primary/50",
   "from-accent/80 to-accent/50",
@@ -92,11 +110,11 @@ function RatingStars({ rating }: { rating: number }) {
   )
 }
 
-function Avatar({ name, avatar, gradient }: { name: string; avatar?: MediaValue; gradient?: string }) {
+function Avatar({ name, avatar, gradient }: { name: string; avatar?: MediaValue; gradient?: AvatarGradientKey }) {
   const initials = getInitials(name)
   const url = resolveMediaClient(avatar)
 
-  // Priority: 1. Image, 2. Persisted gradient, 3. Fallback avatar palette
+  // Priority: 1. Image, 2. Selected gradient from mapping, 3. Auto/fallback
   if (url) {
     return (
       <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-full ring-2 ring-border/60 ring-offset-2 ring-offset-background">
@@ -106,14 +124,16 @@ function Avatar({ name, avatar, gradient }: { name: string; avatar?: MediaValue;
     )
   }
 
-  // Use persisted gradient if available, otherwise default to first palette entry
-  const fallbackGradient = gradient || avatarPalette[0]
+  // Resolve gradient from mapping
+  const gradientClass = gradient && gradient in AVATAR_GRADIENTS 
+    ? AVATAR_GRADIENTS[gradient]
+    : AVATAR_GRADIENTS.auto
 
   return (
     <div
       className={cn(
         "flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-linear-to-br font-semibold text-primary-foreground ring-2 ring-border/60 ring-offset-2 ring-offset-background",
-        fallbackGradient
+        gradientClass
       )}
     >
       <span className="text-sm">{initials}</span>

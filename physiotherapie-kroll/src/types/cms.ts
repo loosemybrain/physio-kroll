@@ -562,8 +562,8 @@ export interface TestimonialsBlock extends BaseBlock {
       /** 1–5 (optional) */
       rating?: 1 | 2 | 3 | 4 | 5
       avatar?: MediaValue
-      /** Persisted gradient from palette (e.g., "from-primary/80 to-primary/50") */
-      avatarGradient?: string
+      /** Avatar gradient preset: "auto" | "g1"..."g10" (default: "auto") */
+      avatarGradient?: "auto" | "g1" | "g2" | "g3" | "g4" | "g5" | "g6" | "g7" | "g8" | "g9" | "g10"
     }>
     columns?: 1 | 2 | 3 | 4
     background?: "none" | "muted" | "gradient"
