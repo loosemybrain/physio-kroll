@@ -131,6 +131,7 @@ export function HeroSection({
 
   const [ctaHovered, setCtaHovered] = useState(false)
   const [playHovered, setPlayHovered] = useState(false)
+  const [actionHoveredStates, setActionHoveredStates] = useState<Record<string, boolean>>({})
   const pathname = usePathname()
 
   // Element shadows
@@ -231,6 +232,31 @@ export function HeroSection({
     activeBrandContent.imageFit ?? (props as any)?.imageFit ?? "cover"
   const resolvedImageFocus = activeBrandContent.imageFocus ?? "center"
   const resolvedContainBackground = activeBrandContent.containBackground ?? "blur"
+
+  // Resolve actions: prefer brandContent.actions, fallback to props.actions, fallback to legacy props
+  const resolvedActions = activeBrandContent.actions ?? props.actions ?? (
+    // Backward compatibility: create actions from old ctaText/ctaHref + playText (for physio-konzept)
+    (() => {
+      const actions: any[] = []
+      if (resolvedCtaText && resolvedCtaHref) {
+        actions.push({
+          id: "primary",
+          variant: "primary",
+          label: resolvedCtaText,
+          href: resolvedCtaHref,
+        })
+      }
+      if (!isCalm && resolvedPlayText) {
+        actions.push({
+          id: "video",
+          variant: "secondary",
+          label: resolvedPlayText,
+          action: "video",
+        })
+      }
+      return actions
+    })()
+  )
 
   // Farben (nur gesetzt falls in brandContent belegt, sonst undefined)
   const resolvedHeadlineColor = opt(activeBrandContent.headlineColor)
@@ -415,142 +441,95 @@ export function HeroSection({
             </span>
           </Editable>
 
-          {/* CTA */}
+          {/* CTA Actions */}
           <div className={cn("hero-cta mt-4 flex flex-wrap items-center gap-4", mounted && "animate-fade-in-up animate-delay-400")}>
-            <Editable
-              blockId={blockId || ""}
-              elementId="cta"
-              typography={ctaTypography}
-              editable={editable}
-              onElementClick={onElementClick}
-              isSelected={selectedElementId === "cta"}
-            >
-              <Button
-                size="lg"
-                className={cn(
-                  "group gap-2 text-base font-semibold",
-                  isCalm ? "rounded-full px-8" : "rounded-md px-8 uppercase tracking-wide",
-                )}
-                data-element-id="cta"
-                style={{
-                  ...heroPrimaryCtaShadow,
-                  ...(resolvedCtaColor ||
-                  resolvedCtaBgColor ||
-                  resolvedCtaBorderColor ||
-                  (ctaHovered && resolvedCtaHoverBgColor)
-                    ? {
-                        ...(resolvedCtaColor ? { color: resolvedCtaColor } : {}),
-                        ...(resolvedCtaBgColor || (ctaHovered && resolvedCtaHoverBgColor)
-                          ? {
-                              backgroundColor:
-                                (ctaHovered && resolvedCtaHoverBgColor) ? resolvedCtaHoverBgColor : resolvedCtaBgColor
-                            }
-                          : {}),
-                        ...(resolvedCtaBorderColor
-                          ? { borderColor: resolvedCtaBorderColor }
-                          : {}),
-                      }
-                    : {}),
-                }}
-                onMouseEnter={() => setCtaHovered(true)}
-                onMouseLeave={() => setCtaHovered(false)}
-                onClick={editable && blockId && onEditField ? (e) => handleInlineEdit(e, "ctaText") : onCtaClick}
-                asChild={!editable && !!ctaHref}
-              >
-                {!editable && resolvedCtaHref ? (
-                  <a href={resolvedCtaHref}>
-                    {resolvedCtaText}
-                    <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" aria-hidden="true" />
-                  </a>
-                ) : (
-                  <>
-                    <span
-                      onClick={(e) => {
-                        if (editable && blockId && onEditField) {
-                          e.stopPropagation()
-                          handleInlineEdit(e, "ctaText")
-                        }
-                      }}
-                      className={cn(
-                        editable && blockId && onEditField && "cursor-pointer"
-                      )}
-                    >
-                      {resolvedCtaText}
-                    </span>
-                    <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" aria-hidden="true" />
-                  </>
-                )}
-              </Button>
-            </Editable>
+            {resolvedActions.map((action, index) => {
+              const isVideo = action.action === "video"
+              const elementId = `action-${action.id}`
+              const actionHovered = actionHoveredStates[action.id] ?? false
+              
+              // Resolve colors based on variant
+              const isSecondary = action.variant === "secondary"
+              const shadowStyle = isSecondary ? heroSecondaryCtaShadow : heroPrimaryCtaShadow
+              const textColorProp = isSecondary ? resolvedPlayTextColor : resolvedCtaColor
+              const bgColorProp = isSecondary ? resolvedPlayBgColor : resolvedCtaBgColor
+              const hoverBgColorProp = isSecondary ? resolvedPlayHoverBgColor : resolvedCtaHoverBgColor
+              const borderColorProp = isSecondary ? resolvedPlayBorderColor : resolvedCtaBorderColor
 
-            {!isCalm && (
-              <Editable
-                blockId={blockId || ""}
-                elementId="secondaryCtaText"
-                typography={playTypography}
-                editable={editable}
-                onElementClick={onElementClick}
-                isSelected={selectedElementId === "secondaryCtaText"}
-                as="div"
-              >
-                <Button
-                  variant="outline"
-                  size="lg"
-                  className="group gap-2 rounded-md border-border/50 bg-transparent text-base uppercase tracking-wide text-foreground hover:bg-secondary hover:text-secondary-foreground"
-                  data-element-id="secondaryCtaText"
-                  style={{
-                    ...heroSecondaryCtaShadow,
-                    ...(resolvedPlayTextColor ||
-                    resolvedPlayBgColor ||
-                    resolvedPlayBorderColor ||
-                    (playHovered && resolvedPlayHoverBgColor)
-                      ? {
-                          ...(resolvedPlayTextColor ? { color: resolvedPlayTextColor } : {}),
-                          ...(resolvedPlayBgColor || (playHovered && resolvedPlayHoverBgColor)
-                            ? {
-                                backgroundColor:
-                                  (playHovered && resolvedPlayHoverBgColor)
-                                    ? resolvedPlayHoverBgColor
-                                    : resolvedPlayBgColor
-                              }
-                            : {}),
-                          ...(resolvedPlayBorderColor
-                            ? { borderColor: resolvedPlayBorderColor }
-                            : {}),
-                        }
-                      : {}),
-                  }}
-                onMouseEnter={() => setPlayHovered(true)}
-                onMouseLeave={() => setPlayHovered(false)}
-                onClick={editable && blockId && onEditField ? (e) => handleInlineEdit(e, "playText") : undefined}
-                asChild={!editable}
-              >
-                {!editable ? (
-                  <a href="#video">
-                    <Play className="h-4 w-4" aria-hidden="true" />
-                    {resolvedPlayText}
-                  </a>
-                ) : (
-                  <>
-                    <Play className="h-4 w-4" aria-hidden="true" />
-                    <span
-                      onClick={(e) => {
-                        if (editable && blockId && onEditField) {
-                          e.stopPropagation()
-                          handleInlineEdit(e, "playText")
-                        }
-                      }}
-                      className={cn(
-                        editable && blockId && onEditField && "cursor-pointer"
-                      )}
-                    >
-                      {resolvedPlayText}
-                    </span>
-                  </>
-                )}
-              </Button>
-            </Editable>
-            )}
+              return (
+                <Editable
+                  key={action.id}
+                  blockId={blockId || ""}
+                  elementId={elementId}
+                  typography={isSecondary ? playTypography : ctaTypography}
+                  editable={editable}
+                  onElementClick={onElementClick}
+                  isSelected={selectedElementId === elementId}
+                >
+                  <Button
+                    size="lg"
+                    variant={isSecondary ? "outline" : "default"}
+                    className={cn(
+                      "group gap-2 text-base font-semibold",
+                      isSecondary && "border-border/50 bg-transparent text-foreground hover:bg-secondary hover:text-secondary-foreground rounded-md uppercase tracking-wide",
+                      !isSecondary && isCalm && "rounded-full px-8",
+                      !isSecondary && !isCalm && "rounded-md px-8 uppercase tracking-wide",
+                    )}
+                    data-element-id={elementId}
+                    style={{
+                      ...shadowStyle,
+                      ...(textColorProp ||
+                      bgColorProp ||
+                      borderColorProp ||
+                      (actionHovered && hoverBgColorProp)
+                        ? {
+                            ...(textColorProp ? { color: textColorProp } : {}),
+                            ...(bgColorProp || (actionHovered && hoverBgColorProp)
+                              ? {
+                                  backgroundColor:
+                                    (actionHovered && hoverBgColorProp) ? hoverBgColorProp : bgColorProp
+                                }
+                              : {}),
+                            ...(borderColorProp
+                              ? { borderColor: borderColorProp }
+                              : {}),
+                          }
+                        : {}),
+                    }}
+                    onMouseEnter={() => setActionHoveredStates(prev => ({ ...prev, [action.id]: true }))}
+                    onMouseLeave={() => setActionHoveredStates(prev => ({ ...prev, [action.id]: false }))}
+                    onClick={editable && blockId && onEditField ? (e) => handleInlineEdit(e, `actions.${index}.label`, elementId) : (isVideo ? onCtaClick : undefined)}
+                    asChild={!editable && !isVideo && !!action.href}
+                  >
+                    {!editable && !isVideo && action.href ? (
+                      <a href={action.href}>
+                        {isVideo && <Play className="h-4 w-4" aria-hidden="true" />}
+                        {action.label}
+                        {!isVideo && <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" aria-hidden="true" />}
+                      </a>
+                    ) : (
+                      <>
+                        {isVideo && <Play className="h-4 w-4" aria-hidden="true" />}
+                        <span
+                          onClick={(e) => {
+                            if (editable && blockId && onEditField) {
+                              e.stopPropagation()
+                              handleInlineEdit(e, `actions.${index}.label`, elementId)
+                            }
+                          }}
+                          className={cn(
+                            editable && blockId && onEditField && "cursor-pointer"
+                          )}
+                        >
+                          {action.label}
+                        </span>
+                        {!isVideo && <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" aria-hidden="true" />}
+                      </>
+                    )}
+                  </Button>
+                </Editable>
+              )
+            })}
           </div>
 
           {/* Trust indicators for calm mood */}

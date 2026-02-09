@@ -18,7 +18,7 @@ import { usePage } from "@/lib/cms/useLocalCms"
 import { createEmptyPage, generateUniqueSlug, type AdminPage } from "@/lib/cms/supabaseStore"
 import type { BrandKey } from "@/components/brand/brandAssets"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { blockRegistry, getBlockDefinition, createServiceCard, createFaqItem, createTeamMember, createFeatureItem, createContactFormField, createTestimonialItem, createGalleryImage, createImageSlide, createOpeningHour, createContactInfoCard } from "@/cms/blocks/registry"
+import { blockRegistry, getBlockDefinition, createServiceCard, createFaqItem, createTeamMember, createFeatureItem, createContactFormField, createTestimonialItem, createGalleryImage, createImageSlide, createOpeningHour, createContactInfoCard, createHeroAction } from "@/cms/blocks/registry"
 import { normalizeBlock } from "@/cms/blocks/normalize"
 import type { InspectorField, InspectorFieldType } from "@/cms/blocks/registry"
 import { arrayRemove, arrayMove, arrayInsert } from "@/lib/cms/arrayOps"
@@ -3317,45 +3317,128 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
                   return null
                 })()}
 
-                {/* Dynamic Element Selector (e.g., for trust items) */}
+                {/* Dynamic Element Selector (e.g., for trust items, actions) */}
                 {selectedBlock.type === "hero" && (() => {
                   const props = selectedBlock.props as HeroBlock["props"]
                   const trustItems = normalizeStringArray(props.trustItems ?? [])
-                  if (trustItems.length === 0) return null
+                  const mood = (props as any)?.mood ?? "physiotherapy"
+                  const actions = props.actions ?? (props.brandContent?.[mood as keyof typeof props.brandContent]?.actions) ?? []
+                  
+                  if (trustItems.length === 0 && actions.length === 0) return null
                   
                   return (
-                    <div className="space-y-2 rounded-md border border-border bg-muted/20 p-3">
-                      <Label className="text-xs font-semibold">Trust Items</Label>
-                      <div className="flex flex-wrap gap-2">
-                        {trustItems.map((_, index) => {
-                          const itemId = `trustItems.${index}`
-                          const isSelected = selectedElementId === itemId
-                          return (
+                    <>
+                      {trustItems.length > 0 && (
+                        <div className="space-y-2 rounded-md border border-border bg-muted/20 p-3">
+                          <Label className="text-xs font-semibold">Trust Items</Label>
+                          <div className="flex flex-wrap gap-2">
+                            {trustItems.map((_, index) => {
+                              const itemId = `trustItems.${index}`
+                              const isSelected = selectedElementId === itemId
+                              return (
+                                <Button
+                                  key={index}
+                                  variant={isSelected ? "default" : "outline"}
+                                  size="sm"
+                                  className="text-xs"
+                                  onClick={() => setSelectedElementId(itemId)}
+                                >
+                                  Item {index + 1}
+                                </Button>
+                              )
+                            })}
+                          </div>
+                          {selectedElementId && selectedElementId.startsWith("trustItems.") && (
                             <Button
-                              key={index}
-                              variant={isSelected ? "default" : "outline"}
+                              variant="ghost"
                               size="sm"
-                              className="text-xs"
-                              onClick={() => setSelectedElementId(itemId)}
+                              className="w-full text-xs"
+                              onClick={() => setSelectedElementId(null)}
                             >
-                              Item {index + 1}
+                              Deselect
                             </Button>
-                          )
-                        })}
-                      </div>
-                      {selectedElementId && selectedElementId.startsWith("trustItems.") && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="w-full text-xs"
-                          onClick={() => setSelectedElementId(null)}
-                        >
-                          Deselect
-                        </Button>
+                          )}
+                        </div>
                       )}
-                    </div>
+
+                      {actions.length > 0 && (
+                        <div className="space-y-2 rounded-md border border-border bg-muted/20 p-3">
+                          <Label className="text-xs font-semibold">CTA Actions</Label>
+                          <div className="flex flex-wrap gap-2">
+                            {actions.map((action: any, index: number) => {
+                              const itemId = `action-${action.id}`
+                              const isSelected = selectedElementId === itemId
+                              return (
+                                <Button
+                                  key={action.id}
+                                  variant={isSelected ? "default" : "outline"}
+                                  size="sm"
+                                  className="text-xs"
+                                  onClick={() => setSelectedElementId(itemId)}
+                                >
+                                  {action.label || `Action ${index + 1}`}
+                                </Button>
+                              )
+                            })}
+                          </div>
+                          {selectedElementId && selectedElementId.startsWith("action-") && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="w-full text-xs"
+                              onClick={() => setSelectedElementId(null)}
+                            >
+                              Deselect
+                            </Button>
+                          )}
+                        </div>
+                      )}
+                    </>
                   )
                 })()}
+
+                {/* Hero Actions Array Editor */}
+                {selectedBlock.type === "hero" && (() => {
+                  const def = getBlockDefinition("hero")
+                  const hasActionsField = def.inspectorFields?.some(f => f.key === "actions")
+                  if (!hasActionsField) return null
+
+                  return (
+                    <>
+                      <Separator />
+                      {renderArrayItemsControls(
+                        selectedBlock,
+                        "actions",
+                        "Action",
+                        (action: any, index: number) => `${index + 1}. ${action.label || "Action"}`,
+                        createHeroAction,
+                        [
+                          {
+                            key: "variant",
+                            label: "Typ",
+                            type: "select" as const,
+                            options: [
+                              { value: "primary", label: "Primary Button" },
+                              { value: "secondary", label: "Secondary Button" },
+                            ],
+                          },
+                          { key: "label", label: "Label", type: "text" as const, required: true },
+                          { key: "href", label: "Link (optional)", type: "url" as const },
+                          {
+                            key: "action",
+                            label: "Action Typ (optional)",
+                            type: "select" as const,
+                            options: [
+                              { value: "video", label: "Video" },
+                              { value: "scroll", label: "Scroll" },
+                            ],
+                          },
+                        ]
+                      )}
+                    </>
+                  )
+                })()}
+
 
                 {/* Global Element Shadow Inspector */}
                 {selectedElementId && (
@@ -3400,6 +3483,7 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
 
   const isArrayItemField = (key: string) => {
     if (selectedBlock.type === "hero" && key.startsWith("trustItems.")) return true
+    if (selectedBlock.type === "hero" && key.startsWith("actions.")) return true
     if (selectedBlock.type === "featureGrid" && key.startsWith("features.")) return true
     if (selectedBlock.type === "servicesGrid" && key.startsWith("cards.")) return true
     if (selectedBlock.type === "faq" && key.startsWith("items.")) return true

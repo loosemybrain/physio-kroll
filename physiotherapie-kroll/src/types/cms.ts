@@ -161,6 +161,17 @@ export type SectionBackgroundPreset = {
 }
 
 /**
+ * Hero action (button)
+ */
+export type HeroAction = {
+  id: string
+  variant: "primary" | "secondary"
+  label: string
+  href?: string
+  action?: "video" | "scroll"
+}
+
+/**
  * Brand-specific content for Hero block
  */
 export type HeroBrandContent = {
@@ -199,6 +210,8 @@ export type HeroBrandContent = {
   imageFit?: "cover" | "contain"
   imageFocus?: "center" | "top" | "bottom"
   containBackground?: "none" | "blur"
+  // Actions array (new)
+  actions?: HeroAction[]
 }
 
 /**
@@ -226,6 +239,8 @@ export interface HeroBlock extends BaseBlock {
     floatingLabel?: string
     // Hero background color override (for theme presets or manual override)
     heroBgColor?: string
+    // Actions array (new)
+    actions?: HeroAction[]
     // New brand-specific content structure
     brandContent?: {
       physiotherapy?: HeroBrandContent

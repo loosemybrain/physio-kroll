@@ -95,7 +95,7 @@ export function AnimationInspector({ config: configProp, onChange }: AnimationIn
           </div>
 
           {!config.enabled && (
-            <div className="px-3 py-2 rounded-md bg-muted/60 border border-muted text-xs text-muted-foreground italic">
+            <div className="mb-4 px-3 py-2 rounded-md bg-muted/60 border border-muted text-xs text-muted-foreground italic">
               Animationen sind deaktiviert
             </div>
           )}

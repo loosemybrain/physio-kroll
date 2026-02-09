@@ -1,5 +1,5 @@
 import { z } from "zod"
-import type { CMSBlock, BlockType, HeroBlock, TextBlock, ImageTextBlock, FeatureGridBlock, CtaBlock, SectionBlock, ServicesGridBlock, FaqBlock, TeamBlock, ContactFormBlock, TestimonialsBlock, GalleryBlock, OpeningHoursBlock, ImageSliderBlock, } from "@/types/cms"
+import type { CMSBlock, BlockType, HeroBlock, TextBlock, ImageTextBlock, FeatureGridBlock, CtaBlock, SectionBlock, ServicesGridBlock, FaqBlock, TeamBlock, ContactFormBlock, TestimonialsBlock, GalleryBlock, OpeningHoursBlock, ImageSliderBlock, HeroAction } from "@/types/cms"
 import type { BrandKey } from "@/components/brand/brandAssets"
 import { uuid } from "@/lib/cms/arrayOps"
 import { typographySchema, elementTypographySchema } from "@/lib/typography"
@@ -545,6 +545,14 @@ const heroDefaults: HeroBlock["props"] = {
       imageFit: "cover",
       imageFocus: "center",
       containBackground: "blur",
+      actions: [
+        {
+          id: "primary",
+          variant: "primary",
+          label: "Termin vereinbaren",
+          href: "/kontakt",
+        },
+      ],
     },
     "physio-konzept": {
       headline: "Push Your Limits",
@@ -562,6 +570,20 @@ const heroDefaults: HeroBlock["props"] = {
       imageFit: "cover",
       imageFocus: "center",
       containBackground: "blur",
+      actions: [
+        {
+          id: "primary",
+          variant: "primary",
+          label: "Jetzt starten",
+          href: "/kontakt",
+        },
+        {
+          id: "video",
+          variant: "secondary",
+          label: "Video ansehen",
+          action: "video",
+        },
+      ],
     },
   },
 }
@@ -686,6 +708,15 @@ export function createHeroTrustItem(): string {
   return "Neuer Vorteil"
 }
 
+export function createHeroAction(): HeroAction {
+  return {
+    id: uuid(),
+    variant: "primary",
+    label: "Neue Action",
+    href: "#",
+  }
+}
+
 export function createTestimonialItem(): TestimonialsBlock["props"]["items"][0] {
   return {
     id: uuid(),
@@ -755,17 +786,14 @@ const servicesGridDefaults: ServicesGridBlock["props"] = {
   headline: "Angebote & Kurse",
   subheadline: "Therapie, Training und Kurse – alles an einem Ort.",
   columns: 3,
-  variant: "grid",
   background: "none",
-  autoplay: false,
-  interval: 6000,
-  sliderAlign: "center",
-  showControls: true,
   cards: [
     { id: generateUniqueId("card", 0), icon: "HeartPulse", title: "Physiotherapie", text: "Individuelle Behandlung für Ihre Gesundheit und Wohlbefinden.", ctaText: "Mehr erfahren", ctaHref: "/physiotherapie" },
     { id: generateUniqueId("card", 1), icon: "Dumbbell", title: "Training", text: "Gezieltes Kraft- und Ausdauertraining für optimale Ergebnisse.", ctaText: "Mehr erfahren", ctaHref: "/training" },
     { id: generateUniqueId("card", 2), icon: "Activity", title: "Rehabilitation", text: "Professionelle Reha nach Verletzungen und Operationen.", ctaText: "Mehr erfahren", ctaHref: "/rehabilitation" },
     { id: generateUniqueId("card", 3), icon: "Users", title: "Gruppenkurse", text: "Gemeinsam trainieren und motiviert bleiben in der Gruppe.", ctaText: "Mehr erfahren", ctaHref: "/kurse" },
+    { id: generateUniqueId("card", 4), icon: "Timer", title: "Prävention", text: "Vorbeugende Maßnahmen für langfristige Gesundheit.", ctaText: "Mehr erfahren", ctaHref: "/praevention" },
+    { id: generateUniqueId("card", 5), icon: "Sparkles", title: "Wellness", text: "Entspannung und Regeneration für Körper und Geist.", ctaText: "Mehr erfahren", ctaHref: "/wellness" },
   ],
 }
 
@@ -825,8 +853,6 @@ const testimonialsDefaults: TestimonialsBlock["props"] = {
   variant: "grid",
   columns: 3,
   background: "none",
-  autoplay: false,
-  interval: 6000,
   items: [
     {
       id: generateUniqueId("testimonial", 0),

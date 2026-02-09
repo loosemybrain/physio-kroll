@@ -507,8 +507,8 @@ export function ContactFormBlock({
       <section className="relative w-full overflow-hidden py-12">
         {/* Decorative background elements - subtle ambient glow only */}
         <div className="pointer-events-none absolute inset-0 -z-20" aria-hidden="true">
-          <div className="absolute -left-32 top-1/4 size-96 rounded-full bg-primary/2 blur-3xl" />
-          <div className="absolute -right-32 bottom-1/4 size-80 rounded-full bg-primary/2 blur-3xl" />
+        <div className="absolute left-1/2 top-1/4 size-96 -translate-x-[65%] rounded-full bg-primary/2 blur-3xl" />
+        <div className="absolute right-1/2 bottom-1/4 size-80 translate-x-[65%] rounded-full bg-primary/2 blur-3xl" />
         </div>
 
         <div className="mx-auto max-w-7xl">
