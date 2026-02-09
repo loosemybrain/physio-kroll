@@ -1468,7 +1468,6 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
       { key: "subheadline", label: "Subheadline", type: "text", placeholder: "Optionaler Untertext" },
       { key: "primaryCtaText", label: "Primärer CTA Text", type: "text", placeholder: "Button Text", required: true },
       { key: "primaryCtaHref", label: "Primärer CTA Link", type: "url", placeholder: "https://...", required: true },
-      { key: "secondaryCtaText", label: "Sekundärer CTA Text", type: "text", placeholder: "Optionaler zweiter Button" },
       { key: "secondaryCtaHref", label: "Sekundärer CTA Link", type: "url", placeholder: "https://..." },
       {
         key: "variant",

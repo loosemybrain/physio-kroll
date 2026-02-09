@@ -2141,7 +2141,9 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
           {selectedBlock && (
             <div className="p-4 space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="font-semibold text-foreground">Block Settings</h3>
+                <h3 className="font-semibold text-foreground">
+                  {blockRegistry[selectedBlock.type]?.label || selectedBlock.type} · Block Settings
+                </h3>
                 <Button
                   variant="ghost"
                   size="icon"
@@ -2222,6 +2224,39 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
                   }}
                 />
               </div>              <Separator />
+
+              {/* Global Element Shadow Inspector */}
+              {selectedElementId && (
+                  <>
+                    <div className="space-y-3">
+                    <h3 className="text-sm font-semibold mb-4">Shadow</h3>
+                      <ShadowInspector
+                        config={
+                          ((selectedBlock.props as Record<string, unknown>)?.elements as Record<string, ElementConfig> | undefined)?.[selectedElementId]?.style?.shadow
+                        }
+                        onChange={(shadowConfig) => {
+                          const currentElements = ((selectedBlock.props as Record<string, unknown>)?.elements ?? {}) as Record<string, ElementConfig>
+                          const currentElement = currentElements[selectedElementId] ?? { style: {} }
+                          const nextElement: ElementConfig = {
+                            ...currentElement,
+                            style: {
+                              ...currentElement.style,
+                              shadow: shadowConfig,
+                            },
+                          }
+                          const nextElements = {
+                            ...currentElements,
+                            [selectedElementId]: nextElement,
+                          }
+                          const updatedProps = setByPath(selectedBlock.props as Record<string, unknown>, "elements", nextElements) as CMSBlock["props"]
+                          updateSelectedProps(updatedProps)
+                        }}
+                        onClose={() => setSelectedElementId(null)}
+                      />
+                    </div>
+                    <Separator />
+                  </>
+                )}
 
               {/* Generic Inspector from Registry */}
               <div className="space-y-4">
@@ -2839,6 +2874,19 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
                               />
                             </div>
                             <div className="space-y-1.5">
+                              <Label className="text-xs">Badge Text</Label>
+                              <Input
+                                id={`${selectedBlock.id}.badgeText`}
+                                ref={(el) => {
+                                  fieldRefs.current[`${selectedBlock.id}.badgeText`] = el
+                                }}
+                                value={String(brandContent.badgeText || "")}
+                                onChange={(e) => handleBrandFieldChange("badgeText", e.target.value)}
+                                placeholder="Badge Text"
+                                className="h-8 text-sm"
+                              />
+                            </div>
+                            <div className="space-y-1.5">
                               <Label className="text-xs">CTA Text</Label>
                               <Input
                                 id={`${selectedBlock.id}.ctaText`}
@@ -2865,38 +2913,7 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
                               />
                             </div>
                             <div className="space-y-1.5">
-                              <Label className="text-xs">Sekundärer CTA Text</Label>
-                              <Input
-                                value={String(brandContent.secondaryCtaText || "")}
-                                onChange={(e) => handleBrandFieldChange("secondaryCtaText", e.target.value)}
-                                placeholder="Sekundärer CTA Text"
-                                className="h-8 text-sm"
-                              />
-                            </div>
-                            <div className="space-y-1.5">
-                              <Label className="text-xs">Sekundärer CTA Link</Label>
-                              <Input
-                                value={String(brandContent.secondaryCtaHref || "")}
-                                onChange={(e) => handleBrandFieldChange("secondaryCtaHref", e.target.value)}
-                                placeholder="/video"
-                                className="h-8 text-sm"
-                              />
-                            </div>
-                            <div className="space-y-1.5">
-                              <Label className="text-xs">Badge Text</Label>
-                              <Input
-                                id={`${selectedBlock.id}.badgeText`}
-                                ref={(el) => {
-                                  fieldRefs.current[`${selectedBlock.id}.badgeText`] = el
-                                }}
-                                value={String(brandContent.badgeText || "")}
-                                onChange={(e) => handleBrandFieldChange("badgeText", e.target.value)}
-                                placeholder="Badge Text"
-                                className="h-8 text-sm"
-                              />
-                            </div>
-                            <div className="space-y-1.5">
-                              <Label className="text-xs">Video Button Text</Label>
+                              <Label className="text-xs">Sekundärer Button Text</Label>
                               <Input
                                 id={`${selectedBlock.id}.playText`}
                                 ref={(el) => {
@@ -2908,6 +2925,15 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
                                 className="h-8 text-sm"
                               />
                             </div>
+                            <div className="space-y-1.5">
+                              <Label className="text-xs">Sekundärer CTA Link</Label>
+                              <Input
+                                value={String(brandContent.secondaryCtaHref || "")}
+                                onChange={(e) => handleBrandFieldChange("secondaryCtaHref", e.target.value)}
+                                placeholder="/video"
+                                className="h-8 text-sm"
+                              />
+                            </div>                            
 
                             <div className="rounded-md border border-border bg-muted/20 p-3 space-y-3">
                               <div className="text-xs font-semibold">Farben</div>
@@ -3439,38 +3465,6 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
                   )
                 })()}
 
-
-                {/* Global Element Shadow Inspector */}
-                {selectedElementId && (
-                  <>
-                    <div className="space-y-3">
-                      <ShadowInspector
-                        config={
-                          ((selectedBlock.props as Record<string, unknown>)?.elements as Record<string, ElementConfig> | undefined)?.[selectedElementId]?.style?.shadow
-                        }
-                        onChange={(shadowConfig) => {
-                          const currentElements = ((selectedBlock.props as Record<string, unknown>)?.elements ?? {}) as Record<string, ElementConfig>
-                          const currentElement = currentElements[selectedElementId] ?? { style: {} }
-                          const nextElement: ElementConfig = {
-                            ...currentElement,
-                            style: {
-                              ...currentElement.style,
-                              shadow: shadowConfig,
-                            },
-                          }
-                          const nextElements = {
-                            ...currentElements,
-                            [selectedElementId]: nextElement,
-                          }
-                          const updatedProps = setByPath(selectedBlock.props as Record<string, unknown>, "elements", nextElements) as CMSBlock["props"]
-                          updateSelectedProps(updatedProps)
-                        }}
-                        onClose={() => setSelectedElementId(null)}
-                      />
-                    </div>
-                    <Separator />
-                  </>
-                )}
 
                 {/* Render array items with controls for featureGrid, faq, team, contactForm */}
                 
