@@ -4072,19 +4072,136 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
       {selectedBlock.type === "team" && (
         <>
           <Separator />
+          
+          {/* Block-Level Controls */}
+          <div className="space-y-3">
+            {/* Eyebrow */}
+            <div className="space-y-1.5">
+              <Label className="text-xs">Eyebrow (optional)</Label>
+              <input
+                type="text"
+                value={(selectedBlock.props as any)?.eyebrow || ""}
+                onChange={(e) => {
+                  if (!selectedBlock) return
+                  const currentProps = selectedBlock.props as Record<string, unknown>
+                  const updatedProps = { ...currentProps, eyebrow: e.target.value } as CMSBlock["props"]
+                  updateSelectedProps(updatedProps)
+                }}
+                className="h-8 w-full rounded border border-border bg-background px-2 text-sm"
+                placeholder="z.B. UNSER TEAM"
+              />
+            </div>
+
+            {/* Layout */}
+            <div className="space-y-1.5">
+              <Label className="text-xs">Layout</Label>
+              <Select
+                value={(selectedBlock.props as any)?.layout || "cards"}
+                onValueChange={(v) => {
+                  if (!selectedBlock) return
+                  const currentProps = selectedBlock.props as Record<string, unknown>
+                  const updatedProps = { ...currentProps, layout: v } as CMSBlock["props"]
+                  updateSelectedProps(updatedProps)
+                }}
+              >
+                <SelectTrigger className="h-8 text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="cards">Cards (vertikal)</SelectItem>
+                  <SelectItem value="compact">Compact (horizontal)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Background */}
+            <div className="space-y-1.5">
+              <Label className="text-xs">Hintergrund</Label>
+              <Select
+                value={(selectedBlock.props as any)?.background || "none"}
+                onValueChange={(v) => {
+                  if (!selectedBlock) return
+                  const currentProps = selectedBlock.props as Record<string, unknown>
+                  const updatedProps = { ...currentProps, background: v } as CMSBlock["props"]
+                  updateSelectedProps(updatedProps)
+                }}
+              >
+                <SelectTrigger className="h-8 text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Keine</SelectItem>
+                  <SelectItem value="muted">Muted</SelectItem>
+                  <SelectItem value="gradient">Gradient</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Columns */}
+            <div className="space-y-1.5">
+              <Label className="text-xs">Spalten</Label>
+              <Select
+                value={String((selectedBlock.props as any)?.columns || 3)}
+                onValueChange={(v) => {
+                  if (!selectedBlock) return
+                  const currentProps = selectedBlock.props as Record<string, unknown>
+                  const updatedProps = { ...currentProps, columns: Number(v) } as CMSBlock["props"]
+                  updateSelectedProps(updatedProps)
+                }}
+              >
+                <SelectTrigger className="h-8 text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="2">2</SelectItem>
+                  <SelectItem value="3">3</SelectItem>
+                  <SelectItem value="4">4</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Members Array */}
           {renderArrayItemsControls(
             selectedBlock,
             "members",
             "Mitglied",
-            (member, index) => `Mitglied ${index + 1}`,
+            (member, index) => {
+              const m = member as unknown as Record<string, unknown>
+              const name = String(m.name || "")
+              return `${index + 1}. ${name || "Mitglied"}`
+            },
             createTeamMember,
             [
-              { key: "name", label: "Name", type: "text" as const },
+              { key: "name", label: "Name", type: "text" as const, required: true },
               { key: "nameColor", label: "Name Farbe (optional)", type: "color" as const, placeholder: "#111111" },
               { key: "role", label: "Rolle", type: "text" as const },
               { key: "roleColor", label: "Rolle Farbe (optional)", type: "color" as const, placeholder: "#666666" },
-              { key: "imageUrl", label: "Bild", type: "image" as const },
-              { key: "imageAlt", label: "Bild Alt-Text", type: "text" as const },
+              { key: "bio", label: "Bio", type: "textarea" as const },
+              { key: "bioColor", label: "Bio Farbe (optional)", type: "color" as const, placeholder: "#666666" },
+              { key: "imageUrl", label: "Avatar", type: "image" as const },
+              { key: "imageAlt", label: "Avatar Alt-Text", type: "text" as const },
+              {
+                key: "avatarGradient",
+                label: "Avatar Gradient",
+                type: "select" as const,
+                options: [
+                  { value: "auto", label: "Auto" },
+                  { value: "g1", label: "Emerald" },
+                  { value: "g2", label: "Sky" },
+                  { value: "g3", label: "Amber" },
+                  { value: "g4", label: "Rose" },
+                  { value: "g5", label: "Violet" },
+                  { value: "g6", label: "Cyan" },
+                  { value: "g7", label: "Lime" },
+                  { value: "g8", label: "Fuchsia" },
+                  { value: "g9", label: "Indigo" },
+                  { value: "g10", label: "Red" },
+                ],
+              },
+              { key: "tags", label: "Tags (komma-getrennt)", type: "text" as const, placeholder: "Tag1, Tag2, Tag3" },
               { key: "ctaText", label: "CTA Text", type: "text" as const },
               { key: "ctaColor", label: "CTA Farbe (optional)", type: "color" as const, placeholder: "#111111" },
               { key: "ctaHref", label: "CTA Link", type: "url" as const },
