@@ -60,20 +60,8 @@ export function ShadowInspector({ config = {}, onChange, onClose }: ShadowInspec
   const isCustom = localConfig.preset === "custom"
 
   return (
-    <div className="space-y-4 rounded-lg border border-border bg-card p-4">
-      <div className="flex items-center justify-between">
-        <h4 className="text-sm font-semibold text-foreground">Shadow</h4>
-        {onClose && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onClose}
-            className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
-          >
-            ✕
-          </Button>
-        )}
-      </div>
+    <div className="rounded-lg border border-border bg-card p-4">
+      <div className="flex items-center justify-between"/>
 
       {/* Enable Toggle */}
       <div className="flex items-center gap-3">
@@ -91,7 +79,7 @@ export function ShadowInspector({ config = {}, onChange, onClose }: ShadowInspec
       {/* Preset Select */}
       {localConfig.enabled && (
         <>
-          <div className="space-y-2">
+          <div className="space-y-2 mt-2">
             <Label htmlFor="shadow-preset" className="text-xs font-medium text-muted-foreground">
               Preset
             </Label>
@@ -129,7 +117,7 @@ export function ShadowInspector({ config = {}, onChange, onClose }: ShadowInspec
 
           {/* Glow Shadow Settings */}
           {localConfig.preset === "glow" && (
-            <div className="space-y-3 rounded-md border border-border/50 bg-muted/20 p-3">
+            <div className="mt-3 space-y-3 rounded-md border border-border/50 bg-muted/20 p-3">
               <p className="text-xs font-semibold text-muted-foreground">Glow Einstellungen</p>
               {/* Color Picker für Glow */}
               <div className="space-y-1.5">
@@ -163,7 +151,7 @@ export function ShadowInspector({ config = {}, onChange, onClose }: ShadowInspec
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="glow-opacity" className="text-xs">
-                    Opazität
+                    Opacity (Deckkraft)
                   </Label>
                   <span className="text-xs font-medium text-muted-foreground">
                     {typeof localConfig.opacity === "number"

@@ -159,7 +159,7 @@ function AnimationConfigSection({ stage, config, onChange }: AnimationConfigSect
       <h4 className="text-sm font-medium">{stage}</h4>
 
       {/* Animation Type */}
-      <div className="space-y-1">
+      <div className="space-y-1 mb-4">
         <Label className="text-xs text-muted-foreground">Animationstyp</Label>
         <Select value={config.type} onValueChange={(type) => onChange({ type: type as any })}>
           <SelectTrigger className="h-8">

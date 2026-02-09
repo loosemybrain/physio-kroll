@@ -64,7 +64,7 @@ const blockTypes: Array<{ icon: React.ElementType; label: string; type: CMSBlock
   { icon: HelpCircle, label: "FAQ", type: "faq" },
   { icon: Users, label: "Team", type: "team" },
   { icon: FileText, label: "Kontaktformular", type: "contactForm" },
-  { icon: MessageSquareQuote, label: "Testimonial Slider", type: "testimonialSlider" },
+/*   { icon: MessageSquareQuote, label: "Testimonial Slider", type: "testimonialSlider" }, */
 ]
 
 function uuid() {

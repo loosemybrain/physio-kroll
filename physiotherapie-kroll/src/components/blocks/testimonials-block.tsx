@@ -34,6 +34,8 @@ export interface TestimonialsBlockProps {
     roleColor?: string
     rating?: 1 | 2 | 3 | 4 | 5
     avatar?: MediaValue
+    /** Persisted gradient from palette (e.g., "from-primary/80 to-primary/50") */
+    avatarGradient?: string
   }>
   columns?: 1 | 2 | 3 | 4
   variant?: "grid" | "slider"
@@ -63,12 +65,6 @@ const avatarPalette = [
   "from-chart-3/80 to-chart-3/50",
 ]
 
-function hashName(name: string) {
-  let h = 0
-  for (let i = 0; i < name.length; i++) h = ((h << 5) - h + name.charCodeAt(i)) | 0
-  return Math.abs(h)
-}
-
 function getInitials(name: string) {
   return name
     .split(" ")
@@ -96,11 +92,11 @@ function RatingStars({ rating }: { rating: number }) {
   )
 }
 
-function Avatar({ name, avatar }: { name: string; avatar?: MediaValue }) {
-  const idx = hashName(name) % avatarPalette.length
+function Avatar({ name, avatar, gradient }: { name: string; avatar?: MediaValue; gradient?: string }) {
   const initials = getInitials(name)
   const url = resolveMediaClient(avatar)
 
+  // Priority: 1. Image, 2. Persisted gradient, 3. Fallback avatar palette
   if (url) {
     return (
       <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-full ring-2 ring-border/60 ring-offset-2 ring-offset-background">
@@ -110,11 +106,14 @@ function Avatar({ name, avatar }: { name: string; avatar?: MediaValue }) {
     )
   }
 
+  // Use persisted gradient if available, otherwise default to first palette entry
+  const fallbackGradient = gradient || avatarPalette[0]
+
   return (
     <div
       className={cn(
         "flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-linear-to-br font-semibold text-primary-foreground ring-2 ring-border/60 ring-offset-2 ring-offset-background",
-        avatarPalette[idx]
+        fallbackGradient
       )}
     >
       <span className="text-sm">{initials}</span>
@@ -207,7 +206,7 @@ function TestimonialCard({
         <div className="my-6 h-px bg-linear-to-r from-border via-border/50 to-transparent" />
 
         <footer className="flex items-center gap-4">
-          <Avatar name={item.name} avatar={item.avatar} />
+          <Avatar name={item.name} avatar={item.avatar} gradient={item.avatarGradient} />
           <div className="min-w-0">
             <div
               onClick={(e) => onInlineEdit(e, `items.${index}.name`)}
