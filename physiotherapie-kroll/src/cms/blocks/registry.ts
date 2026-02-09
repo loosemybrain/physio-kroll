@@ -514,7 +514,6 @@ function getDefaultBrand(): BrandKey {
 
 const heroDefaults: HeroBlock["props"] = {
   mood: getDefaultBrand(),
-  minHeightVh: "60",
   // Legacy props (for backward compatibility)
   headline: "Ihre Gesundheit in besten Händen",
   subheadline: "Professionelle Physiotherapie mit ganzheitlichem Ansatz.",

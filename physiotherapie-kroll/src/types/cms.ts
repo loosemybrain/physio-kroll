@@ -222,7 +222,6 @@ export interface HeroBlock extends BaseBlock {
   type: "hero"
   props: {
     section?: BlockSectionProps
-    // Layout height control
     minHeightVh?: "50" | "60" | "70" | "80" | "90" | "100"
     // Legacy props (for backward compatibility)
     mood?: BrandKey

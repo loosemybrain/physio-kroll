@@ -2336,40 +2336,41 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
                   return (
                     <div className="space-y-4">
                       {/* Global hero settings (not brand-specific) */}
-                      <div className="space-y-2 rounded-md border border-border bg-muted/30 px-3 py-3">
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="space-y-0.5">
-                            <div className="text-xs font-semibold">Media anzeigen</div>
-                            <div className="text-xs text-muted-foreground">
-                              Floating-Elemente werden im Media-Bereich gerendert.
-                            </div>
+                      <div className="flex items-center justify-between gap-3 rounded-md border border-border bg-muted/30 px-3 py-2">
+                        <div className="space-y-0.5">
+                          <div className="text-xs font-semibold">Media anzeigen</div>
+                          <div className="text-xs text-muted-foreground">
+                            Floating-Elemente werden im Media-Bereich gerendert.
                           </div>
-                          <Checkbox
-                            checked={Boolean(props.showMedia ?? true)}
-                            onCheckedChange={(checked) => handleHeroRootFieldChange("showMedia", Boolean(checked))}
-                          />
                         </div>
+                        <Checkbox
+                          checked={Boolean(props.showMedia ?? true)}
+                          onCheckedChange={(checked) => handleHeroRootFieldChange("showMedia", Boolean(checked))}
+                        />
+                      </div>
 
-                        {/* Min-Height VH Dropdown */}
-                        <div className="space-y-1.5 mt-3 pt-3 border-t border-border">
-                          <Label className="text-xs font-semibold">Höhe (Viewport)</Label>
-                          <Select
-                            value={String(props.minHeightVh ?? "60")}
-                            onValueChange={(v) => handleHeroRootFieldChange("minHeightVh", v)}
-                          >
-                            <SelectTrigger className="h-8 text-sm">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="50">50vh (Klein)</SelectItem>
-                              <SelectItem value="60">60vh (Standard)</SelectItem>
-                              <SelectItem value="70">70vh (Mittel)</SelectItem>
-                              <SelectItem value="80">80vh (Groß)</SelectItem>
-                              <SelectItem value="90">90vh (Sehr Groß)</SelectItem>
-                              <SelectItem value="100">100vh (Vollbild)</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
+                      {/* Viewport Height Dropdown */}
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-semibold">Höhe (Viewport)</Label>
+                        <Select
+                          value={String(props.minHeightVh || "90")}
+                          onValueChange={(v) => handleHeroRootFieldChange("minHeightVh", v)}
+                        >
+                          <SelectTrigger className="h-8 text-sm">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="50">50vh</SelectItem>
+                            <SelectItem value="60">60vh</SelectItem>
+                            <SelectItem value="70">70vh</SelectItem>
+                            <SelectItem value="80">80vh</SelectItem>
+                            <SelectItem value="90">90vh</SelectItem>
+                            <SelectItem value="100">100vh</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <p className="text-xs text-muted-foreground">
+                          Minimale Höhe des Hero-Bereichs
+                        </p>
                       </div>
 
                       <Tabs value={currentBrandTab} onValueChange={(v) => handleBrandTabChange(v as typeof currentBrandTab)}>
