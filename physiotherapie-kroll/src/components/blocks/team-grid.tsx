@@ -484,19 +484,6 @@ export function TeamGridBlock({
       )}
       aria-label={headline || "Team"}
     >
-      {/* Decorative background glows */}
-      <div className="pointer-events-none absolute inset-0" aria-hidden="true">
-        <div className="absolute -left-40 top-1/4 h-[500px] w-[500px] rounded-full bg-primary/[0.03] blur-3xl" />
-        <div className="absolute -right-32 bottom-0 h-[400px] w-[400px] rounded-full bg-primary/[0.025] blur-3xl" />
-        <div
-          className="absolute inset-0 opacity-[0.012]"
-          style={{
-            backgroundImage:
-              "linear-gradient(to right, currentColor 1px, transparent 1px), linear-gradient(to bottom, currentColor 1px, transparent 1px)",
-            backgroundSize: "80px 80px",
-          }}
-        />
-      </div>
 
       <div className="relative mx-auto max-w-6xl px-4 sm:px-6">
         {/* ---- Header ---- */}
