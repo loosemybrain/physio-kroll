@@ -1372,10 +1372,16 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
                             <Select
                               value={itemFieldValue == null || itemFieldValue === "" ? "none" : String(itemFieldValue)}
                               onValueChange={(v) => {
-                                if (v === "none") {
-                                  handleItemFieldChange(undefined)
+                                // Special handling for rating: convert to number or undefined
+                                if (itemField.key === "rating") {
+                                  if (v === "none") {
+                                    handleItemFieldChange(undefined)
+                                  } else {
+                                    handleItemFieldChange(Number(v))
+                                  }
                                 } else {
-                                  handleItemFieldChange(Number(v))
+                                  // For all other select fields (avatarGradient, etc.), keep as string
+                                  handleItemFieldChange(v)
                                 }
                               }}
                             >
