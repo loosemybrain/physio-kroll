@@ -137,7 +137,7 @@ const itemVariants = {
   visible: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.5, ease: [0.25, 0.1, 0.25, 1] as const },
+    transition: { duration: 0.5, ease: [0.25, 0.1, 0.25, 1] },
   },
 }
 
@@ -146,7 +146,7 @@ const imageVariants = {
   visible: {
     opacity: 1,
     scale: 1,
-    transition: { duration: 0.6, ease: [0.25, 0.1, 0.25, 1] as const },
+    transition: { duration: 0.6, ease: [0.25, 0.1, 0.25, 1] },
   },
 }
 
@@ -226,7 +226,7 @@ export function ImageTextBlock({
               isImageRight && "md:order-2"
             )}
           >
-            <div className="relative aspect-4/3 w-full">
+            <div className="relative aspect-[4/3] w-full">
               <Image
                 src={image.src || "/placeholder.svg"}
                 alt={image.alt}
@@ -240,8 +240,8 @@ export function ImageTextBlock({
                 className={cn(
                   "absolute inset-0",
                   isSoft
-                    ? "bg-linear-to-t from-muted/20 to-transparent"
-                    : "bg-linear-to-t from-background/10 to-transparent"
+                    ? "bg-gradient-to-t from-muted/20 to-transparent"
+                    : "bg-gradient-to-t from-background/10 to-transparent"
                 )}
                 aria-hidden="true"
               />

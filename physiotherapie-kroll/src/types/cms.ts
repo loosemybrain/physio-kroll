@@ -446,16 +446,27 @@ export interface TeamBlock extends BaseBlock {
     section?: BlockSectionProps
     headline?: string
     subheadline?: string
+    eyebrow?: string
+    layout?: "cards" | "compact"
+    background?: "none" | "muted" | "gradient"
     members: Array<{
       id: string
       name: string
-      role: string
-      imageUrl: string
-      imageAlt: string
+      role?: string
+      bio?: string
+      imageUrl?: string | { url?: string; src?: string; publicUrl?: string; path?: string }
+      imageAlt?: string
+      avatarGradient?: "auto" | "g1" | "g2" | "g3" | "g4" | "g5" | "g6" | "g7" | "g8" | "g9" | "g10"
+      tags?: string[]
+      socials?: Array<{
+        type: "website" | "linkedin" | "instagram" | "email"
+        href: string
+      }>
       ctaText?: string
       ctaHref?: string
       nameColor?: string
       roleColor?: string
+      bioColor?: string
       ctaColor?: string
       cardBgColor?: string
       cardBorderColor?: string
@@ -463,8 +474,10 @@ export interface TeamBlock extends BaseBlock {
     columns?: 2 | 3 | 4
     headlineColor?: string
     subheadlineColor?: string
+    eyebrowColor?: string
     nameColor?: string
     roleColor?: string
+    bioColor?: string
     ctaColor?: string
     cardBgColor?: string
     cardBorderColor?: string

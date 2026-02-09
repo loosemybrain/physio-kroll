@@ -2,10 +2,11 @@
 
 import { useState } from "react"
 import { HeroSection, type HeroMood } from "../components/hero-section"
-import { CardBlock } from "../components/card-block"
 import { ContactFormBlock } from "../components/blocks/contact-form-block"
+import { ServicesGridBlock } from "../components/blocks/services-grid-block"
 import { ImageTextBlock } from "../components/blocks/image-text-block"
 import { TestimonialsBlock } from "../components/blocks/testimonials-block"
+import { TeamGridBlock } from "../components/blocks/team-grid-block"
 import { Button } from "@/components/ui/button"
 
 export default function Home() {
@@ -39,115 +40,65 @@ export default function Home() {
       {/* Hero Section */}
       <HeroSection mood={mood} onCtaClick={() => console.log("CTA clicked")} />
 
-      {/* CardBlock Section */}
-      <section className="bg-background py-16">
-        <div className="container mx-auto px-4">
-          <h2 className="mb-8 text-center text-2xl font-semibold text-foreground">
-            Unsere Leistungen
-          </h2>
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            <CardBlock
-              eyebrow="Klassisch"
-              title="Physiotherapie"
-              description="Professionelle Behandlung bei Schmerzen und Bewegungseinschränkungen"
-              content="Unsere erfahrenen Therapeuten erstellen individuelle Behandlungspläne für Ihre Genesung."
-              buttons={[
-                {
-                  id: "book-physio",
-                  label: "Termin buchen",
-                  href: "/termin",
-                  variant: "default",
-                  icon: "arrow-right",
-                  iconPosition: "right",
-                },
-                {
-                  id: "info-physio",
-                  label: "Mehr erfahren",
-                  variant: "outline",
-                },
-              ]}
-              animation={{
-                entrance: "slide-up",
-                hover: "lift",
-                durationMs: 500,
-                delayMs: 0,
-              }}
-              style={{
-                variant: "default",
-                radius: "xl",
-                border: "subtle",
-                shadow: "md",
-                accent: "brand",
-              }}
-            />
-
-            <CardBlock
-              eyebrow="Sport"
-              title="Rehabilitation"
-              description="Zurück zur Höchstleistung"
-              content="Spezialisierte Programme für Sportler aller Leistungsstufen."
-              align="center"
-              headerLayout="inline-action"
-              actionSlot="badge"
-              actionLabel="Beliebt"
-              footerAlign="center"
-              buttons={[
-                {
-                  id: "start-rehab",
-                  label: "Jetzt starten",
-                  variant: "default",
-                },
-              ]}
-              animation={{
-                entrance: "fade",
-                hover: "glow",
-                durationMs: 400,
-                delayMs: 100,
-              }}
-              style={{
-                variant: "elevated",
-                radius: "lg",
-                border: "none",
-                shadow: "lg",
-              }}
-            />
-
-            <CardBlock
-              title="Manuelle Therapie"
-              description="Hands-on Behandlungstechniken"
-              buttons={[
-                {
-                  id: "details-manual",
-                  label: "Details ansehen",
-                  variant: "ghost",
-                  icon: "arrow-right",
-                  iconPosition: "right",
-                },
-                {
-                  id: "download-manual",
-                  label: "Broschüre laden",
-                  variant: "link",
-                  icon: "download",
-                  iconPosition: "left",
-                },
-              ]}
-              animation={{
-                entrance: "scale",
-                hover: "none",
-                durationMs: 300,
-                delayMs: 200,
-              }}
-              style={{
-                variant: "outline",
-                radius: "md",
-                border: "strong",
-                shadow: "none",
-                accent: "muted",
-              }}
-            />
-          </div>
-        </div>
-      </section>
+      {/* Services Grid */}
+      <ServicesGridBlock
+        blockId="services-grid"
+        headline="Unsere Leistungen"
+        subheadline="Was wir bieten"
+        variant="grid"
+        columns={3}
+        background="muted"
+        cards={[
+          {
+            id: "s1",
+            icon: "Activity",
+            title: "Physiotherapie",
+            text: "Professionelle Behandlung bei Schmerzen und Bewegungseinschränkungen. Unsere erfahrenen Therapeuten erstellen individuelle Behandlungspläne für Ihre Genesung.",
+            ctaText: "Termin buchen",
+            ctaHref: "#contact",
+          },
+          {
+            id: "s2",
+            icon: "Dumbbell",
+            title: "Sport-Rehabilitation",
+            text: "Spezialisierte Programme für Sportler aller Leistungsstufen. Zurück zur Höchstleistung mit evidenzbasierter Therapie.",
+            ctaText: "Jetzt starten",
+            ctaHref: "#contact",
+          },
+          {
+            id: "s3",
+            icon: "HandHeart",
+            title: "Manuelle Therapie",
+            text: "Gezielte Hands-on Behandlungstechniken zur Mobilisierung von Gelenken und Lösung von Verspannungen im gesamten Bewegungsapparat.",
+            ctaText: "Details ansehen",
+            ctaHref: "#contact",
+          },
+          {
+            id: "s4",
+            icon: "Brain",
+            title: "Neurologische Therapie",
+            text: "Behandlung neurologischer Erkrankungen wie Schlaganfall, Multiple Sklerose oder Parkinson mit spezialisierten Therapiekonzepten.",
+            ctaText: "Mehr erfahren",
+            ctaHref: "#contact",
+          },
+          {
+            id: "s5",
+            icon: "Waves",
+            title: "Lymphdrainage",
+            text: "Sanfte, rhythmische Massagetechnik zur Anregung des Lymphflusses und Reduktion von Schwellungen nach Operationen oder Verletzungen.",
+            ctaText: "Termin vereinbaren",
+            ctaHref: "#contact",
+          },
+          {
+            id: "s6",
+            icon: "Flame",
+            title: "Wärmetherapie",
+            text: "Fango, Rotlicht und Heißluft zur Förderung der Durchblutung, Schmerzlinderung und Vorbereitung auf die manuelle Behandlung.",
+            ctaText: "Mehr erfahren",
+            ctaHref: "#contact",
+          },
+        ]}
+      />
 
       {/* Image-Text Block: About */}
       <ImageTextBlock
@@ -189,6 +140,100 @@ export default function Home() {
           label: "Termin vereinbaren",
           href: "#contact",
         }}
+      />
+
+      {/* Team Grid */}
+      <TeamGridBlock
+        blockId="team"
+        eyebrow="Unser Team"
+        headline="Die Menschen hinter Ihrer Genesung"
+        subheadline="Lernen Sie unser engagiertes Team aus erfahrenen Therapeuten kennen, das sich jeden Tag für Ihre Gesundheit einsetzt."
+        columns={3}
+        layout="cards"
+        background="gradient"
+        members={[
+          {
+            id: "m1",
+            name: "Dr. Elena Hartmann",
+            role: "Praxisleitung & Physiotherapeutin",
+            bio: "Spezialisiert auf orthopädische Rehabilitation mit über 15 Jahren Erfahrung. Zertifizierte Manualtherapeutin und Sportphysiotherapeutin.",
+            tags: ["Orthopädie", "Manuelle Therapie"],
+            socials: [
+              { type: "linkedin", href: "#" },
+              { type: "email", href: "mailto:hartmann@example.com" },
+            ],
+            ctaText: "Profil ansehen",
+            ctaHref: "#",
+          },
+          {
+            id: "m2",
+            name: "Maximilian Berger",
+            role: "Sport-Physiotherapeut",
+            bio: "Ehemaliger Leistungssportler mit Fokus auf sportliche Rehabilitation. Betreut Athleten vom Breitensport bis zur Bundesliga.",
+            avatarGradient: "g2",
+            tags: ["Sport-Reha", "Leistungsdiagnostik"],
+            socials: [
+              { type: "instagram", href: "#" },
+              { type: "linkedin", href: "#" },
+            ],
+            ctaText: "Profil ansehen",
+            ctaHref: "#",
+          },
+          {
+            id: "m3",
+            name: "Sophie Kraus",
+            role: "Neurologische Therapeutin",
+            bio: "Expertin für neurologische Erkrankungen wie Schlaganfall, MS und Parkinson. Arbeitet mit evidenzbasierten Therapiekonzepten.",
+            avatarGradient: "g4",
+            tags: ["Neurologie", "Bobath"],
+            socials: [
+              { type: "linkedin", href: "#" },
+            ],
+            ctaText: "Profil ansehen",
+            ctaHref: "#",
+          },
+          {
+            id: "m4",
+            name: "Jonas Fischer",
+            role: "Manualtherapeut",
+            bio: "Spezialist für Wirbelsäulentherapie und chronische Schmerzbehandlung. Zertifiziert in Osteopathie und Faszientherapie.",
+            avatarGradient: "g6",
+            tags: ["Wirbelsäule", "Osteopathie"],
+            socials: [
+              { type: "website", href: "#" },
+              { type: "email", href: "mailto:fischer@example.com" },
+            ],
+            ctaText: "Profil ansehen",
+            ctaHref: "#",
+          },
+          {
+            id: "m5",
+            name: "Laura Weiß",
+            role: "Lymphtherapeutin",
+            bio: "Zertifizierte Lymphdrainagetherapeutin mit Zusatzqualifikation in Ödemtherapie. Einfühlsame Betreuung nach operativen Eingriffen.",
+            avatarGradient: "g3",
+            tags: ["Lymphdrainage", "Ödemtherapie"],
+            socials: [
+              { type: "linkedin", href: "#" },
+            ],
+            ctaText: "Profil ansehen",
+            ctaHref: "#",
+          },
+          {
+            id: "m6",
+            name: "David Meier",
+            role: "Trainingstherapeut",
+            bio: "Medizinischer Trainingstherapeut und Personal Trainer. Erstellt individuelle Trainingspläne für Prävention und Rehabilitation.",
+            avatarGradient: "g8",
+            tags: ["MTT", "Prävention"],
+            socials: [
+              { type: "instagram", href: "#" },
+              { type: "linkedin", href: "#" },
+            ],
+            ctaText: "Profil ansehen",
+            ctaHref: "#",
+          },
+        ]}
       />
 
       {/* Testimonials Block -- Slider variant */}

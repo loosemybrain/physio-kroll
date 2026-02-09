@@ -668,8 +668,12 @@ export function createTeamMember(): TeamBlock["props"]["members"][0] {
     id: uuid(),
     name: "Neues Mitglied",
     role: "Rolle",
+    bio: "Bio eingeben...",
     imageUrl: "/placeholder.svg",
     imageAlt: "Portrait",
+    avatarGradient: "auto",
+    tags: [],
+    socials: [],
     ctaText: "Profil ansehen",
     ctaHref: "/team",
   }
@@ -813,11 +817,57 @@ const faqDefaults: FaqBlock["props"] = {
 const teamDefaults: TeamBlock["props"] = {
   headline: "Unser Team",
   subheadline: "Erfahrene Therapeuten für Ihre Gesundheit.",
+  eyebrow: "UNSER TEAM",
   columns: 3,
+  layout: "cards",
+  background: "none",
   members: [
-    { id: generateUniqueId("member", 0), name: "Max Mustermann", role: "Physiotherapeut", imageUrl: "/placeholder.svg", imageAlt: "Max Mustermann", ctaText: "Profil ansehen", ctaHref: "/team/max-mustermann" },
-    { id: generateUniqueId("member", 1), name: "Anna Schmidt", role: "Sportphysiotherapeutin", imageUrl: "/placeholder.svg", imageAlt: "Anna Schmidt", ctaText: "Profil ansehen", ctaHref: "/team/anna-schmidt" },
-    { id: generateUniqueId("member", 2), name: "Thomas Weber", role: "Reha-Spezialist", imageUrl: "/placeholder.svg", imageAlt: "Thomas Weber", ctaText: "Profil ansehen", ctaHref: "/team/thomas-weber" },
+    { 
+      id: generateUniqueId("member", 0), 
+      name: "Max Mustermann", 
+      role: "Physiotherapeut",
+      bio: "Leidenschaftlicher Therapeut mit über 10 Jahren Erfahrung in der modernen Physiotherapie.",
+      imageUrl: "/placeholder.svg", 
+      imageAlt: "Max Mustermann",
+      avatarGradient: "g1",
+      tags: ["Physiotherapie", "Rehabilitation"],
+      socials: [
+        { type: "linkedin", href: "https://linkedin.com" },
+        { type: "email", href: "mailto:max@example.com" }
+      ],
+      ctaText: "Profil ansehen", 
+      ctaHref: "/team/max-mustermann" 
+    },
+    { 
+      id: generateUniqueId("member", 1), 
+      name: "Anna Schmidt", 
+      role: "Sportphysiotherapeutin",
+      bio: "Spezialistin für Sportmedizin und Leistungsoptimierung mit Top-Athleten.",
+      imageUrl: "/placeholder.svg", 
+      imageAlt: "Anna Schmidt",
+      avatarGradient: "g2",
+      tags: ["Sportmedizin", "Training"],
+      socials: [
+        { type: "linkedin", href: "https://linkedin.com" }
+      ],
+      ctaText: "Profil ansehen", 
+      ctaHref: "/team/anna-schmidt" 
+    },
+    { 
+      id: generateUniqueId("member", 2), 
+      name: "Thomas Weber", 
+      role: "Reha-Spezialist",
+      bio: "Erfahrener Experte für medizinische Rehabilitation und postoperative Betreuung.",
+      imageUrl: "/placeholder.svg", 
+      imageAlt: "Thomas Weber",
+      avatarGradient: "g3",
+      tags: ["Rehabilitation", "Schmerztherapie"],
+      socials: [
+        { type: "website", href: "https://example.com" }
+      ],
+      ctaText: "Profil ansehen", 
+      ctaHref: "/team/thomas-weber" 
+    },
   ],
 }
 

@@ -10,15 +10,30 @@ import {
   Instagram,
   Mail,
 } from "lucide-react"
+import { motion, useReducedMotion } from "framer-motion"
 
-interface TeamMember {
+/* ------------------------------------------------------------------ */
+/*  Types                                                              */
+/* ------------------------------------------------------------------ */
+
+export interface TeamMember {
   id: string
   name: string
   role?: string
   bio?: string
-  imageUrl?: string | { url?: string; src?: string; publicUrl?: string; path?: string }
-  imageAlt?: string
-  avatarGradient?: "auto" | "g1" | "g2" | "g3" | "g4" | "g5" | "g6" | "g7" | "g8" | "g9" | "g10"
+  avatar?: string | { url?: string; src?: string; publicUrl?: string; path?: string }
+  avatarGradient?:
+    | "auto"
+    | "g1"
+    | "g2"
+    | "g3"
+    | "g4"
+    | "g5"
+    | "g6"
+    | "g7"
+    | "g8"
+    | "g9"
+    | "g10"
   tags?: string[]
   socials?: Array<{
     type: "website" | "linkedin" | "instagram" | "email"
@@ -26,12 +41,6 @@ interface TeamMember {
   }>
   ctaText?: string
   ctaHref?: string
-  nameColor?: string
-  roleColor?: string
-  bioColor?: string
-  ctaColor?: string
-  cardBgColor?: string
-  cardBorderColor?: string
 }
 
 export interface TeamGridBlockProps {
@@ -42,9 +51,6 @@ export interface TeamGridBlockProps {
     fieldPath: string,
     anchorRect?: DOMRect,
   ) => void
-  onElementClick?: (blockId: string, elementId: string) => void
-  selectedElementId?: string | null
-  elements?: Record<string, any>
 
   headline?: string
   subheadline?: string
@@ -67,19 +73,9 @@ export interface TeamGridBlockProps {
   cardBorderColor?: string
 }
 
-/* Gradient presets keyed g1..g10 */
-const gradientPresets: string[] = [
-  "from-emerald-500 to-teal-600",
-  "from-sky-500 to-blue-600",
-  "from-amber-500 to-orange-600",
-  "from-rose-500 to-pink-600",
-  "from-violet-500 to-purple-600",
-  "from-cyan-500 to-teal-500",
-  "from-lime-500 to-green-600",
-  "from-fuchsia-500 to-pink-500",
-  "from-indigo-500 to-blue-500",
-  "from-red-500 to-rose-600",
-]
+/* ------------------------------------------------------------------ */
+/*  Helpers                                                            */
+/* ------------------------------------------------------------------ */
 
 function getInitials(name: string): string {
   return name
@@ -109,6 +105,20 @@ function getMediaUrl(
   if (typeof avatar === "string") return avatar
   return avatar.url || avatar.src || avatar.publicUrl || avatar.path || null
 }
+
+/* Gradient presets keyed g0..g9 */
+const gradientPresets: string[] = [
+  "from-emerald-500 to-teal-600",
+  "from-sky-500 to-blue-600",
+  "from-amber-500 to-orange-600",
+  "from-rose-500 to-pink-600",
+  "from-violet-500 to-purple-600",
+  "from-cyan-500 to-teal-500",
+  "from-lime-500 to-green-600",
+  "from-fuchsia-500 to-pink-500",
+  "from-indigo-500 to-blue-500",
+  "from-red-500 to-rose-600",
+]
 
 function resolveGradient(
   avatarGradient: TeamMember["avatarGradient"],
@@ -141,6 +151,31 @@ const socialLabelMap: Record<string, string> = {
   email: "E-Mail",
 }
 
+/* ------------------------------------------------------------------ */
+/*  Motion variants                                                    */
+/* ------------------------------------------------------------------ */
+
+const containerVariants = {
+  hidden: {},
+  visible: {
+    transition: { staggerChildren: 0.1 },
+  },
+}
+
+const cardVariants = {
+  hidden: { opacity: 0, y: 32, scale: 0.97 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: { duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] },
+  },
+}
+
+/* ------------------------------------------------------------------ */
+/*  Avatar component                                                   */
+/* ------------------------------------------------------------------ */
+
 function MemberAvatar({
   member,
   size = "lg",
@@ -148,7 +183,7 @@ function MemberAvatar({
   member: TeamMember
   size?: "sm" | "lg"
 }) {
-  const imageUrl = getMediaUrl(member.imageUrl)
+  const imageUrl = getMediaUrl(member.avatar)
   const initials = getInitials(member.name)
   const gradient = resolveGradient(member.avatarGradient, member.id)
 
@@ -164,7 +199,7 @@ function MemberAvatar({
         )}
       >
         <img
-          src={imageUrl}
+          src={imageUrl || "/placeholder.svg"}
           alt={member.name}
           className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
         />
@@ -185,6 +220,10 @@ function MemberAvatar({
     </div>
   )
 }
+
+/* ------------------------------------------------------------------ */
+/*  Bio with expand                                                    */
+/* ------------------------------------------------------------------ */
 
 function Bio({
   text,
@@ -233,6 +272,10 @@ function Bio({
   )
 }
 
+/* ------------------------------------------------------------------ */
+/*  Member card                                                        */
+/* ------------------------------------------------------------------ */
+
 function MemberCard({
   member,
   index,
@@ -246,6 +289,7 @@ function MemberCard({
   editable,
   blockId,
   onEditField,
+  prefersReducedMotion,
 }: {
   member: TeamMember
   index: number
@@ -259,6 +303,7 @@ function MemberCard({
   editable?: boolean
   blockId?: string
   onEditField?: TeamGridBlockProps["onEditField"]
+  prefersReducedMotion: boolean
 }) {
   const handleEdit = useCallback(
     (e: React.MouseEvent, fieldPath: string) => {
@@ -277,7 +322,8 @@ function MemberCard({
   const isCompact = layout === "compact"
 
   return (
-    <article
+    <motion.article
+      variants={prefersReducedMotion ? undefined : cardVariants}
       className={cn(
         "group relative flex overflow-hidden rounded-2xl border bg-card/60 backdrop-blur-sm",
         // Shadow & hover
@@ -365,7 +411,7 @@ function MemberCard({
 
         {/* Bio */}
         {member.bio && (
-          <div className={cn("mt-4 w-full min-w-0", !isCompact && "text-left")}>
+          <div className={cn("mt-4 w-full", !isCompact && "text-left")}>
             <Bio
               text={member.bio}
               color={bioColor}
@@ -425,9 +471,13 @@ function MemberCard({
           </div>
         )}
       </div>
-    </article>
+    </motion.article>
   )
 }
+
+/* ------------------------------------------------------------------ */
+/*  Main component                                                     */
+/* ------------------------------------------------------------------ */
 
 export function TeamGridBlock({
   blockId,
@@ -450,6 +500,8 @@ export function TeamGridBlock({
   cardBgColor,
   cardBorderColor,
 }: TeamGridBlockProps) {
+  const prefersReducedMotion = useReducedMotion() ?? false
+
   const handleInlineEdit = useCallback(
     (e: React.MouseEvent, fieldPath: string) => {
       if (!editable || !blockId || !onEditField) return
@@ -541,8 +593,12 @@ export function TeamGridBlock({
         )}
 
         {/* ---- Grid ---- */}
-        <div
+        <motion.div
           className={cn("grid gap-6 lg:gap-8", columnsMap[columns])}
+          variants={prefersReducedMotion ? undefined : containerVariants}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, amount: 0.15 }}
         >
           {members.map((member, index) => (
             <MemberCard
@@ -559,9 +615,10 @@ export function TeamGridBlock({
               editable={editable}
               blockId={blockId}
               onEditField={onEditField}
+              prefersReducedMotion={prefersReducedMotion}
             />
           ))}
-        </div>
+        </motion.div>
       </div>
     </section>
   )
