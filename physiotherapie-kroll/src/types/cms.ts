@@ -222,6 +222,8 @@ export interface HeroBlock extends BaseBlock {
   type: "hero"
   props: {
     section?: BlockSectionProps
+    // Layout height control
+    minHeightVh?: "50" | "60" | "70" | "80" | "90" | "100"
     // Legacy props (for backward compatibility)
     mood?: BrandKey
     headline?: string
@@ -457,6 +459,8 @@ export interface TeamBlock extends BaseBlock {
       imageUrl?: string | { url?: string; src?: string; publicUrl?: string; path?: string }
       imageAlt?: string
       avatarGradient?: "auto" | "g1" | "g2" | "g3" | "g4" | "g5" | "g6" | "g7" | "g8" | "g9" | "g10"
+      avatarFit?: "cover" | "contain"
+      avatarFocus?: "center" | "top" | "bottom" | "left" | "right"
       tags?: string[]
       socials?: Array<{
         type: "website" | "linkedin" | "instagram" | "email"
@@ -481,6 +485,12 @@ export interface TeamBlock extends BaseBlock {
     ctaColor?: string
     cardBgColor?: string
     cardBorderColor?: string
+    
+    // Inner Container Background (for Panel behind Header + Grid)
+    containerBackgroundMode?: "transparent" | "color" | "gradient"
+    containerBackgroundColor?: string
+    containerBackgroundGradientPreset?: "soft" | "aurora" | "ocean" | "sunset" | "hero" | "none"
+    containerBackgroundGradient?: string
   }
 }
 

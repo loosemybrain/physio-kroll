@@ -10,6 +10,9 @@ import {
   Instagram,
   Mail,
 } from "lucide-react"
+import { resolveSectionBg, getSectionWrapperClasses } from "@/lib/theme/resolveSectionBg"
+import { resolveContainerBg } from "@/lib/theme/resolveContainerBg"
+import type { BlockSectionProps } from "@/types/cms"
 
 interface TeamMember {
   id: string
@@ -19,6 +22,8 @@ interface TeamMember {
   imageUrl?: string | { url?: string; src?: string; publicUrl?: string; path?: string }
   imageAlt?: string
   avatarGradient?: "auto" | "g1" | "g2" | "g3" | "g4" | "g5" | "g6" | "g7" | "g8" | "g9" | "g10"
+  avatarFit?: "cover" | "contain"
+  avatarFocus?: "center" | "top" | "bottom" | "left" | "right"
   tags?: string[]
   socials?: Array<{
     type: "website" | "linkedin" | "instagram" | "email"
@@ -46,6 +51,8 @@ export interface TeamGridBlockProps {
   selectedElementId?: string | null
   elements?: Record<string, any>
 
+  section?: BlockSectionProps
+
   headline?: string
   subheadline?: string
   eyebrow?: string
@@ -65,6 +72,12 @@ export interface TeamGridBlockProps {
   ctaColor?: string
   cardBgColor?: string
   cardBorderColor?: string
+
+  // Inner Container Background (Panel behind Header + Grid)
+  containerBackgroundMode?: "transparent" | "color" | "gradient"
+  containerBackgroundColor?: string
+  containerBackgroundGradientPreset?: "soft" | "aurora" | "ocean" | "sunset" | "hero" | "none"
+  containerBackgroundGradient?: string
 }
 
 /* Gradient presets keyed g1..g10 */
@@ -121,6 +134,21 @@ function resolveGradient(
   return gradientPresets[Math.max(0, Math.min(idx, 9))]
 }
 
+function getAvatarFitClass(fit?: "cover" | "contain"): string {
+  return fit === "contain" ? "object-contain" : "object-cover"
+}
+
+function getAvatarFocusClass(focus?: "center" | "top" | "bottom" | "left" | "right"): string {
+  const focusMap: Record<string, string> = {
+    center: "object-center",
+    top: "object-top",
+    bottom: "object-bottom",
+    left: "object-left",
+    right: "object-right",
+  }
+  return focusMap[focus || "center"] || "object-center"
+}
+
 const columnsMap: Record<2 | 3 | 4, string> = {
   2: "grid-cols-1 md:grid-cols-2",
   3: "grid-cols-1 md:grid-cols-2 lg:grid-cols-3",
@@ -155,18 +183,29 @@ function MemberAvatar({
   const sizeClasses = size === "lg" ? "h-28 w-28" : "h-16 w-16"
   const textSize = size === "lg" ? "text-2xl" : "text-base"
 
+  // Avatar Fit und Focus (mit Defaults)
+  const avatarFit = member.avatarFit || "cover"
+  const avatarFocus = member.avatarFocus || "center"
+  const fitClass = getAvatarFitClass(avatarFit)
+  const focusClass = getAvatarFocusClass(avatarFocus)
+
   if (imageUrl) {
     return (
       <div
         className={cn(
           "relative shrink-0 overflow-hidden rounded-2xl ring-[3px] ring-border/40 ring-offset-2 ring-offset-card transition-all duration-500 group-hover:ring-primary/40",
+          avatarFit === "contain" && "bg-muted/30",
           sizeClasses,
         )}
       >
         <img
           src={imageUrl}
           alt={member.name}
-          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+          className={cn(
+            "h-full w-full transition-transform duration-500 group-hover:scale-110",
+            fitClass,
+            focusClass
+          )}
         />
       </div>
     )
@@ -443,6 +482,7 @@ export function TeamGridBlock({
   blockId,
   editable = false,
   onEditField,
+  section,
   headline,
   subheadline,
   eyebrow,
@@ -459,7 +499,18 @@ export function TeamGridBlock({
   ctaColor,
   cardBgColor,
   cardBorderColor,
+  containerBackgroundMode,
+  containerBackgroundColor,
+  containerBackgroundGradientPreset,
+  containerBackgroundGradient,
 }: TeamGridBlockProps) {
+  const sectionBg = resolveSectionBg(section)
+  const containerBg = resolveContainerBg({
+    mode: containerBackgroundMode,
+    color: containerBackgroundColor,
+    gradientPreset: containerBackgroundGradientPreset,
+    gradient: containerBackgroundGradient,
+  })
   const handleInlineEdit = useCallback(
     (e: React.MouseEvent, fieldPath: string) => {
       if (!editable || !blockId || !onEditField) return
@@ -477,15 +528,25 @@ export function TeamGridBlock({
   return (
     <section
       className={cn(
-        "relative overflow-hidden py-20 md:py-28",
-        background === "none" && "bg-background",
-        background === "muted" && "bg-muted/15",
-        background === "gradient" && "bg-gradient-to-br from-primary/5 via-background to-background",
+        "relative overflow-x-hidden py-20 md:py-28",
+        sectionBg.className
       )}
+      style={sectionBg.style}
       aria-label={headline || "Team"}
     >
-
-      <div className="relative mx-auto max-w-6xl px-4 sm:px-6">
+      {/* Inner Container Panel (Header + Grid) */}
+      <div
+        className={cn(
+          "relative mx-auto max-w-6xl rounded-3xl p-6 md:p-10",
+          containerBackgroundMode && containerBackgroundMode !== "transparent" && "border border-border/20",
+          containerBackgroundMode === "gradient" && "backdrop-blur-sm"
+        )}
+        style={{
+          ...containerBg.style,
+        }}
+      >
+        {/* Content Wrapper */}
+        <div className="relative mx-auto max-w-6xl px-4 sm:px-6">
         {/* ---- Header ---- */}
         {(eyebrow || headline || subheadline) && (
           <header className="mb-16 text-center">
@@ -559,6 +620,7 @@ export function TeamGridBlock({
             />
           ))}
         </div>
+      </div>
       </div>
     </section>
   )

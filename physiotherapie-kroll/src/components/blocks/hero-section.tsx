@@ -71,6 +71,7 @@ function normalizeStringArray(v: unknown): string[] {
 interface HeroSectionProps extends CommonBlockProps {
   headline?: string
   subheadline?: string
+  minHeightVh?: "50" | "60" | "70" | "80" | "90" | "100"
   ctaText?: string
   ctaHref?: string
   showMedia?: boolean
@@ -97,6 +98,7 @@ interface HeroSectionProps extends CommonBlockProps {
 export function HeroSection({
   headline,
   subheadline,
+  minHeightVh,
   ctaText,
   ctaHref = "#contact",
   showMedia = true,
@@ -126,6 +128,28 @@ export function HeroSection({
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  // Resolve minHeightVh from multiple sources with priority
+  const resolvedMinHeightVh = (() => {
+    // Priority: heroProps?.section?.minHeightVh > minHeightVh (top-level prop) > default 90
+    let value: string | number | undefined = 
+      (heroProps?.section as any)?.minHeightVh || 
+      (heroProps?.section as any)?.viewportHeight || 
+      minHeightVh
+
+    // Convert to number
+    if (typeof value === "string") {
+      value = parseInt(value, 10)
+    }
+
+    // Clamp to 50-100
+    if (typeof value === "number") {
+      return Math.max(50, Math.min(100, value))
+    }
+
+    // Default
+    return 90
+  })()
 
   const heroMountedRef = useRef(false)
 
@@ -302,9 +326,10 @@ export function HeroSection({
     <AnimatedBlock config={props.section?.animation}>
       <section
         className={cn(
-          "relative min-h-[90vh] w-full",
+          "relative w-full",
           !isCalm && "physio-konzept"
         )}
+        style={{ minHeight: `${resolvedMinHeightVh}vh` }}
         aria-labelledby="hero-headline"
       >
         {/* Background Layer */}
@@ -322,11 +347,14 @@ export function HeroSection({
           </div>
         )}
 
-      <div className="flex min-h-[90vh] flex-col items-center justify-center gap-8 py-16 lg:flex-row lg:gap-12 lg:py-24">
-        {/* Content */}
+      <div className={cn(
+        "relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16 md:py-20 lg:py-24 grid grid-cols-1 lg:grid-cols-[1fr_520px] gap-8 lg:gap-12 items-start lg:items-center",
+        "lg:min-h-auto"
+      )}>
+        {/* Content - Left Column */}
         <header
           className={cn(
-            "hero-content flex max-w-2xl flex-1 flex-col gap-6",
+            "hero-content flex flex-col gap-6",
             "pt-16 sm:pt-0", // Mobile padding to avoid Toggle collision
             isCalm ? "items-start text-left" : "items-center text-center lg:items-start lg:text-left",
           )}
@@ -555,9 +583,9 @@ export function HeroSection({
           )}
         </header>
 
-        {/* Media Section */}
+        {/* Media Section - Right Column */}
           {showMedia && (
-            <figure className={cn("hero-media relative flex-1", isCalm ? "max-w-lg" : "max-w-xl", mounted && "animate-scale-in animate-delay-400")}>
+            <figure className={cn("hero-media relative", mounted && "animate-scale-in animate-delay-400")}>
             {mediaType === "video" && mediaUrl ? (
               <div
                 className={cn(

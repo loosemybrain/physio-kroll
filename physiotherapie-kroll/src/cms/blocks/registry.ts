@@ -514,6 +514,7 @@ function getDefaultBrand(): BrandKey {
 
 const heroDefaults: HeroBlock["props"] = {
   mood: getDefaultBrand(),
+  minHeightVh: "60",
   // Legacy props (for backward compatibility)
   headline: "Ihre Gesundheit in besten Händen",
   subheadline: "Professionelle Physiotherapie mit ganzheitlichem Ansatz.",
@@ -672,6 +673,8 @@ export function createTeamMember(): TeamBlock["props"]["members"][0] {
     imageUrl: "/placeholder.svg",
     imageAlt: "Portrait",
     avatarGradient: "auto",
+    avatarFit: "cover",
+    avatarFocus: "center",
     tags: [],
     socials: [],
     ctaText: "Profil ansehen",
@@ -821,6 +824,21 @@ const teamDefaults: TeamBlock["props"] = {
   columns: 3,
   layout: "cards",
   background: "none",
+  section: {
+    layout: {
+      width: "contained",
+      paddingY: "lg",
+      paddingX: "md",
+    },
+    background: {
+      type: "none",
+    },
+  },
+  // Inner container background defaults (transparent by default)
+  containerBackgroundMode: "transparent",
+  containerBackgroundColor: undefined,
+  containerBackgroundGradientPreset: "soft",
+  containerBackgroundGradient: undefined,
   members: [
     { 
       id: generateUniqueId("member", 0), 
@@ -830,6 +848,8 @@ const teamDefaults: TeamBlock["props"] = {
       imageUrl: "/placeholder.svg", 
       imageAlt: "Max Mustermann",
       avatarGradient: "g1",
+      avatarFit: "cover",
+      avatarFocus: "center",
       tags: ["Physiotherapie", "Rehabilitation"],
       socials: [
         { type: "linkedin", href: "https://linkedin.com" },
@@ -846,6 +866,8 @@ const teamDefaults: TeamBlock["props"] = {
       imageUrl: "/placeholder.svg", 
       imageAlt: "Anna Schmidt",
       avatarGradient: "g2",
+      avatarFit: "cover",
+      avatarFocus: "center",
       tags: ["Sportmedizin", "Training"],
       socials: [
         { type: "linkedin", href: "https://linkedin.com" }
@@ -861,6 +883,8 @@ const teamDefaults: TeamBlock["props"] = {
       imageUrl: "/placeholder.svg", 
       imageAlt: "Thomas Weber",
       avatarGradient: "g3",
+      avatarFit: "cover",
+      avatarFocus: "center",
       tags: ["Rehabilitation", "Schmerztherapie"],
       socials: [
         { type: "website", href: "https://example.com" }
