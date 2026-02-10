@@ -21,7 +21,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { blockRegistry, getBlockDefinition, createServiceCard, createFaqItem, createTeamMember, createFeatureItem, createContactFormField, createTestimonialItem, createGalleryImage, createImageSlide, createOpeningHour, createContactInfoCard, createHeroAction } from "@/cms/blocks/registry"
 import { normalizeBlock } from "@/cms/blocks/normalize"
 import type { InspectorField, InspectorFieldType } from "@/cms/blocks/registry"
-import { getAvailableIconNames } from "@/components/icons/service-icons"
+import { getAvailableIconNames, getAvailableIconsWithLabels } from "@/components/icons/service-icons"
 import { arrayRemove, arrayMove, arrayInsert } from "@/lib/cms/arrayOps"
 import { duplicateBlock } from "@/cms/blocks/duplicateBlock"
 import { InlineFieldEditor } from "./InlineFieldEditor"
@@ -3786,10 +3786,7 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
                 key: "icon",
                 label: "Icon",
                 type: "select" as const,
-                options: getAvailableIconNames().map((iconName) => ({
-                  value: iconName,
-                  label: iconName,
-                })),
+                options: getAvailableIconsWithLabels(),
               },
               { key: "iconColor", label: "Icon Farbe (optional)", type: "color" as const, placeholder: "#111111" },
               { key: "iconBgColor", label: "Icon Hintergrund (optional)", type: "color" as const, placeholder: "#e5e7eb" },

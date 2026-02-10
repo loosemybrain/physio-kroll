@@ -29,6 +29,21 @@ import {
   Footprints,
   HeartPulse,
   Timer,
+  // Additional icons for more variety
+  Lightbulb,
+  Smile,
+  BarChart3,
+  Rocket,
+  CheckCircle,
+  AlertCircle,
+  Leaf,
+  Repeat,
+  Plus,
+  HelpCircle,
+  Gauge,
+  Accessibility,
+  Smartphone,
+  MapPin,
 } from "lucide-react"
 
 /**
@@ -46,29 +61,100 @@ export const serviceIconMap = {
   Stethoscope,
   Shield,
   HandHeart,
+  Accessibility,
 
   // Performance & Goals
   Zap,
   Target,
   Award,
   TrendingUp,
+  Rocket,
+  Gauge,
+  BarChart3,
 
   // Social & Time
   Users,
   Clock,
   Timer,
 
-  // Aesthetic/Mood
+  // Aesthetic/Mood & Well-being
   Star,
   Sparkles,
   Flame,
   Wind,
   Waves,
   Footprints,
+  Smile,
+  Leaf,
+
+  // Learning & Support
+  Lightbulb,
+  CheckCircle,
+  AlertCircle,
+  HelpCircle,
+  Plus,
+
+  // Digital & Location
+  Smartphone,
+  MapPin,
+  Repeat,
 
   // Navigation & Fallback
   ArrowRight,
   Circle,
+} as const
+
+/**
+ * Icon aliases for common typos and variations
+ * Maps incorrect/alternative names to canonical icon names
+ */
+export const serviceIconAliases: Record<string, ServiceIconName> = {
+  // Common typos
+  HeartRate: "HeartPulse",
+  Heartbeat: "HeartPulse",
+  Pulse: "HeartPulse",
+  Running: "Activity",
+  Exercise: "Dumbbell",
+  Training: "Dumbbell",
+  Fitness: "Dumbbell",
+  Doctor: "Stethoscope",
+  Medical: "Stethoscope",
+  Protection: "Shield",
+  Safety: "Shield",
+  Team: "Users",
+  People: "Users",
+  Group: "Users",
+  Time: "Clock",
+  Duration: "Timer",
+  Speed: "Zap",
+  Energy: "Zap",
+  Thunder: "Zap",
+  Trophy: "Award",
+  Achievement: "Award",
+  Success: "CheckCircle",
+  Done: "CheckCircle",
+  Completed: "CheckCircle",
+  Launch: "Rocket",
+  Growth: "TrendingUp",
+  Analytics: "BarChart3",
+  Chart: "BarChart3",
+  Idea: "Lightbulb",
+  Innovation: "Lightbulb",
+  Happy: "Smile",
+  Happiness: "Smile",
+  Nature: "Leaf",
+  Eco: "Leaf",
+  Green: "Leaf",
+  Help: "HelpCircle",
+  Info: "AlertCircle",
+  Warning: "AlertCircle",
+  Question: "HelpCircle",
+  Mobile: "Smartphone",
+  Phone: "Smartphone",
+  Location: "MapPin",
+  Place: "MapPin",
+  Refresh: "Repeat",
+  Reload: "Repeat",
 } as const
 
 /**
@@ -79,7 +165,8 @@ export type ServiceIconName = keyof typeof serviceIconMap
 
 /**
  * Get a lucide icon component by name
- * @param name - Name of the icon from serviceIconMap
+ * Supports both direct names and aliases (e.g., "HeartRate" → "HeartPulse")
+ * @param name - Name of the icon from serviceIconMap or alias
  * @returns Icon component, or Circle (fallback) if name not found
  */
 export function getServiceIcon(
@@ -89,11 +176,35 @@ export function getServiceIcon(
     return Circle
   }
 
-  const Icon =
-    serviceIconMap[name as ServiceIconName] ||
-    (serviceIconMap[name as keyof typeof serviceIconMap] as any)
+  // Try direct match first
+  let iconName = name as ServiceIconName
+  if (iconName in serviceIconMap) {
+    const Icon = serviceIconMap[iconName]
+    return Icon || Circle
+  }
 
-  return Icon || Circle
+  // Try alias match
+  const aliasedName = serviceIconAliases[name]
+  if (aliasedName && aliasedName in serviceIconMap) {
+    const Icon = serviceIconMap[aliasedName]
+    return Icon || Circle
+  }
+
+  // Fallback
+  return Circle
+}
+
+/**
+ * Humanize icon name for display
+ * Converts "HeartPulse" to "Heart Pulse", "Activity" stays "Activity"
+ * @param name - Icon name in camelCase
+ * @returns Humanized name with spaces
+ */
+export function humanizeIconName(name: string): string {
+  // Insert space before uppercase letters (but not at the start)
+  return name
+    .replace(/([a-z])([A-Z])/g, "$1 $2") // Add space before uppercase
+    .replace(/^(.)/, (letter) => letter.toUpperCase()) // Capitalize first letter
 }
 
 /**
@@ -102,6 +213,16 @@ export function getServiceIcon(
  */
 export function getAvailableIconNames(): ServiceIconName[] {
   return Object.keys(serviceIconMap) as ServiceIconName[]
+}
+
+/**
+ * Get list of icons with humanized labels for UI display
+ */
+export function getAvailableIconsWithLabels(): Array<{ value: ServiceIconName; label: string }> {
+  return getAvailableIconNames().map((iconName) => ({
+    value: iconName,
+    label: humanizeIconName(iconName),
+  }))
 }
 
 /**
