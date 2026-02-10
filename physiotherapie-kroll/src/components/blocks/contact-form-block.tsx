@@ -737,7 +737,6 @@ export function ContactFormBlock({
                           checked={consentChecked}
                           onCheckedChange={(checked) => setValue("consent", checked === true)}
                           aria-invalid={!!errors.consent}
-                          className={cn(errors.consent && "border-destructive")}
                         />
                         <Label
                           data-cms-field="consentLabel"

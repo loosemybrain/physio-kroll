@@ -433,6 +433,54 @@ html.cursor-down .cursor-dot {
   }
 }
 
+/* ===== CONTROL SURFACE PATTERN (Form Controls: Checkbox, Radio, Switch) ===== */
+@layer components {
+  /**
+   * Control Surface: Sustainable, contrast-stable styling for small form controls
+   * 
+   * Pattern:
+   * - Unchecked: background = surface (neutral), border = border (visible)
+   * - Checked: background = primary, border = primary, text = primary-foreground
+   * - Focus: subtle ring, priority when visible
+   * - Disabled: opacity preserved, cursor not-allowed
+   * 
+   * Usage:
+   * - Apply to checkbox/radio/switch root or track
+   * - Preserves data-state attributes for Radix primitive styling
+   */
+
+  /* Base control surface: neutral, visible border */
+  .control-surface {
+    @apply bg-background border border-border;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+  }
+
+  /* Checked state: primary colors */
+  .control-surface-checked {
+    @apply bg-primary border-primary;
+  }
+
+  /* Focus ring: subtle but visible (ring-primary/20 allows theme flexibility) */
+  .control-surface-focus {
+    @apply focus-visible:ring-[3px] focus-visible:ring-primary/20;
+  }
+
+  /* Disabled state: reduced opacity, clear cursor */
+  .control-surface-disabled {
+    @apply disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  /* Subtle variant: lighter border, works well with secondary surfaces */
+  .control-surface-subtle {
+    @apply bg-background border border-muted;
+  }
+
+  /* Error/invalid state: destructive red */
+  .control-surface-invalid {
+    @apply aria-invalid:border-destructive aria-invalid:bg-destructive/5 aria-invalid:ring-destructive/20;
+  }
+}
+
 /* ===== FONT PRESETS - CSS Switching (GDPR-compliant) ===== */
 
 /* LOCAL FONT PRESETS */
