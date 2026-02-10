@@ -21,6 +21,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { blockRegistry, getBlockDefinition, createServiceCard, createFaqItem, createTeamMember, createFeatureItem, createContactFormField, createTestimonialItem, createGalleryImage, createImageSlide, createOpeningHour, createContactInfoCard, createHeroAction } from "@/cms/blocks/registry"
 import { normalizeBlock } from "@/cms/blocks/normalize"
 import type { InspectorField, InspectorFieldType } from "@/cms/blocks/registry"
+import { getAvailableIconNames } from "@/components/icons/service-icons"
 import { arrayRemove, arrayMove, arrayInsert } from "@/lib/cms/arrayOps"
 import { duplicateBlock } from "@/cms/blocks/duplicateBlock"
 import { InlineFieldEditor } from "./InlineFieldEditor"
@@ -3785,30 +3786,10 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
                 key: "icon",
                 label: "Icon",
                 type: "select" as const,
-                options: [
-                  { value: "Activity", label: "Activity" },
-                  { value: "Heart", label: "Heart" },
-                  { value: "Brain", label: "Brain" },
-                  { value: "Bone", label: "Bone" },
-                  { value: "Dumbbell", label: "Dumbbell" },
-                  { value: "Stethoscope", label: "Stethoscope" },
-                  { value: "Zap", label: "Zap" },
-                  { value: "Shield", label: "Shield" },
-                  { value: "Users", label: "Users" },
-                  { value: "Clock", label: "Clock" },
-                  { value: "Star", label: "Star" },
-                  { value: "Award", label: "Award" },
-                  { value: "Target", label: "Target" },
-                  { value: "TrendingUp", label: "TrendingUp" },
-                  { value: "HandHeart", label: "HandHeart" },
-                  { value: "Sparkles", label: "Sparkles" },
-                  { value: "Flame", label: "Flame" },
-                  { value: "Wind", label: "Wind" },
-                  { value: "Waves", label: "Waves" },
-                  { value: "Footprints", label: "Footprints" },
-                  { value: "Circle", label: "Circle" },
-                  { value: "HeartPulse", label: "HeartPulse" },
-                ],
+                options: getAvailableIconNames().map((iconName) => ({
+                  value: iconName,
+                  label: iconName,
+                })),
               },
               { key: "iconColor", label: "Icon Farbe (optional)", type: "color" as const, placeholder: "#111111" },
               { key: "iconBgColor", label: "Icon Hintergrund (optional)", type: "color" as const, placeholder: "#e5e7eb" },
