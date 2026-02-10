@@ -1289,45 +1289,6 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
                       )
 
                     case "select":
-                      // Handle icon select for servicesGrid cards
-                      if (itemField.key === "icon" && block.type === "servicesGrid") {
-                        const iconOptions = [
-                          { value: "HeartPulse", label: "Herz" },
-                          { value: "Dumbbell", label: "Hantel" },
-                          { value: "Activity", label: "Aktivität" },
-                          { value: "Users", label: "Nutzer" },
-                          { value: "Timer", label: "Timer" },
-                          { value: "Sparkles", label: "Stern" },
-                          { value: "Stethoscope", label: "Stethoskop" },
-                          { value: "Zap", label: "Blitz" },
-                        ]
-                        return (
-                          <div key={itemField.key} className="space-y-1.5">
-                            <Label htmlFor={itemFieldId} className="text-xs">
-                              {itemField.label}
-                            </Label>
-                            <Select
-                              value={String(itemFieldValue)}
-                              onValueChange={(v: string) => handleItemFieldChange(v)}
-                            >
-                              <SelectTrigger
-                                id={itemFieldId}
-                                className={cn("h-8 text-sm", isActive && "ring-2 ring-primary")}
-                              >
-                                <SelectValue placeholder="Icon wählen" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {iconOptions.map((opt) => (
-                                  <SelectItem key={opt.value} value={opt.value}>
-                                    {opt.label}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        )
-                      }
-
                       // Handle contact form field type select
                       if (itemField.key === "type" && block.type === "contactForm") {
                         const typeOptions = [
