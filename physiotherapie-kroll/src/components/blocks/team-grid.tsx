@@ -12,7 +12,8 @@ import {
 } from "lucide-react"
 import { resolveSectionBg, getSectionWrapperClasses } from "@/lib/theme/resolveSectionBg"
 import { resolveContainerBg } from "@/lib/theme/resolveContainerBg"
-import type { BlockSectionProps } from "@/types/cms"
+import { resolveBoxShadow } from "@/lib/shadow/resolveBoxShadow"
+import type { BlockSectionProps, ElementShadow } from "@/types/cms"
 
 interface TeamMember {
   id: string
@@ -78,6 +79,9 @@ export interface TeamGridBlockProps {
   containerBackgroundColor?: string
   containerBackgroundGradientPreset?: "soft" | "aurora" | "ocean" | "sunset" | "hero" | "none"
   containerBackgroundGradient?: string
+  
+  // Container Shadow
+  containerShadow?: ElementShadow
 }
 
 /* Gradient presets keyed g1..g10 */
@@ -503,6 +507,7 @@ export function TeamGridBlock({
   containerBackgroundColor,
   containerBackgroundGradientPreset,
   containerBackgroundGradient,
+  containerShadow,
 }: TeamGridBlockProps) {
   const sectionBg = resolveSectionBg(section)
   const containerBg = resolveContainerBg({
@@ -511,6 +516,7 @@ export function TeamGridBlock({
     gradientPreset: containerBackgroundGradientPreset,
     gradient: containerBackgroundGradient,
   })
+  const containerShadowCss = resolveBoxShadow(containerShadow)
   const handleInlineEdit = useCallback(
     (e: React.MouseEvent, fieldPath: string) => {
       if (!editable || !blockId || !onEditField) return
@@ -543,6 +549,7 @@ export function TeamGridBlock({
         )}
         style={{
           ...containerBg.style,
+          ...(containerShadowCss ? { boxShadow: containerShadowCss } : {}),
         }}
       >
         {/* Content Wrapper */}

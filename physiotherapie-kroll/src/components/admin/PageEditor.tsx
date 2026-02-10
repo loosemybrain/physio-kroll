@@ -4237,6 +4237,24 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
                   </Select>
                 </div>
               )}
+
+              {/* Container Shadow Inspector */}
+              <div className="mt-3 pt-3 border-t border-border/50">
+                <Label className="text-xs font-semibold">Shadow</Label>
+                <ShadowInspector
+                  config={(selectedBlock.props as any)?.containerShadow}
+                  onChange={(shadowConfig) => {
+                    if (!selectedBlock) return
+                    const currentProps = selectedBlock.props as Record<string, unknown>
+                    const updatedProps = {
+                      ...currentProps,
+                      containerShadow: shadowConfig,
+                    } as CMSBlock["props"]
+                    updateSelectedProps(updatedProps)
+                  }}
+                  onClose={() => {}}
+                />
+              </div>
             </div>
 
             {/* Columns */}

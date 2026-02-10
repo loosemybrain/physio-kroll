@@ -490,6 +490,9 @@ export interface TeamBlock extends BaseBlock {
     containerBackgroundColor?: string
     containerBackgroundGradientPreset?: "soft" | "aurora" | "ocean" | "sunset" | "hero" | "none"
     containerBackgroundGradient?: string
+    
+    // Container Shadow
+    containerShadow?: ElementShadow
   }
 }
 
