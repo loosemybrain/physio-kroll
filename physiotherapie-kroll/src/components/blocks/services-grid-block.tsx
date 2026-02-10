@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils"
 import { CardSurface } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { ArrowRight } from "lucide-react"
-import * as LucideIcons from "lucide-react"
+import { getServiceIcon } from "@/components/icons/service-icons"
 
 interface ServicesGridBlockProps {
   section?: unknown
@@ -57,11 +57,6 @@ const backgroundMap = {
   none: "bg-background",
   muted: "bg-muted/10",
   gradient: "bg-gradient-to-br from-primary/5 via-background to-background",
-}
-
-function getIconComponent(iconName: string) {
-  const IconComponent = (LucideIcons as unknown as Record<string, React.ComponentType<any>>)[iconName]
-  return IconComponent || LucideIcons.Circle
 }
 
 export function ServicesGridBlock({
@@ -137,7 +132,7 @@ export function ServicesGridBlock({
         <div className={cn("grid gap-6 lg:gap-8", columnsMap[columns])}>
           {cards.map((card, index) => {
             // 1) Icon Badge Defaults
-            const IconComponent = getIconComponent(card.icon)
+            const IconComponent = getServiceIcon(card.icon)
             const resolvedIconBg = card.iconBgColor ?? iconBgColor
             const resolvedIconColor = card.iconColor ?? iconColor
             const elementId = `card:${index}`

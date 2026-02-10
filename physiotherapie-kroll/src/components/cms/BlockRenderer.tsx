@@ -1,6 +1,7 @@
 "use client"
 
 import { cn } from "@/lib/utils"
+import dynamic from "next/dynamic"
 import type { CMSBlock } from "@/types/cms"
 import { SectionWrapper } from "@/components/cms/SectionWrapper"
 import { HeroSection } from "@/components/blocks/hero-section"
@@ -10,7 +11,6 @@ import { FeatureGridBlock } from "@/components/blocks/feature-grid-block"
 import { CtaBlock } from "@/components/blocks/cta-block"
 import { SectionBlock } from "@/components/blocks/section-block"
 import { ServicesGridBlock } from "@/components/blocks/services-grid-block"
-import { FaqAccordion } from "@/components/blocks/faq-accordion"
 import { TeamGridBlock } from "@/components/blocks/team-grid"
 import { ContactFormBlock } from "@/components/blocks/contact-form-block"
 import { TestimonialsBlock } from "@/components/blocks/testimonials-block"
@@ -21,6 +21,8 @@ import { TestimonialSliderBlock } from "@/components/blocks/testimonial-slider"
 import type { BlockSectionProps, HeroBlock } from "@/types/cms"
 import { blockRegistry } from "@/cms/blocks/registry"
 import { getTypographyClassName, type TypographySettings } from "@/lib/typography"
+
+const FaqAccordion = dynamic(() => import("@/components/blocks/faq-accordion").then(mod => ({ default: mod.FaqAccordion })), { ssr: false })
 
 interface BlockRendererProps {
   block: CMSBlock

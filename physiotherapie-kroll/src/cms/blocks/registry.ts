@@ -4,6 +4,7 @@ import type { BrandKey } from "@/components/brand/brandAssets"
 import { uuid } from "@/lib/cms/arrayOps"
 import { typographySchema, elementTypographySchema } from "@/lib/typography"
 import type { EditableElementDef } from "@/lib/editableElements"
+import { getAvailableIconNames } from "@/components/icons/service-icons"
 
 // ---- TestimonialSlider Extension Types (temporary, until in types/cms) ----
 export type TestimonialSliderBlock = {
@@ -641,13 +642,24 @@ function generateUniqueId(prefix: string, index: number): string {
 }
 
 /**
+ * Generate inspector field options for service icons
+ * Used in per-item icon selection for ServicesGrid cards
+ */
+function getServiceIconOptions(): Array<{ value: string; label: string }> {
+  return getAvailableIconNames().map((iconName) => ({
+    value: iconName,
+    label: iconName, // Display as-is for now; could add humanization later
+  }))
+}
+
+/**
  * Factory functions for creating new array items
  */
 
 export function createServiceCard(): ServicesGridBlock["props"]["cards"][0] {
   return {
     id: uuid(),
-    icon: "HeartPulse",
+    icon: "Heart",
     title: "Neuer Service",
     text: "Beschreibung hier eingeben...",
     ctaText: "Mehr erfahren",
@@ -799,7 +811,7 @@ const servicesGridDefaults: ServicesGridBlock["props"] = {
     { id: generateUniqueId("card", 1), icon: "Dumbbell", title: "Training", text: "Gezieltes Kraft- und Ausdauertraining für optimale Ergebnisse.", ctaText: "Mehr erfahren", ctaHref: "/training" },
     { id: generateUniqueId("card", 2), icon: "Activity", title: "Rehabilitation", text: "Professionelle Reha nach Verletzungen und Operationen.", ctaText: "Mehr erfahren", ctaHref: "/rehabilitation" },
     { id: generateUniqueId("card", 3), icon: "Users", title: "Gruppenkurse", text: "Gemeinsam trainieren und motiviert bleiben in der Gruppe.", ctaText: "Mehr erfahren", ctaHref: "/kurse" },
-    { id: generateUniqueId("card", 4), icon: "Timer", title: "Prävention", text: "Vorbeugende Maßnahmen für langfristige Gesundheit.", ctaText: "Mehr erfahren", ctaHref: "/praevention" },
+    { id: generateUniqueId("card", 4), icon: "Clock", title: "Prävention", text: "Vorbeugende Maßnahmen für langfristige Gesundheit.", ctaText: "Mehr erfahren", ctaHref: "/praevention" },
     { id: generateUniqueId("card", 5), icon: "Sparkles", title: "Wellness", text: "Entspannung und Regeneration für Körper und Geist.", ctaText: "Mehr erfahren", ctaHref: "/wellness" },
   ],
 }
