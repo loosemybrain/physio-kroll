@@ -14,6 +14,8 @@ import { getThemePresetInlineVars } from "@/lib/theme/themePresetCss.server"
 import type { BrandKey } from "@/components/brand/brandAssets"
 import { headers } from "next/headers"
 import CustomCursor from "@/components/ui/customCursor"
+import { getSansFontPreset } from "@/lib/fonts/storage"
+import { GOOGLE_FONTS_VARIABLES_CLASSNAMES } from "@/lib/fonts/presets"
 
 import "../styles/globals.css";
 
@@ -54,6 +56,9 @@ export default async function RootLayout({
           vars: {} as Record<string, string>,
         }
 
+  // Fetch current font preset (SSR-safe, server-side only)
+  const fontPreset = await getSansFontPreset()
+
   // Only apply style if there are actual tokens (prevents empty style attribute from affecting admin)
   const hasTokens = Object.keys(preset.vars).length > 0
   const htmlStyle = hasTokens ? (preset.vars as unknown as React.CSSProperties) : undefined
@@ -62,7 +67,7 @@ export default async function RootLayout({
     <html
       lang="de"
       suppressHydrationWarning
-      className={brand === "physio-konzept" ? "physio-konzept" : undefined}
+      className={`${brand === "physio-konzept" ? "physio-konzept" : ""} ${GOOGLE_FONTS_VARIABLES_CLASSNAMES} font-${fontPreset}`.trim()}
       data-brand={brand}
       style={htmlStyle}
     >

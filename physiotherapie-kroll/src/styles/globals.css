@@ -432,3 +432,59 @@ html.cursor-down .cursor-dot {
     transition: opacity 120ms ease;
   }
 }
+
+/* ===== FONT PRESETS - CSS Switching (GDPR-compliant) ===== */
+
+/* LOCAL FONT PRESETS */
+
+/* Inter Local - Modern, clean sans-serif (GDPR-safe) */
+.font-inter-local {
+  --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, Arial, "Noto Sans", "Liberation Sans", sans-serif;
+}
+
+/* Playfair Display Local - Elegant serif (GDPR-safe) */
+.font-playfair-local {
+  --font-sans: "Playfair Display Variable", ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+}
+
+/* GOOGLE FONT PRESETS (build-time imported, no external requests) */
+
+/* Lora - Elegant serif, humanist style */
+.font-lora {
+  --font-sans: var(--font-lora), ui-serif, Georgia, Cambria, Times, serif;
+}
+
+/* Merriweather - Traditional serif, high legibility */
+.font-merriweather {
+  --font-sans: var(--font-merriweather), ui-serif, Georgia, Cambria, Times, serif;
+}
+
+/* Crimson Text - Classic serif, book-like feel */
+.font-crimson-text {
+  --font-sans: var(--font-crimson-text), ui-serif, Georgia, Cambria, Times, serif;
+}
+
+/* EB Garamond - Sophisticated serif, traditional typography */
+.font-eb-garamond {
+  --font-sans: var(--font-eb-garamond), ui-serif, Georgia, Cambria, Times, serif;
+}
+
+/* Playfair Display Google - Display serif, elegant and bold */
+.font-playfair-google {
+  --font-sans: var(--font-playfair-google), ui-serif, Georgia, Cambria, Times, serif;
+}
+
+/* Roboto - Modern sans-serif, versatile */
+.font-roboto {
+  --font-sans: var(--font-roboto), system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+}
+
+/* Open Sans - Friendly sans-serif, highly readable */
+.font-open-sans {
+  --font-sans: var(--font-open-sans), system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+}
+
+/* Quicksand - Soft sans-serif, modern and playful */
+.font-quicksand {
+  --font-sans: var(--font-quicksand), system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+}
