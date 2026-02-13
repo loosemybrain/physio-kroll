@@ -14,7 +14,7 @@ import { getThemePresetInlineVars } from "@/lib/theme/themePresetCss.server"
 import type { BrandKey } from "@/components/brand/brandAssets"
 import { headers } from "next/headers"
 import CustomCursor from "@/components/ui/customCursor"
-import { getSansFontPreset } from "@/lib/fonts/storage"
+import { getSansFontPreset } from "@/lib/fonts/storage.server"
 import { GOOGLE_FONTS_VARIABLES_CLASSNAMES } from "@/lib/fonts/presets"
 
 import "../styles/globals.css";

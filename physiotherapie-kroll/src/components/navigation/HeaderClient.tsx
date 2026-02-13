@@ -189,34 +189,43 @@ export function HeaderClient({ brand, navConfig }: HeaderClientProps) {
     <>
       <header
         className={cn(
-          "sticky top-0 z-50 w-full transition-colors duration-200",
+          "sticky top-0 pt-1 pb-1 z-50 w-full transition-colors duration-200",
           theme.wrapper,
           theme.shadow
         )}
       >
-        <div className="container mx-auto flex h-16 items-center justify-between px-4">
+        <div className="container mx-auto flex h-16 min-h-16 items-center justify-between px-4 gap-0 shrink-0">
           {/* Logo */}
-          <Link href="/" className={cn("flex items-center gap-2", logoClasses.width)}>
-            {logoUrl ? (
-              <div className={cn("relative", logoClasses.height, logoClasses.maxWidth)}>
+          <Link href="/" className={cn("flex items-center justify-center shrink-0", logoClasses.width, "h-16 min-h-16")}>
+            <div
+              className={cn(
+                "relative flex items-center justify-start shrink-0",
+                "h-16 w-auto"  // Exakte Header-Höhe
+              )}
+            >
+              {logoUrl ? (
                 <Image
                   src={logoUrl}
                   alt={logoAlt || `${brand} Logo`}
                   width={logoDimensions.width}
                   height={logoDimensions.height}
                   className={cn(
-                    "h-full w-auto",
-                    logoFit === "contain" ? "object-contain" : "object-cover"
+                    "h-full w-auto object-contain shrink-0",
+                    logoClasses.maxWidth
                   )}
                   priority
                   sizes="(max-width: 768px) 140px, 180px"
                 />
-              </div>
-            ) : (
-              <span className={cn("font-semibold", logoClasses.height, "flex items-center")}>
-                {brand === "physio-konzept" ? "Physio-Konzept" : "Physiotherapie"}
-              </span>
-            )}
+              ) : (
+                <div className="h-full w-full flex items-center justify-start shrink-0">
+                  <span className="font-semibold text-sm truncate shrink-0">
+                    {brand === "physio-konzept"
+                      ? "Physio-Konzept"
+                      : "Physiotherapie"}
+                  </span>
+                </div>
+              )}
+            </div>
           </Link>
 
           {/* Desktop Navigation */}

@@ -30,7 +30,7 @@ export function AdminLayout({ children, user }: AdminLayoutProps) {
       <AdminSidebar />
       <div className="flex flex-1 flex-col min-h-0 overflow-hidden">
         <AdminTopbar user={user} />
-        <main className="flex-1 overflow-hidden min-h-0">{isMounted && children}</main>
+        <main className="flex-1 overflow-y-auto overflow-x-hidden min-h-0">{isMounted && children}</main>
       </div>
     </div>
   )

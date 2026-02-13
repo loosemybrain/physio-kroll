@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useMemo } from "react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { HeroDecoration } from "@/components/decorations/HeroDecoration"
@@ -18,7 +18,24 @@ import { useElementShadowStyle } from "@/lib/shadow"
 import { resolveDynamicElementId } from "@/lib/editableElements"
 import { BrandToggle } from "@/components/brand/BrandToggle"
 
+/**
+ * Modul-weites Animation-Guard-Set
+ * 
+ * Grund: React 18 StrictMode führt absichtlich zu Unmount/Remount während Development.
+ * useRef würde bei jedem Remount neu erstellt (Set wird leer), deshalb müssen wir
+ * das Guard-Set auf Modul-Scope speichern. Das überlebt Remounts und verhindert,
+ * dass Enter-Animationen mehrfach abspielen.
+ * 
+ * Ein Key wird hinzugefügt, wenn die Animation das erste Mal läuft:
+ * `${pathname}::${blockId}`
+ * 
+ * Das Set lebt für die gesamte Modul-Lebensdauer (bis Reload/Neustart).
+ */
+const heroAnimatedOnce = new Set<string>()
+
+
 // No instrumentation in production
+
 
 function resolveMediaUrl(mediaValue?: MediaValue, fallbackUrl?: string): string | undefined {
   if (!mediaValue) return fallbackUrl
@@ -121,18 +138,23 @@ export function HeroSection({
   brandToggleValue,
   ...restProps
 }: HeroSectionProps) {
-  // Hydration-safe mounted flag for micro-enter animations
-  const [mounted, setMounted] = useState(false)
-  useEffect(() => {
-    setMounted(true)
-  }, [])
-
-  const heroMountedRef = useRef(false)
-
   const [ctaHovered, setCtaHovered] = useState(false)
   const [playHovered, setPlayHovered] = useState(false)
   const [actionHoveredStates, setActionHoveredStates] = useState<Record<string, boolean>>({})
   const pathname = usePathname()
+
+  const animationKey = `${pathname || "unknown"}::${blockId || "no-block"}`
+
+  // Decide once per mount; never flip during this mount (prevents abrupt stop)
+  const shouldAnimateInRef = useRef<boolean | null>(null)
+  if (shouldAnimateInRef.current === null) {
+    shouldAnimateInRef.current = !heroAnimatedOnce.has(animationKey)
+  }
+  const shouldAnimateIn = shouldAnimateInRef.current
+
+  useEffect(() => {
+    if (shouldAnimateIn) heroAnimatedOnce.add(animationKey)
+  }, [shouldAnimateIn, animationKey])
 
   // Element shadows
   const heroHeadlineShadow = useElementShadowStyle({
@@ -350,9 +372,8 @@ export function HeroSection({
             isSelected={selectedElementId === "badge"}
             as="div"
             className={cn(
-              "hero-badge inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium",
-              "bg-primary/10 text-primary cursor-pointer",
-              mounted && "animate-fade-in-up"
+              "hero-badge inline-flex items-center gap-2",
+              "bg-primary/10 text-primary cursor-pointer"
             )}
             data-element-id="badge"
             style={{
@@ -362,41 +383,43 @@ export function HeroSection({
                 : {}),
             }}
           >
-            {isCalm ? (
-              <>
-                <Heart className="h-4 w-4" aria-hidden="true" />
-                <span
-                  onClick={(e) => handleInlineEdit(e, "badgeText", "badge")}
-                  className={cn(
-                    editable && blockId && onEditField && "cursor-pointer rounded px-1 transition-colors hover:bg-primary/20"
-                  )}
-                  style={
-                    resolvedBadgeColor
-                      ? ({ color: resolvedBadgeColor } as React.CSSProperties)
-                      : undefined
-                  }
-                >
-                  {resolvedBadgeText}
-                </span>
-              </>
-            ) : (
-              <>
-                <Zap className="h-4 w-4" aria-hidden="true" />
-                <span
-                  onClick={(e) => handleInlineEdit(e, "badgeText", "badge")}
-                  className={cn(
-                    editable && blockId && onEditField && "cursor-pointer rounded px-1 transition-colors hover:bg-primary/20"
-                  )}
-                  style={
-                    resolvedBadgeColor
-                      ? ({ color: resolvedBadgeColor } as React.CSSProperties)
-                      : undefined
-                  }
-                >
-                  {resolvedBadgeText}
-                </span>
-              </>
-            )}
+            <div className={cn("inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium", shouldAnimateIn && "animate-fade-in-up")}>
+              {isCalm ? (
+                <>
+                  <Heart className="h-4 w-4" aria-hidden="true" />
+                  <span
+                    onClick={(e) => handleInlineEdit(e, "badgeText", "badge")}
+                    className={cn(
+                      editable && blockId && onEditField && "cursor-pointer rounded px-1 transition-colors hover:bg-primary/20"
+                    )}
+                    style={
+                      resolvedBadgeColor
+                        ? ({ color: resolvedBadgeColor } as React.CSSProperties)
+                        : undefined
+                    }
+                  >
+                    {resolvedBadgeText}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <Zap className="h-4 w-4" aria-hidden="true" />
+                  <span
+                    onClick={(e) => handleInlineEdit(e, "badgeText", "badge")}
+                    className={cn(
+                      editable && blockId && onEditField && "cursor-pointer rounded px-1 transition-colors hover:bg-primary/20"
+                    )}
+                    style={
+                      resolvedBadgeColor
+                        ? ({ color: resolvedBadgeColor } as React.CSSProperties)
+                        : undefined
+                    }
+                  >
+                    {resolvedBadgeText}
+                  </span>
+                </>
+              )}
+            </div>
           </Editable>
 
           {/* Headline */}
@@ -412,8 +435,7 @@ export function HeroSection({
               "hero-headline text-balance text-foreground",
               isCalm
                 ? "font-serif text-4xl font-semibold tracking-tight md:text-5xl lg:text-6xl"
-                : "font-sans text-4xl font-bold uppercase tracking-tight md:text-5xl lg:text-7xl",
-              mounted && "animate-fade-in-up animate-delay-200"
+                : "font-sans text-4xl font-bold uppercase tracking-tight md:text-5xl lg:text-7xl"
             )}
             style={{
               ...heroHeadlineShadow,
@@ -421,7 +443,7 @@ export function HeroSection({
             }}
             data-element-id="headline"
           >
-            <span onClick={(e) => handleInlineEdit(e, "headline", "headline")}>
+            <span className={shouldAnimateIn ? "animate-fade-in-up animate-delay-200 inline-block" : "inline-block"} onClick={(e) => handleInlineEdit(e, "headline", "headline")}>
               {resolvedHeadline}
             </span>
           </Editable>
@@ -437,8 +459,7 @@ export function HeroSection({
             as="p"
             className={cn(
               "hero-subheadline max-w-xl text-pretty leading-relaxed",
-              "text-lg md:text-xl text-muted-foreground",
-              mounted && "animate-fade-in-up animate-delay-300"
+              "text-lg md:text-xl text-muted-foreground"
             )}
             style={{
               ...heroSubheadlineShadow,
@@ -446,13 +467,13 @@ export function HeroSection({
             }}
             data-element-id="subheadline"
           >
-            <span onClick={(e) => handleInlineEdit(e, "subheadline", "subheadline")}>
+            <span className={shouldAnimateIn ? "animate-fade-in-up animate-delay-300 inline-block" : "inline-block"} onClick={(e) => handleInlineEdit(e, "subheadline", "subheadline")}>
               {resolvedSubheadline}
             </span>
           </Editable>
 
           {/* CTA Actions */}
-          <div className={cn("hero-cta mt-4 flex flex-wrap items-center gap-4", mounted && "animate-fade-in-up animate-delay-400")}>
+          <div className={cn("hero-cta mt-4 flex flex-wrap items-center gap-4", shouldAnimateIn && "animate-fade-in-up animate-delay-400")}>
             {resolvedActions.map((action, index) => {
               const isVideo = action.action === "video"
               const elementId = `action-${action.id}`
@@ -545,7 +566,7 @@ export function HeroSection({
           {/* Trust indicators for calm mood */}
           {isCalm && resolvedTrustItems.length > 0 && (
             <div 
-              className={cn("hero-trust mt-6 flex flex-wrap items-center gap-6 text-sm text-muted-foreground", mounted && "animate-fade-in-up animate-delay-500")}
+              className={cn("hero-trust mt-6 flex flex-wrap items-center gap-6 text-sm text-muted-foreground", shouldAnimateIn && "animate-fade-in-up animate-delay-500")}
               data-element-id="trust"
               style={heroTrustShadow}
               onClick={() => onElementClick?.(blockId || "", "trust")}
@@ -567,7 +588,7 @@ export function HeroSection({
 
         {/* Media Section */}
           {showMedia && (
-            <figure className={cn("hero-media relative flex-1", isCalm ? "max-w-lg" : "max-w-xl", mounted && "animate-scale-in animate-delay-400")}>
+            <figure className={cn("hero-media relative flex-1", isCalm ? "max-w-lg" : "max-w-xl", shouldAnimateIn && "animate-scale-in animate-delay-400")}>
             {mediaType === "video" && mediaUrl ? (
               <div
                 className={cn(
@@ -610,7 +631,7 @@ export function HeroSection({
 
                   {/* Floating card for PhysioKonzept */}
                   {!isCalm && (resolvedFloatingTitle?.trim() || resolvedFloatingValue?.trim()) && (
-                    <div className={cn("absolute bottom-6 left-6 right-6 rounded-xl bg-card/90 p-4 backdrop-blur-sm animate-slide-in-left", mounted && "animate-delay-500")}>
+                    <div className={cn("absolute bottom-6 left-6 right-6 rounded-xl bg-card/90 p-4 backdrop-blur-sm animate-slide-in-left", shouldAnimateIn && "animate-delay-500")}>
                       {resolvedFloatingTitle?.trim() && (
                         <span
                           data-element-id="floatingTitle"
@@ -772,7 +793,7 @@ export function HeroSection({
 
                   {/* Floating card for PhysioKonzept */}
                   {!isCalm && (resolvedFloatingTitle?.trim() || resolvedFloatingValue?.trim()) && (
-                    <div className={cn("absolute bottom-6 left-6 right-6 rounded-xl bg-card/90 p-4 backdrop-blur-sm animate-slide-in-left", mounted && "animate-delay-500")}>
+                    <div className={cn("absolute bottom-6 left-6 right-6 rounded-xl bg-card/90 p-4 backdrop-blur-sm animate-slide-in-left", shouldAnimateIn && "animate-delay-500")}>
                       {resolvedFloatingTitle?.trim() && (
                         <p
                           className={cn(
@@ -817,9 +838,10 @@ export function HeroSection({
 
             {/* Decorative floating element for calm mood */}
             {isCalm && (resolvedFloatingTitle?.trim() || resolvedFloatingValue?.trim()) && (
-              <div className={cn("absolute -bottom-4 -right-4 rounded-2xl bg-card p-6 shadow-lg md:-bottom-6 md:-right-6 animate-float", mounted && "animate-delay-500")}>
+              <div className={cn("absolute -bottom-4 -right-4 rounded-2xl bg-card p-6 shadow-lg md:-bottom-6 md:-right-6 animate-float", shouldAnimateIn && "animate-delay-500")}>
                 {resolvedFloatingValue?.trim() && (
                   <p
+                  
                     className={cn(
                       "text-3xl font-bold text-primary",
                       editable && blockId && onEditField && "cursor-pointer rounded px-1 transition-colors hover:bg-primary/10"

@@ -1,12 +1,9 @@
-import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
+import { createServerClient } from "@supabase/ssr"
+import type { SupabaseClient } from "@supabase/supabase-js"
+import { cookies } from "next/headers"
 
-/**
- * Erstellt einen Supabase-Client für SSR/App Router mit Next.js-Cookie-Integration.
- * Auth-State wird automatisch über next/headers-cookies gemanagt.
- */
-export async function createSupabaseServerClient() {
-  const cookieStore = await cookies();
+export async function createSupabaseServerClient(): Promise<SupabaseClient> {
+  const cookieStore = await cookies()
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -14,20 +11,20 @@ export async function createSupabaseServerClient() {
     {
       cookies: {
         getAll() {
-          return cookieStore.getAll();
+          return cookieStore.getAll()
         },
         setAll(cookiesToSet) {
           try {
             cookiesToSet.forEach(({ name, value, options }) => {
-              cookieStore.set(name, value, options);
-            });
-          } catch (e) {
-            // setAll aufgerufen aus z.B. Server Component → ignorierbar
+              cookieStore.set(name, value, options)
+            })
+          } catch {
+            // ok
           }
         },
       },
     }
-  );
+  ) as unknown as SupabaseClient
 }
 
 /**

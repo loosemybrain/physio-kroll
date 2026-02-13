@@ -6,7 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server"
-import { updateSansFontPreset } from "@/lib/fonts/storage"
+import { updateSansFontPreset } from "@/lib/fonts/storage.server"
 import { isValidFontPresetId } from "@/lib/fonts/presets"
 
 export async function POST(request: NextRequest) {
