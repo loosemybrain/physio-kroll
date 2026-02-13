@@ -355,21 +355,31 @@ export interface SectionBlock extends BaseBlock {
     section?: BlockSectionProps
     eyebrow?: string
     headline: string
+    subheadline?: string
     content: string
-    align?: "left" | "center"
-    maxWidth?: "md" | "lg" | "xl"
-    primaryCtaText?: string
-    primaryCtaHref?: string
-    variant?: "default" | "soft"
-    background?: "none" | "muted" | "gradient"
+    align?: "left" | "center" | "justify"
+    justifyBias?: "none" | "readable" | "tight"
+    maxWidth?: "sm" | "md" | "lg" | "xl" | "full"
+    background?: "none" | "muted" | "gradient-soft" | "gradient-brand"
+    showDivider?: boolean
+    enableGlow?: boolean
+    enableHoverElevation?: boolean
     backgroundColor?: string
     eyebrowColor?: string
     headlineColor?: string
+    subheadlineColor?: string
     contentColor?: string
+    ctaText?: string
+    ctaHref?: string
     ctaTextColor?: string
     ctaBgColor?: string
     ctaHoverBgColor?: string
     ctaBorderColor?: string
+    /** Backward compat - old prop names */
+    primaryCtaText?: string
+    primaryCtaHref?: string
+    secondaryCtaText?: string
+    secondaryCtaHref?: string
   }
 }
 
