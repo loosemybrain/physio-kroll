@@ -48,6 +48,7 @@ export type BlockType =
   | "featureGrid"
   | "cta"
   | "section"
+  | "card"
   | "testimonialSlider"
   | "servicesGrid"
   | "faq"
@@ -724,6 +725,50 @@ export interface OpeningHoursBlock extends BaseBlock {
 }
 
 /**
+ * Card block configuration
+ */
+export interface CardBlock extends BaseBlock {
+  type: "card"
+  props: {
+    section?: BlockSectionProps
+    eyebrow?: string
+    title: string
+    description?: string
+    content?: string
+    align?: "left" | "center" | "right"
+    headerLayout?: "stacked" | "inline-action"
+    actionSlot?: "none" | "badge" | "icon-button"
+    actionLabel?: string
+    footerAlign?: "left" | "center" | "right"
+    buttons?: Array<{
+      id: string
+      label: string
+      href?: string
+      onClickAction?: "none" | "open-modal" | "scroll-to"
+      targetId?: string
+      variant?: "default" | "secondary" | "outline" | "ghost" | "link"
+      size?: "sm" | "default" | "lg"
+      icon?: "none" | "arrow-right" | "external" | "download"
+      iconPosition?: "left" | "right"
+      disabled?: boolean
+    }>
+    style?: {
+      variant?: "default" | "soft" | "outline" | "elevated"
+      radius?: "md" | "lg" | "xl"
+      border?: "none" | "subtle" | "strong"
+      shadow?: "none" | "sm" | "md" | "lg"
+      accent?: "none" | "brand" | "muted"
+    }
+    animation?: {
+      entrance?: "none" | "fade" | "slide-up" | "slide-left" | "scale"
+      hover?: "none" | "lift" | "glow" | "tilt"
+      durationMs?: number
+      delayMs?: number
+    }
+  }
+}
+
+/**
  * Union type of all possible CMS blocks
  */
 export type CMSBlock =
@@ -733,6 +778,7 @@ export type CMSBlock =
   | FeatureGridBlock
   | CtaBlock
   | SectionBlock
+  | CardBlock
   | ServicesGridBlock
   | FaqBlock
   | TeamBlock

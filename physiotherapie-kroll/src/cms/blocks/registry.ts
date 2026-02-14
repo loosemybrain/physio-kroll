@@ -1,5 +1,5 @@
 import { z } from "zod"
-import type { CMSBlock, BlockType, HeroBlock, TextBlock, ImageTextBlock, FeatureGridBlock, CtaBlock, SectionBlock, ServicesGridBlock, FaqBlock, TeamBlock, ContactFormBlock, TestimonialsBlock, GalleryBlock, OpeningHoursBlock, ImageSliderBlock, HeroAction } from "@/types/cms"
+import type { CMSBlock, BlockType, HeroBlock, TextBlock, ImageTextBlock, FeatureGridBlock, CtaBlock, SectionBlock, CardBlock, ServicesGridBlock, FaqBlock, TeamBlock, ContactFormBlock, TestimonialsBlock, GalleryBlock, OpeningHoursBlock, ImageSliderBlock, HeroAction } from "@/types/cms"
 import type { BrandKey } from "@/components/brand/brandAssets"
 import { uuid } from "@/lib/cms/arrayOps"
 import { typographySchema, elementTypographySchema } from "@/lib/typography"
@@ -226,6 +226,49 @@ const sectionPropsSchema = z.object({
   primaryCtaHref: z.string().optional(),
   secondaryCtaText: z.string().optional(),
   secondaryCtaHref: z.string().optional(),
+})
+
+const cardButtonSchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  href: z.string().optional(),
+  onClickAction: z.enum(["none", "open-modal", "scroll-to"]).optional(),
+  targetId: z.string().optional(),
+  variant: z.enum(["default", "secondary", "outline", "ghost", "link"]).optional(),
+  size: z.enum(["sm", "default", "lg"]).optional(),
+  icon: z.enum(["none", "arrow-right", "external", "download"]).optional(),
+  iconPosition: z.enum(["left", "right"]).optional(),
+  disabled: z.boolean().optional(),
+})
+
+const cardStyleSchema = z.object({
+  variant: z.enum(["default", "soft", "outline", "elevated"]).optional(),
+  radius: z.enum(["md", "lg", "xl"]).optional(),
+  border: z.enum(["none", "subtle", "strong"]).optional(),
+  shadow: z.enum(["none", "sm", "md", "lg"]).optional(),
+  accent: z.enum(["none", "brand", "muted"]).optional(),
+})
+
+const cardAnimationSchema = z.object({
+  entrance: z.enum(["none", "fade", "slide-up", "slide-left", "scale"]).optional(),
+  hover: z.enum(["none", "lift", "glow", "tilt"]).optional(),
+  durationMs: z.number().optional(),
+  delayMs: z.number().optional(),
+})
+
+const cardPropsSchema = z.object({
+  eyebrow: z.string().optional(),
+  title: z.string(),
+  description: z.string().optional(),
+  content: z.string().optional(),
+  align: z.enum(["left", "center", "right"]).optional(),
+  headerLayout: z.enum(["stacked", "inline-action"]).optional(),
+  actionSlot: z.enum(["none", "badge", "icon-button"]).optional(),
+  actionLabel: z.string().optional(),
+  footerAlign: z.enum(["left", "center", "right"]).optional(),
+  buttons: z.array(cardButtonSchema).optional(),
+  style: cardStyleSchema.optional(),
+  animation: cardAnimationSchema.optional(),
 })
 
 const servicesGridPropsSchema = z.object({
@@ -647,6 +690,56 @@ const sectionDefaults: SectionBlock["props"] = {
   enableHoverElevation: true,
   ctaText: "Mehr erfahren",
   ctaHref: "/kontakt",
+}
+
+const cardDefaults: CardBlock["props"] = {
+  title: "Card Title",
+  eyebrow: "Label",
+  description: "Card description",
+  content: "Card content goes here",
+  align: "left",
+  headerLayout: "stacked",
+  actionSlot: "none",
+  actionLabel: undefined,
+  footerAlign: "left",
+  buttons: [
+    {
+      id: "btn-1",
+      label: "Action",
+      href: "#",
+      variant: "default",
+      size: "default",
+      icon: "arrow-right",
+      iconPosition: "right",
+      disabled: false,
+    },
+  ],
+  style: {
+    variant: "default",
+    radius: "xl",
+    border: "subtle",
+    shadow: "sm",
+    accent: "none",
+  },
+  animation: {
+    entrance: "fade",
+    hover: "lift",
+    durationMs: 400,
+    delayMs: 0,
+  },
+}
+
+export function createCardButton() {
+  return {
+    id: uuid(),
+    label: "New Button",
+    href: "#",
+    variant: "default" as const,
+    size: "default" as const,
+    icon: "arrow-right" as const,
+    iconPosition: "right" as const,
+    disabled: false,
+  }
 }
 
 function generateUniqueId(prefix: string, index: number): string {
@@ -1565,6 +1658,153 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
       { key: "ctaBgColor", label: "CTA Hintergrund", type: "color", placeholder: "#308973" },
       { key: "ctaHoverBgColor", label: "CTA Hover Hintergrund", type: "color", placeholder: "#276D5A" },
       { key: "ctaBorderColor", label: "CTA Border Farbe", type: "color", placeholder: "#276D5A" },
+    ],
+  },
+  card: {
+    type: "card",
+    label: "Card",
+    defaults: cardDefaults,
+    zodSchema: cardPropsSchema,
+    allowInlineEdit: true,
+    inspectorFields: [
+      // Content
+      { key: "eyebrow", label: "Eyebrow (Label)", type: "text", placeholder: "Label" },
+      { key: "title", label: "Title", type: "text", placeholder: "Card Title", required: true },
+      { key: "description", label: "Description", type: "text", placeholder: "Card description" },
+      { key: "content", label: "Content", type: "textarea", placeholder: "Card content" },
+      
+      // Layout
+      {
+        key: "align",
+        label: "Text Alignment",
+        type: "select",
+        options: [
+          { value: "left", label: "Left" },
+          { value: "center", label: "Center" },
+          { value: "right", label: "Right" },
+        ],
+      },
+      {
+        key: "headerLayout",
+        label: "Header Layout",
+        type: "select",
+        options: [
+          { value: "stacked", label: "Stacked" },
+          { value: "inline-action", label: "Inline Action" },
+        ],
+      },
+      {
+        key: "actionSlot",
+        label: "Action Slot",
+        type: "select",
+        options: [
+          { value: "none", label: "None" },
+          { value: "badge", label: "Badge" },
+          { value: "icon-button", label: "Icon Button" },
+        ],
+      },
+      { key: "actionLabel", label: "Action Label", type: "text", placeholder: "New" },
+      {
+        key: "footerAlign",
+        label: "Footer Alignment",
+        type: "select",
+        options: [
+          { value: "left", label: "Left" },
+          { value: "center", label: "Center" },
+          { value: "right", label: "Right" },
+        ],
+      },
+      
+      // Style
+      {
+        key: "style.variant",
+        label: "Card Variant",
+        type: "select",
+        options: [
+          { value: "default", label: "Default" },
+          { value: "soft", label: "Soft" },
+          { value: "outline", label: "Outline" },
+          { value: "elevated", label: "Elevated" },
+        ],
+      },
+      {
+        key: "style.radius",
+        label: "Border Radius",
+        type: "select",
+        options: [
+          { value: "md", label: "Medium" },
+          { value: "lg", label: "Large" },
+          { value: "xl", label: "Extra Large" },
+        ],
+      },
+      {
+        key: "style.border",
+        label: "Border Style",
+        type: "select",
+        options: [
+          { value: "none", label: "None" },
+          { value: "subtle", label: "Subtle" },
+          { value: "strong", label: "Strong" },
+        ],
+      },
+      {
+        key: "style.shadow",
+        label: "Shadow",
+        type: "select",
+        options: [
+          { value: "none", label: "None" },
+          { value: "sm", label: "Small" },
+          { value: "md", label: "Medium" },
+          { value: "lg", label: "Large" },
+        ],
+      },
+      {
+        key: "style.accent",
+        label: "Accent Color",
+        type: "select",
+        options: [
+          { value: "none", label: "None" },
+          { value: "brand", label: "Brand" },
+          { value: "muted", label: "Muted" },
+        ],
+      },
+      
+      // Animation
+      {
+        key: "animation.entrance",
+        label: "Entrance Animation",
+        type: "select",
+        options: [
+          { value: "none", label: "None" },
+          { value: "fade", label: "Fade" },
+          { value: "slide-up", label: "Slide Up" },
+          { value: "slide-left", label: "Slide Left" },
+          { value: "scale", label: "Scale" },
+        ],
+      },
+      {
+        key: "animation.hover",
+        label: "Hover Animation",
+        type: "select",
+        options: [
+          { value: "none", label: "None" },
+          { value: "lift", label: "Lift" },
+          { value: "glow", label: "Glow" },
+          { value: "tilt", label: "Tilt" },
+        ],
+      },
+      {
+        key: "animation.durationMs",
+        label: "Animation Duration (ms)",
+        type: "number",
+        placeholder: "400",
+      },
+      {
+        key: "animation.delayMs",
+        label: "Animation Delay (ms)",
+        type: "number",
+        placeholder: "0",
+      },
     ],
   },
   featureGrid: {

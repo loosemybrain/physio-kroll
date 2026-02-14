@@ -748,8 +748,9 @@ export function ContactFormBlock({
                           style={consentLabelColor ? ({ color: consentLabelColor } as React.CSSProperties) : undefined}
                           onClick={handleInlineEdit("props.consentLabel")}
                         >
-                          {consentLabel || "Ich habe die Datenschutzerklärung gelesen und bin mit der Verarbeitung meiner Daten zur Kontaktaufnahme einverstanden."}
-                          <span className="text-destructive ml-1">*</span>
+                        {/* <p className="text-destructive ml-1">*</p> */}
+                          {consentLabel || "Ich habe die Datenschutzerklärung gelesen und bin mit der Verarbeitung meiner Daten zur Kontaktaufnahme einverstanden. "}
+                         
                         </Label>
                       </div>
                     )}

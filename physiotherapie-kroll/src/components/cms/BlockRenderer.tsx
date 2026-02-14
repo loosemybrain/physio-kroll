@@ -10,6 +10,7 @@ import { ImageTextBlock } from "@/components/blocks/image-text-block"
 import { FeatureGridBlock } from "@/components/blocks/feature-grid-block"
 import { CtaBlock } from "@/components/blocks/cta-block"
 import { SectionBlock } from "@/components/blocks/section-block"
+import { CardBlock } from "@/components/blocks/card-block"
 import { ServicesGridBlock } from "@/components/blocks/services-grid-block"
 import { TeamGridBlock } from "@/components/blocks/team-grid"
 import { ContactFormBlock } from "@/components/blocks/contact-form-block"
@@ -160,6 +161,24 @@ export function BlockRenderer({
         const elements = elementsValue as Record<string, any> | undefined
         return (
           <SectionBlock
+            {...props}
+            elements={elements}
+            editable={editable}
+            blockId={block.id}
+            onEditField={onEditField}
+            onElementClick={onElementClick}
+            selectedElementId={selectedElementId}
+          />
+        )
+      }
+
+      case "card": {
+        const props = block.props
+        const extras = (block.props ?? {}) as Record<string, unknown>
+        const elementsValue = extras.elements
+        const elements = elementsValue as Record<string, any> | undefined
+        return (
+          <CardBlock
             {...props}
             elements={elements}
             editable={editable}
