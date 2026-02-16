@@ -416,6 +416,10 @@ export interface SectionBlock extends BaseBlock {
     showDivider?: boolean
     enableGlow?: boolean
     enableHoverElevation?: boolean
+    showCta?: boolean
+    dividerFromColor?: string
+    dividerViaColor?: string
+    dividerToColor?: string
     backgroundColor?: string
     eyebrowColor?: string
     headlineColor?: string
@@ -427,6 +431,10 @@ export interface SectionBlock extends BaseBlock {
     ctaBgColor?: string
     ctaHoverBgColor?: string
     ctaBorderColor?: string
+    /** Per-element typography */
+    typography?: Record<string, any>
+    /** Per-element shadows & other properties */
+    elements?: Record<string, any>
     /** Backward compat - old prop names */
     primaryCtaText?: string
     primaryCtaHref?: string

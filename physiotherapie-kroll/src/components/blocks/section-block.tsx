@@ -7,6 +7,7 @@ import { ArrowRight } from "lucide-react"
 import { motion, useReducedMotion, cubicBezier } from "framer-motion"
 import { useElementShadowStyle } from "@/lib/shadow"
 import { resolveButtonPresetStyles } from "@/lib/buttonPresets"
+import { mergeTypographyClasses } from "@/lib/typography"
 
 /* ================================================================ */
 /*  Types                                                            */
@@ -23,6 +24,7 @@ export interface SectionBlockProps {
   onElementClick?: (blockId: string, elementId: string) => void
   selectedElementId?: string | null
   elements?: Record<string, any>
+  typography?: Record<string, any>
 
   eyebrow?: string
   headline: string
@@ -56,6 +58,13 @@ export interface SectionBlockProps {
 
   /** Enable hover elevation on inner surface */
   enableHoverElevation?: boolean
+
+  showCta?: boolean
+
+  /** Divider custom colors */
+  dividerFromColor?: string
+  dividerViaColor?: string
+  dividerToColor?: string
 
   /** Color overrides */
   backgroundColor?: string
@@ -166,7 +175,6 @@ export function SectionBlock({
   onEditField,
   onElementClick,
   selectedElementId,
-  elements,
   eyebrow,
   headline,
   subheadline,
@@ -178,6 +186,10 @@ export function SectionBlock({
   showDivider = false,
   enableGlow = true,
   enableHoverElevation = true,
+  showCta = true,
+  dividerFromColor,
+  dividerViaColor,
+  dividerToColor,
   backgroundColor,
   eyebrowColor,
   headlineColor,
@@ -194,6 +206,8 @@ export function SectionBlock({
   secondaryCtaText,
   secondaryCtaHref,
   buttonPreset,
+  typography,
+  elements,
 }: SectionBlockProps) {
   const prefersReducedMotion = useReducedMotion()
   const isCentered = align === "center"
@@ -202,14 +216,16 @@ export function SectionBlock({
   const primaryPreset = resolveButtonPresetStyles(buttonPreset, undefined, undefined)
   const secondaryPreset = resolveButtonPresetStyles(buttonPreset, "outline", undefined)
 
-  // Resolve backward-compat CTA props
-  const resolvedPrimaryText = ctaText || primaryCtaText
-  const resolvedPrimaryHref = ctaHref || primaryCtaHref
+  // Resolve backward-compat CTA props - use nullish coalescing
+  const resolvedPrimaryText = (ctaText ?? primaryCtaText)?.trim() || ""
+  const resolvedPrimaryHref = ctaHref ?? primaryCtaHref
+  const resolvedSecondaryText = (secondaryCtaText)?.trim() || ""
+  const resolvedSecondaryHref = secondaryCtaHref
 
-  const [primaryHovered, setPrimaryHovered] = useState(false)
-  const [surfaceHovered, setSurfaceHovered] = useState(false)
-
-  const paragraphs = splitParagraphs(content)
+  const hasCta =
+    showCta &&
+    ((resolvedPrimaryText.length > 0 && resolvedPrimaryHref) ||
+      (resolvedSecondaryText.length > 0 && resolvedSecondaryHref))
 
   // Element shadows
   const surfaceShadow = useElementShadowStyle({
@@ -260,9 +276,10 @@ export function SectionBlock({
     onEditField(blockId, fieldPath, rect)
   }
 
-  const hasCta =
-    (resolvedPrimaryText && resolvedPrimaryHref) ||
-    (secondaryCtaText && secondaryCtaHref)
+  const [primaryHovered, setPrimaryHovered] = useState(false)
+  const [surfaceHovered, setSurfaceHovered] = useState(false)
+
+  const paragraphs = splitParagraphs(content)
 
   /* ---- Background classes ---- */
   const bgClasses = cn(
@@ -329,14 +346,18 @@ export function SectionBlock({
       )}
 
       {/* ---- Decorative glow orb ---- */}
-      {enableGlow && (background === "gradient-soft" || background === "gradient-brand") && (
+      {enableGlow && (
         <div className="pointer-events-none absolute inset-0" aria-hidden="true">
           <div
             className={cn(
               "absolute left-1/2 top-1/2 h-[300px] w-[300px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-[100px]",
               background === "gradient-brand"
                 ? "bg-primary/6"
-                : "bg-accent/4",
+                : background === "gradient-soft"
+                  ? "bg-accent/4"
+                  : background === "muted"
+                    ? "bg-primary/3"
+                    : "bg-primary/2",
             )}
           />
         </div>
@@ -359,15 +380,14 @@ export function SectionBlock({
                 ? "border border-border/15 bg-card/60 backdrop-blur-md"
                 : "border border-transparent bg-transparent shadow-none",
             // Hover elevation
+            enableHoverElevation && "transition-all duration-500 ease-out",
             enableHoverElevation &&
-              background !== "none" &&
-              "transition-all duration-500 ease-out",
-            enableHoverElevation &&
-              background !== "none" &&
               surfaceHovered &&
               (background === "gradient-brand"
-                ? "scale-[1.008] shadow-[0_8px_32px_-4px_oklch(0.45_0.12_160_/_0.1),0_20px_64px_-16px_oklch(0.45_0.12_160_/_0.12)]"
-                : "scale-[1.008] shadow-[0_8px_32px_-4px_rgba(0,0,0,0.06),0_20px_64px_-16px_rgba(0,0,0,0.1)]"),
+                ? "scale-[1.006] shadow-[0_8px_32px_-4px_oklch(0.45_0.12_160/0.1),0_20px_64px_-16px_oklch(0.45_0.12_160/0.12)]"
+                : background === "none"
+                  ? "scale-[1.006] bg-card/30 ring-1 ring-border/20"
+                  : "scale-[1.006] shadow-[0_8px_32px_-4px_rgba(0,0,0,0.06),0_20px_64px_-16px_rgba(0,0,0,0.1)]"),
           )}
           onMouseEnter={() => setSurfaceHovered(true)}
           onMouseLeave={() => setSurfaceHovered(false)}
@@ -403,6 +423,10 @@ export function SectionBlock({
                   data-element-id="section.eyebrow"
                   className={cn(
                     "text-xs font-semibold uppercase tracking-[0.2em] text-primary/80",
+                    mergeTypographyClasses(
+                      "text-xs font-semibold uppercase tracking-[0.2em] text-primary/80",
+                      (typography ?? {})["section.eyebrow"]
+                    ),
                     editable &&
                       blockId &&
                       onEditField &&
@@ -430,7 +454,10 @@ export function SectionBlock({
               onClick={(e) => handleInlineEdit(e, "headline", "section.headline")}
               data-element-id="section.headline"
               className={cn(
-                "text-4xl font-semibold tracking-tight text-foreground md:text-5xl",
+                mergeTypographyClasses(
+                  "text-4xl font-semibold tracking-tight text-foreground md:text-5xl",
+                  (typography ?? {})["section.headline"]
+                ),
                 isCentered && "text-balance",
                 editable &&
                   blockId &&
@@ -452,7 +479,10 @@ export function SectionBlock({
                 onClick={(e) => handleInlineEdit(e, "subheadline", "section.subheadline")}
                 data-element-id="section.subheadline"
                 className={cn(
-                  "mt-4 text-lg text-muted-foreground/80 md:text-xl",
+                  mergeTypographyClasses(
+                    "mt-4 text-lg text-muted-foreground/80 md:text-xl",
+                    (typography ?? {})["section.subheadline"]
+                  ),
                   isCentered && "mx-auto max-w-2xl text-balance",
                   editable &&
                     blockId &&
@@ -480,10 +510,19 @@ export function SectionBlock({
                 <div
                   className={cn(
                     "h-px w-24",
-                    background === "gradient-brand"
-                      ? "bg-linear-to-r from-primary/10 via-primary/40 to-primary/10"
-                      : "bg-linear-to-r from-border/20 via-border/60 to-border/20",
+                    // Use custom colors if provided, otherwise fallback to tailwind
+                    !dividerFromColor &&
+                      (background === "gradient-brand"
+                        ? "bg-linear-to-r from-primary/10 via-primary/40 to-primary/10"
+                        : "bg-linear-to-r from-border/20 via-border/60 to-border/20"),
                   )}
+                  style={
+                    dividerFromColor
+                      ? {
+                          backgroundImage: `linear-gradient(to right, ${dividerFromColor}, ${dividerViaColor || dividerFromColor}, ${dividerToColor || dividerFromColor})`,
+                        }
+                      : undefined
+                  }
                   aria-hidden="true"
                 />
               </motion.div>
@@ -496,7 +535,10 @@ export function SectionBlock({
               data-element-id="section.content"
               className={cn(
                 showDivider ? "mt-2" : "mt-8",
-                "space-y-5 text-base leading-relaxed text-muted-foreground md:text-lg md:leading-8",
+                mergeTypographyClasses(
+                  "space-y-5 text-base leading-relaxed text-muted-foreground md:text-lg md:leading-8",
+                  (typography ?? {})["section.content"]
+                ),
                 alignTextMap[align],
                 isJustified && justifyBiasMap[justifyBias],
                 isCentered && "mx-auto max-w-2xl",
@@ -536,7 +578,10 @@ export function SectionBlock({
                         size="lg"
                         className={cn(
                           primaryPreset.className,
-                          "gap-2 rounded-xl px-8 text-base shadow-lg transition-all duration-300",
+                          mergeTypographyClasses(
+                            "gap-2 rounded-xl px-8 text-base shadow-lg transition-all duration-300",
+                            (typography ?? {})["section.ctaPrimary"]
+                          ),
                           "hover:-translate-y-0.5 hover:shadow-xl",
                           background === "gradient-brand"
                             ? "hover:shadow-primary/25"
