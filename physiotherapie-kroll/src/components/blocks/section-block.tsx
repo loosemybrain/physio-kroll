@@ -57,9 +57,6 @@ export interface SectionBlockProps {
   /** Enable hover elevation on inner surface */
   enableHoverElevation?: boolean
 
-  /** Show CTA button */
-  showCta?: boolean
-
   /** Color overrides */
   backgroundColor?: string
   eyebrowColor?: string
@@ -181,7 +178,6 @@ export function SectionBlock({
   showDivider = false,
   enableGlow = true,
   enableHoverElevation = true,
-  showCta = true,
   backgroundColor,
   eyebrowColor,
   headlineColor,
@@ -264,10 +260,9 @@ export function SectionBlock({
     onEditField(blockId, fieldPath, rect)
   }
 
-  const hasCta = showCta && (
+  const hasCta =
     (resolvedPrimaryText && resolvedPrimaryHref) ||
     (secondaryCtaText && secondaryCtaHref)
-  )
 
   /* ---- Background classes ---- */
   const bgClasses = cn(

@@ -256,7 +256,6 @@ const sectionPropsSchema = z.object({
   showDivider: z.boolean().optional(),
   enableGlow: z.boolean().optional(),
   enableHoverElevation: z.boolean().optional(),
-  showCta: z.boolean().optional(),
   backgroundColor: z.string().optional(),
   eyebrowColor: z.string().optional(),
   headlineColor: z.string().optional(),
@@ -769,7 +768,6 @@ const sectionDefaults: SectionBlock["props"] = {
   showDivider: false,
   enableGlow: true,
   enableHoverElevation: true,
-  showCta: true,
   ctaText: "Mehr erfahren",
   ctaHref: "/kontakt",
 }
@@ -1818,7 +1816,6 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
       { key: "showDivider", label: "Divider anzeigen", type: "boolean" },
       { key: "enableGlow", label: "Glow-Effekt aktivieren", type: "boolean" },
       { key: "enableHoverElevation", label: "Hover-Elevation aktivieren", type: "boolean" },
-      { key: "showCta", label: "CTA Button anzeigen", type: "boolean" },
       
       { key: "ctaText", label: "CTA Button Text", type: "text", placeholder: "Mehr erfahren" },
       { key: "ctaHref", label: "CTA Button Link", type: "url", placeholder: "/kontakt" },

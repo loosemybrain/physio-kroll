@@ -1441,14 +1441,7 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
     const fieldKey = `${block.id}.${field.key}`
     const props = block.props as Record<string, unknown>
     // Support nested paths like "trustItems.0" or "cards.0.title"
-    let value = getByPath(props, field.key)
-    
-    // For boolean fields, provide proper defaults
-    if (field.type === "boolean" && value === undefined) {
-      value = false
-    } else if (value === undefined) {
-      value = ""
-    }
+    const value = getByPath(props, field.key) ?? ""
 
     const handleChange = (newValue: unknown) => {
       if (!selectedBlock) return
@@ -1723,20 +1716,10 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
         </div>
       )
 
-    case "boolean": {
-      // Ensure value is explicitly true or false, never undefined
-      // Note: This is recalculated on every render, so it reflects the current state
-      const boolValue = value === true
+    case "boolean":
       return (
         <div key={field.key} className="flex items-center space-x-2">
-          <Checkbox 
-            key={`${fieldKey}-${boolValue}`}
-            id={fieldKey} 
-            checked={boolValue}
-            onCheckedChange={(checked) => {
-              handleChange(checked === true ? true : false)
-            }} 
-          />
+          <Checkbox id={fieldKey} checked={Boolean(value)} onCheckedChange={(checked) => handleChange(checked)} />
           <Label htmlFor={fieldKey} className="cursor-pointer">
             {field.label}
             {field.required && <span className="text-destructive ml-1">*</span>}
@@ -1744,7 +1727,6 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
           {field.helpText && <p className="text-xs text-muted-foreground">{field.helpText}</p>}
         </div>
       )
-    }
 
     default:
       return null

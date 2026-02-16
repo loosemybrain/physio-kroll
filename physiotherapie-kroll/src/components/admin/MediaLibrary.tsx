@@ -54,6 +54,12 @@ import { cn } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
 import type { MediaFolder, MediaAsset } from "@/lib/supabase/mediaLibrary"
 import { createSupabaseBrowserClient } from "@/lib/supabase/client"
+import {
+  uploadWithConcurrency,
+  validateUploadFiles,
+  extractFilesFromInput,
+  type UploadStatus,
+} from "@/lib/uploadConcurrency"
 
 type MediaLibraryProps = {
   onSelect?: (asset: MediaAsset) => void
@@ -68,6 +74,7 @@ export function MediaLibrary(props: MediaLibraryProps) {
   const [assets, setAssets] = React.useState<MediaAsset[]>([])
   const [loading, setLoading] = React.useState(true)
   const [uploading, setUploading] = React.useState(false)
+  const [uploadStatuses, setUploadStatuses] = React.useState<UploadStatus[]>([])
   const [error, setError] = React.useState<string | null>(null)
   const [searchQuery, setSearchQuery] = React.useState("")
   const [deleteAssetDialogOpen, setDeleteAssetDialogOpen] = React.useState<string | null>(null)
@@ -80,6 +87,7 @@ export function MediaLibrary(props: MediaLibraryProps) {
   const [renameFolderName, setRenameFolderName] = React.useState("")
   const [actionLoading, setActionLoading] = React.useState<string | null>(null)
   const fileRef = React.useRef<HTMLInputElement | null>(null)
+  const folderRef = React.useRef<HTMLInputElement | null>(null)
 
   const loadFolders = React.useCallback(async (brand: BrandKey) => {
     try {
@@ -224,26 +232,32 @@ export function MediaLibrary(props: MediaLibraryProps) {
     [activeBrand, selectedFolderId, loadFolders, toast]
   )
 
+  const handleUploadSingleFile = React.useCallback(
+    async (file: File): Promise<void> => {
+      const formData = new FormData()
+      formData.append("file", file)
+      formData.append("brand", activeBrand)
+      if (selectedFolderId) {
+        formData.append("folderId", selectedFolderId)
+      }
+
+      const res = await fetch("/api/admin/media/upload", {
+        method: "POST",
+        body: formData,
+        credentials: "include",
+      })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(body?.error || "Konnte nicht hochladen")
+    },
+    [activeBrand, selectedFolderId]
+  )
+
   const handleUpload = React.useCallback(
     async (file: File) => {
       setUploading(true)
       setError(null)
       try {
-        const formData = new FormData()
-        formData.append("file", file)
-        formData.append("brand", activeBrand)
-        if (selectedFolderId) {
-          formData.append("folderId", selectedFolderId)
-        }
-
-        const res = await fetch("/api/admin/media/upload", {
-          method: "POST",
-          body: formData,
-          credentials: "include",
-        })
-        const body = await res.json().catch(() => ({}))
-        if (!res.ok) throw new Error(body?.error || "Konnte nicht hochladen")
-
+        await handleUploadSingleFile(file)
         await loadAssets(activeBrand, selectedFolderId)
         toast({ title: "Datei hochgeladen", description: "Die Datei wurde erfolgreich hochgeladen." })
       } catch (e) {
@@ -254,7 +268,89 @@ export function MediaLibrary(props: MediaLibraryProps) {
         setUploading(false)
       }
     },
-    [activeBrand, selectedFolderId, loadAssets, toast]
+    [activeBrand, selectedFolderId, loadAssets, handleUploadSingleFile, toast]
+  )
+
+  const handleFilesUpload = React.useCallback(
+    async (files: FileList | File[]) => {
+      const { valid, errors } = validateUploadFiles(files)
+
+      if (errors.length > 0) {
+        errors.forEach((err) => {
+          toast({ title: "Validierungsfehler", description: err, variant: "destructive" })
+        })
+      }
+
+      if (valid.length === 0) return
+
+      setUploading(true)
+      setError(null)
+
+      // Initialize status for all files
+      const statuses: UploadStatus[] = valid.map((file, idx) => ({
+        id: `${Date.now()}-${idx}`,
+        fileName: file.name,
+        status: "pending" as const,
+      }))
+      setUploadStatuses(statuses)
+
+      try {
+        await uploadWithConcurrency(
+          valid,
+          4, // Max 4 concurrent uploads
+          async (file) => {
+            // Update status to uploading
+            setUploadStatuses((prev) =>
+              prev.map((s) => (s.fileName === file.name ? { ...s, status: "uploading" as const } : s))
+            )
+
+            try {
+              await handleUploadSingleFile(file)
+              // Update status to success
+              setUploadStatuses((prev) =>
+                prev.map((s) => (s.fileName === file.name ? { ...s, status: "success" as const } : s))
+              )
+            } catch (e) {
+              const msg = e instanceof Error ? e.message : "Fehler beim Upload"
+              // Update status to error
+              setUploadStatuses((prev) =>
+                prev.map((s) =>
+                  s.fileName === file.name ? { ...s, status: "error" as const, error: msg } : s
+                )
+              )
+            }
+          },
+          (completed, total) => {
+            // Optional: log progress
+            console.log(`[MediaLibrary] Upload progress: ${completed}/${total}`)
+          }
+        )
+
+        // Reload assets after all uploads
+        await loadAssets(activeBrand, selectedFolderId)
+
+        // Count successes
+        const successCount = statuses.filter((s) => s.status === "success").length
+        if (successCount > 0) {
+          toast({
+            title: "Dateien hochgeladen",
+            description: `${successCount} von ${valid.length} Dateien erfolgreich hochgeladen.`,
+          })
+        }
+
+        // Clear statuses after 3 seconds
+        setTimeout(() => {
+          setUploadStatuses([])
+        }, 3000)
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : "Fehler beim Upload"
+        setError(msg)
+        toast({ title: "Fehler", description: msg, variant: "destructive" })
+      } finally {
+        setUploading(false)
+      }
+    },
+    [activeBrand, selectedFolderId, loadAssets, handleUploadSingleFile, toast]
   )
 
   const handleMoveAsset = React.useCallback(
@@ -451,16 +547,39 @@ export function MediaLibrary(props: MediaLibraryProps) {
               ref={fileRef}
               type="file"
               accept="image/*,video/*"
+              multiple
               onChange={(e) => {
-                const file = e.target.files?.[0]
-                if (file) handleUpload(file)
+                const files = e.target.files
+                if (files && files.length > 0) {
+                  handleFilesUpload(files)
+                }
                 e.target.value = ""
               }}
               className="hidden"
             />
-            <Button onClick={() => fileRef.current?.click()} disabled={uploading}>
+            <Input
+              ref={folderRef}
+              type="file"
+              accept="image/*,video/*"
+              multiple
+              webkitdirectory="true"
+              directory="true"
+              onChange={(e) => {
+                const files = e.target.files
+                if (files && files.length > 0) {
+                  handleFilesUpload(files)
+                }
+                e.target.value = ""
+              }}
+              className="hidden"
+            />
+            <Button onClick={() => fileRef.current?.click()} disabled={uploading} title="Mehrere Dateien hochladen">
               {uploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
               Hochladen
+            </Button>
+            <Button onClick={() => folderRef.current?.click()} disabled={uploading} variant="outline" title="Ordner hochladen">
+              <Folder className="mr-2 h-4 w-4" />
+              Ordner
             </Button>
           </div>
         </div>
@@ -470,6 +589,36 @@ export function MediaLibrary(props: MediaLibraryProps) {
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>{error}</AlertDescription>
           </Alert>
+        )}
+
+        {/* Upload Status List */}
+        {uploadStatuses.length > 0 && (
+          <div className="mb-4 border border-border rounded-lg p-4 bg-card">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold">
+                Upload-Fortschritt: {uploadStatuses.filter((s) => s.status === "success").length} / {uploadStatuses.length}
+              </h3>
+            </div>
+            <div className="space-y-2 max-h-48 overflow-y-auto">
+              {uploadStatuses.map((status) => (
+                <div
+                  key={status.id}
+                  className="flex items-center gap-3 text-sm p-2 rounded-md bg-muted/50"
+                >
+                  <div className="flex-1 truncate">
+                    <p className="text-foreground truncate">{status.fileName}</p>
+                    {status.error && <p className="text-destructive text-xs">{status.error}</p>}
+                  </div>
+                  <div className="shrink-0">
+                    {status.status === "pending" && <div className="text-muted-foreground text-xs">Ausstehend</div>}
+                    {status.status === "uploading" && <Loader2 className="h-4 w-4 animate-spin text-primary" />}
+                    {status.status === "success" && <div className="text-green-600 text-xs font-semibold">✓</div>}
+                    {status.status === "error" && <div className="text-destructive text-xs font-semibold">✕</div>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         )}
 
         {/* Assets Grid */}
