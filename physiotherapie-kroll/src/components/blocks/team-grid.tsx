@@ -13,6 +13,7 @@ import {
 import { resolveSectionBg, getSectionWrapperClasses } from "@/lib/theme/resolveSectionBg"
 import { resolveContainerBg } from "@/lib/theme/resolveContainerBg"
 import { resolveBoxShadow } from "@/lib/shadow/resolveBoxShadow"
+import { resolveButtonPresetStyles } from "@/lib/buttonPresets"
 import type { BlockSectionProps, ElementShadow } from "@/types/cms"
 
 interface TeamMember {
@@ -534,7 +535,7 @@ export function TeamGridBlock({
   return (
     <section
       className={cn(
-        "relative overflow-x-hidden py-20 md:py-28",
+        "relative overflow-x-hidden py-10 md:py-14 lg:py-16",
         sectionBg.className
       )}
       style={sectionBg.style}
@@ -543,7 +544,7 @@ export function TeamGridBlock({
       {/* Inner Container Panel (Header + Grid) */}
       <div
         className={cn(
-          "relative mx-auto max-w-6xl rounded-3xl p-6 md:p-10",
+          "relative mx-auto max-w-6xl rounded-3xl px-8 py-8 md:px-14 md:py-10",
           containerBackgroundMode && containerBackgroundMode !== "transparent" && "border border-border/20",
           containerBackgroundMode === "gradient" && "backdrop-blur-sm"
         )}
@@ -556,7 +557,7 @@ export function TeamGridBlock({
         <div className="relative mx-auto max-w-6xl px-4 sm:px-6">
         {/* ---- Header ---- */}
         {(eyebrow || headline || subheadline) && (
-          <header className="mb-16 text-center">
+          <header className="mb-10 md:mb-12 text-center">
             {/* Eyebrow */}
             {eyebrow && (
               <div className="mb-5 flex items-center justify-center gap-4">

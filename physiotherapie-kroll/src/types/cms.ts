@@ -145,6 +145,7 @@ export type BlockSectionProps = {
   layout: SectionLayout
   background: SectionBackground
   animation?: BlockAnimationConfig // Neu: Animation Config
+  fullBleed?: boolean // Optional: render without max-width constraint
 }
 
 /**
@@ -248,6 +249,8 @@ export interface HeroBlock extends BaseBlock {
       physiotherapy?: HeroBrandContent
       "physio-konzept"?: HeroBrandContent
     }
+    // Button preset (global)
+    buttonPreset?: string
   }
 }
 
@@ -272,6 +275,19 @@ export interface TextBlock extends BaseBlock {
 /**
  * Image with text block configuration
  */
+/**
+ * Design style for ImageText (from v0)
+ */
+export interface ImageTextStyle {
+  variant?: "default" | "soft"
+  verticalAlign?: "top" | "center"
+  textAlign?: "left" | "center"
+  maxWidth?: "md" | "lg" | "xl"
+  imageAspectRatio?: "4/3" | "16/9" | "1/1" | "3/2"
+  paddingY?: "none" | "sm" | "md" | "lg" | "xl"
+  paddingX?: "sm" | "md" | "lg"
+}
+
 export interface ImageTextBlock extends BaseBlock {
   type: "imageText"
   props: {
@@ -279,6 +295,7 @@ export interface ImageTextBlock extends BaseBlock {
     imageUrl: string
     imageAlt: string
     imagePosition?: "left" | "right"
+    eyebrow?: string
     headline?: string
     content: string
     ctaText?: string
@@ -289,7 +306,33 @@ export interface ImageTextBlock extends BaseBlock {
     ctaBgColor?: string
     ctaHoverBgColor?: string
     ctaBorderColor?: string
+    background?: "none" | "muted" | "gradient"
+    backgroundColor?: string
+    designPreset?: string
+    style?: ImageTextStyle
+    buttonPreset?: string
   }
+}
+
+/**
+ * Design style for FeatureGrid cards (shared with CardBlock)
+ */
+export interface FeatureGridStyle {
+  variant?: "default" | "soft" | "outline" | "elevated"
+  radius?: "md" | "lg" | "xl"
+  border?: "none" | "subtle" | "strong"
+  shadow?: "none" | "sm" | "md" | "lg"
+  accent?: "none" | "brand" | "muted"
+}
+
+/**
+ * Animation config for FeatureGrid cards (shared with CardBlock)
+ */
+export interface FeatureGridAnimation {
+  entrance?: "none" | "fade" | "slide-up" | "slide-left" | "scale"
+  hover?: "none" | "lift" | "glow" | "tilt"
+  durationMs?: number
+  delayMs?: number
 }
 
 /**
@@ -309,6 +352,8 @@ export interface FeatureGridBlock extends BaseBlock {
       iconColor?: string
       cardBgColor?: string
       cardBorderColor?: string
+      style?: FeatureGridStyle
+      animation?: FeatureGridAnimation
     }>
     columns?: 2 | 3 | 4
     titleColor?: string
@@ -316,6 +361,9 @@ export interface FeatureGridBlock extends BaseBlock {
     iconColor?: string
     cardBgColor?: string
     cardBorderColor?: string
+    designPreset?: string
+    style?: FeatureGridStyle
+    animation?: FeatureGridAnimation
   }
 }
 
@@ -340,10 +388,13 @@ export interface CtaBlock extends BaseBlock {
     primaryCtaBgColor?: string
     primaryCtaHoverBgColor?: string
     primaryCtaBorderColor?: string
+    primaryCtaBorderRadius?: string
     secondaryCtaTextColor?: string
     secondaryCtaBgColor?: string
     secondaryCtaHoverBgColor?: string
     secondaryCtaBorderColor?: string
+    secondaryCtaBorderRadius?: string
+    buttonPreset?: string
   }
 }
 
@@ -365,6 +416,7 @@ export interface SectionBlock extends BaseBlock {
     showDivider?: boolean
     enableGlow?: boolean
     enableHoverElevation?: boolean
+    showCta?: boolean
     backgroundColor?: string
     eyebrowColor?: string
     headlineColor?: string
@@ -381,6 +433,7 @@ export interface SectionBlock extends BaseBlock {
     primaryCtaHref?: string
     secondaryCtaText?: string
     secondaryCtaHref?: string
+    buttonPreset?: string
   }
 }
 
@@ -504,6 +557,9 @@ export interface TeamBlock extends BaseBlock {
     
     // Container Shadow
     containerShadow?: ElementShadow
+    
+    // Button preset (global)
+    buttonPreset?: string
   }
 }
 
@@ -568,6 +624,9 @@ export interface ContactFormBlock extends BaseBlock {
       title: string
       value: string
     }>
+    
+    // Button preset (global)
+    buttonPreset?: string
   }
 }
 
@@ -765,6 +824,7 @@ export interface CardBlock extends BaseBlock {
       durationMs?: number
       delayMs?: number
     }
+    buttonPreset?: string
   }
 }
 

@@ -43,6 +43,7 @@ import { ShadowInspector } from "./ShadowInspector"
 import { resolveBoxShadow } from "@/lib/shadow/resolveBoxShadow"
 import type { ElementShadow, ElementConfig } from "@/types/cms"
 import { resolveMediaClient } from "@/lib/cms/resolveMediaClient"
+import { BUTTON_PRESET_OPTIONS } from "@/lib/buttonPresets"
 
 
 interface PageEditorProps {
@@ -1440,7 +1441,14 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
     const fieldKey = `${block.id}.${field.key}`
     const props = block.props as Record<string, unknown>
     // Support nested paths like "trustItems.0" or "cards.0.title"
-    const value = getByPath(props, field.key) ?? ""
+    let value = getByPath(props, field.key)
+    
+    // For boolean fields, provide proper defaults
+    if (field.type === "boolean" && value === undefined) {
+      value = false
+    } else if (value === undefined) {
+      value = ""
+    }
 
     const handleChange = (newValue: unknown) => {
       if (!selectedBlock) return
@@ -1715,10 +1723,20 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
         </div>
       )
 
-    case "boolean":
+    case "boolean": {
+      // Ensure value is explicitly true or false, never undefined
+      // Note: This is recalculated on every render, so it reflects the current state
+      const boolValue = value === true
       return (
         <div key={field.key} className="flex items-center space-x-2">
-          <Checkbox id={fieldKey} checked={Boolean(value)} onCheckedChange={(checked) => handleChange(checked)} />
+          <Checkbox 
+            key={`${fieldKey}-${boolValue}`}
+            id={fieldKey} 
+            checked={boolValue}
+            onCheckedChange={(checked) => {
+              handleChange(checked === true ? true : false)
+            }} 
+          />
           <Label htmlFor={fieldKey} className="cursor-pointer">
             {field.label}
             {field.required && <span className="text-destructive ml-1">*</span>}
@@ -1726,6 +1744,7 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
           {field.helpText && <p className="text-xs text-muted-foreground">{field.helpText}</p>}
         </div>
       )
+    }
 
     default:
       return null
@@ -1897,7 +1916,7 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
                 >
                   {/* Block Controls Overlay */}
                   <div
-                    className="absolute top-2 right-2 z-10 flex items-center gap-1 rounded-md bg-[#0f0f10]/90 text-white border border-white/10 shadow-xl backdrop-blur-sm p-1"
+                    className="absolute top-2 right-2 z-50 flex items-center gap-1 rounded-md bg-[#0f0f10]/90 text-white border border-white/10 shadow-xl backdrop-blur-sm p-1"
                     onClick={(e) => {
                       e.preventDefault()
                       e.stopPropagation()
@@ -3561,6 +3580,53 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
       {/* 1) Head/Subline (und ggf. Background) */}
       {primaryFields.map((field) => renderInspectorField(field, selectedBlock))}
 
+      {/* Button Preset (one dropdown per block for card, section, imageText, cta, hero, team, contactForm) */}
+      {(() => {
+        const showButtonPreset = selectedBlock.type === "card" ||
+          selectedBlock.type === "section" ||
+          selectedBlock.type === "imageText" ||
+          selectedBlock.type === "cta" ||
+          selectedBlock.type === "hero" ||
+          selectedBlock.type === "team" ||
+          selectedBlock.type === "contactForm"
+        
+        if (!showButtonPreset) {
+          return null
+        }
+        
+        return (
+          <>
+            <Separator />
+            <div className="space-y-1.5">
+              <Label className="text-xs">Button Preset</Label>
+              <Select
+                value={String((selectedBlock.props as Record<string, unknown>)?.buttonPreset ?? "default")}
+                onValueChange={(v) => {
+                  if (!selectedBlock) return
+                  const currentProps = selectedBlock.props as Record<string, unknown>
+                  const updatedProps = {
+                    ...currentProps,
+                    buttonPreset: v === "default" ? undefined : v,
+                  } as CMSBlock["props"]
+                  updateSelectedProps(updatedProps)
+                }}
+              >
+                <SelectTrigger className="h-8 text-sm">
+                  <SelectValue placeholder="Default" />
+                </SelectTrigger>
+                <SelectContent side="bottom" align="start" sideOffset={5}>
+                  {BUTTON_PRESET_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </>
+        )
+      })()}
+
       {/* 2) Items/Arrays */}
       {selectedBlock.type === "servicesGrid" && (
         <>
@@ -3993,6 +4059,484 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
       {selectedBlock.type === "featureGrid" && (
         <>
           <Separator />
+
+          {/* Block-Level Design System Controls */}
+          <div className="space-y-3">
+            {/* Columns */}
+            <div className="space-y-1.5">
+              <Label className="text-xs">Spalten</Label>
+              <Select
+                value={((selectedBlock.props as any)?.columns || 3).toString()}
+                onValueChange={(v) => {
+                  if (!selectedBlock) return
+                  const currentProps = selectedBlock.props as Record<string, unknown>
+                  const updatedProps = { ...currentProps, columns: parseInt(v, 10) } as CMSBlock["props"]
+                  updateSelectedProps(updatedProps)
+                }}
+              >
+                <SelectTrigger className="h-8 text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="2">2</SelectItem>
+                  <SelectItem value="3">3</SelectItem>
+                  <SelectItem value="4">4</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Design Preset */}
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold text-primary">Design Preset</Label>
+              <Select
+                value={(selectedBlock.props as any)?.designPreset || "standard"}
+                onValueChange={(v) => {
+                  if (!selectedBlock) return
+                  const presets: Record<string, any> = {
+                    standard: {
+                      style: { variant: "default", radius: "xl", border: "subtle", shadow: "sm", accent: "none" },
+                      animation: { entrance: "fade", hover: "none", durationMs: 400, delayMs: 0 },
+                    },
+                    softGlow: {
+                      style: { variant: "soft", radius: "lg", border: "none", shadow: "md", accent: "none" },
+                      animation: { entrance: "fade", hover: "glow", durationMs: 400, delayMs: 0 },
+                    },
+                    outlineStrong: {
+                      style: { variant: "outline", radius: "lg", border: "strong", shadow: "none", accent: "none" },
+                      animation: { entrance: "slide-up", hover: "lift", durationMs: 500, delayMs: 0 },
+                    },
+                    elevatedBrand: {
+                      style: { variant: "elevated", radius: "xl", border: "subtle", shadow: "lg", accent: "brand" },
+                      animation: { entrance: "scale", hover: "lift", durationMs: 400, delayMs: 0 },
+                    },
+                    mutedAccentMinimal: {
+                      style: { variant: "soft", radius: "md", border: "none", shadow: "sm", accent: "muted" },
+                      animation: { entrance: "slide-left", hover: "none", durationMs: 300, delayMs: 0 },
+                    },
+                  }
+                  const preset = presets[v]
+                  const currentProps = selectedBlock.props as Record<string, unknown>
+                  const updatedProps = {
+                    ...currentProps,
+                    designPreset: v,
+                    style: preset.style,
+                    animation: preset.animation,
+                  } as CMSBlock["props"]
+                  updateSelectedProps(updatedProps)
+                }}
+              >
+                <SelectTrigger className="h-8 text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="standard">Standard</SelectItem>
+                  <SelectItem value="softGlow">Soft Glow</SelectItem>
+                  <SelectItem value="outlineStrong">Outline Strong</SelectItem>
+                  <SelectItem value="elevatedBrand">Elevated Brand</SelectItem>
+                  <SelectItem value="mutedAccentMinimal">Muted Accent Minimal</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Style Controls */}
+            <div className="space-y-1.5 rounded-lg bg-muted/30 p-3">
+              <Label className="text-xs font-semibold text-primary">STYLE (nach Preset anpassen)</Label>
+              
+              {/* Variant */}
+              <div className="space-y-1.5">
+                <Label className="text-xs">Variante</Label>
+                <Select
+                  value={(selectedBlock.props as any)?.style?.variant || "default"}
+                  onValueChange={(v) => {
+                    if (!selectedBlock) return
+                    const currentProps = selectedBlock.props as Record<string, unknown>
+                    const style = (currentProps.style as Record<string, unknown>) || {}
+                    const updatedProps = {
+                      ...currentProps,
+                      style: { ...style, variant: v },
+                    } as CMSBlock["props"]
+                    updateSelectedProps(updatedProps)
+                  }}
+                >
+                  <SelectTrigger className="h-8 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="default">Default</SelectItem>
+                    <SelectItem value="soft">Soft</SelectItem>
+                    <SelectItem value="outline">Outline</SelectItem>
+                    <SelectItem value="elevated">Elevated</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Radius */}
+              <div className="space-y-1.5">
+                <Label className="text-xs">Border Radius</Label>
+                <Select
+                  value={(selectedBlock.props as any)?.style?.radius || "xl"}
+                  onValueChange={(v) => {
+                    if (!selectedBlock) return
+                    const currentProps = selectedBlock.props as Record<string, unknown>
+                    const style = (currentProps.style as Record<string, unknown>) || {}
+                    const updatedProps = {
+                      ...currentProps,
+                      style: { ...style, radius: v },
+                    } as CMSBlock["props"]
+                    updateSelectedProps(updatedProps)
+                  }}
+                >
+                  <SelectTrigger className="h-8 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="md">Medium</SelectItem>
+                    <SelectItem value="lg">Large</SelectItem>
+                    <SelectItem value="xl">Extra Large</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Border */}
+              <div className="space-y-1.5">
+                <Label className="text-xs">Border</Label>
+                <Select
+                  value={(selectedBlock.props as any)?.style?.border || "subtle"}
+                  onValueChange={(v) => {
+                    if (!selectedBlock) return
+                    const currentProps = selectedBlock.props as Record<string, unknown>
+                    const style = (currentProps.style as Record<string, unknown>) || {}
+                    const updatedProps = {
+                      ...currentProps,
+                      style: { ...style, border: v },
+                    } as CMSBlock["props"]
+                    updateSelectedProps(updatedProps)
+                  }}
+                >
+                  <SelectTrigger className="h-8 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    <SelectItem value="subtle">Subtle</SelectItem>
+                    <SelectItem value="strong">Strong</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Shadow */}
+              <div className="space-y-1.5">
+                <Label className="text-xs">Schatten</Label>
+                <Select
+                  value={(selectedBlock.props as any)?.style?.shadow || "sm"}
+                  onValueChange={(v) => {
+                    if (!selectedBlock) return
+                    const currentProps = selectedBlock.props as Record<string, unknown>
+                    const style = (currentProps.style as Record<string, unknown>) || {}
+                    const updatedProps = {
+                      ...currentProps,
+                      style: { ...style, shadow: v },
+                    } as CMSBlock["props"]
+                    updateSelectedProps(updatedProps)
+                  }}
+                >
+                  <SelectTrigger className="h-8 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    <SelectItem value="sm">Small</SelectItem>
+                    <SelectItem value="md">Medium</SelectItem>
+                    <SelectItem value="lg">Large</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Accent */}
+              <div className="space-y-1.5">
+                <Label className="text-xs">Akzentfarbe</Label>
+                <Select
+                  value={(selectedBlock.props as any)?.style?.accent || "none"}
+                  onValueChange={(v) => {
+                    if (!selectedBlock) return
+                    const currentProps = selectedBlock.props as Record<string, unknown>
+                    const style = (currentProps.style as Record<string, unknown>) || {}
+                    const updatedProps = {
+                      ...currentProps,
+                      style: { ...style, accent: v },
+                    } as CMSBlock["props"]
+                    updateSelectedProps(updatedProps)
+                  }}
+                >
+                  <SelectTrigger className="h-8 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    <SelectItem value="brand">Brand</SelectItem>
+                    <SelectItem value="muted">Muted</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Animation Controls */}
+            <div className="space-y-1.5 rounded-lg bg-muted/30 p-3">
+              <Label className="text-xs font-semibold text-primary">ANIMATION</Label>
+              
+              {/* Entrance */}
+              <div className="space-y-1.5">
+                <Label className="text-xs">Eintrittsanimation</Label>
+                <Select
+                  value={(selectedBlock.props as any)?.animation?.entrance || "fade"}
+                  onValueChange={(v) => {
+                    if (!selectedBlock) return
+                    const currentProps = selectedBlock.props as Record<string, unknown>
+                    const animation = (currentProps.animation as Record<string, unknown>) || {}
+                    const updatedProps = {
+                      ...currentProps,
+                      animation: { ...animation, entrance: v },
+                    } as CMSBlock["props"]
+                    updateSelectedProps(updatedProps)
+                  }}
+                >
+                  <SelectTrigger className="h-8 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    <SelectItem value="fade">Fade</SelectItem>
+                    <SelectItem value="slide-up">Slide Up</SelectItem>
+                    <SelectItem value="slide-left">Slide Left</SelectItem>
+                    <SelectItem value="scale">Scale</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Hover */}
+              <div className="space-y-1.5">
+                <Label className="text-xs">Hover-Animation</Label>
+                <Select
+                  value={(selectedBlock.props as any)?.animation?.hover || "none"}
+                  onValueChange={(v) => {
+                    if (!selectedBlock) return
+                    const currentProps = selectedBlock.props as Record<string, unknown>
+                    const animation = (currentProps.animation as Record<string, unknown>) || {}
+                    const updatedProps = {
+                      ...currentProps,
+                      animation: { ...animation, hover: v },
+                    } as CMSBlock["props"]
+                    updateSelectedProps(updatedProps)
+                  }}
+                >
+                  <SelectTrigger className="h-8 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    <SelectItem value="lift">Lift</SelectItem>
+                    <SelectItem value="glow">Glow</SelectItem>
+                    <SelectItem value="tilt">Tilt</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Duration */}
+              <div className="space-y-1.5">
+                <Label className="text-xs">Dauer (ms)</Label>
+                <input
+                  type="number"
+                  min="100"
+                  max="1000"
+                  step="50"
+                  value={(selectedBlock.props as any)?.animation?.durationMs || 400}
+                  onChange={(e) => {
+                    if (!selectedBlock) return
+                    const currentProps = selectedBlock.props as Record<string, unknown>
+                    const animation = (currentProps.animation as Record<string, unknown>) || {}
+                    const updatedProps = {
+                      ...currentProps,
+                      animation: { ...animation, durationMs: parseInt(e.target.value, 10) },
+                    } as CMSBlock["props"]
+                    updateSelectedProps(updatedProps)
+                  }}
+                  className="h-8 w-full rounded border border-border bg-background px-2 text-sm"
+                />
+              </div>
+
+              {/* Delay */}
+              <div className="space-y-1.5">
+                <Label className="text-xs">Verzögerung (ms)</Label>
+                <input
+                  type="number"
+                  min="0"
+                  max="500"
+                  step="50"
+                  value={(selectedBlock.props as any)?.animation?.delayMs || 0}
+                  onChange={(e) => {
+                    if (!selectedBlock) return
+                    const currentProps = selectedBlock.props as Record<string, unknown>
+                    const animation = (currentProps.animation as Record<string, unknown>) || {}
+                    const updatedProps = {
+                      ...currentProps,
+                      animation: { ...animation, delayMs: parseInt(e.target.value, 10) },
+                    } as CMSBlock["props"]
+                    updateSelectedProps(updatedProps)
+                  }}
+                  className="h-8 w-full rounded border border-border bg-background px-2 text-sm"
+                />
+              </div>
+            </div>
+
+            {/* Global Colors */}
+            <div className="space-y-1.5 rounded-lg bg-muted/30 p-3">
+              <Label className="text-xs font-semibold text-primary">FARBEN (global)</Label>
+              
+              <div className="space-y-1.5">
+                <Label className="text-xs">Titel Farbe</Label>
+                <div className="flex gap-2">
+                  <input
+                    type="color"
+                    value={(selectedBlock.props as any)?.titleColor || "#111111"}
+                    onChange={(e) => {
+                      if (!selectedBlock) return
+                      const currentProps = selectedBlock.props as Record<string, unknown>
+                      const updatedProps = { ...currentProps, titleColor: e.target.value } as CMSBlock["props"]
+                      updateSelectedProps(updatedProps)
+                    }}
+                    className="h-8 w-12 rounded border border-border"
+                  />
+                  <input
+                    type="text"
+                    value={(selectedBlock.props as any)?.titleColor || "#111111"}
+                    onChange={(e) => {
+                      if (!selectedBlock) return
+                      const currentProps = selectedBlock.props as Record<string, unknown>
+                      const updatedProps = { ...currentProps, titleColor: e.target.value } as CMSBlock["props"]
+                      updateSelectedProps(updatedProps)
+                    }}
+                    className="h-8 flex-1 rounded border border-border bg-background px-2 text-xs"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs">Beschreibung Farbe</Label>
+                <div className="flex gap-2">
+                  <input
+                    type="color"
+                    value={(selectedBlock.props as any)?.descriptionColor || "#666666"}
+                    onChange={(e) => {
+                      if (!selectedBlock) return
+                      const currentProps = selectedBlock.props as Record<string, unknown>
+                      const updatedProps = { ...currentProps, descriptionColor: e.target.value } as CMSBlock["props"]
+                      updateSelectedProps(updatedProps)
+                    }}
+                    className="h-8 w-12 rounded border border-border"
+                  />
+                  <input
+                    type="text"
+                    value={(selectedBlock.props as any)?.descriptionColor || "#666666"}
+                    onChange={(e) => {
+                      if (!selectedBlock) return
+                      const currentProps = selectedBlock.props as Record<string, unknown>
+                      const updatedProps = { ...currentProps, descriptionColor: e.target.value } as CMSBlock["props"]
+                      updateSelectedProps(updatedProps)
+                    }}
+                    className="h-8 flex-1 rounded border border-border bg-background px-2 text-xs"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs">Icon Farbe</Label>
+                <div className="flex gap-2">
+                  <input
+                    type="color"
+                    value={(selectedBlock.props as any)?.iconColor || "#111111"}
+                    onChange={(e) => {
+                      if (!selectedBlock) return
+                      const currentProps = selectedBlock.props as Record<string, unknown>
+                      const updatedProps = { ...currentProps, iconColor: e.target.value } as CMSBlock["props"]
+                      updateSelectedProps(updatedProps)
+                    }}
+                    className="h-8 w-12 rounded border border-border"
+                  />
+                  <input
+                    type="text"
+                    value={(selectedBlock.props as any)?.iconColor || "#111111"}
+                    onChange={(e) => {
+                      if (!selectedBlock) return
+                      const currentProps = selectedBlock.props as Record<string, unknown>
+                      const updatedProps = { ...currentProps, iconColor: e.target.value } as CMSBlock["props"]
+                      updateSelectedProps(updatedProps)
+                    }}
+                    className="h-8 flex-1 rounded border border-border bg-background px-2 text-xs"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs">Card Hintergrund</Label>
+                <div className="flex gap-2">
+                  <input
+                    type="color"
+                    value={(selectedBlock.props as any)?.cardBgColor || "#ffffff"}
+                    onChange={(e) => {
+                      if (!selectedBlock) return
+                      const currentProps = selectedBlock.props as Record<string, unknown>
+                      const updatedProps = { ...currentProps, cardBgColor: e.target.value } as CMSBlock["props"]
+                      updateSelectedProps(updatedProps)
+                    }}
+                    className="h-8 w-12 rounded border border-border"
+                  />
+                  <input
+                    type="text"
+                    value={(selectedBlock.props as any)?.cardBgColor || "#ffffff"}
+                    onChange={(e) => {
+                      if (!selectedBlock) return
+                      const currentProps = selectedBlock.props as Record<string, unknown>
+                      const updatedProps = { ...currentProps, cardBgColor: e.target.value } as CMSBlock["props"]
+                      updateSelectedProps(updatedProps)
+                    }}
+                    className="h-8 flex-1 rounded border border-border bg-background px-2 text-xs"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs">Card Border</Label>
+                <div className="flex gap-2">
+                  <input
+                    type="color"
+                    value={(selectedBlock.props as any)?.cardBorderColor || "#e5e7eb"}
+                    onChange={(e) => {
+                      if (!selectedBlock) return
+                      const currentProps = selectedBlock.props as Record<string, unknown>
+                      const updatedProps = { ...currentProps, cardBorderColor: e.target.value } as CMSBlock["props"]
+                      updateSelectedProps(updatedProps)
+                    }}
+                    className="h-8 w-12 rounded border border-border"
+                  />
+                  <input
+                    type="text"
+                    value={(selectedBlock.props as any)?.cardBorderColor || "#e5e7eb"}
+                    onChange={(e) => {
+                      if (!selectedBlock) return
+                      const currentProps = selectedBlock.props as Record<string, unknown>
+                      const updatedProps = { ...currentProps, cardBorderColor: e.target.value } as CMSBlock["props"]
+                      updateSelectedProps(updatedProps)
+                    }}
+                    className="h-8 flex-1 rounded border border-border bg-background px-2 text-xs"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <Separator className="my-4" />
+
+          {/* Array Items Controls */}
           {renderArrayItemsControls(
             selectedBlock,
             "features",
@@ -4010,6 +4554,218 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
               { key: "cardBorderColor", label: "Card Border (optional)", type: "color" as const, placeholder: "#e5e7eb" },
             ]
           )}
+        </>
+      )}
+
+      {selectedBlock.type === "imageText" && (
+        <>
+          <Separator />
+          
+          {/* Block-Level Design System Controls */}
+          <div className="space-y-3">
+            {/* Layout Preset */}
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold text-primary">Layout Preset</Label>
+              <Select
+                value={(selectedBlock.props as any)?.designPreset || "standard"}
+                onValueChange={(v) => {
+                  if (!selectedBlock) return
+                  const presets: Record<string, any> = {
+                    standard: {
+                      style: { variant: "default", verticalAlign: "center", textAlign: "left", maxWidth: "lg" },
+                      background: "none",
+                      imagePosition: "left",
+                    },
+                    soft: {
+                      style: { variant: "soft", verticalAlign: "center", textAlign: "left", maxWidth: "lg" },
+                      background: "muted",
+                      imagePosition: "left",
+                    },
+                    softCentered: {
+                      style: { variant: "soft", verticalAlign: "center", textAlign: "center", maxWidth: "lg" },
+                      background: "muted",
+                      imagePosition: "left",
+                    },
+                    imageRight: {
+                      style: { variant: "default", verticalAlign: "center", textAlign: "left", maxWidth: "lg" },
+                      background: "none",
+                      imagePosition: "right",
+                    },
+                    imageRightCentered: {
+                      style: { variant: "default", verticalAlign: "center", textAlign: "center", maxWidth: "lg" },
+                      background: "none",
+                      imagePosition: "right",
+                    },
+                    topAligned: {
+                      style: { variant: "default", verticalAlign: "top", textAlign: "left", maxWidth: "lg" },
+                      background: "none",
+                      imagePosition: "left",
+                    },
+                  }
+                  const preset = presets[v]
+                  const currentProps = selectedBlock.props as Record<string, unknown>
+                  const updatedProps = {
+                    ...currentProps,
+                    designPreset: v,
+                    style: preset.style,
+                    background: preset.background,
+                    imagePosition: preset.imagePosition,
+                  } as CMSBlock["props"]
+                  updateSelectedProps(updatedProps)
+                }}
+              >
+                <SelectTrigger className="h-8 text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="standard">Standard</SelectItem>
+                  <SelectItem value="soft">Soft</SelectItem>
+                  <SelectItem value="softCentered">Soft Centered</SelectItem>
+                  <SelectItem value="imageRight">Image Right</SelectItem>
+                  <SelectItem value="imageRightCentered">Image Right Centered</SelectItem>
+                  <SelectItem value="topAligned">Top Aligned</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Style Controls */}
+            <div className="space-y-1.5 rounded-lg bg-muted/30 p-3">
+              <Label className="text-xs font-semibold text-primary">STYLE</Label>
+              
+              {/* Variant */}
+              <div className="space-y-1.5">
+                <Label className="text-xs">Variante</Label>
+                <Select
+                  value={(selectedBlock.props as any)?.style?.variant || "default"}
+                  onValueChange={(v) => {
+                    if (!selectedBlock) return
+                    const currentProps = selectedBlock.props as Record<string, unknown>
+                    const style = (currentProps.style as Record<string, unknown>) || {}
+                    const updatedProps = {
+                      ...currentProps,
+                      style: { ...style, variant: v },
+                    } as CMSBlock["props"]
+                    updateSelectedProps(updatedProps)
+                  }}
+                >
+                  <SelectTrigger className="h-8 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="default">Default</SelectItem>
+                    <SelectItem value="soft">Soft</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Vertical Align */}
+              <div className="space-y-1.5">
+                <Label className="text-xs">Vertikale Ausrichtung</Label>
+                <Select
+                  value={(selectedBlock.props as any)?.style?.verticalAlign || "center"}
+                  onValueChange={(v) => {
+                    if (!selectedBlock) return
+                    const currentProps = selectedBlock.props as Record<string, unknown>
+                    const style = (currentProps.style as Record<string, unknown>) || {}
+                    const updatedProps = {
+                      ...currentProps,
+                      style: { ...style, verticalAlign: v },
+                    } as CMSBlock["props"]
+                    updateSelectedProps(updatedProps)
+                  }}
+                >
+                  <SelectTrigger className="h-8 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="top">Oben</SelectItem>
+                    <SelectItem value="center">Zentriert</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Text Align */}
+              <div className="space-y-1.5">
+                <Label className="text-xs">Text Ausrichtung</Label>
+                <Select
+                  value={(selectedBlock.props as any)?.style?.textAlign || "left"}
+                  onValueChange={(v) => {
+                    if (!selectedBlock) return
+                    const currentProps = selectedBlock.props as Record<string, unknown>
+                    const style = (currentProps.style as Record<string, unknown>) || {}
+                    const updatedProps = {
+                      ...currentProps,
+                      style: { ...style, textAlign: v },
+                    } as CMSBlock["props"]
+                    updateSelectedProps(updatedProps)
+                  }}
+                >
+                  <SelectTrigger className="h-8 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="left">Links</SelectItem>
+                    <SelectItem value="center">Zentriert</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Max Width */}
+              <div className="space-y-1.5">
+                <Label className="text-xs">Maximale Breite</Label>
+                <Select
+                  value={(selectedBlock.props as any)?.style?.maxWidth || "lg"}
+                  onValueChange={(v) => {
+                    if (!selectedBlock) return
+                    const currentProps = selectedBlock.props as Record<string, unknown>
+                    const style = (currentProps.style as Record<string, unknown>) || {}
+                    const updatedProps = {
+                      ...currentProps,
+                      style: { ...style, maxWidth: v },
+                    } as CMSBlock["props"]
+                    updateSelectedProps(updatedProps)
+                  }}
+                >
+                  <SelectTrigger className="h-8 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="md">Medium</SelectItem>
+                    <SelectItem value="lg">Large</SelectItem>
+                    <SelectItem value="xl">Extra Large</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Image Aspect Ratio */}
+              <div className="space-y-1.5">
+                <Label className="text-xs">Bild Seitenverhältnis</Label>
+                <Select
+                  value={(selectedBlock.props as any)?.style?.imageAspectRatio || "4/3"}
+                  onValueChange={(v) => {
+                    if (!selectedBlock) return
+                    const currentProps = selectedBlock.props as Record<string, unknown>
+                    const style = (currentProps.style as Record<string, unknown>) || {}
+                    const updatedProps = {
+                      ...currentProps,
+                      style: { ...style, imageAspectRatio: v },
+                    } as CMSBlock["props"]
+                    updateSelectedProps(updatedProps)
+                  }}
+                >
+                  <SelectTrigger className="h-8 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="4/3">4:3 (Standard)</SelectItem>
+                    <SelectItem value="16/9">16:9 (Breitbild)</SelectItem>
+                    <SelectItem value="1/1">1:1 (Quadrat)</SelectItem>
+                    <SelectItem value="3/2">3:2 (Klassisch)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
         </>
       )}
 

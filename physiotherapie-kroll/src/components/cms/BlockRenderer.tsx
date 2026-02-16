@@ -56,7 +56,7 @@ export function BlockRenderer({
 
   const blockProps = (block.props ?? {}) as Record<string, unknown>
   const sectionValue = blockProps.section
-  const section =
+  const section: BlockSectionProps | undefined =
     sectionValue && typeof sectionValue === "object"
       ? (sectionValue as BlockSectionProps)
       : undefined
@@ -366,20 +366,37 @@ export function BlockRenderer({
 
   const typographyClassName = getTypographyClassName(typography)
 
+  // Check if block should be full bleed (no width constraint)
+  const isFullBleed = section?.fullBleed === true
+
+  // Wrapper function for unified global width
+  const wrapWithGlobalWidth = (blockContent: React.ReactNode) => {
+    if (isFullBleed) {
+      // Full bleed: no max-width, no horizontal padding
+      return blockContent
+    }
+    // Standard: apply consistent width and padding
+    return (
+      <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
+        {blockContent}
+      </div>
+    )
+  }
+
   if (!editable) {
     // Apply typography classes to wrapper even in non-editable mode
     if (typographyClassName) {
       return (
         <div className={typographyClassName}>
           <SectionWrapper section={section} isFirst={isFirst}>
-            {content}
+            {wrapWithGlobalWidth(content)}
           </SectionWrapper>
         </div>
       )
     }
     return (
       <SectionWrapper section={section} isFirst={isFirst}>
-        {content}
+        {wrapWithGlobalWidth(content)}
       </SectionWrapper>
     )
   }
@@ -429,7 +446,7 @@ export function BlockRenderer({
       }}
     >
       <SectionWrapper section={section} editable isFirst={isFirst}>
-        {content}
+        {wrapWithGlobalWidth(content)}
       </SectionWrapper>
     </div>
   )

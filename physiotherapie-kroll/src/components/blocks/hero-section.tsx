@@ -17,6 +17,7 @@ import type { BrandKey } from "@/components/brand/brandAssets"
 import { useElementShadowStyle } from "@/lib/shadow"
 import { resolveDynamicElementId } from "@/lib/editableElements"
 import { BrandToggle } from "@/components/brand/BrandToggle"
+import { resolveButtonPresetStyles } from "@/lib/buttonPresets"
 
 /**
  * Modul-weites Animation-Guard-Set
@@ -373,7 +374,9 @@ export function HeroSection({
             as="div"
             className={cn(
               "hero-badge inline-flex items-center gap-2",
-              "bg-primary/10 text-primary cursor-pointer"
+              "rounded-full px-4 py-2 text-sm font-medium",
+              "bg-primary/10 text-primary cursor-pointer",
+              shouldAnimateIn && "animate-fade-in-up"
             )}
             data-element-id="badge"
             style={{
@@ -383,7 +386,7 @@ export function HeroSection({
                 : {}),
             }}
           >
-            <div className={cn("inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium", shouldAnimateIn && "animate-fade-in-up")}>
+            <div className="inline-flex items-center gap-2">
               {isCalm ? (
                 <>
                   <Heart className="h-4 w-4" aria-hidden="true" />
@@ -501,6 +504,12 @@ export function HeroSection({
                     size="lg"
                     variant={isSecondary ? "outline" : "default"}
                     className={cn(
+                      // First apply button preset styles if available
+                      resolveButtonPresetStyles(
+                        props?.buttonPreset,
+                        isSecondary ? "outline" : "default"
+                      ).className,
+                      // Then add block-specific styling
                       "group gap-2 text-base font-semibold",
                       isSecondary && "border-border/50 bg-transparent text-foreground hover:bg-secondary hover:text-secondary-foreground rounded-md uppercase tracking-wide",
                       !isSecondary && isCalm && "rounded-full px-8",

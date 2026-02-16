@@ -271,7 +271,7 @@ function AnimationConfigSection({ stage, config, onChange }: AnimationConfigSect
           {/* Scroll Trigger Params */}
           {config.trigger === "onScroll" && (
             <div className="space-y-1">
-              <Label className="text-xs text-muted-foreground">Threshold (0-1)</Label>
+              <Label className="text-xs text-muted-foreground ">Threshold (0-1)</Label>
               <Input
                 type="number"
                 value={config.threshold ?? 0.1}
@@ -279,7 +279,7 @@ function AnimationConfigSection({ stage, config, onChange }: AnimationConfigSect
                 min={0}
                 max={1}
                 step={0.1}
-                className="h-8 text-xs"
+                className="h-8 text-xs mb-4"
               />
             </div>
           )}

@@ -15,6 +15,7 @@ import { useBrand } from "@/components/brand/BrandProvider"
 import { CheckCircle2, AlertCircle, Loader2, Send, Mail, Clock, Phone, MapPin } from "lucide-react"
 import * as React from "react"
 import { useElementShadowStyle } from "@/lib/shadow"
+import { resolveButtonPresetStyles } from "@/lib/buttonPresets"
 import type { CommonBlockProps } from "@/types/cms"
 
 type ContactFormBlockProps = ContactFormBlock["props"] & CommonBlockProps & {
@@ -303,6 +304,7 @@ export function ContactFormBlock({
   layout = "stack",
   elements,
   contactInfoCards,
+  buttonPreset,
   blockId,
   pageSlug,
   editable = false,
@@ -469,7 +471,10 @@ export function ContactFormBlock({
             <Button
               variant="outline"
               onClick={() => setFormState("idle")}
-              className="mt-10 rounded-xl px-6 transition-all duration-300 hover:-translate-y-0.5 hover:bg-background hover:shadow-lg"
+              className={cn(
+                resolveButtonPresetStyles(buttonPreset, "outline").className,
+                "mt-10 rounded-xl px-6 transition-all duration-300 hover:-translate-y-0.5 hover:bg-background hover:shadow-lg"
+              )}
             >
               Weitere Nachricht senden
             </Button>
@@ -767,6 +772,9 @@ export function ContactFormBlock({
                       type="submit"
                       disabled={isSubmitting || formState === "loading"}
                       className={cn(
+                        // Apply button preset styles first
+                        resolveButtonPresetStyles(buttonPreset, "default").className,
+                        // Then add form-specific styling
                         "group relative h-14 w-full overflow-hidden rounded-xl text-base font-semibold",
                         "bg-primary text-primary-foreground",
                         "transition-all duration-400 ease-out",
@@ -989,6 +997,9 @@ export function ContactFormBlock({
                 type="submit"
                 disabled={isSubmitting || formState === "loading"}
                 className={cn(
+                  // Apply button preset styles first
+                  resolveButtonPresetStyles(buttonPreset, "default").className,
+                  // Then add form-specific styling
                   "group relative h-14 w-full overflow-hidden rounded-xl text-base font-semibold",
                   "bg-primary text-primary-foreground",
                   "transition-all duration-400 ease-out",

@@ -4,8 +4,9 @@ import React, { useState, useEffect } from "react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { ArrowRight } from "lucide-react"
-import { motion, useReducedMotion } from "framer-motion"
+import { motion, useReducedMotion, cubicBezier } from "framer-motion"
 import { useElementShadowStyle } from "@/lib/shadow"
+import { resolveButtonPresetStyles } from "@/lib/buttonPresets"
 
 /* ================================================================ */
 /*  Types                                                            */
@@ -56,6 +57,9 @@ export interface SectionBlockProps {
   /** Enable hover elevation on inner surface */
   enableHoverElevation?: boolean
 
+  /** Show CTA button */
+  showCta?: boolean
+
   /** Color overrides */
   backgroundColor?: string
   eyebrowColor?: string
@@ -76,6 +80,8 @@ export interface SectionBlockProps {
   primaryCtaHref?: string
   secondaryCtaText?: string
   secondaryCtaHref?: string
+
+  buttonPreset?: string
 }
 
 /* ================================================================ */
@@ -149,7 +155,7 @@ const itemVariants = {
   visible: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] },
+    transition: { duration: 0.6, ease: cubicBezier(0.22, 1, 0.36, 1) },
   },
 }
 
@@ -175,6 +181,7 @@ export function SectionBlock({
   showDivider = false,
   enableGlow = true,
   enableHoverElevation = true,
+  showCta = true,
   backgroundColor,
   eyebrowColor,
   headlineColor,
@@ -190,10 +197,14 @@ export function SectionBlock({
   primaryCtaHref,
   secondaryCtaText,
   secondaryCtaHref,
+  buttonPreset,
 }: SectionBlockProps) {
   const prefersReducedMotion = useReducedMotion()
   const isCentered = align === "center"
   const isJustified = align === "justify"
+
+  const primaryPreset = resolveButtonPresetStyles(buttonPreset, undefined, undefined)
+  const secondaryPreset = resolveButtonPresetStyles(buttonPreset, "outline", undefined)
 
   // Resolve backward-compat CTA props
   const resolvedPrimaryText = ctaText || primaryCtaText
@@ -253,9 +264,10 @@ export function SectionBlock({
     onEditField(blockId, fieldPath, rect)
   }
 
-  const hasCta =
+  const hasCta = showCta && (
     (resolvedPrimaryText && resolvedPrimaryHref) ||
     (secondaryCtaText && secondaryCtaHref)
+  )
 
   /* ---- Background classes ---- */
   const bgClasses = cn(
@@ -268,7 +280,7 @@ export function SectionBlock({
   return (
     <section
       className={cn(
-        "relative overflow-hidden py-20 md:py-28 lg:py-32",
+        "relative overflow-hidden py-10 md:py-14 lg:py-16",
         bgClasses,
       )}
       style={
@@ -328,8 +340,8 @@ export function SectionBlock({
             className={cn(
               "absolute left-1/2 top-1/2 h-[300px] w-[300px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-[100px]",
               background === "gradient-brand"
-                ? "bg-primary/[0.06]"
-                : "bg-accent/[0.04]",
+                ? "bg-primary/6"
+                : "bg-accent/4",
             )}
           />
         </div>
@@ -340,7 +352,7 @@ export function SectionBlock({
         <div
           className={cn(
             // Inner card surface with layered shadow system
-            "rounded-3xl px-8 py-14 md:px-14 md:py-20",
+            "rounded-3xl px-8 py-8 md:px-14 md:py-10",
             // Soft outer shadow with blue tint for brand
             background === "gradient-brand"
               ? "shadow-[0_4px_24px_-4px_oklch(0.45_0.12_160_/_0.06),0_12px_48px_-12px_oklch(0.45_0.12_160_/_0.08)]"
@@ -388,7 +400,7 @@ export function SectionBlock({
                 )}
               >
                 <div
-                  className="h-px w-10 bg-gradient-to-r from-transparent via-primary/40 to-primary/60"
+                  className="h-px w-10 bg-linear-to-r from-transparent via-primary/40 to-primary/60"
                   aria-hidden="true"
                 />
                 <span
@@ -410,7 +422,7 @@ export function SectionBlock({
                 </span>
                 {isCentered && (
                   <div
-                    className="h-px w-10 bg-gradient-to-l from-transparent via-primary/40 to-primary/60"
+                    className="h-px w-10 bg-linear-to-l from-transparent via-primary/40 to-primary/60"
                     aria-hidden="true"
                   />
                 )}
@@ -474,8 +486,8 @@ export function SectionBlock({
                   className={cn(
                     "h-px w-24",
                     background === "gradient-brand"
-                      ? "bg-gradient-to-r from-primary/10 via-primary/40 to-primary/10"
-                      : "bg-gradient-to-r from-border/20 via-border/60 to-border/20",
+                      ? "bg-linear-to-r from-primary/10 via-primary/40 to-primary/10"
+                      : "bg-linear-to-r from-border/20 via-border/60 to-border/20",
                   )}
                   aria-hidden="true"
                 />
@@ -525,8 +537,10 @@ export function SectionBlock({
                   >
                     {editable && blockId && onEditField ? (
                       <Button
+                        variant={primaryPreset.variant}
                         size="lg"
                         className={cn(
+                          primaryPreset.className,
                           "gap-2 rounded-xl px-8 text-base shadow-lg transition-all duration-300",
                           "hover:-translate-y-0.5 hover:shadow-xl",
                           background === "gradient-brand"
@@ -536,11 +550,10 @@ export function SectionBlock({
                         )}
                         style={{
                           color: ctaTextColor || undefined,
-                          backgroundColor: ctaBgColor
-                            ? primaryHovered && ctaHoverBgColor
+                          backgroundColor:
+                            primaryHovered && ctaHoverBgColor
                               ? ctaHoverBgColor
-                              : ctaBgColor
-                            : undefined,
+                              : ctaBgColor || undefined,
                           borderColor: ctaBorderColor || undefined,
                         }}
                         onMouseEnter={() => setPrimaryHovered(true)}
@@ -554,8 +567,10 @@ export function SectionBlock({
                       </Button>
                     ) : (
                       <Button
+                        variant={primaryPreset.variant}
                         size="lg"
                         className={cn(
+                          primaryPreset.className,
                           "gap-2 rounded-xl px-8 text-base shadow-lg transition-all duration-300",
                           "hover:-translate-y-0.5 hover:shadow-xl",
                           background === "gradient-brand"
@@ -589,8 +604,9 @@ export function SectionBlock({
                     {editable && blockId && onEditField ? (
                       <Button
                         size="lg"
-                        variant="outline"
+                        variant={secondaryPreset.variant}
                         className={cn(
+                          secondaryPreset.className,
                           "gap-2 rounded-xl border-2 bg-transparent px-8 text-base transition-all duration-300",
                           "hover:-translate-y-0.5 hover:border-primary/40 hover:bg-primary/5",
                           "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
@@ -604,8 +620,9 @@ export function SectionBlock({
                     ) : (
                       <Button
                         size="lg"
-                        variant="outline"
+                        variant={secondaryPreset.variant}
                         className={cn(
+                          secondaryPreset.className,
                           "gap-2 rounded-xl border-2 bg-transparent px-8 text-base transition-all duration-300",
                           "hover:-translate-y-0.5 hover:border-primary/40 hover:bg-primary/5",
                           "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",

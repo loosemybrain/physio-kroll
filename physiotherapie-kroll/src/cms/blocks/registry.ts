@@ -117,6 +117,8 @@ const heroPropsSchema = z.object({
     "physio-konzept": heroBrandContentSchema.optional(),
   }).optional(),
   typography: elementTypographySchema,
+  // Button preset
+  buttonPreset: z.string().optional(),
 })
 
 const textPropsSchema = z.object({
@@ -134,6 +136,7 @@ const imageTextPropsSchema = z.object({
   imageUrl: z.string(),
   imageAlt: z.string(),
   imagePosition: z.enum(["left", "right"]).optional(),
+  eyebrow: z.string().optional(),
   headline: z.string().optional(),
   content: z.string(),
   ctaText: z.string().optional(),
@@ -144,6 +147,19 @@ const imageTextPropsSchema = z.object({
   ctaBgColor: z.string().optional(),
   ctaHoverBgColor: z.string().optional(),
   ctaBorderColor: z.string().optional(),
+  background: z.enum(["none", "muted", "gradient"]).optional(),
+  backgroundColor: z.string().optional(),
+  designPreset: z.string().optional(),
+  style: z.object({
+    variant: z.enum(["default", "soft"]).optional(),
+    verticalAlign: z.enum(["top", "center"]).optional(),
+    textAlign: z.enum(["left", "center"]).optional(),
+    maxWidth: z.enum(["md", "lg", "xl"]).optional(),
+    imageAspectRatio: z.enum(["4/3", "16/9", "1/1", "3/2"]).optional(),
+    paddingY: z.enum(["none", "sm", "md", "lg", "xl"]).optional(),
+    paddingX: z.enum(["sm", "md", "lg"]).optional(),
+  }).optional(),
+  buttonPreset: z.string().optional(),
   typography: elementTypographySchema,
 })
 
@@ -159,6 +175,19 @@ const featureGridPropsSchema = z.object({
       iconColor: z.string().optional(),
       cardBgColor: z.string().optional(),
       cardBorderColor: z.string().optional(),
+      style: z.object({
+        variant: z.enum(["default", "soft", "outline", "elevated"]).optional(),
+        radius: z.enum(["md", "lg", "xl"]).optional(),
+        border: z.enum(["none", "subtle", "strong"]).optional(),
+        shadow: z.enum(["none", "sm", "md", "lg"]).optional(),
+        accent: z.enum(["none", "brand", "muted"]).optional(),
+      }).optional(),
+      animation: z.object({
+        entrance: z.enum(["none", "fade", "slide-up", "slide-left", "scale"]).optional(),
+        hover: z.enum(["none", "lift", "glow", "tilt"]).optional(),
+        durationMs: z.number().optional(),
+        delayMs: z.number().optional(),
+      }).optional(),
     })
   ),
   titleColor: z.string().optional(),
@@ -172,6 +201,20 @@ const featureGridPropsSchema = z.object({
       z.union([z.literal(2), z.literal(3), z.literal(4)])
     )
     .optional(),
+  designPreset: z.string().optional(),
+  style: z.object({
+    variant: z.enum(["default", "soft", "outline", "elevated"]).optional(),
+    radius: z.enum(["md", "lg", "xl"]).optional(),
+    border: z.enum(["none", "subtle", "strong"]).optional(),
+    shadow: z.enum(["none", "sm", "md", "lg"]).optional(),
+    accent: z.enum(["none", "brand", "muted"]).optional(),
+  }).optional(),
+  animation: z.object({
+    entrance: z.enum(["none", "fade", "slide-up", "slide-left", "scale"]).optional(),
+    hover: z.enum(["none", "lift", "glow", "tilt"]).optional(),
+    durationMs: z.number().optional(),
+    delayMs: z.number().optional(),
+  }).optional(),
   typography: elementTypographySchema,
 })
 
@@ -190,10 +233,13 @@ const ctaPropsSchema = z.object({
   primaryCtaBgColor: z.string().optional(),
   primaryCtaHoverBgColor: z.string().optional(),
   primaryCtaBorderColor: z.string().optional(),
+  primaryCtaBorderRadius: z.string().optional(),
   secondaryCtaTextColor: z.string().optional(),
   secondaryCtaBgColor: z.string().optional(),
   secondaryCtaHoverBgColor: z.string().optional(),
   secondaryCtaBorderColor: z.string().optional(),
+  secondaryCtaBorderRadius: z.string().optional(),
+  buttonPreset: z.string().optional(),
   typography: elementTypographySchema,
 })
 
@@ -210,6 +256,7 @@ const sectionPropsSchema = z.object({
   showDivider: z.boolean().optional(),
   enableGlow: z.boolean().optional(),
   enableHoverElevation: z.boolean().optional(),
+  showCta: z.boolean().optional(),
   backgroundColor: z.string().optional(),
   eyebrowColor: z.string().optional(),
   headlineColor: z.string().optional(),
@@ -226,6 +273,7 @@ const sectionPropsSchema = z.object({
   primaryCtaHref: z.string().optional(),
   secondaryCtaText: z.string().optional(),
   secondaryCtaHref: z.string().optional(),
+  buttonPreset: z.string().optional(),
 })
 
 const cardButtonSchema = z.object({
@@ -269,6 +317,7 @@ const cardPropsSchema = z.object({
   buttons: z.array(cardButtonSchema).optional(),
   style: cardStyleSchema.optional(),
   animation: cardAnimationSchema.optional(),
+  buttonPreset: z.string().optional(),
 })
 
 const servicesGridPropsSchema = z.object({
@@ -360,6 +409,8 @@ const teamPropsSchema = z.object({
       z.union([z.literal(2), z.literal(3), z.literal(4)])
     )
     .optional(),
+  // Button preset
+  buttonPreset: z.string().optional(),
 })
 
 const contactFormPropsSchema = z.object({
@@ -404,6 +455,8 @@ const contactFormPropsSchema = z.object({
   consentLabel: z.string().optional(),
   consentRequiredText: z.string().optional(),
   layout: z.enum(["stack", "split"]).optional(),
+  // Button preset
+  buttonPreset: z.string().optional(),
 })
 
 const testimonialsPropsSchema = z.object({
@@ -582,6 +635,8 @@ const heroDefaults: HeroBlock["props"] = {
   floatingTitle: "Patientenzufriedenheit",
   floatingValue: "98%",
   floatingLabel: undefined,
+  // Button preset
+  buttonPreset: undefined,
   // New brand-specific content structure
   brandContent: {
     physiotherapy: {
@@ -652,11 +707,23 @@ const textDefaults: TextBlock["props"] = {
 const imageTextDefaults: ImageTextBlock["props"] = {
   imageUrl: "/placeholder.svg",
   imageAlt: "Bildbeschreibung",
-  imagePosition: "right",
+  imagePosition: "left",
+  eyebrow: "Label",
   headline: "Überschrift",
   content: "Textinhalt hier eingeben...",
   ctaText: "Mehr erfahren",
   ctaHref: "/",
+  background: "none",
+  designPreset: "standard",
+  style: {
+    variant: "default",
+    verticalAlign: "center",
+    textAlign: "left",
+    maxWidth: "lg",
+    imageAspectRatio: "4/3",
+    paddingY: "md",
+    paddingX: "md",
+  },
 }
 
 const featureGridDefaults: FeatureGridBlock["props"] = {
@@ -666,6 +733,20 @@ const featureGridDefaults: FeatureGridBlock["props"] = {
     { id: "3", title: "Feature 3", description: "Beschreibung..." },
   ],
   columns: 3,
+  designPreset: "standard",
+  style: {
+    variant: "default",
+    radius: "xl",
+    border: "subtle",
+    shadow: "sm",
+    accent: "none",
+  },
+  animation: {
+    entrance: "fade",
+    hover: "none",
+    durationMs: 400,
+    delayMs: 0,
+  },
 }
 
 const ctaDefaults: CtaBlock["props"] = {
@@ -688,6 +769,7 @@ const sectionDefaults: SectionBlock["props"] = {
   showDivider: false,
   enableGlow: true,
   enableHoverElevation: true,
+  showCta: true,
   ctaText: "Mehr erfahren",
   ctaHref: "/kontakt",
 }
@@ -1011,6 +1093,8 @@ const teamDefaults: TeamBlock["props"] = {
       ctaHref: "/team/thomas-weber" 
     },
   ],
+  // Button preset
+  buttonPreset: undefined,
 }
 
 const contactFormDefaults: ContactFormBlock["props"] = {
@@ -1038,6 +1122,8 @@ const contactFormDefaults: ContactFormBlock["props"] = {
   requireConsent: false,
   consentLabel: "Ich akzeptiere die Datenschutzerklärung",
   layout: "stack",
+  // Button preset
+  buttonPreset: undefined,
 }
 
 const testimonialsDefaults: TestimonialsBlock["props"] = {
@@ -1544,6 +1630,78 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
         placeholder: "Bildbeschreibung",
         required: true,
       },
+      // Style controls
+      {
+        key: "style.variant",
+        label: "Variante",
+        type: "select",
+        options: [
+          { value: "default", label: "Default" },
+          { value: "soft", label: "Soft" },
+        ],
+      },
+      {
+        key: "style.verticalAlign",
+        label: "Vertikale Ausrichtung",
+        type: "select",
+        options: [
+          { value: "top", label: "Oben" },
+          { value: "center", label: "Zentriert" },
+        ],
+      },
+      {
+        key: "style.textAlign",
+        label: "Text Ausrichtung",
+        type: "select",
+        options: [
+          { value: "left", label: "Links" },
+          { value: "center", label: "Zentriert" },
+        ],
+      },
+      {
+        key: "style.maxWidth",
+        label: "Maximale Breite",
+        type: "select",
+        options: [
+          { value: "md", label: "Medium" },
+          { value: "lg", label: "Large" },
+          { value: "xl", label: "Extra Large" },
+        ],
+      },
+      {
+        key: "style.imageAspectRatio",
+        label: "Bild Seitenverhältnis",
+        type: "select",
+        options: [
+          { value: "4/3", label: "4:3 (Standard)" },
+          { value: "16/9", label: "16:9 (Breitbild)" },
+          { value: "1/1", label: "1:1 (Quadrat)" },
+          { value: "3/2", label: "3:2 (Klassisch)" },
+        ],
+      },
+      // Spacing section
+      {
+        key: "style.paddingY",
+        label: "Padding (Vertikal)",
+        type: "select",
+        options: [
+          { value: "none", label: "Keine" },
+          { value: "sm", label: "Klein" },
+          { value: "md", label: "Mittel" },
+          { value: "lg", label: "Groß" },
+          { value: "xl", label: "Extra Groß" },
+        ],
+      },
+      {
+        key: "style.paddingX",
+        label: "Padding (Horizontal)",
+        type: "select",
+        options: [
+          { value: "sm", label: "Klein" },
+          { value: "md", label: "Mittel" },
+          { value: "lg", label: "Groß" },
+        ],
+      },
       {
         key: "imagePosition",
         label: "Bildposition",
@@ -1552,6 +1710,12 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
           { value: "left", label: "Links" },
           { value: "right", label: "Rechts" },
         ],
+      },
+      {
+        key: "eyebrow",
+        label: "Eyebrow (Label)",
+        type: "text",
+        placeholder: "Label eingeben",
       },
       {
         key: "headline",
@@ -1584,6 +1748,17 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
       { key: "ctaBgColor", label: "CTA Hintergrund", type: "color", placeholder: "#111111" },
       { key: "ctaHoverBgColor", label: "CTA Hover Hintergrund", type: "color", placeholder: "#000000" },
       { key: "ctaBorderColor", label: "CTA Border", type: "color", placeholder: "#111111" },
+      {
+        key: "background",
+        label: "Hintergrund",
+        type: "select",
+        options: [
+          { value: "none", label: "Keine" },
+          { value: "muted", label: "Dezent" },
+          { value: "gradient", label: "Verlauf" },
+        ],
+      },
+      { key: "backgroundColor", label: "Hintergrundfarbe (Custom)", type: "color", placeholder: "#ffffff" },
     ],
   },
   section: {
@@ -1643,6 +1818,7 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
       { key: "showDivider", label: "Divider anzeigen", type: "boolean" },
       { key: "enableGlow", label: "Glow-Effekt aktivieren", type: "boolean" },
       { key: "enableHoverElevation", label: "Hover-Elevation aktivieren", type: "boolean" },
+      { key: "showCta", label: "CTA Button anzeigen", type: "boolean" },
       
       { key: "ctaText", label: "CTA Button Text", type: "text", placeholder: "Mehr erfahren" },
       { key: "ctaHref", label: "CTA Button Link", type: "url", placeholder: "/kontakt" },
@@ -1812,7 +1988,113 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
     label: "Feature Grid",
     defaults: featureGridDefaults,
     zodSchema: featureGridPropsSchema,
-    inspectorFields: [],
+    inspectorFields: [
+      {
+        key: "columns",
+        label: "Spalten",
+        type: "select",
+        options: [
+          { value: "2", label: "2" },
+          { value: "3", label: "3" },
+          { value: "4", label: "4" },
+        ],
+      },
+      // Style controls
+      {
+        key: "style.variant",
+        label: "Card Variant",
+        type: "select",
+        options: [
+          { value: "default", label: "Default" },
+          { value: "soft", label: "Soft" },
+          { value: "outline", label: "Outline" },
+          { value: "elevated", label: "Elevated" },
+        ],
+      },
+      {
+        key: "style.radius",
+        label: "Border Radius",
+        type: "select",
+        options: [
+          { value: "md", label: "Medium" },
+          { value: "lg", label: "Large" },
+          { value: "xl", label: "Extra Large" },
+        ],
+      },
+      {
+        key: "style.border",
+        label: "Border Style",
+        type: "select",
+        options: [
+          { value: "none", label: "None" },
+          { value: "subtle", label: "Subtle" },
+          { value: "strong", label: "Strong" },
+        ],
+      },
+      {
+        key: "style.shadow",
+        label: "Shadow",
+        type: "select",
+        options: [
+          { value: "none", label: "None" },
+          { value: "sm", label: "Small" },
+          { value: "md", label: "Medium" },
+          { value: "lg", label: "Large" },
+        ],
+      },
+      {
+        key: "style.accent",
+        label: "Accent Color",
+        type: "select",
+        options: [
+          { value: "none", label: "None" },
+          { value: "brand", label: "Brand" },
+          { value: "muted", label: "Muted" },
+        ],
+      },
+      // Animation controls
+      {
+        key: "animation.entrance",
+        label: "Entrance Animation",
+        type: "select",
+        options: [
+          { value: "none", label: "None" },
+          { value: "fade", label: "Fade" },
+          { value: "slide-up", label: "Slide Up" },
+          { value: "slide-left", label: "Slide Left" },
+          { value: "scale", label: "Scale" },
+        ],
+      },
+      {
+        key: "animation.hover",
+        label: "Hover Animation",
+        type: "select",
+        options: [
+          { value: "none", label: "None" },
+          { value: "lift", label: "Lift" },
+          { value: "glow", label: "Glow" },
+          { value: "tilt", label: "Tilt" },
+        ],
+      },
+      {
+        key: "animation.durationMs",
+        label: "Animation Duration (ms)",
+        type: "number",
+        placeholder: "400",
+      },
+      {
+        key: "animation.delayMs",
+        label: "Animation Delay (ms)",
+        type: "number",
+        placeholder: "0",
+      },
+      // Global colors
+      { key: "titleColor", label: "Title Farbe (global)", type: "color", placeholder: "#111111" },
+      { key: "descriptionColor", label: "Beschreibung Farbe (global)", type: "color", placeholder: "#666666" },
+      { key: "iconColor", label: "Icon Farbe (global)", type: "color", placeholder: "#111111" },
+      { key: "cardBgColor", label: "Card Hintergrund (global)", type: "color", placeholder: "#ffffff" },
+      { key: "cardBorderColor", label: "Card Border (global)", type: "color", placeholder: "#e5e7eb" },
+    ],
   },
   cta: {
     type: "cta",
@@ -1843,10 +2125,12 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
       { key: "primaryCtaBgColor", label: "Primärer CTA Hintergrund", type: "color" },
       { key: "primaryCtaHoverBgColor", label: "Primärer CTA Hover Hintergrund", type: "color" },
       { key: "primaryCtaBorderColor", label: "Primärer CTA Border", type: "color" },
+      { key: "primaryCtaBorderRadius", label: "Primärer CTA Border Radius", type: "text", placeholder: "0.5rem" },
       { key: "secondaryCtaTextColor", label: "Sekundärer CTA Text Farbe", type: "color" },
       { key: "secondaryCtaBgColor", label: "Sekundärer CTA Hintergrund", type: "color" },
       { key: "secondaryCtaHoverBgColor", label: "Sekundärer CTA Hover Hintergrund", type: "color" },
       { key: "secondaryCtaBorderColor", label: "Sekundärer CTA Border", type: "color" },
+      { key: "secondaryCtaBorderRadius", label: "Sekundärer CTA Border Radius", type: "text", placeholder: "0.5rem" },
     ],
   },
   servicesGrid: {

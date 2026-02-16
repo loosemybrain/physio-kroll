@@ -16,6 +16,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { useElementShadowStyle } from "@/lib/shadow"
+import { resolveButtonPresetStyles } from "@/lib/buttonPresets"
 
 // ============================================================================
 // Types
@@ -74,6 +75,7 @@ export type CardBlockProps = {
   elements?: Record<string, any>
   onElementClick?: (blockId: string, elementId: string) => void
   selectedElementId?: string | null
+  buttonPreset?: string
 }
 
 // ============================================================================
@@ -219,6 +221,7 @@ function CardButtonRenderer({
   onEditField,
   buttonShadow,
   onElementClick,
+  buttonPreset,
 }: {
   button: CardButton
   editable?: boolean
@@ -226,6 +229,7 @@ function CardButtonRenderer({
   onEditField?: CardBlockProps["onEditField"]
   buttonShadow?: React.CSSProperties
   onElementClick?: CardBlockProps["onElementClick"]
+  buttonPreset?: string
 }) {
   const iconLeft = button.iconPosition !== "right" ? getIcon(button.icon, "left") : null
   const iconRight = button.iconPosition === "right" ? getIcon(button.icon, "right") : null
@@ -239,13 +243,20 @@ function CardButtonRenderer({
   )
 
   const canInlineEdit = Boolean(editable && blockId && onEditField)
+  const { variant, className: presetClassName } = resolveButtonPresetStyles(
+    buttonPreset,
+    button.variant,
+    undefined
+  )
 
   const handleEditClick = (e: React.MouseEvent) => {
     if (!canInlineEdit) return
     e.preventDefault()
     e.stopPropagation()
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
-    onEditField?.(blockId, `buttons.${button.id}.label`, rect)
+    if (blockId) {
+      onEditField?.(blockId, `buttons.${button.id}.label`, rect)
+    }
   }
 
   const buttonElement = (
@@ -255,7 +266,8 @@ function CardButtonRenderer({
       onClick={() => onEditField && blockId && onElementClick?.(blockId, `card.button.${button.id}`)}
     >
       <Button
-        variant={button.variant ?? "default"}
+        variant={variant}
+        className={presetClassName}
         size={button.size ?? "default"}
         disabled={button.disabled}
         onClick={
@@ -299,7 +311,7 @@ function ActionSlotRenderer({
   const canInlineEdit = Boolean(editable && blockId && onEditField)
 
   const handleEditClick = (e: React.MouseEvent) => {
-    if (!canInlineEdit) return
+    if (!canInlineEdit || !blockId) return
     e.preventDefault()
     e.stopPropagation()
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
@@ -361,6 +373,7 @@ export function CardBlock({
   elements,
   onElementClick,
   selectedElementId,
+  buttonPreset,
 }: CardBlockProps) {
   const [prefersReducedMotion, setPrefersReducedMotion] = React.useState(false)
 
@@ -463,7 +476,7 @@ export function CardBlock({
     e.preventDefault()
     e.stopPropagation()
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
-    onEditField?.(blockId, fieldPath, rect)
+    onEditField?.(blockId || "", fieldPath, rect)
   }
 
   return (
@@ -571,6 +584,7 @@ export function CardBlock({
                   onEditField={onEditField}
                   buttonShadow={buttonShadow}
                   onElementClick={onElementClick}
+                  buttonPreset={buttonPreset}
                 />
               )
             })}
