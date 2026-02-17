@@ -107,14 +107,23 @@ export function FaqAccordion({
       )}
     >
       <div className="mx-auto max-w-4xl px-4 sm:px-6">
-        {/* Inner surface panel - always rounded, overflow, and padded */}
+        {/* Inner surface panel - as div like section-block.tsx */}
         <div
           data-element-id="faq.surface"
           style={surfaceShadow}
-          onClick={() => onElementClick?.(blockId || "", "faq.surface")}
+          onClick={() => {
+            if (editable && blockId && onElementClick) {
+              onElementClick(blockId, "faq.surface")
+            }
+          }}
           className={cn(
             "relative rounded-2xl overflow-hidden px-6 py-10 sm:px-10 md:py-14",
-            isSoft ? "border border-border/20 bg-muted/30 backdrop-blur-sm" : "bg-card"
+            "border border-border/20",
+            isSoft
+              ? "bg-muted/30 backdrop-blur-sm"
+              : "bg-card",
+            selectedElementId === "faq.surface" && "ring-2 ring-primary/30",
+            editable && blockId && onElementClick && "cursor-pointer"
           )}
         >
           {/* Headline */}
