@@ -38,7 +38,9 @@ export interface InspectorField {
   options?: Array<{ value: string; label: string }>
   required?: boolean
   helpText?: string
+  showWhen?: { key: string; equals: any }
 }
+
 
 export interface BlockDefinition<T extends CMSBlock = CMSBlock> {
   type: T["type"]
@@ -48,6 +50,7 @@ export interface BlockDefinition<T extends CMSBlock = CMSBlock> {
   inspectorFields: InspectorField[]
   allowInlineEdit?: boolean
   elements?: EditableElementDef[]
+  enableInnerPanel?: boolean
 }
 
 const brandKeySchema = z.enum(["physiotherapy", "physio-konzept"])
@@ -366,6 +369,8 @@ const faqPropsSchema = z.object({
   headlineColor: z.string().optional(),
   questionColor: z.string().optional(),
   answerColor: z.string().optional(),
+  background: z.enum(["none", "muted", "gradient"]).optional(),
+  backgroundColor: z.string().optional(),
   items: z.array(
     z.object({
       id: z.string(),
@@ -378,6 +383,90 @@ const faqPropsSchema = z.object({
   variant: z.enum(["default", "soft"]).optional(),
   typography: elementTypographySchema,
 })
+
+/* ================================================================ */
+/*  Panel Container Props (Reusable Preset for all blocks)            */
+/* ================================================================ */
+
+const panelPropsSchema = z.object({
+  section: z.any().optional(),
+  containerBackgroundMode: z.enum(["transparent", "color", "gradient"]).optional(),
+  containerBackgroundColor: z.string().optional(),
+  containerBackgroundGradientPreset: z.string().optional(),
+  containerBackgroundGradient: z.any().optional(),
+  containerShadow: z.any().optional(),
+})
+
+const panelDefaults = {
+  containerBackgroundMode: "transparent" as const,
+  containerBackgroundColor: "",
+  containerBackgroundGradientPreset: "soft",
+  containerBackgroundGradient: undefined,
+  containerShadow: undefined,
+}
+
+const panelInspectorFields: InspectorField[] = [
+  {
+    key: "containerBackgroundMode",
+    label: "Panel Hintergrund",
+    type: "select",
+    options: [
+      { value: "transparent", label: "Transparent" },
+      { value: "color", label: "Farbe" },
+      { value: "gradient", label: "Gradient" },
+    ],
+  },
+  {
+    key: "containerBackgroundColor",
+    label: "Panel Farbe",
+    type: "color",
+    placeholder: "#RRGGBB",
+    showWhen: { key: "containerBackgroundMode", equals: "color" },
+  },
+  {
+    key: "containerBackgroundGradientPreset",
+    label: "Gradient Preset",
+    type: "select",
+    options: [
+      { value: "soft", label: "Soft" },
+      { value: "aurora", label: "Aurora" },
+      { value: "ocean", label: "Ocean" },
+      { value: "sunset", label: "Sunset" },
+      { value: "hero", label: "Hero" },
+      { value: "none", label: "Keine" },
+    ],
+    showWhen: { key: "containerBackgroundMode", equals: "gradient" },
+  },
+  {
+    key: "containerBackgroundGradient",
+    label: "Gradient (Custom)",
+    type: "text",
+    placeholder: "Custom gradient (Advanced)",
+    showWhen: { key: "containerBackgroundMode", equals: "gradient" },
+  },
+]
+
+/* ================================================================ */
+/*  Inner Panel Auto-Injection Helper                              */
+/* ================================================================ */
+
+function withInnerPanel<T extends BlockDefinition>(def: T): T {
+  if (!def.enableInnerPanel) return def
+
+  return {
+    ...def,
+    zodSchema: def.zodSchema ? (def.zodSchema as any).merge(panelPropsSchema) : panelPropsSchema,
+    defaults: { ...panelDefaults, ...(def.defaults ?? {}) } as T["defaults"],
+    inspectorFields: [
+      ...panelInspectorFields,
+      ...(def.inspectorFields ?? []),
+    ] as InspectorField[],
+  } as T
+}
+
+/* ================================================================ */
+/*  Block Schemas & Defaults                                        */
+/* ================================================================ */
 
 const teamPropsSchema = z.object({
   headline: z.string().optional(),
@@ -413,6 +502,8 @@ const teamPropsSchema = z.object({
     .optional(),
   // Button preset
   buttonPreset: z.string().optional(),
+  // Panel props (merged from panelPropsSchema)
+  ...panelPropsSchema.shape,
 })
 
 const contactFormPropsSchema = z.object({
@@ -1009,6 +1100,8 @@ const servicesGridDefaults: ServicesGridBlock["props"] = {
 
 const faqDefaults: FaqBlock["props"] = {
   headline: "Häufige Fragen",
+  background: "none",
+  backgroundColor: "",
   variant: "default",
   items: [
     { id: generateUniqueId("faq", 0), question: "Wie lange dauert eine Behandlung?", answer: "Eine Behandlungseinheit dauert in der Regel 30-60 Minuten, abhängig von der Art der Therapie und Ihren individuellen Bedürfnissen." },
@@ -2240,16 +2333,6 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
       { key: "ctaColor", label: "CTA Farbe", type: "color", placeholder: "#111111" },
       { key: "cardBgColor", label: "Karte Hintergrund", type: "color", placeholder: "#FFFFFF" },
       { key: "cardBorderColor", label: "Karte Border", type: "color", placeholder: "#E5E7EB" },
-      {
-        key: "background",
-        label: "Block Hintergrund",
-        type: "select",
-        options: [
-          { value: "none", label: "Kein Hintergrund" },
-          { value: "muted", label: "Dezent" },
-          { value: "gradient", label: "Verlauf" },
-        ]
-      }
       
     ],
   },
@@ -2258,7 +2341,24 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
     label: "FAQ",
     defaults: faqDefaults,
     zodSchema: faqPropsSchema,
-    inspectorFields: [],
+    enableInnerPanel: true,
+    inspectorFields: [
+      { key: "headline", label: "Überschrift", type: "text", placeholder: "Überschrift eingeben", required: false },
+      {
+        key: "background",
+        label: "Hintergrund",
+        type: "select",
+        options: [
+          { value: "none", label: "Keine" },
+          { value: "muted", label: "Gedimmt" },
+          { value: "gradient", label: "Gradient" },
+        ],
+      },
+      { key: "backgroundColor", label: "Hintergrundfarbe (Wrapper)", type: "color", placeholder: "#RRGGBB" },
+      { key: "headlineColor", label: "Überschrift Farbe", type: "color", placeholder: "#111111" },
+      { key: "questionColor", label: "Frage Farbe", type: "color", placeholder: "#111111" },
+      { key: "answerColor", label: "Antwort Farbe", type: "color", placeholder: "#666666" },
+    ],
   },
   team: {
     type: "team",
@@ -2266,6 +2366,7 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
     defaults: teamDefaults,
     zodSchema: teamPropsSchema,
     allowInlineEdit: true,
+    enableInnerPanel: true,
     inspectorFields: [
       { key: "headline", label: "Headline", type: "text", placeholder: "Überschrift", required: false },
       { key: "subheadline", label: "Subheadline", type: "text", placeholder: "Kurzer Text" },
@@ -2537,10 +2638,21 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
 }
 
 /**
+ * Transform blockRegistry to apply withInnerPanel to all blocks
+ */
+const transformedRegistry = Object.fromEntries(
+  Object.entries(blockRegistry).map(([type, def]) => [type, withInnerPanel(def)])
+) as Record<BlockType, BlockDefinition>
+
+// Re-export the transformed registry
+Object.assign(blockRegistry, transformedRegistry)
+
+/**
  * Get block definition by type
  */
 export function getBlockDefinition<T extends BlockType>(type: T): BlockDefinition<Extract<CMSBlock, { type: T }>> {
-  return blockRegistry[type] as BlockDefinition<Extract<CMSBlock, { type: T }>>
+  const def = blockRegistry[type] as BlockDefinition<Extract<CMSBlock, { type: T }>>
+  return def
 }
 
 /**

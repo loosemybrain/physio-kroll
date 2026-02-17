@@ -23,6 +23,8 @@ interface FaqAccordionProps {
   headlineColor?: string
   questionColor?: string
   answerColor?: string
+  background?: "none" | "muted" | "gradient"
+  backgroundColor?: string
   items: Array<{
     id: string
     question: string
@@ -30,7 +32,6 @@ interface FaqAccordionProps {
     questionColor?: string
     answerColor?: string
   }>
-  background?: "none" | "muted" | "gradient"
   variant?: "default" | "soft"
   editable?: boolean
   blockId?: string
@@ -62,6 +63,7 @@ export function FaqAccordion({
   answerColor,
   items,
   background = "none",
+  backgroundColor,
   variant = "default",
   editable = false,
   blockId,
@@ -74,7 +76,14 @@ export function FaqAccordion({
 
   const canInlineEdit = Boolean(editable && blockId && onEditField)
 
+  // Custom background logic
+  const hasCustomBg = typeof backgroundColor === "string" && backgroundColor.trim().length > 0
+
   // Element shadows
+  const wrapperShadow = useElementShadowStyle({
+    elementId: "faq.wrapper",
+    elementConfig: (elements ?? {})["faq.wrapper"],
+  })
   const surfaceShadow = useElementShadowStyle({
     elementId: "faq.surface",
     elementConfig: (elements ?? {})["faq.surface"],
@@ -100,32 +109,56 @@ export function FaqAccordion({
   const isElementSelected = (elementId: string) => selectedElementId === elementId
 
   return (
-    <section
-      className={cn(
-        "py-10 md:py-14 lg:py-16",
-        backgroundMap[background]
-      )}
-    >
+    <section className="py-10 md:py-14 lg:py-16">
       <div className="mx-auto max-w-4xl px-4 sm:px-6">
-        {/* Inner surface panel - as div like section-block.tsx */}
+        {/* Wrapper - outer container with background and rounded corners */}
         <div
-          data-element-id="faq.surface"
-          style={surfaceShadow}
-          onClick={() => {
+          data-element-id="faq.wrapper"
+          style={{
+            ...wrapperShadow,
+          }}
+          onClick={(e) => {
             if (editable && blockId && onElementClick) {
-              onElementClick(blockId, "faq.surface")
+              e.stopPropagation()
+              onElementClick(blockId, "faq.wrapper")
             }
           }}
           className={cn(
-            "relative rounded-2xl overflow-hidden px-6 py-10 sm:px-10 md:py-14",
-            "border border-border/20",
-            isSoft
-              ? "bg-muted/30 backdrop-blur-sm"
-              : "bg-card",
-            selectedElementId === "faq.surface" && "ring-2 ring-primary/30",
-            editable && blockId && onElementClick && "cursor-pointer"
+            "relative rounded-2xl",
+            selectedElementId === "faq.wrapper" && "ring-2 ring-primary/30",
+            editable && blockId && onElementClick && "cursor-pointer",
+            "p-4 sm:p-6" // Optional padding, so surface shadow is not clipped at the edges
           )}
         >
+          {/* Background Layer */}
+          <div
+            aria-hidden="true"
+            className={cn(
+              "absolute inset-0 rounded-2xl overflow-hidden border border-border/40",
+              !hasCustomBg && backgroundMap[background]
+            )}
+            style={hasCustomBg ? { backgroundColor: backgroundColor.trim() } : undefined}
+          />
+          {/* Inner surface panel */}
+          <div
+            data-element-id="faq.surface"
+            style={surfaceShadow}
+            onClick={(e) => {
+              if (editable && blockId && onElementClick) {
+                e.stopPropagation()
+                onElementClick(blockId, "faq.surface")
+              }
+            }}
+            className={cn(
+              "relative rounded-2xl overflow-hidden px-6 py-10 sm:px-10 md:py-14",
+              "border border-border/20",
+              isSoft
+                ? "bg-muted/30 backdrop-blur-sm"
+                : "bg-card",
+              selectedElementId === "faq.surface" && "ring-2 ring-primary/30",
+              editable && blockId && onElementClick && "cursor-pointer"
+            )}
+          >
           {/* Headline */}
           {headline && (
             <div className="mb-10">
@@ -265,6 +298,7 @@ export function FaqAccordion({
               )
             })}
           </Accordion>
+          </div>
         </div>
       </div>
     </section>

@@ -3564,10 +3564,21 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
   const midFields = restFields.filter((f) => !lateKeys.has(f.key))
   const lateFields = restFields.filter((f) => lateKeys.has(f.key))
 
+  // Helper to evaluate showWhen condition
+  const shouldShowField = (field: InspectorField): boolean => {
+    if (!field.showWhen) return true
+    const currentProps = selectedBlock?.props as Record<string, unknown>
+    const getByPath = (obj: any, path: string): any => {
+      return path.split(".").reduce((acc, part) => acc?.[part], obj)
+    }
+    const currentValue = getByPath(currentProps, field.showWhen.key)
+    return currentValue === field.showWhen.equals
+  }
+
   return (
     <>
       {/* 1) Head/Subline (und ggf. Background) */}
-      {primaryFields.map((field) => renderInspectorField(field, selectedBlock))}
+      {primaryFields.filter(shouldShowField).map((field) => renderInspectorField(field, selectedBlock))}
 
       {/* Button Preset (one dropdown per block for card, section, imageText, cta, hero, team, contactForm) */}
       {(() => {
@@ -5090,12 +5101,20 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
       )}
 
       {/* 3) Restliche Felder (Settings kommen ans Ende) */}
-      {midFields.map((field) => renderInspectorField(field, selectedBlock))}
+      {midFields.filter(shouldShowField).map((field) => renderInspectorField(field, selectedBlock))}
 
       {lateFields.length > 0 && (
         <>
           <Separator />
-          {lateFields.map((field) => renderInspectorField(field, selectedBlock))}
+          {lateFields.filter(shouldShowField).map((field) => renderInspectorField(field, selectedBlock))}
+        </>
+      )}
+
+      {/* Panel Container Shadow Inspector (for blocks with enableInnerPanel) */}
+      {getBlockDefinition(selectedBlock.type)?.enableInnerPanel && (
+        <>
+          <Separator />
+          
         </>
       )}
     </>

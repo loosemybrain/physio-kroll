@@ -493,6 +493,8 @@ export interface FaqBlock extends BaseBlock {
   props: {
     section?: BlockSectionProps
     headline?: string
+    background?: "none" | "muted" | "gradient"
+    backgroundColor?: string
     items: Array<{
       id: string
       question: string
