@@ -555,9 +555,8 @@ export function SectionBlock({
             {resolvedShowDivider && (
               <motion.div
                 variants={prefersReducedMotion ? undefined : itemVariants}
-                className={cn("my-8 flex cursor-pointer", isCentered && "justify-center")}
+                className={cn("my-8 w-full flex cursor-pointer", isCentered && "justify-center")}
                 data-element-id="section.divider"
-                style={dividerShadow}
                 onClick={(e) => {
                   if (editable && blockId && onElementClick) {
                     e.preventDefault()
@@ -567,8 +566,13 @@ export function SectionBlock({
                 }}
               >
                 <div
-                  className={cn("h-[2px] w-24 bg-foreground/20")}
-                  style={hasDividerColor ? { backgroundColor: resolvedDividerColor } : undefined}
+                  role="separator"
+                  className={cn("h-px w-full rounded opacity-70")}
+                  style={{
+                    ...dividerShadow,
+                    backgroundColor: resolvedDividerColor?.trim() ? resolvedDividerColor.trim() : "var(--border)",
+                    height: "1px",
+                  }}
                   aria-hidden="true"
                 />
               </motion.div>

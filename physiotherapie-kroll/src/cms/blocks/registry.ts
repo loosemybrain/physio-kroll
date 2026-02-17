@@ -1211,6 +1211,9 @@ const imageSliderDefaults: ImageSliderBlock["props"] = {
 /**
  * Block registry with all block definitions
  */
+// Temporäre UI-Gate: unstabile/ungetestete Section-Felder verstecken (nur UI, keine DB/Props-Änderung)
+const HIDE_UNSTABLE_SECTION_FIELDS = true
+
 export const blockRegistry: Record<BlockType, BlockDefinition> = {
   hero: {
     type: "hero",
@@ -1817,17 +1820,20 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
           { value: "gradient-brand", label: "Brand Gradient" },
         ],
       },
-      { key: "showDivider", label: "Divider anzeigen", type: "boolean" },
-      { key: "enableGlow", label: "Glow-Effekt aktivieren", type: "boolean" },
-      { key: "enableHoverElevation", label: "Hover-Elevation aktivieren", type: "boolean" },
-      { key: "showCta", label: "CTA Button anzeigen", type: "boolean" },
-      
-      {
-        key: "dividerColor",
-        label: "Divider-Farbe",
-        type: "color",
-      },
-      
+      ...(HIDE_UNSTABLE_SECTION_FIELDS
+        ? []
+        : [
+            { key: "showDivider", label: "Divider anzeigen", type: "boolean" as const },
+            { key: "enableGlow", label: "Glow-Effekt aktivieren", type: "boolean" as const },
+            { key: "enableHoverElevation", label: "Hover-Elevation aktivieren", type: "boolean" as const },
+            { key: "showCta", label: "CTA Button anzeigen", type: "boolean" as const },
+            {
+              key: "dividerColor",
+              label: "Divider-Farbe",
+              type: "color" as const,
+            },
+          ]),
+      { key: "enableHoverElevation", label: "Hover-Elevation aktivieren", type: "boolean" as const },
       { key: "ctaText", label: "CTA Button Text", type: "text", placeholder: "Mehr erfahren" },
       { key: "ctaHref", label: "CTA Button Link", type: "url", placeholder: "/kontakt" },
       { key: "secondaryCtaText", label: "Sekundärer CTA Text (optional)", type: "text", placeholder: "Weitere Info" },

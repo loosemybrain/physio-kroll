@@ -30,6 +30,7 @@ interface FaqAccordionProps {
     questionColor?: string
     answerColor?: string
   }>
+  background?: "none" | "muted" | "gradient"
   variant?: "default" | "soft"
   editable?: boolean
   blockId?: string
@@ -38,6 +39,16 @@ interface FaqAccordionProps {
   elements?: Record<string, any>
   onElementClick?: (blockId: string, elementId: string) => void
   selectedElementId?: string | null
+}
+
+/* ================================================================ */
+/*  Background Map                                                   */
+/* ================================================================ */
+
+const backgroundMap = {
+  none: "bg-background",
+  muted: "bg-muted/10",
+  gradient: "bg-gradient-to-br from-primary/5 via-background to-background",
 }
 
 /* ================================================================ */
@@ -50,6 +61,7 @@ export function FaqAccordion({
   questionColor,
   answerColor,
   items,
+  background = "none",
   variant = "default",
   editable = false,
   blockId,
@@ -90,18 +102,19 @@ export function FaqAccordion({
   return (
     <section
       className={cn(
-        "py-10 md:py-14 lg:py-16"
+        "py-10 md:py-14 lg:py-16",
+        backgroundMap[background]
       )}
     >
       <div className="mx-auto max-w-4xl px-4 sm:px-6">
-        {/* Inner surface panel - always rounded, overflow, and padded; soft style conditional */}
+        {/* Inner surface panel - always rounded, overflow, and padded */}
         <div
           data-element-id="faq.surface"
           style={surfaceShadow}
           onClick={() => onElementClick?.(blockId || "", "faq.surface")}
           className={cn(
             "relative rounded-2xl overflow-hidden px-6 py-10 sm:px-10 md:py-14",
-            isSoft && "border border-border/20 bg-muted/30 backdrop-blur-sm"
+            isSoft ? "border border-border/20 bg-muted/30 backdrop-blur-sm" : "bg-card"
           )}
         >
           {/* Headline */}

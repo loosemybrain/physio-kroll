@@ -1,8 +1,7 @@
 import type React from "react"
 import type { Metadata } from "next"
 import { redirect } from "next/navigation"
-import { AdminLayout } from "@/components/admin/AdminLayout"
-import { AdminRootProvider } from "@/components/admin/AdminRootProvider"
+import { AdminClientShell } from "./AdminClientShell"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
 import "@/styles/admin-theme.css"
 
@@ -20,10 +19,6 @@ export default async function Layout({ children }: { children: React.ReactNode }
     redirect("/auth/login?next=" + encodeURIComponent("/admin/pages"))
   }
 
-  return (
-    <AdminRootProvider>
-      <AdminLayout user={userData.user}>{children}</AdminLayout>
-    </AdminRootProvider>
-  )
+  return <AdminClientShell user={userData.user}>{children}</AdminClientShell>
 }
 
