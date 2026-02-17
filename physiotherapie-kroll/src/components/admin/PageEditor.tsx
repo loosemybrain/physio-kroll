@@ -1968,7 +1968,14 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
                       // Set selection state - auto-scroll will be handled by useInspectorAutoscroll
                       setSelectedBlockId(blockId)
                       setSelectedElementId(elementId)
-                      setActiveFieldPath(null)
+                      
+                      // For section.divider, focus inspector on dividerColor field
+                      const block = current?.blocks.find((b: CMSBlock) => b.id === blockId)
+                      if (block?.type === "section" && elementId === "section.divider") {
+                        setActiveFieldPath("dividerColor")
+                      } else {
+                        setActiveFieldPath(null)
+                      }
                     }}
                     selectedElementId={selectedBlockId === block.id ? selectedElementId : null}
                   />

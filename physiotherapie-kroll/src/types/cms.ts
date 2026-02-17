@@ -417,9 +417,7 @@ export interface SectionBlock extends BaseBlock {
     enableGlow?: boolean
     enableHoverElevation?: boolean
     showCta?: boolean
-    dividerFromColor?: string
-    dividerViaColor?: string
-    dividerToColor?: string
+    dividerColor?: string
     backgroundColor?: string
     eyebrowColor?: string
     headlineColor?: string

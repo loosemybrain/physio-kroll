@@ -245,7 +245,7 @@ const ctaPropsSchema = z.object({
 
 const sectionPropsSchema = z.object({
   typography: elementTypographySchema,
-  elements: z.record(z.any()).optional(),
+  elements: z.record(z.string(), z.any()).optional(),
   eyebrow: z.string().optional(),
   headline: z.string(),
   subheadline: z.string().optional(),
@@ -258,9 +258,7 @@ const sectionPropsSchema = z.object({
   enableGlow: z.boolean().optional(),
   enableHoverElevation: z.boolean().optional(),
   showCta: z.boolean().optional(),
-  dividerFromColor: z.string().optional(),
-  dividerViaColor: z.string().optional(),
-  dividerToColor: z.string().optional(),
+  dividerColor: z.string().optional(),
   backgroundColor: z.string().optional(),
   eyebrowColor: z.string().optional(),
   headlineColor: z.string().optional(),
@@ -1825,22 +1823,9 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
       { key: "showCta", label: "CTA Button anzeigen", type: "boolean" },
       
       {
-        key: "dividerFromColor",
-        label: "Divider From Farbe",
+        key: "dividerColor",
+        label: "Divider-Farbe",
         type: "color",
-        placeholder: "#8f8f8f",
-      },
-      {
-        key: "dividerViaColor",
-        label: "Divider Via Farbe",
-        type: "color",
-        placeholder: "#999999",
-      },
-      {
-        key: "dividerToColor",
-        label: "Divider To Farbe",
-        type: "color",
-        placeholder: "#8f8f8f",
       },
       
       { key: "ctaText", label: "CTA Button Text", type: "text", placeholder: "Mehr erfahren" },
@@ -1862,6 +1847,7 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
       {
         id: "section.surface",
         label: "Oberfläche/Hintergrund",
+        path: "surface",
         supportsShadow: true,
         group: "Layout",
       },
@@ -1892,6 +1878,7 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
       {
         id: "section.divider",
         label: "Divider/Trennlinie",
+        path: "divider",
         supportsShadow: true,
         group: "Dekorative Elemente",
       },

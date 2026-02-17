@@ -61,10 +61,8 @@ export interface SectionBlockProps {
 
   showCta?: boolean
 
-  /** Divider custom colors */
-  dividerFromColor?: string
-  dividerViaColor?: string
-  dividerToColor?: string
+  /** Divider custom color */
+  dividerColor?: string
 
   /** Color overrides */
   backgroundColor?: string
@@ -183,13 +181,11 @@ export function SectionBlock({
   justifyBias = "readable",
   maxWidth = "lg",
   background = "none",
-  showDivider = false,
+  showDivider,
   enableGlow = true,
   enableHoverElevation = true,
   showCta = true,
-  dividerFromColor,
-  dividerViaColor,
-  dividerToColor,
+  dividerColor,
   backgroundColor,
   eyebrowColor,
   headlineColor,
@@ -208,10 +204,40 @@ export function SectionBlock({
   buttonPreset,
   typography,
   elements,
-}: SectionBlockProps) {
+  // Backward compat props (not in interface but may come from saved data)
+  ...restProps
+}: SectionBlockProps & Record<string, any>) {
   const prefersReducedMotion = useReducedMotion()
   const isCentered = align === "center"
   const isJustified = align === "justify"
+
+  // Backward compatibility: resolve dividerColor from old props if not set
+  const rawDividerColor =
+    dividerColor ??
+    restProps?.dividerColor ??
+    restProps?.dividerFromColor ??
+    restProps?.dividerViaColor ??
+    restProps?.dividerToColor
+
+  const resolvedDividerColor =
+    typeof rawDividerColor === "string"
+      ? rawDividerColor
+      : (rawDividerColor?.value ?? rawDividerColor?.hex ?? rawDividerColor?.color)
+
+  const hasDividerColor = Boolean((resolvedDividerColor ?? "").trim())
+
+  // Resolve showDivider: handle string/boolean/missing/fallback
+  const rawShowDivider =
+    (typeof showDivider === "boolean" || showDivider === "true" || showDivider === "false")
+      ? showDivider
+      : restProps?.showDivider ?? restProps?.dividerEnabled
+
+  const resolvedShowDivider =
+    rawShowDivider === false
+      ? false
+      : rawShowDivider === true ||
+        rawShowDivider === "true" ||
+        hasDividerColor
 
   const primaryPreset = resolveButtonPresetStyles(buttonPreset, undefined, undefined)
   const secondaryPreset = resolveButtonPresetStyles(buttonPreset, "outline", undefined)
@@ -292,7 +318,7 @@ export function SectionBlock({
   return (
     <section
       className={cn(
-        "relative overflow-hidden py-10 md:py-14 lg:py-16",
+        "relative rounded-3xl py-10 md:py-14 lg:py-16",
         bgClasses,
       )}
       style={
@@ -304,7 +330,7 @@ export function SectionBlock({
     >
       {/* ---- Decorative background gradients ---- */}
       {background === "gradient-soft" && (
-        <div className="pointer-events-none absolute inset-0" aria-hidden="true">
+        <div className="pointer-events-none absolute inset-0 rounded-3xl overflow-hidden" aria-hidden="true">
           {/* Large radial glow from top center */}
           <div
             className="absolute left-1/2 top-0 h-[600px] w-[900px] -translate-x-1/2 -translate-y-1/4 rounded-full opacity-[0.12]"
@@ -325,7 +351,7 @@ export function SectionBlock({
       )}
 
       {background === "gradient-brand" && (
-        <div className="pointer-events-none absolute inset-0" aria-hidden="true">
+        <div className="pointer-events-none absolute inset-0 rounded-3xl overflow-hidden" aria-hidden="true">
           {/* Brand blue glow from top */}
           <div
             className="absolute left-1/2 top-0 h-[700px] w-[1000px] -translate-x-1/2 -translate-y-1/3 rounded-full opacity-[0.15]"
@@ -347,7 +373,7 @@ export function SectionBlock({
 
       {/* ---- Decorative glow orb ---- */}
       {enableGlow && (
-        <div className="pointer-events-none absolute inset-0" aria-hidden="true">
+        <div className="pointer-events-none absolute inset-0 rounded-3xl overflow-hidden" aria-hidden="true">
           <div
             className={cn(
               "absolute left-1/2 top-1/2 h-[300px] w-[300px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-[100px]",
@@ -355,9 +381,7 @@ export function SectionBlock({
                 ? "bg-primary/6"
                 : background === "gradient-soft"
                   ? "bg-accent/4"
-                  : background === "muted"
-                    ? "bg-primary/3"
-                    : "bg-primary/2",
+                  : "bg-foreground/5"
             )}
           />
         </div>
@@ -365,29 +389,58 @@ export function SectionBlock({
 
       {/* ---- Inner surface ---- */}
       <div className="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+        {/* ---- Glow orb, unconditional, color based on background ---- */}
+        {enableGlow && (
+          <div className="pointer-events-none absolute inset-0" aria-hidden="true">
+            <div
+              className={cn(
+                "absolute left-1/2 top-1/2 h-[300px] w-[300px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-[100px]",
+                background === "gradient-brand"
+                  ? "bg-primary/6"
+                  : background === "gradient-soft"
+                    ? "bg-accent/4"
+                    : "bg-foreground/5"
+              )}
+            />
+          </div>
+        )}
+
         <div
           className={cn(
             // Inner card surface with layered shadow system
             "rounded-3xl px-8 py-8 md:px-14 md:py-10",
-            // Soft outer shadow with blue tint for brand
-            background === "gradient-brand"
-              ? "shadow-[0_4px_24px_-4px_oklch(0.45_0.12_160_/_0.06),0_12px_48px_-12px_oklch(0.45_0.12_160_/_0.08)]"
-              : "shadow-[0_4px_24px_-4px_rgba(0,0,0,0.04),0_12px_48px_-12px_rgba(0,0,0,0.06)]",
-            // Background & border
-            background === "muted"
-              ? "border border-border/20 bg-card/80 backdrop-blur-md"
-              : background === "gradient-soft" || background === "gradient-brand"
-                ? "border border-border/15 bg-card/60 backdrop-blur-md"
-                : "border border-transparent bg-transparent shadow-none",
-            // Hover elevation
+            // Check if surface shadow is enabled
+            (() => {
+              const surfaceShadowEnabled = Boolean(elements?.["section.surface"]?.style?.shadow?.enabled)
+              return cn(
+                // Soft outer shadow with blue tint for brand
+                background === "gradient-brand"
+                  ? "shadow-[0_4px_24px_-4px_oklch(0.45_0.12_160_/_0.06),0_12px_48px_-12px_oklch(0.45_0.12_160_/_0.08)]"
+                  : "shadow-[0_4px_24px_-4px_rgba(0,0,0,0.04),0_12px_48px_-12px_rgba(0,0,0,0.06)]",
+                // Background & border
+                background === "muted"
+                  ? "border border-border/20 bg-card/80 backdrop-blur-md"
+                  : background === "gradient-soft" || background === "gradient-brand"
+                    ? "border border-border/15 bg-card/60 backdrop-blur-md"
+                    : surfaceShadowEnabled
+                      ? "border border-border/20 bg-card/20 backdrop-blur-sm"
+                      : "border border-transparent bg-transparent shadow-none",
+                // Add subtle top border/ring when shadow is enabled for top edge visibility
+                surfaceShadowEnabled && "ring-1 ring-inset ring-border/20",
+              )
+            })(),
+            // Hover elevation (immer sichtbar)
             enableHoverElevation && "transition-all duration-500 ease-out",
             enableHoverElevation &&
               surfaceHovered &&
-              (background === "gradient-brand"
-                ? "scale-[1.006] shadow-[0_8px_32px_-4px_oklch(0.45_0.12_160/0.1),0_20px_64px_-16px_oklch(0.45_0.12_160/0.12)]"
-                : background === "none"
-                  ? "scale-[1.006] bg-card/30 ring-1 ring-border/20"
-                  : "scale-[1.006] shadow-[0_8px_32px_-4px_rgba(0,0,0,0.06),0_20px_64px_-16px_rgba(0,0,0,0.1)]"),
+              (
+                background === "gradient-brand"
+                  ? "scale-[1.006] shadow-[0_8px_32px_-4px_oklch(0.45_0.12_160/0.1),0_20px_64px_-16px_oklch(0.45_0.12_160/0.12)]"
+                  : (background === "gradient-soft" || background === "muted")
+                    ? "scale-[1.006] shadow-[0_8px_32px_-4px_rgba(0,0,0,0.06),0_20px_64px_-16px_rgba(0,0,0,0.1)]"
+                    // Fallback für background="none"
+                    : "scale-[1.006] ring-1 ring-border/25 bg-card/20 shadow-[0_8px_32px_-16px_rgba(0,0,0,0.10)]"
+              ),
           )}
           onMouseEnter={() => setSurfaceHovered(true)}
           onMouseLeave={() => setSurfaceHovered(false)}
@@ -499,30 +552,23 @@ export function SectionBlock({
             )}
 
             {/* ---- Divider ---- */}
-            {showDivider && (
+            {resolvedShowDivider && (
               <motion.div
                 variants={prefersReducedMotion ? undefined : itemVariants}
-                className={cn("my-8 flex", isCentered && "justify-center")}
+                className={cn("my-8 flex cursor-pointer", isCentered && "justify-center")}
                 data-element-id="section.divider"
                 style={dividerShadow}
-                onClick={() => onElementClick?.(blockId || "", "section.divider")}
+                onClick={(e) => {
+                  if (editable && blockId && onElementClick) {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    onElementClick(blockId, "section.divider")
+                  }
+                }}
               >
                 <div
-                  className={cn(
-                    "h-px w-24",
-                    // Use custom colors if provided, otherwise fallback to tailwind
-                    !dividerFromColor &&
-                      (background === "gradient-brand"
-                        ? "bg-linear-to-r from-primary/10 via-primary/40 to-primary/10"
-                        : "bg-linear-to-r from-border/20 via-border/60 to-border/20"),
-                  )}
-                  style={
-                    dividerFromColor
-                      ? {
-                          backgroundImage: `linear-gradient(to right, ${dividerFromColor}, ${dividerViaColor || dividerFromColor}, ${dividerToColor || dividerFromColor})`,
-                        }
-                      : undefined
-                  }
+                  className={cn("h-[2px] w-24 bg-foreground/20")}
+                  style={hasDividerColor ? { backgroundColor: resolvedDividerColor } : undefined}
                   aria-hidden="true"
                 />
               </motion.div>
@@ -534,7 +580,7 @@ export function SectionBlock({
               onClick={(e) => handleInlineEdit(e, "content", "section.content")}
               data-element-id="section.content"
               className={cn(
-                showDivider ? "mt-2" : "mt-8",
+                resolvedShowDivider ? "mt-2" : "mt-8",
                 mergeTypographyClasses(
                   "space-y-5 text-base leading-relaxed text-muted-foreground md:text-lg md:leading-8",
                   (typography ?? {})["section.content"]
