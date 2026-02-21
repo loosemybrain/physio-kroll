@@ -2,7 +2,6 @@
 
 import React, { useCallback, useRef, useState, useEffect } from "react"
 import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
 import {
   ArrowRight,
   Globe,
@@ -10,10 +9,10 @@ import {
   Instagram,
   Mail,
 } from "lucide-react"
-import { resolveSectionBg, getSectionWrapperClasses } from "@/lib/theme/resolveSectionBg"
+import { resolveSectionBg } from "@/lib/theme/resolveSectionBg"
 import { resolveContainerBg } from "@/lib/theme/resolveContainerBg"
 import { resolveBoxShadow } from "@/lib/shadow/resolveBoxShadow"
-import { resolveButtonPresetStyles } from "@/lib/buttonPresets"
+import { mergeTypographyClasses } from "@/lib/typography"
 import type { BlockSectionProps, ElementShadow } from "@/types/cms"
 
 interface TeamMember {
@@ -51,7 +50,10 @@ export interface TeamGridBlockProps {
   ) => void
   onElementClick?: (blockId: string, elementId: string) => void
   selectedElementId?: string | null
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   elements?: Record<string, any>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  typography?: Record<string, any>
 
   section?: BlockSectionProps
 
@@ -79,7 +81,10 @@ export interface TeamGridBlockProps {
   containerBackgroundMode?: "transparent" | "color" | "gradient"
   containerBackgroundColor?: string
   containerBackgroundGradientPreset?: "soft" | "aurora" | "ocean" | "sunset" | "hero" | "none"
-  containerBackgroundGradient?: string
+  containerGradientFrom?: string
+  containerGradientVia?: string
+  containerGradientTo?: string
+  containerGradientAngle?: number
   
   // Container Shadow
   containerShadow?: ElementShadow
@@ -290,6 +295,7 @@ function MemberCard({
   editable,
   blockId,
   onEditField,
+  typography,
 }: {
   member: TeamMember
   index: number
@@ -303,6 +309,7 @@ function MemberCard({
   editable?: boolean
   blockId?: string
   onEditField?: TeamGridBlockProps["onEditField"]
+  typography?: Record<string, any>
 }) {
   const handleEdit = useCallback(
     (e: React.MouseEvent, fieldPath: string) => {
@@ -371,7 +378,10 @@ function MemberCard({
         <h3
           onClick={(e) => handleEdit(e, `members.${index}.name`)}
           className={cn(
-            "truncate text-lg font-semibold tracking-tight text-card-foreground",
+            mergeTypographyClasses(
+              "truncate text-lg font-semibold tracking-tight text-card-foreground",
+              (typography ?? {})["team.member.name"]
+            ),
             editable && blockId && onEditField && "cursor-pointer rounded px-1 hover:bg-primary/10",
           )}
           style={{ color: nameColor || undefined }}
@@ -384,7 +394,10 @@ function MemberCard({
           <p
             onClick={(e) => handleEdit(e, `members.${index}.role`)}
             className={cn(
-              "mt-1 truncate text-sm text-muted-foreground",
+              mergeTypographyClasses(
+                "mt-1 truncate text-sm text-muted-foreground",
+                (typography ?? {})["team.member.role"]
+              ),
               editable && blockId && onEditField && "cursor-pointer rounded px-1 hover:bg-primary/10",
             )}
             style={{ color: roleColor || undefined }}
@@ -493,7 +506,6 @@ export function TeamGridBlock({
   eyebrow,
   columns = 3,
   layout = "cards",
-  background = "none",
   members,
   headlineColor,
   subheadlineColor,
@@ -507,15 +519,24 @@ export function TeamGridBlock({
   containerBackgroundMode,
   containerBackgroundColor,
   containerBackgroundGradientPreset,
-  containerBackgroundGradient,
+  containerGradientFrom,
+  containerGradientVia,
+  containerGradientTo,
+  containerGradientAngle,
   containerShadow,
+  typography,
 }: TeamGridBlockProps) {
   const sectionBg = resolveSectionBg(section)
   const containerBg = resolveContainerBg({
     mode: containerBackgroundMode,
     color: containerBackgroundColor,
     gradientPreset: containerBackgroundGradientPreset,
-    gradient: containerBackgroundGradient,
+    gradient: {
+      from: containerGradientFrom || "",
+      via: containerGradientVia || "",
+      to: containerGradientTo || "",
+      angle: containerGradientAngle ?? 135,
+    },
   })
   const containerShadowCss = resolveBoxShadow(containerShadow)
   const handleInlineEdit = useCallback(
@@ -545,7 +566,7 @@ export function TeamGridBlock({
       <div
         className={cn(
           "relative mx-auto max-w-6xl rounded-3xl px-8 py-8 md:px-14 md:py-10",
-          containerBackgroundMode && containerBackgroundMode !== "transparent" && "border border-border/20",
+          containerBackgroundMode && containerBackgroundMode !== "transparent" && "border border-border/80",
           containerBackgroundMode === "gradient" && "backdrop-blur-sm"
         )}
         style={{
@@ -565,7 +586,10 @@ export function TeamGridBlock({
                 <span
                   onClick={(e) => handleInlineEdit(e, "eyebrow")}
                   className={cn(
-                    "text-xs font-semibold uppercase tracking-[0.2em] text-primary",
+                    mergeTypographyClasses(
+                      "text-xs font-semibold uppercase tracking-[0.2em] text-primary",
+                      (typography ?? {})["team.eyebrow"]
+                    ),
                     editable && blockId && onEditField && "cursor-pointer rounded px-1 transition-colors hover:bg-primary/10",
                   )}
                   style={eyebrowColor ? { color: eyebrowColor } : undefined}
@@ -581,7 +605,10 @@ export function TeamGridBlock({
               <h2
                 onClick={(e) => handleInlineEdit(e, "headline")}
                 className={cn(
-                  "mx-auto max-w-3xl text-balance text-3xl font-bold tracking-tight text-foreground md:text-4xl lg:text-5xl",
+                  mergeTypographyClasses(
+                    "mx-auto max-w-3xl text-balance text-3xl font-bold tracking-tight text-foreground md:text-4xl lg:text-5xl",
+                    (typography ?? {})["team.headline"]
+                  ),
                   editable && blockId && onEditField && "cursor-pointer rounded px-1 transition-colors hover:bg-primary/10",
                 )}
                 style={headlineColor ? { color: headlineColor } : undefined}
@@ -595,7 +622,10 @@ export function TeamGridBlock({
               <p
                 onClick={(e) => handleInlineEdit(e, "subheadline")}
                 className={cn(
-                  "mx-auto mt-4 max-w-2xl text-pretty text-base leading-relaxed text-muted-foreground md:text-lg",
+                  mergeTypographyClasses(
+                    "mx-auto mt-4 max-w-2xl text-pretty text-base leading-relaxed text-muted-foreground md:text-lg",
+                    (typography ?? {})["team.subheadline"]
+                  ),
                   editable && blockId && onEditField && "cursor-pointer rounded px-1 transition-colors hover:bg-primary/10",
                 )}
                 style={subheadlineColor ? { color: subheadlineColor } : undefined}
@@ -625,6 +655,7 @@ export function TeamGridBlock({
               editable={editable}
               blockId={blockId}
               onEditField={onEditField}
+              typography={typography}
             />
           ))}
         </div>

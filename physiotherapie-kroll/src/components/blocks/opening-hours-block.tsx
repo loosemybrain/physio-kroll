@@ -1,6 +1,7 @@
 "use client"
 
 import { cn } from "@/lib/utils"
+import { mergeTypographyClasses } from "@/lib/typography"
 
 export interface OpeningHoursBlockProps {
   section?: unknown
@@ -54,10 +55,12 @@ export function OpeningHoursBlock({
   noteColor,
   cardBgColor,
   cardBorderColor,
+  typography,
   editable = false,
   blockId,
   onEditField,
 }: OpeningHoursBlockProps) {
+  const typo = (typography as Record<string, unknown> | undefined) ?? {}
   const handleInlineEdit = (e: React.MouseEvent, fieldPath: string) => {
     if (!editable || !blockId || !onEditField) return
     e.preventDefault()
@@ -75,7 +78,10 @@ export function OpeningHoursBlock({
               <h2
                 onClick={(e) => handleInlineEdit(e, "headline")}
                 className={cn(
-                  "text-3xl font-bold tracking-tight text-foreground md:text-4xl",
+                  mergeTypographyClasses(
+                    "text-3xl font-bold tracking-tight text-foreground md:text-4xl",
+                    typo["openingHours.headline"]
+                  ),
                   editable && blockId && onEditField && "cursor-pointer rounded px-1 transition-colors hover:bg-primary/10",
                 )}
                 style={headlineColor ? ({ color: headlineColor } as React.CSSProperties) : undefined}
@@ -87,7 +93,10 @@ export function OpeningHoursBlock({
               <p
                 onClick={(e) => handleInlineEdit(e, "subheadline")}
                 className={cn(
-                  "mt-4 text-lg text-muted-foreground",
+                  mergeTypographyClasses(
+                    "mt-4 text-lg text-muted-foreground",
+                    typo["openingHours.subheadline"]
+                  ),
                   editable && blockId && onEditField && "cursor-pointer rounded px-1 transition-colors hover:bg-primary/10",
                 )}
                 style={subheadlineColor ? ({ color: subheadlineColor } as React.CSSProperties) : undefined}
@@ -117,7 +126,10 @@ export function OpeningHoursBlock({
                 <dt
                   onClick={(e) => handleInlineEdit(e, `hours.${index}.label`)}
                   className={cn(
-                    "font-medium text-foreground",
+                    mergeTypographyClasses(
+                      "font-medium text-foreground",
+                      typo["openingHours.label"]
+                    ),
                     editable && blockId && onEditField && "cursor-pointer rounded px-1 transition-colors hover:bg-primary/10",
                   )}
                   style={{ color: row.labelColor || labelColor || undefined }}
@@ -127,7 +139,10 @@ export function OpeningHoursBlock({
                 <dd
                   onClick={(e) => handleInlineEdit(e, `hours.${index}.value`)}
                   className={cn(
-                    "text-muted-foreground",
+                    mergeTypographyClasses(
+                      "text-muted-foreground",
+                      typo["openingHours.value"]
+                    ),
                     layout === "twoColumn" ? "text-right" : "text-left",
                     editable && blockId && onEditField && "cursor-pointer rounded px-1 transition-colors hover:bg-primary/10",
                   )}
@@ -144,7 +159,10 @@ export function OpeningHoursBlock({
               <p
                 onClick={(e) => handleInlineEdit(e, "note")}
                 className={cn(
-                  "text-sm text-muted-foreground",
+                  mergeTypographyClasses(
+                    "text-sm text-muted-foreground",
+                    typo["openingHours.note"]
+                  ),
                   editable && blockId && onEditField && "cursor-pointer rounded px-1 transition-colors hover:bg-primary/10",
                 )}
                 style={noteColor ? ({ color: noteColor } as React.CSSProperties) : undefined}

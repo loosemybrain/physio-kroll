@@ -16,6 +16,7 @@ import { CheckCircle2, AlertCircle, Loader2, Send, Mail, Clock, Phone, MapPin } 
 import * as React from "react"
 import { useElementShadowStyle } from "@/lib/shadow"
 import { resolveButtonPresetStyles } from "@/lib/buttonPresets"
+import { mergeTypographyClasses } from "@/lib/typography"
 import type { CommonBlockProps } from "@/types/cms"
 
 type ContactFormBlockProps = ContactFormBlock["props"] & CommonBlockProps & {
@@ -25,6 +26,7 @@ type ContactFormBlockProps = ContactFormBlock["props"] & CommonBlockProps & {
   onEditField?: (blockId: string, fieldPath: string, anchorRect?: DOMRect) => void
   onElementClick?: (blockId: string, elementId: string) => void
   selectedElementId?: string | null
+  typography?: Record<string, unknown>
 }
 
 type ContactInfoCard = {
@@ -305,6 +307,7 @@ export function ContactFormBlock({
   elements,
   contactInfoCards,
   buttonPreset,
+  typography,
   blockId,
   pageSlug,
   editable = false,
@@ -312,6 +315,7 @@ export function ContactFormBlock({
   onElementClick,
   selectedElementId,
 }: ContactFormBlockProps) {
+  const typo: Record<string, unknown> = (typography as Record<string, unknown> | undefined) ?? {}
   const { brand: activeBrand } = useBrand()
   const [formState, setFormState] = useState<FormState>("idle")
   const [submitError, setSubmitError] = useState<string | null>(null)
@@ -531,7 +535,10 @@ export function ContactFormBlock({
                 data-cms-field="heading"
                 data-element-id="heading"
                 className={cn(
-                  "text-balance text-3xl font-bold tracking-tight text-foreground md:text-4xl lg:text-5xl",
+                  mergeTypographyClasses(
+                    "text-balance text-3xl font-bold tracking-tight text-foreground md:text-4xl lg:text-5xl",
+                    typo["contactForm.heading"] as Parameters<typeof mergeTypographyClasses>[1]
+                  ),
                   editable && blockId && onEditField && "cursor-pointer rounded px-1 transition-colors hover:bg-primary/10"
                 )}
                 style={{
@@ -548,7 +555,10 @@ export function ContactFormBlock({
                 <p 
                   data-cms-field="text"
                   className={cn(
-                    "mt-6 max-w-md text-pretty leading-relaxed text-muted-foreground lg:text-lg lg:leading-8",
+                    mergeTypographyClasses(
+                      "mt-6 max-w-md text-pretty leading-relaxed text-muted-foreground lg:text-lg lg:leading-8",
+                      typo["contactForm.text"] as Parameters<typeof mergeTypographyClasses>[1]
+                    ),
                     editable && blockId && onEditField && "cursor-pointer rounded px-1 transition-colors hover:bg-primary/10"
                   )}
                   style={textColor ? ({ color: textColor } as React.CSSProperties) : undefined}
@@ -837,7 +847,10 @@ export function ContactFormBlock({
           <h2 
             data-element-id="stackedHeading"
             className={cn(
-              "text-balance text-3xl font-semibold tracking-tight text-foreground md:text-4xl",
+              mergeTypographyClasses(
+                "text-balance text-3xl font-semibold tracking-tight text-foreground md:text-4xl",
+                typo["contactForm.heading"] as Parameters<typeof mergeTypographyClasses>[1]
+              ),
               editable && blockId && onEditField && "cursor-pointer rounded px-1 transition-colors hover:bg-primary/10"
             )}
             style={{
@@ -853,7 +866,10 @@ export function ContactFormBlock({
             <p 
               data-cms-field="text"
               className={cn(
-                "mt-4 text-pretty leading-relaxed text-muted-foreground lg:leading-7",
+                mergeTypographyClasses(
+                  "mt-4 text-pretty leading-relaxed text-muted-foreground lg:leading-7",
+                  typo["contactForm.text"] as Parameters<typeof mergeTypographyClasses>[1]
+                ),
                 editable && blockId && onEditField && "cursor-pointer rounded px-1 transition-colors hover:bg-primary/10"
               )}
               style={textColor ? ({ color: textColor } as React.CSSProperties) : undefined}

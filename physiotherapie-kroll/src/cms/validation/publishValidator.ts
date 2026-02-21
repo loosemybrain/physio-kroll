@@ -111,6 +111,7 @@ const galleryPublishSchema = z.object({
         url: z.string().min(1, "Bild URL erforderlich"),
         alt: z.string().min(1, "Bild Alt-Text erforderlich"),
         caption: z.string().optional(),
+        link: z.string().optional(),
       })
     )
     .min(3, "Mindestens 3 Bilder erforderlich"),

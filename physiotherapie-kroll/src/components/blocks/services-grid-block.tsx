@@ -5,6 +5,7 @@ import { CardSurface } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { ArrowRight } from "lucide-react"
 import { getServiceIcon } from "@/components/icons/service-icons"
+import { mergeTypographyClasses } from "@/lib/typography"
 
 interface ServicesGridBlockProps {
   section?: unknown
@@ -74,6 +75,7 @@ export function ServicesGridBlock({
   ctaColor,
   cardBgColor,
   cardBorderColor,
+  typography,
   editable = false,
   blockId,
   onEditField,
@@ -105,7 +107,10 @@ export function ServicesGridBlock({
               <p
                 onClick={(e) => handleInlineEdit(e, "subheadline")}
                 className={cn(
-                  "mb-5 text-xs font-semibold uppercase tracking-[0.2em] text-primary",
+                  mergeTypographyClasses(
+                    "mb-5 text-xs font-semibold uppercase tracking-[0.2em] text-primary",
+                    (typography as Record<string, any> ?? {})["services.subheadline"]
+                  ),
                   editable && blockId && onEditField && "cursor-pointer rounded px-1 transition-colors hover:bg-primary/10"
                 )}
                 style={subheadlineColor ? ({ color: subheadlineColor } as React.CSSProperties) : undefined}
@@ -117,7 +122,10 @@ export function ServicesGridBlock({
               <h2
                 onClick={(e) => handleInlineEdit(e, "headline")}
                 className={cn(
-                  "text-balance text-3xl font-bold tracking-tight text-foreground md:text-4xl lg:text-5xl",
+                  mergeTypographyClasses(
+                    "text-balance text-3xl font-bold tracking-tight text-foreground md:text-4xl lg:text-5xl",
+                    (typography as Record<string, any> ?? {})["services.headline"]
+                  ),
                   editable && blockId && onEditField && "cursor-pointer rounded px-1 transition-colors hover:bg-primary/10"
                 )}
                 style={headlineColor ? ({ color: headlineColor } as React.CSSProperties) : undefined}
@@ -192,7 +200,10 @@ export function ServicesGridBlock({
                       handleInlineEdit(e, `cards.${index}.title`)
                     }}
                     className={cn(
-                      "mb-3 text-lg font-semibold tracking-tight text-card-foreground",
+                      mergeTypographyClasses(
+                        "mb-3 text-lg font-semibold tracking-tight text-card-foreground",
+                        (typography as Record<string, any> ?? {})["services.card.title"]
+                      ),
                       editable && blockId && onEditField && "cursor-pointer rounded px-1 transition-colors hover:bg-primary/10"
                     )}
                     style={{ color: card.titleColor || titleColor || undefined }}

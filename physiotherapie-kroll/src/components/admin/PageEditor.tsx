@@ -18,7 +18,7 @@ import { usePage } from "@/lib/cms/useLocalCms"
 import { createEmptyPage, generateUniqueSlug, type AdminPage } from "@/lib/cms/supabaseStore"
 import type { BrandKey } from "@/components/brand/brandAssets"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { blockRegistry, getBlockDefinition, createServiceCard, createFaqItem, createTeamMember, createFeatureItem, createContactFormField, createTestimonialItem, createGalleryImage, createImageSlide, createOpeningHour, createContactInfoCard, createHeroAction } from "@/cms/blocks/registry"
+import { blockRegistry, getBlockDefinition, createServiceCard, createFaqItem, createTeamMember, createFeatureItem, createContactFormField, createTestimonialItem, createGalleryImage, createImageSlide, createOpeningHour, createContactInfoCard, createHeroAction, sortInspectorFields, INSPECTOR_GROUP_LABELS, DEFAULT_GROUP_ORDER } from "@/cms/blocks/registry"
 import { normalizeBlock } from "@/cms/blocks/normalize"
 import type { InspectorField, InspectorFieldType } from "@/cms/blocks/registry"
 import { getAvailableIconNames, getAvailableIconsWithLabels } from "@/components/icons/service-icons"
@@ -30,6 +30,7 @@ import { TypographyInspectorSection } from "./TypographyInspectorSection"
 import { SectionInspectorSection } from "./SectionInspectorSection"
 import { AnimationInspector } from "./AnimationInspector"
 import { ElementTypographySection } from "./ElementTypographySection"
+import { ElementTypographyAccordion } from "../cms/inspector/ElementTypographyAccordion"
 import { Accordion } from "@/components/ui/accordion"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { validatePageForPublish, type PublishIssue } from "@/cms/validation/publishValidator"
@@ -317,6 +318,12 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
     openAccordionValue: (value) => setAccordionValue(value),
     accordionValue,
   })
+  
+  // Reset element selection and accordion when block selection changes
+  useEffect(() => {
+    setSelectedElementId(null)
+    setAccordionValue(undefined)
+  }, [selectedBlockId])
   
   // Inline editor state
   const [inlineOpen, setInlineOpen] = useState(false)
@@ -1447,11 +1454,10 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
       if (!selectedBlock) return
       // Mark as typing to prevent focus stealing
       isTypingRef.current = true
-      // Use setByPath to support nested paths
-      const currentProps = selectedBlock.props as Record<string, unknown>
-      const updatedProps = setByPath(currentProps, field.key, newValue) as CMSBlock["props"]
-      updateSelectedProps(updatedProps)
-      // Reset typing flag after state update
+      // Always use latest block props from page state (avoids stale props e.g. gallery losing images on layout change)
+      updateBlockPropsById(selectedBlock.id, (currentProps) =>
+        setByPath(currentProps, field.key, newValue) as CMSBlock["props"]
+      )
       setTimeout(() => {
         isTypingRef.current = false
       }, 50)
@@ -3276,73 +3282,6 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
                   )
                 })()}
 
-                {/* Element Typography Section */}
-                {(() => {
-                  const blockDefinition = getBlockDefinition(selectedBlock.type)
-                  const elements = blockDefinition.elements || []
-                  const typographyElements = elements.filter((el) => el.supportsTypography)
-
-                  if (typographyElements.length > 0) {
-                    const blockProps = selectedBlock.props as Record<string, unknown>
-                    const typographyRecord = (blockProps.typography as Record<string, TypographySettings> | undefined) || {}
-
-                    const handleElementTypographyChange = (elementId: string, typography: TypographySettings | null) => {
-                      if (!selectedBlock) return
-                      isTypingRef.current = true
-                      const currentProps = selectedBlock.props as Record<string, unknown>
-                      const currentTypography = (currentProps.typography as Record<string, TypographySettings> | undefined) || {}
-                      
-                      let updatedTypography: Record<string, TypographySettings> | undefined
-                      if (typography) {
-                        updatedTypography = { ...currentTypography, [elementId]: typography }
-                      } else {
-                        // Remove element typography
-                        const { [elementId]: _, ...rest } = currentTypography
-                        updatedTypography = Object.keys(rest).length > 0 ? rest : undefined
-                      }
-
-                      const updatedProps = setByPath(currentProps, "typography", updatedTypography) as CMSBlock["props"]
-                      updateSelectedProps(updatedProps)
-                      setTimeout(() => {
-                        isTypingRef.current = false
-                      }, 50)
-                    }
-
-                    return (
-                      <>
-                        <div>
-                          <Label className="text-sm font-semibold mb-2 block">Element-Typografie</Label>
-                          <Accordion 
-                            type="single" 
-                            collapsible 
-                            value={accordionValue || selectedElementId || undefined}
-                            onValueChange={setAccordionValue}
-                            className="w-full"
-                            suppressHydrationWarning
-                          >
-                            {typographyElements.map((element) => (
-                              <div 
-                                key={element.id} 
-                                data-inspector-element={element.id}
-                                data-inspector-target={`element:${element.id}`}
-                              >
-                                <ElementTypographySection
-                                  blockProps={blockProps}
-                                  elementId={element.id}
-                                  elementLabel={element.label}
-                                  onChange={handleElementTypographyChange}
-                                />
-                              </div>
-                            ))}
-                          </Accordion>
-                        </div>
-                        <Separator />
-                      </>
-                    )
-                  }
-                  return null
-                })()}
-
                 {/* Dynamic Element Selector (e.g., for trust items, actions) */}
                 {selectedBlock.type === "hero" && (() => {
                   const props = selectedBlock.props as HeroBlock["props"]
@@ -3553,14 +3492,18 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
     return true
   })
 
-  const primaryFields = normalFields.filter((f) => {
+  // Sort fields by group (use custom group order if defined on block)
+  const groupOrder = def.inspectorGroupOrder || undefined
+  const sortedFields = sortInspectorFields(normalFields, groupOrder)
+
+  const primaryFields = sortedFields.filter((f) => {
     if (primaryKeys.has(f.key)) return true
     // Slider: background soll direkt bei Head/Subline stehen
     if (selectedBlock.type === "testimonialSlider" && f.key === "background") return true
     return false
   })
 
-  const restFields = normalFields.filter((f) => !primaryFields.some((p) => p.key === f.key))
+  const restFields = sortedFields.filter((f) => !primaryFields.some((p) => p.key === f.key))
   const midFields = restFields.filter((f) => !lateKeys.has(f.key))
   const lateFields = restFields.filter((f) => lateKeys.has(f.key))
 
@@ -3993,10 +3936,11 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
             (_img, index) => `Bild ${index + 1}`,
             createGalleryImage,
             [
-              { key: "url", label: "URL", type: "url" as const, required: true },
+              { key: "url", label: "Bild-URL", type: "image" as const, required: true, placeholder: "/placeholder.svg" },
               { key: "alt", label: "Alt-Text", type: "text" as const, required: true },
               { key: "caption", label: "Caption (optional)", type: "text" as const },
               { key: "captionColor", label: "Caption Farbe (optional)", type: "color" as const, placeholder: "#666666" },
+              { key: "link", label: "Link (optional, wenn Lightbox aus)", type: "url" as const },
             ],
             3,
             18
@@ -4857,63 +4801,19 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
             </div>
 
             {/* Container Background (Inner Panel - for block content) */}
-            <div className="space-y-1.5 rounded-lg bg-muted/30 p-3">
-              <Label className="text-xs font-semibold text-primary">CONTAINER-HINTERGRUND (inneres Panel)</Label>
-              <Select
-                value={(selectedBlock.props as any)?.containerBackgroundMode || "transparent"}
-                onValueChange={(v) => {
-                  if (!selectedBlock) return
-                  const currentProps = selectedBlock.props as Record<string, unknown>
-                  const updatedProps = {
-                    ...currentProps,
-                    containerBackgroundMode: v,
-                  } as CMSBlock["props"]
-                  updateSelectedProps(updatedProps)
-                }}
-              >
-                <SelectTrigger className="h-8 text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="transparent">Transparent</SelectItem>
-                  <SelectItem value="color">Farbe</SelectItem>
-                  <SelectItem value="gradient">Verlauf</SelectItem>
-                </SelectContent>
-              </Select>
-
-              {/* Conditional: Container Color */}
-              {(selectedBlock.props as any)?.containerBackgroundMode === "color" && (
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Panel-Farbe</Label>
-                  <input
-                    type="color"
-                    value={(selectedBlock.props as any)?.containerBackgroundColor || "#ffffff"}
-                    onChange={(e) => {
-                      if (!selectedBlock) return
-                      const currentProps = selectedBlock.props as Record<string, unknown>
-                      const updatedProps = {
-                        ...currentProps,
-                        containerBackgroundColor: e.target.value,
-                      } as CMSBlock["props"]
-                      updateSelectedProps(updatedProps)
-                    }}
-                    className="h-8 w-full rounded border border-border bg-background"
-                  />
-                </div>
-              )}
-
-              {/* Conditional: Container Gradient Preset */}
-              {(selectedBlock.props as any)?.containerBackgroundMode === "gradient" && (
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Verlauf-Preset</Label>
+            {(() => {
+              const blockDef = getBlockDefinition(selectedBlock.type)
+              return blockDef?.enableInnerPanel ? (
+                <div className="space-y-1.5 rounded-lg bg-muted/30 p-3">
+                  <Label className="text-xs font-semibold text-primary">CONTAINER-HINTERGRUND (inneres Panel)</Label>
                   <Select
-                    value={(selectedBlock.props as any)?.containerBackgroundGradientPreset || "soft"}
+                    value={(selectedBlock.props as any)?.containerBackgroundMode || "transparent"}
                     onValueChange={(v) => {
                       if (!selectedBlock) return
                       const currentProps = selectedBlock.props as Record<string, unknown>
                       const updatedProps = {
                         ...currentProps,
-                        containerBackgroundGradientPreset: v,
+                        containerBackgroundMode: v,
                       } as CMSBlock["props"]
                       updateSelectedProps(updatedProps)
                     }}
@@ -4922,35 +4822,84 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="soft">Soft</SelectItem>
-                      <SelectItem value="aurora">Aurora</SelectItem>
-                      <SelectItem value="ocean">Ocean</SelectItem>
-                      <SelectItem value="sunset">Sunset</SelectItem>
-                      <SelectItem value="hero">Hero</SelectItem>
-                      <SelectItem value="none">Keine</SelectItem>
+                      <SelectItem value="transparent">Transparent</SelectItem>
+                      <SelectItem value="color">Farbe</SelectItem>
+                      <SelectItem value="gradient">Verlauf</SelectItem>
                     </SelectContent>
                   </Select>
-                </div>
-              )}
 
-              {/* Container Shadow Inspector */}
-              <div className="mt-3 pt-3 border-t border-border/50">
-                <Label className="text-xs font-semibold">Shadow</Label>
-                <ShadowInspector
-                  config={(selectedBlock.props as any)?.containerShadow}
-                  onChange={(shadowConfig) => {
-                    if (!selectedBlock) return
-                    const currentProps = selectedBlock.props as Record<string, unknown>
-                    const updatedProps = {
-                      ...currentProps,
-                      containerShadow: shadowConfig,
-                    } as CMSBlock["props"]
-                    updateSelectedProps(updatedProps)
-                  }}
-                  onClose={() => {}}
-                />
-              </div>
-            </div>
+                  {/* Conditional: Container Color */}
+                  {(selectedBlock.props as any)?.containerBackgroundMode === "color" && (
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Panel-Farbe</Label>
+                      <input
+                        type="color"
+                        value={(selectedBlock.props as any)?.containerBackgroundColor || "#ffffff"}
+                        onChange={(e) => {
+                          if (!selectedBlock) return
+                          const currentProps = selectedBlock.props as Record<string, unknown>
+                          const updatedProps = {
+                            ...currentProps,
+                            containerBackgroundColor: e.target.value,
+                          } as CMSBlock["props"]
+                          updateSelectedProps(updatedProps)
+                        }}
+                        className="h-8 w-full rounded border border-border bg-background"
+                      />
+                    </div>
+                  )}
+
+                  {/* Conditional: Container Gradient Preset */}
+                  {(selectedBlock.props as any)?.containerBackgroundMode === "gradient" && (
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Verlauf-Preset</Label>
+                      <Select
+                        value={(selectedBlock.props as any)?.containerBackgroundGradientPreset || "soft"}
+                        onValueChange={(v) => {
+                          if (!selectedBlock) return
+                          const currentProps = selectedBlock.props as Record<string, unknown>
+                          const updatedProps = {
+                            ...currentProps,
+                            containerBackgroundGradientPreset: v,
+                          } as CMSBlock["props"]
+                          updateSelectedProps(updatedProps)
+                        }}
+                      >
+                        <SelectTrigger className="h-8 text-sm">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="soft">Soft</SelectItem>
+                          <SelectItem value="aurora">Aurora</SelectItem>
+                          <SelectItem value="ocean">Ocean</SelectItem>
+                          <SelectItem value="sunset">Sunset</SelectItem>
+                          <SelectItem value="hero">Hero</SelectItem>
+                          <SelectItem value="none">Keine</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  {/* Container Shadow Inspector */}
+                  <div className="mt-3 pt-3 border-t border-border/50">
+                    <Label className="text-xs font-semibold">Shadow</Label>
+                    <ShadowInspector
+                      config={(selectedBlock.props as any)?.containerShadow}
+                      onChange={(shadowConfig) => {
+                        if (!selectedBlock) return
+                        const currentProps = selectedBlock.props as Record<string, unknown>
+                        const updatedProps = {
+                          ...currentProps,
+                          containerShadow: shadowConfig,
+                        } as CMSBlock["props"]
+                        updateSelectedProps(updatedProps)
+                      }}
+                      onClose={() => {}}
+                    />
+                  </div>
+                </div>
+              ) : null
+            })()}
 
             {/* Columns */}
             <div className="space-y-1.5">
@@ -5045,6 +4994,7 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
               { key: "cardBorderColor", label: "Card Border (optional)", type: "color" as const, placeholder: "#e5e7eb" },
             ]
           )}
+
         </>
       )}
 
@@ -5100,21 +5050,130 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
         </>
       )}
 
-      {/* 3) Restliche Felder (Settings kommen ans Ende) */}
-      {midFields.filter(shouldShowField).map((field) => renderInspectorField(field, selectedBlock))}
+      {/* 3) Restliche Felder mit Gruppierung und Headern */}
+      {(() => {
+        const visibleMidFields = midFields.filter(shouldShowField)
+        const visibleLateFields = lateFields.filter(shouldShowField)
 
-      {lateFields.length > 0 && (
-        <>
-          <Separator />
-          {lateFields.filter(shouldShowField).map((field) => renderInspectorField(field, selectedBlock))}
-        </>
-      )}
+        // Get group order for this block
+        const blockDef = getBlockDefinition(selectedBlock.type)
+        const effectiveGroupOrder = blockDef.inspectorGroupOrder || DEFAULT_GROUP_ORDER
+
+        // Get typography elements if block has elements
+        const elements = blockDef.elements || []
+        const typographyElements = elements.filter((el) => el.supportsTypography)
+        
+        // Check if there are any fields or typography elements to render
+        if (visibleMidFields.length === 0 && visibleLateFields.length === 0 && typographyElements.length === 0) {
+          return null
+        }
+
+        // Group visible fields by their group property
+        const groupedFields: Record<string, InspectorField[]> = {}
+        for (const field of visibleMidFields) {
+          const group = field.group ?? "design"
+          if (!groupedFields[group]) groupedFields[group] = []
+          groupedFields[group].push(field)
+        }
+
+        // Helper to render element typography section
+        const renderElementTypography = () => {
+          if (typographyElements.length === 0) return null
+
+          const blockProps = selectedBlock.props as Record<string, unknown>
+          const typographyRecord = (blockProps.typography as Record<string, TypographySettings> | undefined) || {}
+
+          const handleElementTypographyChange = (elementId: string, typography: TypographySettings | null) => {
+            if (!selectedBlock) return
+            isTypingRef.current = true
+            const currentProps = selectedBlock.props as Record<string, unknown>
+            const currentTypography = (currentProps.typography as Record<string, TypographySettings> | undefined) || {}
+            
+            let updatedTypography: Record<string, TypographySettings> | undefined
+            if (typography) {
+              updatedTypography = { ...currentTypography, [elementId]: typography }
+            } else {
+              const { [elementId]: _, ...rest } = currentTypography
+              updatedTypography = Object.keys(rest).length > 0 ? rest : undefined
+            }
+
+            const updatedProps = setByPath(currentProps, "typography", updatedTypography) as CMSBlock["props"]
+            updateSelectedProps(updatedProps)
+            setTimeout(() => {
+              isTypingRef.current = false
+            }, 50)
+          }
+
+          return (
+            <ElementTypographyAccordion
+              blockProps={blockProps}
+              typographyElements={typographyElements}
+              selectedElementId={selectedElementId}
+              accordionValue={accordionValue}
+              onAccordionValueChange={setAccordionValue}
+              onElementTypographyChange={handleElementTypographyChange}
+            />
+          )
+        }
+
+        return (
+          <>
+            {/* Render grouped fields in order, with special handling for "elements" group */}
+            {effectiveGroupOrder.map((group) => {
+              const groupFields = groupedFields[group] || []
+              const hasElementTypography = group === "elements" && typographyElements.length > 0
+
+              if (groupFields.length === 0 && !hasElementTypography) {
+                return null
+              }
+
+              return (
+                <div key={group}>
+                  <Separator />
+                  <div className="mt-3 pt-3 border-t border-border/50">
+                    <Label className="text-xs font-semibold">{INSPECTOR_GROUP_LABELS[group] || group}</Label>
+                    <div className="space-y-3 mt-2">
+                      {groupFields.map((field) => renderInspectorField(field, selectedBlock))}
+                      {hasElementTypography && renderElementTypography()}
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+
+            {/* Render late fields if any */}
+            {visibleLateFields.length > 0 && (
+              <div>
+                <Separator />
+                <div className="mt-3 pt-3">
+                  {visibleLateFields.map((field) => renderInspectorField(field, selectedBlock))}
+                </div>
+              </div>
+            )}
+          </>
+        )
+      })()}
 
       {/* Panel Container Shadow Inspector (for blocks with enableInnerPanel) */}
       {getBlockDefinition(selectedBlock.type)?.enableInnerPanel && (
         <>
           <Separator />
-          
+          <div className="mt-3 pt-3 border-t border-border/50">
+            <Label className="text-xs font-semibold">Panel Shadow</Label>
+            <ShadowInspector
+              config={(selectedBlock.props as any)?.containerShadow}
+              onChange={(shadowConfig) => {
+                if (!selectedBlock) return
+                const currentProps = selectedBlock.props as Record<string, unknown>
+                const updatedProps = {
+                  ...currentProps,
+                  containerShadow: shadowConfig,
+                } as CMSBlock["props"]
+                updateSelectedProps(updatedProps)
+              }}
+              onClose={() => {}}
+            />
+          </div>
         </>
       )}
     </>

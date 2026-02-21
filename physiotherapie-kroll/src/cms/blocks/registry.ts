@@ -39,6 +39,7 @@ export interface InspectorField {
   required?: boolean
   helpText?: string
   showWhen?: { key: string; equals: any }
+  group?: "basics" | "layout" | "panel" | "design" | "content" | "interactions" | "elements"
 }
 
 
@@ -51,6 +52,45 @@ export interface BlockDefinition<T extends CMSBlock = CMSBlock> {
   allowInlineEdit?: boolean
   elements?: EditableElementDef[]
   enableInnerPanel?: boolean
+  inspectorGroupOrder?: (typeof INSPECTOR_GROUP_ORDER)[number][]
+}
+
+/* ================================================================ */
+/*  Inspector Field Grouping & Sorting                              */
+/* ================================================================ */
+
+export const INSPECTOR_GROUP_ORDER = ["basics", "layout", "panel", "design", "content", "interactions", "elements"] as const
+
+export const DEFAULT_GROUP_ORDER = INSPECTOR_GROUP_ORDER
+
+export const INSPECTOR_GROUP_LABELS: Record<string, string> = {
+  basics: "Basics",
+  layout: "Layout",
+  panel: "Panel",
+  design: "Design",
+  content: "Inhalt",
+  interactions: "Interaktionen",
+  elements: "Elemente",
+}
+
+export function sortInspectorFields(fields: InspectorField[], groupOrder?: readonly string[] | string[]): InspectorField[] {
+  const order = groupOrder || DEFAULT_GROUP_ORDER
+  
+  const grouped = fields.reduce((acc, field) => {
+    const group = field.group ?? "design"
+    if (!acc[group]) acc[group] = []
+    acc[group].push(field)
+    return acc
+  }, {} as Record<string, InspectorField[]>)
+
+  const sorted: InspectorField[] = []
+  for (const group of order) {
+    if (grouped[group]) {
+      sorted.push(...grouped[group])
+    }
+  }
+
+  return sorted
 }
 
 const brandKeySchema = z.enum(["physiotherapy", "physio-konzept"])
@@ -364,26 +404,6 @@ const servicesGridPropsSchema = z.object({
   typography: elementTypographySchema,
 })
 
-const faqPropsSchema = z.object({
-  headline: z.string().optional(),
-  headlineColor: z.string().optional(),
-  questionColor: z.string().optional(),
-  answerColor: z.string().optional(),
-  background: z.enum(["none", "muted", "gradient"]).optional(),
-  backgroundColor: z.string().optional(),
-  items: z.array(
-    z.object({
-      id: z.string(),
-      question: z.string(), // Allow empty during editing
-      answer: z.string(), // Allow empty during editing
-      questionColor: z.string().optional(),
-      answerColor: z.string().optional(),
-    })
-  ).min(1).max(20),
-  variant: z.enum(["default", "soft"]).optional(),
-  typography: elementTypographySchema,
-})
-
 /* ================================================================ */
 /*  Panel Container Props (Reusable Preset for all blocks)            */
 /* ================================================================ */
@@ -393,7 +413,10 @@ const panelPropsSchema = z.object({
   containerBackgroundMode: z.enum(["transparent", "color", "gradient"]).optional(),
   containerBackgroundColor: z.string().optional(),
   containerBackgroundGradientPreset: z.string().optional(),
-  containerBackgroundGradient: z.any().optional(),
+  containerGradientFrom: z.string().optional(),
+  containerGradientVia: z.string().optional(),
+  containerGradientTo: z.string().optional(),
+  containerGradientAngle: z.number().optional(),
   containerShadow: z.any().optional(),
 })
 
@@ -401,7 +424,10 @@ const panelDefaults = {
   containerBackgroundMode: "transparent" as const,
   containerBackgroundColor: "",
   containerBackgroundGradientPreset: "soft",
-  containerBackgroundGradient: undefined,
+  containerGradientFrom: "",
+  containerGradientVia: "",
+  containerGradientTo: "",
+  containerGradientAngle: 135,
   containerShadow: undefined,
 }
 
@@ -415,6 +441,7 @@ const panelInspectorFields: InspectorField[] = [
       { value: "color", label: "Farbe" },
       { value: "gradient", label: "Gradient" },
     ],
+    group: "panel",
   },
   {
     key: "containerBackgroundColor",
@@ -422,6 +449,7 @@ const panelInspectorFields: InspectorField[] = [
     type: "color",
     placeholder: "#RRGGBB",
     showWhen: { key: "containerBackgroundMode", equals: "color" },
+    group: "panel",
   },
   {
     key: "containerBackgroundGradientPreset",
@@ -436,15 +464,61 @@ const panelInspectorFields: InspectorField[] = [
       { value: "none", label: "Keine" },
     ],
     showWhen: { key: "containerBackgroundMode", equals: "gradient" },
+    group: "panel",
   },
   {
-    key: "containerBackgroundGradient",
-    label: "Gradient (Custom)",
-    type: "text",
-    placeholder: "Custom gradient (Advanced)",
+    key: "containerGradientFrom",
+    label: "Verlauf From",
+    type: "color",
+    placeholder: "#RRGGBB",
     showWhen: { key: "containerBackgroundMode", equals: "gradient" },
+    group: "panel",
+  },
+  {
+    key: "containerGradientVia",
+    label: "Verlauf Via",
+    type: "color",
+    placeholder: "#RRGGBB",
+    showWhen: { key: "containerBackgroundMode", equals: "gradient" },
+    group: "panel",
+  },
+  {
+    key: "containerGradientTo",
+    label: "Verlauf To",
+    type: "color",
+    placeholder: "#RRGGBB",
+    showWhen: { key: "containerBackgroundMode", equals: "gradient" },
+    group: "panel",
+  },
+  {
+    key: "containerGradientAngle",
+    label: "Winkel",
+    type: "number",
+    placeholder: "135",
+    showWhen: { key: "containerBackgroundMode", equals: "gradient" },
+    group: "panel",
   },
 ]
+
+const faqPropsSchema = z.object({
+  headline: z.string().optional(),
+  headlineColor: z.string().optional(),
+  questionColor: z.string().optional(),
+  answerColor: z.string().optional(),
+  items: z.array(
+    z.object({
+      id: z.string(),
+      question: z.string(), // Allow empty during editing
+      answer: z.string(), // Allow empty during editing
+      questionColor: z.string().optional(),
+      answerColor: z.string().optional(),
+    })
+  ).min(1).max(20),
+  variant: z.enum(["default", "soft"]).optional(),
+  typography: elementTypographySchema,
+  // Panel props (merged from panelPropsSchema)
+  ...panelPropsSchema.shape,
+})
 
 /* ================================================================ */
 /*  Inner Panel Auto-Injection Helper                              */
@@ -469,6 +543,7 @@ function withInnerPanel<T extends BlockDefinition>(def: T): T {
 /* ================================================================ */
 
 const teamPropsSchema = z.object({
+  typography: elementTypographySchema,
   headline: z.string().optional(),
   subheadline: z.string().optional(),
   headlineColor: z.string().optional(),
@@ -550,6 +625,7 @@ const contactFormPropsSchema = z.object({
   layout: z.enum(["stack", "split"]).optional(),
   // Button preset
   buttonPreset: z.string().optional(),
+  typography: elementTypographySchema,
 })
 
 const testimonialsPropsSchema = z.object({
@@ -613,9 +689,10 @@ const testimonialSliderPropsSchema = z.object({
   })).min(1).max(12),
 })
 
-const galleryPropsSchema = z.object({
+const galleryPropsSchema = panelPropsSchema.merge(z.object({
   headline: z.string().optional(),
   subheadline: z.string().optional(),
+  layout: z.enum(["grid", "masonry", "carousel", "stack", "highlight-first"]).optional(),
   variant: z.enum(["grid", "slider"]).optional(),
   lightbox: z.boolean().optional(),
   headlineColor: z.string().optional(),
@@ -624,11 +701,21 @@ const galleryPropsSchema = z.object({
   columns: z
     .preprocess(
       (v) => (v === "" || v === null || typeof v === "undefined" ? undefined : v),
-      z.coerce.number().int().min(2).max(4)
+      z.coerce.number().int().min(2).max(6)
     )
     .optional(),
   showCaptions: z.boolean().optional(),
+  captionStyle: z.enum(["below", "overlay"]).optional(),
+  gap: z.enum(["sm", "md", "lg"]).optional(),
+  imageRadius: z.enum(["none", "sm", "md", "lg", "xl"]).optional(),
+  aspectRatio: z.enum(["auto", "square", "video", "portrait", "landscape"]).optional(),
+  imageFit: z.enum(["cover", "contain"]).optional(),
+  hoverEffect: z.enum(["none", "zoom", "lift", "fade"]).optional(),
+  showCounter: z.boolean().optional(),
+  enableMotion: z.boolean().optional(),
   background: z.enum(["none", "muted", "gradient"]).optional(),
+  containerBorder: z.boolean().optional(),
+  typography: elementTypographySchema.optional(),
   images: z
     .array(
       z.object({
@@ -637,11 +724,12 @@ const galleryPropsSchema = z.object({
         alt: z.string(), // allow empty during editing
         caption: z.string().optional(),
         captionColor: z.string().optional(),
+        link: z.string().optional(),
       })
     )
     .min(3)
     .max(18),
-})
+}))
 
 const imageSliderPropsSchema = z.object({
   headline: z.string().optional(),
@@ -706,6 +794,7 @@ const openingHoursPropsSchema = z.object({
     )
     .min(1)
     .max(10),
+  typography: elementTypographySchema,
 })
 
 function getDefaultBrand(): BrandKey {
@@ -1100,9 +1189,16 @@ const servicesGridDefaults: ServicesGridBlock["props"] = {
 
 const faqDefaults: FaqBlock["props"] = {
   headline: "Häufige Fragen",
-  background: "none",
-  backgroundColor: "",
   variant: "default",
+  // Panel props defaults
+  containerBackgroundMode: "transparent",
+  containerBackgroundColor: "",
+  containerBackgroundGradientPreset: "soft",
+  containerGradientFrom: "",
+  containerGradientVia: "",
+  containerGradientTo: "",
+  containerGradientAngle: 135,
+  containerShadow: undefined,
   items: [
     { id: generateUniqueId("faq", 0), question: "Wie lange dauert eine Behandlung?", answer: "Eine Behandlungseinheit dauert in der Regel 30-60 Minuten, abhängig von der Art der Therapie und Ihren individuellen Bedürfnissen." },
     { id: generateUniqueId("faq", 1), question: "Werden die Kosten von der Krankenkasse übernommen?", answer: "Ja, wir arbeiten mit allen gesetzlichen und privaten Krankenkassen zusammen. Die Kostenübernahme hängt von Ihrer Versicherung und der Art der Behandlung ab." },
@@ -1113,6 +1209,7 @@ const faqDefaults: FaqBlock["props"] = {
 }
 
 const teamDefaults: TeamBlock["props"] = {
+  typography: {},
   headline: "Unser Team",
   subheadline: "Erfahrene Therapeuten für Ihre Gesundheit.",
   eyebrow: "UNSER TEAM",
@@ -1133,7 +1230,10 @@ const teamDefaults: TeamBlock["props"] = {
   containerBackgroundMode: "transparent",
   containerBackgroundColor: undefined,
   containerBackgroundGradientPreset: "soft",
-  containerBackgroundGradient: undefined,
+  containerGradientFrom: "",
+  containerGradientVia: "",
+  containerGradientTo: "",
+  containerGradientAngle: 135,
   members: [
     { 
       id: generateUniqueId("member", 0), 
@@ -1256,13 +1356,26 @@ const testimonialsDefaults: TestimonialsBlock["props"] = {
 }
 
 const galleryDefaults: GalleryBlock["props"] = {
+  ...panelDefaults,
+  containerBackgroundGradientPreset: "soft",
   headline: "Galerie",
   subheadline: "Einblicke in unsere Räume und unseren Alltag.",
+  layout: "grid",
   variant: "grid",
-  lightbox: false,
+  lightbox: true,
   columns: 3,
   showCaptions: true,
+  captionStyle: "overlay",
+  gap: "md",
+  imageRadius: "lg",
+  aspectRatio: "landscape",
+  imageFit: "cover",
+  hoverEffect: "zoom",
+  showCounter: true,
+  enableMotion: true,
   background: "none",
+  containerBorder: false,
+  typography: {},
   images: [
     { id: generateUniqueId("image", 0), url: "/placeholder.svg", alt: "", caption: "Behandlungsraum" },
     { id: generateUniqueId("image", 1), url: "/placeholder.svg", alt: "", caption: "Trainingsbereich" },
@@ -1713,6 +1826,14 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
     defaults: imageTextDefaults,
     zodSchema: imageTextPropsSchema,
     allowInlineEdit: true,
+    elements: [
+      { id: "imageText.eyebrow", label: "Eyebrow", path: "eyebrow", supportsTypography: true },
+      { id: "imageText.headline", label: "Headline", path: "headline", supportsTypography: true },
+      { id: "imageText.content", label: "Content", path: "content", supportsTypography: true },
+      { id: "imageText.cta", label: "CTA", path: "ctaText", supportsTypography: true },
+      { id: "imageText.image", label: "Image", path: "imageUrl", supportsTypography: false },
+      { id: "imageText.surface", label: "Surface", path: "", supportsTypography: false },
+    ],
     inspectorFields: [
       {
         key: "imageUrl",
@@ -1926,7 +2047,6 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
               type: "color" as const,
             },
           ]),
-      { key: "enableHoverElevation", label: "Hover-Elevation aktivieren", type: "boolean" as const },
       { key: "ctaText", label: "CTA Button Text", type: "text", placeholder: "Mehr erfahren" },
       { key: "ctaHref", label: "CTA Button Link", type: "url", placeholder: "/kontakt" },
       { key: "secondaryCtaText", label: "Sekundärer CTA Text (optional)", type: "text", placeholder: "Weitere Info" },
@@ -2273,6 +2393,10 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
     defaults: ctaDefaults,
     zodSchema: ctaPropsSchema,
     allowInlineEdit: true,
+    elements: [
+      { id: "cta.headline", label: "Headline", path: "headline", supportsTypography: true },
+      { id: "cta.subheadline", label: "Subheadline", path: "subheadline", supportsTypography: true },
+    ],
     inspectorFields: [
       { key: "headline", label: "Headline", type: "text", placeholder: "Überschrift", required: true },
       { key: "subheadline", label: "Subheadline", type: "text", placeholder: "Optionaler Untertext" },
@@ -2310,9 +2434,14 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
     defaults: servicesGridDefaults,
     zodSchema: servicesGridPropsSchema,
     allowInlineEdit: true,
+    elements: [
+      { id: "services.headline", label: "Headline", path: "headline", supportsTypography: true },
+      { id: "services.subheadline", label: "Subheadline", path: "subheadline", supportsTypography: true },
+      { id: "services.card.title", label: "Card Title", path: "title", supportsTypography: true },
+    ],
     inspectorFields: [
-      { key: "headline", label: "Headline", type: "text", placeholder: "Überschrift", required: false },
-      { key: "subheadline", label: "Subheadline", type: "text", placeholder: "Kurzer Text", required: false },
+      { key: "headline", label: "Headline", type: "text", placeholder: "Überschrift", required: false, group: "basics" },
+      { key: "subheadline", label: "Subheadline", type: "text", placeholder: "Kurzer Text", required: false, group: "basics" },
       {
         key: "columns",
         label: "Spalten",
@@ -2323,16 +2452,17 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
           { value: "4", label: "4" },
         ],
         required: false,
+        group: "layout",
       },
-      { key: "headlineColor", label: "Headline Farbe", type: "color", placeholder: "#111111" },
-      { key: "subheadlineColor", label: "Subheadline Farbe", type: "color", placeholder: "#666666" },
-      { key: "iconColor", label: "Icon Farbe", type: "color", placeholder: "#111111" },
-      { key: "iconBgColor", label: "Icon Hintergrund", type: "color", placeholder: "#EEEEEE" },
-      { key: "titleColor", label: "Titel Farbe", type: "color", placeholder: "#111111" },
-      { key: "textColor", label: "Text Farbe", type: "color", placeholder: "#666666" },
-      { key: "ctaColor", label: "CTA Farbe", type: "color", placeholder: "#111111" },
-      { key: "cardBgColor", label: "Karte Hintergrund", type: "color", placeholder: "#FFFFFF" },
-      { key: "cardBorderColor", label: "Karte Border", type: "color", placeholder: "#E5E7EB" },
+      { key: "headlineColor", label: "Headline Farbe", type: "color", placeholder: "#111111", group: "design" },
+      { key: "subheadlineColor", label: "Subheadline Farbe", type: "color", placeholder: "#666666", group: "design" },
+      { key: "iconColor", label: "Icon Farbe", type: "color", placeholder: "#111111", group: "design" },
+      { key: "iconBgColor", label: "Icon Hintergrund", type: "color", placeholder: "#EEEEEE", group: "design" },
+      { key: "titleColor", label: "Titel Farbe", type: "color", placeholder: "#111111", group: "design" },
+      { key: "textColor", label: "Text Farbe", type: "color", placeholder: "#666666", group: "design" },
+      { key: "ctaColor", label: "CTA Farbe", type: "color", placeholder: "#111111", group: "interactions" },
+      { key: "cardBgColor", label: "Karte Hintergrund", type: "color", placeholder: "#FFFFFF", group: "design" },
+      { key: "cardBorderColor", label: "Karte Border", type: "color", placeholder: "#E5E7EB", group: "design" },
       
     ],
   },
@@ -2342,22 +2472,16 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
     defaults: faqDefaults,
     zodSchema: faqPropsSchema,
     enableInnerPanel: true,
+    elements: [
+      { id: "faq.headline", label: "Headline", path: "headline", supportsTypography: true },
+      { id: "faq.question", label: "Question", path: "question", supportsTypography: true },
+      { id: "faq.answer", label: "Answer", path: "answer", supportsTypography: true },
+    ],
     inspectorFields: [
-      { key: "headline", label: "Überschrift", type: "text", placeholder: "Überschrift eingeben", required: false },
-      {
-        key: "background",
-        label: "Hintergrund",
-        type: "select",
-        options: [
-          { value: "none", label: "Keine" },
-          { value: "muted", label: "Gedimmt" },
-          { value: "gradient", label: "Gradient" },
-        ],
-      },
-      { key: "backgroundColor", label: "Hintergrundfarbe (Wrapper)", type: "color", placeholder: "#RRGGBB" },
-      { key: "headlineColor", label: "Überschrift Farbe", type: "color", placeholder: "#111111" },
-      { key: "questionColor", label: "Frage Farbe", type: "color", placeholder: "#111111" },
-      { key: "answerColor", label: "Antwort Farbe", type: "color", placeholder: "#666666" },
+      { key: "headline", label: "Überschrift", type: "text", placeholder: "Überschrift eingeben", required: false, group: "basics" },
+      { key: "headlineColor", label: "Überschrift Farbe", type: "color", placeholder: "#111111", group: "design" },
+      { key: "questionColor", label: "Frage Farbe", type: "color", placeholder: "#111111", group: "design" },
+      { key: "answerColor", label: "Antwort Farbe", type: "color", placeholder: "#666666", group: "design" },
     ],
   },
   team: {
@@ -2367,9 +2491,17 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
     zodSchema: teamPropsSchema,
     allowInlineEdit: true,
     enableInnerPanel: true,
+    inspectorGroupOrder: ["basics", "layout", "panel", "design", "elements", "content", "interactions"],
+    elements: [
+      { id: "team.eyebrow", label: "Eyebrow", path: "eyebrow", supportsTypography: true },
+      { id: "team.headline", label: "Headline", path: "headline", supportsTypography: true },
+      { id: "team.subheadline", label: "Subheadline", path: "subheadline", supportsTypography: true },
+      { id: "team.member.name", label: "Member Name", path: "name", supportsTypography: true },
+      { id: "team.member.role", label: "Member Role", path: "role", supportsTypography: true },
+    ],
     inspectorFields: [
-      { key: "headline", label: "Headline", type: "text", placeholder: "Überschrift", required: false },
-      { key: "subheadline", label: "Subheadline", type: "text", placeholder: "Kurzer Text" },
+      { key: "headline", label: "Headline", type: "text", placeholder: "Überschrift", required: false, group: "basics" },
+      { key: "subheadline", label: "Subheadline", type: "text", placeholder: "Kurzer Text", group: "basics" },
       {
         key: "columns",
         label: "Spalten",
@@ -2379,14 +2511,15 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
           { value: "3", label: "3" },
           { value: "4", label: "4" },
         ],
+        group: "layout",
       },
-      { key: "headlineColor", label: "Headline Farbe", type: "color", placeholder: "#111111" },
-      { key: "subheadlineColor", label: "Subheadline Farbe", type: "color", placeholder: "#666666" },
-      { key: "nameColor", label: "Name Farbe", type: "color", placeholder: "#111111" },
-      { key: "roleColor", label: "Rolle Farbe", type: "color", placeholder: "#666666" },
-      { key: "ctaColor", label: "CTA Farbe", type: "color", placeholder: "#111111" },
-      { key: "cardBgColor", label: "Karte Hintergrund", type: "color" },
-      { key: "cardBorderColor", label: "Karte Border", type: "color" },
+      { key: "headlineColor", label: "Headline Farbe", type: "color", placeholder: "#111111", group: "design" },
+      { key: "subheadlineColor", label: "Subheadline Farbe", type: "color", placeholder: "#666666", group: "design" },
+      { key: "nameColor", label: "Name Farbe", type: "color", placeholder: "#111111", group: "design" },
+      { key: "roleColor", label: "Rolle Farbe", type: "color", placeholder: "#666666", group: "design" },
+      { key: "ctaColor", label: "CTA Farbe", type: "color", placeholder: "#111111", group: "interactions" },
+      { key: "cardBgColor", label: "Karte Hintergrund", type: "color", group: "design" },
+      { key: "cardBorderColor", label: "Karte Border", type: "color", group: "design" },
     ],
   },
   contactForm: {
@@ -2395,6 +2528,10 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
     defaults: contactFormDefaults,
     zodSchema: contactFormPropsSchema,
     allowInlineEdit: true,
+    elements: [
+      { id: "contactForm.heading", label: "Überschrift", path: "heading", supportsTypography: true },
+      { id: "contactForm.text", label: "Intro-Text", path: "text", supportsTypography: true },
+    ],
     inspectorFields: [
       { key: "heading", label: "Überschrift", type: "text", placeholder: "Kontaktieren Sie uns" },
       { key: "text", label: "Intro-Text", type: "textarea", placeholder: "Beschreibungstext..." },
@@ -2448,6 +2585,13 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
     defaults: testimonialsDefaults,
     zodSchema: testimonialsPropsSchema,
     allowInlineEdit: true,
+    elements: [
+      { id: "testimonials.headline", label: "Headline", path: "headline", supportsTypography: true },
+      { id: "testimonials.subheadline", label: "Subheadline", path: "subheadline", supportsTypography: true },
+      { id: "testimonials.quote", label: "Quote", path: "quote", supportsTypography: true },
+      { id: "testimonials.name", label: "Name", path: "name", supportsTypography: true },
+      { id: "testimonials.role", label: "Role", path: "role", supportsTypography: true },
+    ],
     inspectorFields: [
       { key: "headline", label: "Headline", type: "text", placeholder: "Überschrift" },
       { key: "subheadline", label: "Subheadline", type: "textarea", placeholder: "Kurzer erklärender Text" },
@@ -2515,19 +2659,28 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
     defaults: galleryDefaults,
     zodSchema: galleryPropsSchema,
     allowInlineEdit: false,
+    enableInnerPanel: true,
+    inspectorGroupOrder: ["basics", "layout", "panel", "design", "elements", "content", "interactions"],
+    elements: [
+      { id: "gallery.headline", label: "Headline", path: "headline", supportsTypography: true },
+      { id: "gallery.subheadline", label: "Subheadline", path: "subheadline", supportsTypography: true },
+    ],
     inspectorFields: [
-      { key: "headline", label: "Headline", type: "text", placeholder: "Überschrift" },
-      { key: "subheadline", label: "Subheadline", type: "textarea", placeholder: "Kurzer erklärender Text" },
+      { key: "headline", label: "Headline", type: "text", placeholder: "Überschrift", group: "basics" },
+      { key: "subheadline", label: "Subheadline", type: "textarea", placeholder: "Kurzer erklärender Text", group: "basics" },
       {
-        key: "variant",
-        label: "Variante",
+        key: "layout",
+        label: "Layout",
         type: "select",
         options: [
           { value: "grid", label: "Grid" },
-          { value: "slider", label: "Slider" },
+          { value: "masonry", label: "Masonry" },
+          { value: "carousel", label: "Carousel" },
+          { value: "stack", label: "Stack" },
+          { value: "highlight-first", label: "Highlight erstes" },
         ],
+        group: "layout",
       },
-      { key: "lightbox", label: "Lightbox/Slider aktiv", type: "boolean", helpText: "Wenn aktiv, wird die Galerie als Slider gerendert." },
       {
         key: "columns",
         label: "Spalten",
@@ -2536,22 +2689,37 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
           { value: "2", label: "2" },
           { value: "3", label: "3" },
           { value: "4", label: "4" },
+          { value: "5", label: "5" },
+          { value: "6", label: "6" },
         ],
+        group: "layout",
       },
-      { key: "showCaptions", label: "Captions anzeigen", type: "boolean" },
-      { key: "headlineColor", label: "Headline Farbe", type: "color", placeholder: "#111111" },
-      { key: "subheadlineColor", label: "Subheadline Farbe", type: "color", placeholder: "#666666" },
-      { key: "captionColor", label: "Caption Farbe", type: "color", placeholder: "#666666" },
+      { key: "gap", label: "Abstand", type: "select", options: [ { value: "sm", label: "Klein" }, { value: "md", label: "Mittel" }, { value: "lg", label: "Groß" } ], group: "layout" },
+      /* Panel-Felder (containerBackgroundMode etc.) werden von withInnerPanel vor die Liste gesetzt – nicht hier duplizieren */
+      { key: "containerBorder", label: "Panel Rahmen", type: "boolean", group: "panel" },
+      { key: "headlineColor", label: "Headline Farbe", type: "color", placeholder: "#111111", group: "design" },
+      { key: "subheadlineColor", label: "Subheadline Farbe", type: "color", placeholder: "#666666", group: "design" },
+      { key: "captionColor", label: "Caption Farbe", type: "color", placeholder: "#666666", group: "design" },
+      { key: "imageRadius", label: "Bild-Ecken", type: "select", options: [ { value: "none", label: "Keine" }, { value: "sm", label: "Klein" }, { value: "md", label: "Mittel" }, { value: "lg", label: "Groß" }, { value: "xl", label: "XL" } ], group: "design" },
+      { key: "aspectRatio", label: "Seitenverhältnis", type: "select", options: [ { value: "auto", label: "Auto" }, { value: "square", label: "Quadrat" }, { value: "video", label: "Video" }, { value: "portrait", label: "Hochformat" }, { value: "landscape", label: "Querformat" } ], group: "design" },
+      { key: "imageFit", label: "Bild-Füllung", type: "select", options: [ { value: "cover", label: "Cover" }, { value: "contain", label: "Contain" } ], group: "design" },
+      { key: "hoverEffect", label: "Hover-Effekt", type: "select", options: [ { value: "none", label: "Keiner" }, { value: "zoom", label: "Zoom" }, { value: "lift", label: "Lift" }, { value: "fade", label: "Fade" } ], group: "design" },
       {
         key: "background",
-        label: "Background",
+        label: "Section Hintergrund (ohne Panel)",
         type: "select",
         options: [
-          { value: "none", label: "None" },
+          { value: "none", label: "Keiner" },
           { value: "muted", label: "Muted" },
           { value: "gradient", label: "Gradient" },
         ],
+        group: "design",
       },
+      { key: "showCaptions", label: "Captions anzeigen", type: "boolean", group: "content" },
+      { key: "captionStyle", label: "Caption Position", type: "select", options: [ { value: "below", label: "Unter dem Bild" }, { value: "overlay", label: "Overlay (Hover)" } ], group: "content" },
+      { key: "lightbox", label: "Lightbox aktiv", type: "boolean", helpText: "Bilder per Klick vergrößern.", group: "interactions" },
+      { key: "showCounter", label: "Zähler in Lightbox", type: "boolean", group: "interactions" },
+      { key: "enableMotion", label: "Animationen", type: "boolean", group: "interactions" },
     ],
   },
   imageSlider: {
@@ -2603,6 +2771,13 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
     defaults: openingHoursDefaults,
     zodSchema: openingHoursPropsSchema,
     allowInlineEdit: true,
+    elements: [
+      { id: "openingHours.headline", label: "Headline", path: "headline", supportsTypography: true },
+      { id: "openingHours.subheadline", label: "Subheadline", path: "subheadline", supportsTypography: true },
+      { id: "openingHours.label", label: "Label (Zeilen)", path: "label", supportsTypography: true },
+      { id: "openingHours.value", label: "Wert (Zeiten)", path: "value", supportsTypography: true },
+      { id: "openingHours.note", label: "Hinweis", path: "note", supportsTypography: true },
+    ],
     inspectorFields: [
       { key: "headline", label: "Headline", type: "text", placeholder: "Überschrift" },
       { key: "subheadline", label: "Subheadline", type: "textarea", placeholder: "Kurzer erklärender Text" },

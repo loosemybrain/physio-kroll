@@ -8,6 +8,7 @@ import { AnimatedBlock } from "@/components/blocks/AnimatedBlock"
 import type { BlockSectionProps } from "@/types/cms"
 import { useElementShadowStyle } from "@/lib/shadow"
 import { resolveButtonPresetStyles } from "@/lib/buttonPresets"
+import { mergeTypographyClasses } from "@/lib/typography"
 
 interface CtaBlockProps {
   section?: BlockSectionProps
@@ -157,7 +158,10 @@ export function CtaBlock({
             <div className={cn("flex-1", isSplit && "lg:max-w-xl")}>
               <h2
                 className={cn(
-                  "text-3xl font-bold tracking-tight text-foreground md:text-4xl",
+                  mergeTypographyClasses(
+                    "text-3xl font-bold tracking-tight text-foreground md:text-4xl",
+                    (typography as Record<string, any> ?? {})["cta.headline"]
+                  ),
                   canInlineEdit && "cursor-pointer"
                 )}
                 style={{
@@ -172,7 +176,10 @@ export function CtaBlock({
               {(subheadline || canInlineEdit) && (
                 <p
                   className={cn(
-                    "mt-4 text-lg text-muted-foreground",
+                    mergeTypographyClasses(
+                      "mt-4 text-lg text-muted-foreground",
+                      (typography as Record<string, any> ?? {})["cta.subheadline"]
+                    ),
                     canInlineEdit && "cursor-pointer"
                   )}
                   style={{

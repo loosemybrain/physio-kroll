@@ -7,6 +7,9 @@ import { ServicesGridBlock } from "../components/blocks/services-grid-block"
 import { ImageTextBlock } from "../components/blocks/image-text-block"
 import { TestimonialsBlock } from "../components/blocks/testimonials-block"
 import { TeamGridBlock } from "../components/blocks/team-grid-block"
+import { SectionBlock } from "../components/blocks/section-block"
+import { FaqAccordionBlock } from "../components/blocks/faq-accordion-block"
+import { GalleryBlock } from "../components/blocks/gallery-block"
 import { Button } from "@/components/ui/button"
 
 export default function Home() {
@@ -98,6 +101,43 @@ export default function Home() {
             ctaHref: "#contact",
           },
         ]}
+      />
+
+      {/* Section Block: Philosophie (gradient-brand, centered, divider) */}
+      <SectionBlock
+        blockId="philosophie"
+        eyebrow="Unsere Philosophie"
+        headline="Bewegung ist die beste Medizin"
+        subheadline="Ganzheitlich. Evidenzbasiert. Persönlich."
+        content={"Seit über 15 Jahren begleiten wir Menschen auf ihrem Weg zu einem schmerzfreien und aktiven Leben. Unser Ansatz verbindet klassische Physiotherapie mit modernen, evidenzbasierten Methoden.\n\nWir glauben daran, dass jeder Mensch einzigartig ist und eine individuelle Betreuung verdient. Deshalb nehmen wir uns die Zeit, Ihre Beschwerden ganzheitlich zu verstehen — und gemeinsam mit Ihnen die beste Lösung zu finden.\n\nOb nach einer Operation, bei chronischen Schmerzen oder zur sportlichen Leistungsoptimierung: Unser interdisziplinäres Team steht Ihnen mit Fachwissen, Einfühlungsvermögen und modernster Ausstattung zur Seite."}
+        align="center"
+        maxWidth="lg"
+        background="gradient-brand"
+        showDivider
+        enableGlow
+        enableHoverElevation
+        primaryCtaText="Jetzt Termin vereinbaren"
+        primaryCtaHref="#contact"
+        secondaryCtaText="Mehr über uns"
+        secondaryCtaHref="#about"
+      />
+
+      {/* Section Block: Methodik (gradient-soft, justified, editorial) */}
+      <SectionBlock
+        blockId="methodik"
+        eyebrow="Methodik"
+        headline="Evidenzbasierte Behandlungskonzepte"
+        subheadline="Wissenschaft trifft Empathie"
+        content={"Unsere Therapiekonzepte basieren auf den neuesten wissenschaftlichen Erkenntnissen der Physiotherapie und Rehabilitationsmedizin. Wir arbeiten eng mit Ärzten, Sportwissenschaftlern und Ernährungsberatern zusammen, um Ihnen die bestmögliche Versorgung zu bieten.\n\nJede Behandlung beginnt mit einer ausführlichen Befunderhebung. Dabei analysieren wir nicht nur die Symptome, sondern auch die zugrundeliegenden Ursachen Ihrer Beschwerden. Auf dieser Basis erstellen wir einen individuellen Therapieplan, der regelmäßig überprüft und angepasst wird.\n\nTransparenz und Kommunikation sind uns dabei besonders wichtig: Sie verstehen jederzeit, warum wir welche Maßnahmen empfehlen und welche Fortschritte Sie machen."}
+        align="justify"
+        justifyBias="readable"
+        maxWidth="lg"
+        background="gradient-soft"
+        showDivider
+        enableGlow
+        enableHoverElevation
+        primaryCtaText="Unsere Leistungen entdecken"
+        primaryCtaHref="#services"
       />
 
       {/* Image-Text Block: About */}
@@ -301,6 +341,103 @@ export default function Home() {
             name: "Felix Kramer",
             role: "Crossfit Athlet",
             rating: 5,
+          },
+        ]}
+      />
+
+      {/* Gallery Block -- Praxis-Fotografie */}
+      <GalleryBlock
+        blockId="gallery"
+        headline="Unsere Praxis in Bildern"
+        subheadline="Einblicke"
+        layout="highlight-first"
+        columns={3}
+        gap="md"
+        maxWidth="6xl"
+        imageRadius="lg"
+        aspectRatio="landscape"
+        imageFit="cover"
+        hoverEffect="zoom"
+        lightbox
+        showCaptions
+        captionStyle="overlay"
+        showCounter
+        enableMotion
+        treatment="warm"
+        containerBackgroundMode="gradient"
+        containerBackgroundGradientPreset="soft"
+        containerShadow="md"
+        containerBorder
+        images={[
+          {
+            id: "g1",
+            image: { src: "/images/gallery-1.jpg", alt: "Behandlungsraum" },
+            alt: "Heller, moderner Behandlungsraum mit Tageslicht",
+            caption: "Unsere lichtdurchfluteten Behandlungsräume",
+          },
+          {
+            id: "g2",
+            image: { src: "/images/gallery-2.jpg", alt: "Manuelle Therapie" },
+            alt: "Therapeut bei der manuellen Behandlung",
+            caption: "Einfühlsame Hands-on Therapie",
+          },
+          {
+            id: "g3",
+            image: { src: "/images/gallery-3.jpg", alt: "Trainingsbereich" },
+            alt: "Moderner Trainingsbereich mit Geräten",
+            caption: "Voll ausgestatteter Trainingsbereich",
+          },
+          {
+            id: "g4",
+            image: { src: "/images/gallery-4.jpg", alt: "Empfangsbereich" },
+            alt: "Einladender Empfangsbereich der Praxis",
+            caption: "Herzlich willkommen in unserer Praxis",
+          },
+          {
+            id: "g5",
+            image: { src: "/images/gallery-5.jpg", alt: "Rehabilitation" },
+            alt: "Therapeutin begleitet Patienten bei Übungen",
+            caption: "Individuelle Betreuung bei jeder Übung",
+          },
+          {
+            id: "g6",
+            image: { src: "/images/gallery-6.jpg", alt: "Hydrotherapie" },
+            alt: "Therapeutisches Bewegungsbad",
+            caption: "Modernste Ausstattung für Ihre Therapie",
+          },
+        ]}
+      />
+
+      {/* FAQ Accordion -- soft variant */}
+      <FaqAccordionBlock
+        blockId="faq"
+        headline="Häufig gestellte Fragen"
+        variant="soft"
+        items={[
+          {
+            id: "faq1",
+            question: "Benötige ich eine ärztliche Verordnung?",
+            answer: "Ja, für die meisten physiotherapeutischen Behandlungen benötigen Sie eine <strong>Verordnung Ihres Arztes</strong>. Gerne beraten wir Sie vorab telefonisch, welche Unterlagen Sie mitbringen sollten.",
+          },
+          {
+            id: "faq2",
+            question: "Wie lange dauert eine Behandlungssitzung?",
+            answer: "Eine Standardsitzung dauert in der Regel <strong>30 bis 45 Minuten</strong>, je nach Therapieform. Ersttermine planen wir mit 60 Minuten, damit wir eine ausführliche Befunderhebung durchführen können.",
+          },
+          {
+            id: "faq3",
+            question: "Werden die Kosten von der Krankenkasse übernommen?",
+            answer: "Gesetzlich Versicherte zahlen einen gesetzlichen Eigenanteil von 10 % plus 10 EUR pro Verordnung. Bei privat Versicherten rechnen wir direkt mit Ihrer Versicherung ab. Sprechen Sie uns gerne an — wir helfen bei Fragen zur Kostenübernahme.",
+          },
+          {
+            id: "faq4",
+            question: "Kann ich auch ohne Beschwerden zur Prävention kommen?",
+            answer: "Selbstverständlich! Wir bieten <strong>Präventionsprogramme</strong> und individuelles Training an, um Beschwerden vorzubeugen und Ihre Beweglichkeit langfristig zu erhalten.",
+          },
+          {
+            id: "faq5",
+            question: "Wie kann ich einen Termin vereinbaren?",
+            answer: "Sie können uns telefonisch erreichen, das <a href='#contact' class='text-primary underline hover:no-underline'>Kontaktformular</a> nutzen oder direkt online über unser Buchungssystem einen freien Termin wählen.",
           },
         ]}
       />

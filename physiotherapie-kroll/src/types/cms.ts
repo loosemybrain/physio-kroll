@@ -493,8 +493,6 @@ export interface FaqBlock extends BaseBlock {
   props: {
     section?: BlockSectionProps
     headline?: string
-    background?: "none" | "muted" | "gradient"
-    backgroundColor?: string
     items: Array<{
       id: string
       question: string
@@ -506,6 +504,15 @@ export interface FaqBlock extends BaseBlock {
     headlineColor?: string
     questionColor?: string
     answerColor?: string
+    // Panel Container Props
+    containerBackgroundMode?: "transparent" | "color" | "gradient"
+    containerBackgroundColor?: string
+    containerBackgroundGradientPreset?: string
+    containerGradientFrom?: string
+    containerGradientVia?: string
+    containerGradientTo?: string
+    containerGradientAngle?: number
+    containerShadow?: any
   }
 }
 
@@ -515,6 +522,7 @@ export interface FaqBlock extends BaseBlock {
 export interface TeamBlock extends BaseBlock {
   type: "team"
   props: {
+    typography?: Record<string, any>
     section?: BlockSectionProps
     headline?: string
     subheadline?: string
@@ -560,7 +568,10 @@ export interface TeamBlock extends BaseBlock {
     containerBackgroundMode?: "transparent" | "color" | "gradient"
     containerBackgroundColor?: string
     containerBackgroundGradientPreset?: "soft" | "aurora" | "ocean" | "sunset" | "hero" | "none"
-    containerBackgroundGradient?: string
+    containerGradientFrom?: string
+    containerGradientVia?: string
+    containerGradientTo?: string
+    containerGradientAngle?: number
     
     // Container Shadow
     containerShadow?: ElementShadow
@@ -700,6 +711,7 @@ export interface TestimonialSliderBlock extends BaseBlock {
 
 /**
  * Gallery block configuration
+ * layout: v0-style layouts; variant kept for backward compat (slider → carousel).
  */
 export interface GalleryBlock extends BaseBlock {
   type: "gallery"
@@ -707,6 +719,8 @@ export interface GalleryBlock extends BaseBlock {
     section?: BlockSectionProps
     headline?: string
     subheadline?: string
+    /** v0 layouts; if unset, variant "slider" → carousel, else grid */
+    layout?: "grid" | "masonry" | "carousel" | "stack" | "highlight-first"
     variant?: "grid" | "slider"
     lightbox?: boolean
     headlineColor?: string
@@ -719,10 +733,41 @@ export interface GalleryBlock extends BaseBlock {
       alt: string
       caption?: string
       captionColor?: string
+      /** optional link when lightbox is off */
+      link?: string
     }>
-    columns?: 2 | 3 | 4
+    columns?: 2 | 3 | 4 | 5 | 6
     showCaptions?: boolean
+    /** Caption position: below image or overlay on hover */
+    captionStyle?: "below" | "overlay"
+    /** Responsive gap between items */
+    gap?: "sm" | "md" | "lg"
+    /** Image corner radius preset */
+    imageRadius?: "none" | "sm" | "md" | "lg" | "xl"
+    /** Aspect ratio of image cells (grid/carousel); masonry/stack use auto */
+    aspectRatio?: "auto" | "square" | "video" | "portrait" | "landscape"
+    /** Image object-fit */
+    imageFit?: "cover" | "contain"
+    /** Hover effect on tiles */
+    hoverEffect?: "none" | "zoom" | "lift" | "fade"
+    /** Show counter in lightbox */
+    showCounter?: boolean
+    /** Enable motion (stagger, lightbox transitions) */
+    enableMotion?: boolean
+    /** Legacy section background when no container panel */
     background?: "none" | "muted" | "gradient"
+    /** Inner container panel (team-grid pattern) */
+    containerBackgroundMode?: "transparent" | "color" | "gradient"
+    containerBackgroundColor?: string
+    containerBackgroundGradientPreset?: "soft" | "aurora" | "ocean" | "sunset" | "hero" | "none"
+    containerGradientFrom?: string
+    containerGradientVia?: string
+    containerGradientTo?: string
+    containerGradientAngle?: number
+    containerShadow?: ElementShadow
+    containerBorder?: boolean
+    /** Element typography (e.g. gallery.headline, gallery.subheadline) */
+    typography?: Record<string, unknown>
   }
 }
 

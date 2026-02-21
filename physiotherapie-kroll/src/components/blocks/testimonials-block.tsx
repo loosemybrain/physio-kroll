@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/carousel"
 import type { MediaValue } from "@/types/cms"
 import { resolveMediaClient } from "@/lib/cms/resolveMediaClient"
+import { mergeTypographyClasses } from "@/lib/typography"
 
 export interface TestimonialsBlockProps {
   headline?: string
@@ -24,6 +25,7 @@ export interface TestimonialsBlockProps {
   quoteColor?: string
   nameColor?: string
   roleColor?: string
+  typography?: Record<string, unknown>
   items: Array<{
     id: string
     quote: string
@@ -179,6 +181,7 @@ function TestimonialCard({
   nameColor,
   roleColor,
   onInlineEdit,
+  typography,
 }: {
   item: TestimonialsBlockProps["items"][number]
   index: number
@@ -186,6 +189,7 @@ function TestimonialCard({
   quoteColor?: string
   nameColor?: string
   roleColor?: string
+  typography?: Record<string, unknown>
   onInlineEdit: (e: React.MouseEvent, fieldPath: string) => void
 }) {
   const rating =
@@ -215,7 +219,10 @@ function TestimonialCard({
         <blockquote
           onClick={(e) => onInlineEdit(e, `items.${index}.quote`)}
           className={cn(
-            "flex-1 text-pretty leading-relaxed text-card-foreground/85",
+            mergeTypographyClasses(
+              "flex-1 text-pretty leading-relaxed text-card-foreground/85",
+              (typography as Record<string, any> ?? {})["testimonials.quote"]
+            ),
             isSlider ? "text-lg leading-8 md:text-xl md:leading-9" : "text-base leading-7"
           )}
           style={item.quoteColor || quoteColor ? { color: item.quoteColor || quoteColor } : undefined}
@@ -230,7 +237,12 @@ function TestimonialCard({
           <div className="min-w-0">
             <div
               onClick={(e) => onInlineEdit(e, `items.${index}.name`)}
-              className="truncate font-semibold tracking-tight text-card-foreground"
+              className={cn(
+                mergeTypographyClasses(
+                  "truncate font-semibold tracking-tight text-card-foreground",
+                  (typography as Record<string, any> ?? {})["testimonials.name"]
+                )
+              )}
               style={item.nameColor || nameColor ? { color: item.nameColor || nameColor } : undefined}
             >
               {item.name}
@@ -239,7 +251,12 @@ function TestimonialCard({
             {item.role && (
               <div
                 onClick={(e) => onInlineEdit(e, `items.${index}.role`)}
-                className="truncate text-sm text-muted-foreground"
+                className={cn(
+                  mergeTypographyClasses(
+                    "truncate text-sm text-muted-foreground",
+                    (typography as Record<string, any> ?? {})["testimonials.role"]
+                  )
+                )}
                 style={item.roleColor || roleColor ? { color: item.roleColor || roleColor } : undefined}
               >
                 {item.role}
@@ -260,6 +277,7 @@ export function TestimonialsBlock({
   quoteColor,
   nameColor,
   roleColor,
+  typography,
   items,
   columns = 3,
   variant = "grid",
@@ -304,7 +322,12 @@ export function TestimonialsBlock({
                 <div className="h-px w-12 bg-linear-to-r from-transparent to-primary/40" />
                 <span
                   onClick={(e) => handleInlineEdit(e, "subheadline")}
-                  className="text-xs font-semibold uppercase tracking-[0.2em] text-primary"
+                  className={cn(
+                    mergeTypographyClasses(
+                      "text-xs font-semibold uppercase tracking-[0.2em] text-primary",
+                      (typography as Record<string, any> ?? {})["testimonials.subheadline"]
+                    )
+                  )}
                   style={subheadlineColor ? { color: subheadlineColor } : undefined}
                 >
                   {subheadline}
@@ -316,7 +339,12 @@ export function TestimonialsBlock({
             {headline && (
               <h2
                 onClick={(e) => handleInlineEdit(e, "headline")}
-                className="mx-auto max-w-2xl text-balance text-3xl font-bold tracking-tight text-foreground md:text-4xl lg:text-5xl"
+                className={cn(
+                  mergeTypographyClasses(
+                    "mx-auto max-w-2xl text-balance text-3xl font-bold tracking-tight text-foreground md:text-4xl lg:text-5xl",
+                    (typography as Record<string, any> ?? {})["testimonials.headline"]
+                  )
+                )}
                 style={headlineColor ? { color: headlineColor } : undefined}
               >
                 {headline}
@@ -337,6 +365,7 @@ export function TestimonialsBlock({
                     quoteColor={quoteColor}
                     nameColor={nameColor}
                     roleColor={roleColor}
+                    typography={typography}
                     onInlineEdit={handleInlineEdit}
                   />
                 </CarouselSlide>
@@ -378,6 +407,7 @@ export function TestimonialsBlock({
                 quoteColor={quoteColor}
                 nameColor={nameColor}
                 roleColor={roleColor}
+                typography={typography}
                 onInlineEdit={handleInlineEdit}
               />
             ))}

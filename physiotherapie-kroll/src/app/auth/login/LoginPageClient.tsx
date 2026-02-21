@@ -35,7 +35,6 @@ export function LoginPageClient() {
     setError(null);
 
     try {
-      // Nutze den neuen Browser-Client auf Basis von @supabase/ssr
       const supabase = createSupabaseBrowserClient();
       const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email,
@@ -44,7 +43,6 @@ export function LoginPageClient() {
 
       if (signInError) {
         setError(signInError.message);
-        setLoading(false);
         return;
       }
 
@@ -53,7 +51,14 @@ export function LoginPageClient() {
         router.refresh();
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Ein Fehler ist aufgetreten");
+      const message =
+        err instanceof Error
+          ? err.message === "Failed to fetch" || err.name === "TypeError"
+            ? "Verbindung fehlgeschlagen. Bitte prüfen Sie Ihre Internetverbindung und ob die Supabase-URL (NEXT_PUBLIC_SUPABASE_URL) in .env erreichbar ist."
+            : err.message
+          : "Ein Fehler ist aufgetreten";
+      setError(message);
+    } finally {
       setLoading(false);
     }
   };

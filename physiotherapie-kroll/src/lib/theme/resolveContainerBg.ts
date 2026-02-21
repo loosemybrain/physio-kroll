@@ -6,7 +6,12 @@ export function resolveContainerBg(props?: {
   mode?: "transparent" | "color" | "gradient"
   color?: string
   gradientPreset?: "soft" | "aurora" | "ocean" | "sunset" | "hero" | "none"
-  gradient?: string
+  gradient?: {
+    from?: string
+    via?: string
+    to?: string
+    angle?: number
+  }
 }): { className: string; style?: React.CSSProperties } {
   if (!props || props.mode === "transparent" || !props.mode) {
     return {
@@ -37,8 +42,32 @@ export function resolveContainerBg(props?: {
 
     let bgImage = gradients[props.gradientPreset || "soft"] || gradients.soft
 
+    // Custom gradient stops override preset
     if (props.gradient) {
-      bgImage = props.gradient
+      const from = props.gradient.from?.trim()
+      const via = props.gradient.via?.trim()
+      const to = props.gradient.to?.trim()
+      const angle = typeof props.gradient.angle === "number" && props.gradient.angle >= 0 && props.gradient.angle <= 360 
+        ? props.gradient.angle 
+        : 135
+
+      // If ANY custom stop is set, build custom gradient
+      if (from || via || to) {
+        // Build gradient with from/via/to, using preset defaults as fallback
+        const presetDefault = gradients[props.gradientPreset || "soft"] || gradients.soft
+        
+        // Extract fallback colors from preset if needed
+        const fallbackFrom = from || "rgba(var(--primary), 0.03)"
+        const fallbackVia = via || ""
+        const fallbackTo = to || "rgba(var(--primary), 0.01)"
+
+        // Build linear-gradient string
+        if (via) {
+          bgImage = `linear-gradient(${angle}deg, ${fallbackFrom}, ${fallbackVia}, ${fallbackTo})`
+        } else {
+          bgImage = `linear-gradient(${angle}deg, ${fallbackFrom}, ${fallbackTo})`
+        }
+      }
     }
 
     return {
