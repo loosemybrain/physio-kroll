@@ -11,4 +11,10 @@ export const DEFAULT_NAV_CONFIG: NavConfig = {
   links: [],
   searchEnabled: true,
   cta: null,
+  // Header layout defaults
+  headerLayoutColumns: 4,
+  headerFontPreset: "brand",
+  headerMotionPreset: "subtle",
+  secondaryLinks: [],
+  infoBadge: undefined,
 }

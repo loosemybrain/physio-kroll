@@ -12,7 +12,7 @@ import { Separator } from "@/components/ui/separator"
 import { Textarea } from "@/components/ui/textarea"
 import { ImageField } from "./ImageField"
 import { MediaPickerDialog } from "./MediaPickerDialog"
-import { Plus, Trash2, ChevronUp, ChevronDown, Save } from "lucide-react"
+import { Plus, Trash2, ChevronUp, ChevronDown, Save, Zap } from "lucide-react"
 import { arrayMove, arrayRemove } from "@/lib/cms/arrayOps"
 import { uuid } from "@/lib/cms/arrayOps"
 import type { BrandKey } from "@/components/brand/brandAssets"
@@ -24,6 +24,8 @@ import type { BlockSectionProps, MediaValue, SectionBackgroundPreset } from "@/t
 import { useEffect } from "react"
 import { cn } from "@/lib/utils"
 import { ensureDefaultPresets } from "@/lib/cms/sectionPresets"
+import { HEADER_PRESETS } from "@/lib/admin/header-presets"
+import { HeaderClient } from "@/components/navigation/HeaderClient"
 
 type NavigationEditorClientProps = {
   initialPhysio: NavConfig
@@ -47,6 +49,12 @@ export function NavigationEditorClient({
   const [pages] = useState<PageForNavigation[]>(initialPages || [])
   const [saving, setSaving] = useState(false)
   const [presetJsonDraft, setPresetJsonDraft] = useState<Record<string, string>>({})
+  
+  // Header draft/saved state
+  const [physioHeaderDraft, setPhysioHeaderDraft] = useState<NavConfig>(physioConfig)
+  const [konzeptHeaderDraft, setKonzeptHeaderDraft] = useState<NavConfig>(konzeptConfig)
+  const [previewBrand, setPreviewBrand] = useState<BrandKey>("physiotherapy")
+  const [previewViewport, setPreviewViewport] = useState<"desktop" | "mobile">("desktop")
 
   // Seed defaults persistently (idempotent) for both brands when admin opens this page
   useEffect(() => {
@@ -58,9 +66,14 @@ export function NavigationEditorClient({
     return activeBrand === "physiotherapy" ? physioConfig : konzeptConfig
   }, [activeBrand, physioConfig, konzeptConfig])
 
+  const headerDraft = useMemo(() => {
+    return activeBrand === "physiotherapy" ? physioHeaderDraft : konzeptHeaderDraft
+  }, [activeBrand, physioHeaderDraft, konzeptHeaderDraft])
+
   // Save navigation
-  const handleSave = useCallback(async () => {
-    if (!navConfig) return
+  const handleSave = useCallback(async (configToSave?: NavConfig) => {
+    const configData = configToSave || navConfig
+    if (!configData) return
 
     setSaving(true)
     try {
@@ -71,13 +84,20 @@ export function NavigationEditorClient({
         },
         body: JSON.stringify({
           brand: activeBrand,
-          config: navConfig,
+          config: configData,
         }),
       })
 
       if (!response.ok) {
         const errorData = await response.json()
         throw new Error(errorData.error || "Failed to save navigation")
+      }
+
+      // Sync draft with saved config
+      if (activeBrand === "physiotherapy") {
+        setPhysioHeaderDraft(configData)
+      } else {
+        setKonzeptHeaderDraft(configData)
       }
 
       toast({
@@ -94,7 +114,7 @@ export function NavigationEditorClient({
     } finally {
       setSaving(false)
     }
-  }, [navConfig, activeBrand, toast])
+  }, [activeBrand, toast])
 
   // Update config helper
   const updateConfig = useCallback(
@@ -103,6 +123,70 @@ export function NavigationEditorClient({
         setPhysioConfig((prev) => ({ ...prev, ...updates }))
       } else {
         setKonzeptConfig((prev) => ({ ...prev, ...updates }))
+      }
+    },
+    [activeBrand]
+  )
+
+  // Header-specific helpers
+  const applyHeaderPreset = useCallback(
+    (presetId: string) => {
+      const preset = HEADER_PRESETS.find((p) => p.id === presetId)
+      if (!preset) return
+
+      const updatedDraft = {
+        ...headerDraft,
+        ...preset.config,
+      }
+
+      if (activeBrand === "physiotherapy") {
+        setPhysioHeaderDraft(updatedDraft)
+      } else {
+        setKonzeptHeaderDraft(updatedDraft)
+      }
+
+      toast({
+        title: "Preset angewendet",
+        description: `Header-Preset "${preset.name}" wurde auf Draft übernommen`,
+      })
+    },
+    [activeBrand, headerDraft, toast]
+  )
+
+  const resetHeaderDraft = useCallback(() => {
+    if (activeBrand === "physiotherapy") {
+      setPhysioHeaderDraft(physioConfig)
+    } else {
+      setKonzeptHeaderDraft(konzeptConfig)
+    }
+
+    toast({
+      title: "Draft zurückgesetzt",
+      description: "Header-Draft wurde auf zuletzt gespeicherte Version zurückgesetzt",
+    })
+  }, [activeBrand, physioConfig, konzeptConfig, toast])
+
+  const saveHeaderDraft = useCallback(async () => {
+    const configToSave = activeBrand === "physiotherapy" 
+      ? { ...physioConfig, ...physioHeaderDraft } 
+      : { ...konzeptConfig, ...konzeptHeaderDraft }
+
+    if (activeBrand === "physiotherapy") {
+      setPhysioConfig(configToSave)
+    } else {
+      setKonzeptConfig(configToSave)
+    }
+
+    // Trigger save with the new config
+    await handleSave(configToSave)
+  }, [activeBrand, physioConfig, konzeptConfig, physioHeaderDraft, konzeptHeaderDraft, handleSave])
+
+  const updateHeaderDraft = useCallback(
+    (updates: Partial<NavConfig>) => {
+      if (activeBrand === "physiotherapy") {
+        setPhysioHeaderDraft((prev) => ({ ...prev, ...updates }))
+      } else {
+        setKonzeptHeaderDraft((prev) => ({ ...prev, ...updates }))
       }
     },
     [activeBrand]
@@ -235,7 +319,7 @@ export function NavigationEditorClient({
       <div className="border-b border-border bg-background px-6 py-4">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-semibold">Navigation</h1>
-          <Button onClick={handleSave} disabled={saving}>
+          <Button onClick={() => handleSave(navConfig)} disabled={saving} size="lg">
             <Save className="mr-2 h-4 w-4" />
             {saving ? "Speichern..." : "Speichern"}
           </Button>
@@ -319,6 +403,184 @@ export function NavigationEditorClient({
               
               {/* Logo Preview */}
               {navConfig.logo && <LogoPreview logo={navConfig.logo} logoSize={navConfig.logoSize} logoFit={navConfig.logoFit} activeBrand={activeBrand} />}
+            </div>
+
+            <Separator />
+
+            {/* HEADER LAYOUT CUSTOMIZATION */}
+            <div className="space-y-4">
+              <Label className="text-base font-semibold flex items-center gap-2">
+                <Zap className="h-5 w-5" />
+                Header Konfiguration
+              </Label>
+
+              {/* Header Presets Grid */}
+              <div className="space-y-3">
+                <Label className="text-xs font-medium text-muted-foreground">Schnellauswahl</Label>
+                <div className="grid grid-cols-2 gap-2 md:grid-cols-5 lg:grid-cols-5">
+                  {HEADER_PRESETS.map((preset) => {
+                    const isSelected =
+                      headerDraft.headerLayoutColumns === preset.config.headerLayoutColumns &&
+                      headerDraft.headerFontPreset === preset.config.headerFontPreset &&
+                      headerDraft.headerMotionPreset === preset.config.headerMotionPreset
+                    return (
+                      <button
+                        key={preset.id}
+                        onClick={() => applyHeaderPreset(preset.id)}
+                        className={cn(
+                          "group relative px-3 py-3 rounded-lg border-2 transition-all duration-200",
+                          "flex flex-col items-start gap-1.5 text-left",
+                          isSelected
+                            ? "border-primary bg-primary/5 shadow-sm"
+                            : "border-border bg-card hover:border-primary/50 hover:bg-primary/5"
+                        )}
+                      >
+                        <span className="text-xs font-semibold leading-tight">{preset.name}</span>
+                        <span className="text-xs text-muted-foreground leading-tight">{preset.description}</span>
+                        {isSelected && (
+                          <div className="absolute top-1 right-1 w-2 h-2 rounded-full bg-primary" />
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Header Controls - 3 Column Grid */}
+              <div className="space-y-3">
+                <Label className="text-xs font-medium text-muted-foreground">Individuelle Einstellungen</Label>
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                  {/* Columns */}
+                  <div className="space-y-2">
+                    <Label className="text-xs font-medium">Spalten</Label>
+                    <Select
+                      value={String(headerDraft.headerLayoutColumns ?? 4)}
+                      onValueChange={(v) => updateHeaderDraft({ headerLayoutColumns: parseInt(v) as 3 | 4 | 5 })}
+                    >
+                      <SelectTrigger className="h-9 text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="3">3 Spalten (Kompakt)</SelectItem>
+                        <SelectItem value="4">4 Spalten (Standard)</SelectItem>
+                        <SelectItem value="5">5 Spalten (Erweitert)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Font Preset */}
+                  <div className="space-y-2">
+                    <Label className="text-xs font-medium">Font-Stil</Label>
+                    <Select
+                      value={headerDraft.headerFontPreset ?? "brand"}
+                      onValueChange={(v: "brand" | "sans" | "serif" | "mono") => updateHeaderDraft({ headerFontPreset: v })}
+                    >
+                      <SelectTrigger className="h-9 text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="brand">Brand (Standard)</SelectItem>
+                        <SelectItem value="sans">Sans-Serif</SelectItem>
+                        <SelectItem value="serif">Serif</SelectItem>
+                        <SelectItem value="mono">Monospace</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Motion Preset */}
+                  <div className="space-y-2">
+                    <Label className="text-xs font-medium">Animation</Label>
+                    <Select
+                      value={headerDraft.headerMotionPreset ?? "subtle"}
+                      onValueChange={(v: "none" | "subtle" | "glassy" | "snappy") => updateHeaderDraft({ headerMotionPreset: v })}
+                    >
+                      <SelectTrigger className="h-9 text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Keine</SelectItem>
+                        <SelectItem value="subtle">Subtil</SelectItem>
+                        <SelectItem value="glassy">Glasig</SelectItem>
+                        <SelectItem value="snappy">Schnell</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Header Draft Actions - Split Layout */}
+              <div className="flex gap-3 pt-2">
+                <Button
+                  size="sm"
+                  variant="default"
+                  onClick={saveHeaderDraft}
+                  disabled={saving}
+                  className="flex-1 transition-all hover:shadow-md"
+                >
+                  <Save className="mr-2 h-4 w-4" />
+                  {saving ? "Speichern..." : "Speichern"}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={resetHeaderDraft}
+                  className="transition-all hover:bg-destructive/5"
+                >
+                  Zurücksetzen
+                </Button>
+              </div>
+
+              {/* Live Preview */}
+              <div className="space-y-3 pt-4 border-t">
+                <Label className="text-xs font-medium text-muted-foreground">Live-Vorschau</Label>
+                <div className="flex flex-wrap gap-2 mb-3">
+                  <div className="flex gap-1 rounded-lg border border-border p-1 bg-muted/50">
+                    {(["physiotherapy", "physio-konzept"] as const).map((brand) => (
+                      <Button
+                        key={brand}
+                        size="sm"
+                        variant={previewBrand === brand ? "default" : "ghost"}
+                        onClick={() => setPreviewBrand(brand)}
+                        className="text-xs h-8"
+                      >
+                        {brand === "physiotherapy" ? "Physio" : "Konzept"}
+                      </Button>
+                    ))}
+                  </div>
+                  <div className="flex gap-1 ml-auto rounded-lg border border-border p-1 bg-muted/50">
+                    {(["desktop", "mobile"] as const).map((viewport) => (
+                      <Button
+                        key={viewport}
+                        size="sm"
+                        variant={previewViewport === viewport ? "default" : "ghost"}
+                        onClick={() => setPreviewViewport(viewport)}
+                        className="text-xs h-8 capitalize"
+                      >
+                        {viewport}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+                
+                <div className={cn(
+                  "border border-border rounded-lg overflow-hidden bg-white dark:bg-slate-950 shadow-sm",
+                  previewViewport === "mobile" ? "mx-auto" : ""
+                )} style={{
+                  width: previewViewport === "mobile" ? "390px" : "100%",
+                  maxHeight: "500px",
+                }}>
+                  <div className="flex flex-col h-full">
+                    <HeaderClient brand={previewBrand} navConfig={headerDraft} />
+                    <div className="flex-1 overflow-hidden bg-muted/50">
+                      <div className="h-full w-full flex items-center justify-center">
+                        <span className="text-xs text-muted-foreground">
+                          {previewViewport === "mobile" ? "Mobile (390px)" : "Desktop"} • Scroll zum Testen
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <Separator />

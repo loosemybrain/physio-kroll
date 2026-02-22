@@ -40,6 +40,12 @@ export type NavConfig = {
   presets?: {
     sectionBackground?: SectionBackgroundPreset[]
   }
+  // Header layout customization (optional for backward compatibility)
+  headerLayoutColumns?: 3 | 4 | 5
+  headerFontPreset?: "brand" | "sans" | "serif" | "mono"
+  headerMotionPreset?: "none" | "subtle" | "glassy" | "snappy"
+  secondaryLinks?: NavLink[]
+  infoBadge?: string
 }
 
 /**

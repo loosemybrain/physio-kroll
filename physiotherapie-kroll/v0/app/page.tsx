@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { HeroSection, type HeroMood } from "../components/hero-section"
 import { ContactFormBlock } from "../components/blocks/contact-form-block"
 import { ServicesGridBlock } from "../components/blocks/services-grid-block"
@@ -10,16 +10,37 @@ import { TeamGridBlock } from "../components/blocks/team-grid-block"
 import { SectionBlock } from "../components/blocks/section-block"
 import { FaqAccordionBlock } from "../components/blocks/faq-accordion-block"
 import { GalleryBlock } from "../components/blocks/gallery-block"
+import { ImageSliderBlock } from "../components/blocks/image-slider-block"
+import { HeaderClient } from "../components/header/HeaderClient"
+import { DEFAULT_NAV_CONFIG } from "@/types/navigation"
+import type { BrandKey } from "@/types/navigation"
 import { Button } from "@/components/ui/button"
-
 export default function Home() {
   const [mood, setMood] = useState<HeroMood>("physiotherapy")
 
+  const brand: BrandKey = mood === "physio-konzept" ? "physio-konzept" : "physiotherapy"
+
+  const navConfig = useMemo(
+    () => ({
+      ...DEFAULT_NAV_CONFIG,
+      headerLayoutColumns: 4 as const,
+      headerFontPreset: "brand" as const,
+      secondaryLinks: [
+        { id: "blog", label: "Blog", type: "page" as const, pageSlug: "blog", visibility: "both" as const, sort: 0, group: "secondary" as const },
+        { id: "jobs", label: "Karriere", type: "page" as const, pageSlug: "karriere", visibility: "both" as const, sort: 1, group: "secondary" as const },
+      ],
+    }),
+    []
+  )
+
   return (
     <main>
+      {/* Header */}
+      <HeaderClient brand={brand} navConfig={navConfig} />
+
       {/* Theme Switcher for Demo */}
       <nav
-        className="fixed left-1/2 top-4 z-50 flex -translate-x-1/2 items-center gap-2 rounded-full bg-card/80 p-2 shadow-lg backdrop-blur-sm"
+        className="fixed left-1/2 top-4 z-[60] flex -translate-x-1/2 items-center gap-2 rounded-full bg-card/80 p-2 shadow-lg backdrop-blur-sm"
         aria-label="Theme selection"
       >
         <Button
@@ -404,6 +425,100 @@ export default function Home() {
             image: { src: "/images/gallery-6.jpg", alt: "Hydrotherapie" },
             alt: "Therapeutisches Bewegungsbad",
             caption: "Modernste Ausstattung für Ihre Therapie",
+          },
+        ]}
+      />
+
+      {/* Image Slider -- Hero variant */}
+      <ImageSliderBlock
+        blockId="slider-hero"
+        headline="Impressionen aus der Praxis"
+        subheadline="Galerie"
+        variant="hero"
+        aspect="video"
+        loop
+        autoplay
+        autoplayDelayMs={6000}
+        pauseOnHover
+        controls={{ showArrows: true, showDots: true }}
+        background="none"
+        slides={[
+          {
+            id: "sh1",
+            url: "/images/slider-1.jpg",
+            alt: "Physiotherapeut bei der Schulterbehandlung",
+            title: "Individuelle Behandlung",
+            text: "Unsere Therapeuten gehen auf Ihre persönlichen Bedürfnisse ein.",
+            link: "#contact",
+          },
+          {
+            id: "sh2",
+            url: "/images/slider-2.jpg",
+            alt: "Moderner Trainingsraum",
+            title: "Modernste Ausstattung",
+            text: "Professionelle Geräte für Ihre effektive Rehabilitation.",
+            link: "#contact",
+          },
+          {
+            id: "sh3",
+            url: "/images/slider-3.jpg",
+            alt: "Balance-Training mit Therapeutin",
+            title: "Zurück zur Balance",
+            text: "Schritt für Schritt begleiten wir Sie auf dem Weg zur Genesung.",
+          },
+          {
+            id: "sh4",
+            url: "/images/slider-4.jpg",
+            alt: "Gruppentraining im Studio",
+            title: "Gemeinsam stark",
+            text: "Gruppenangebote für Prävention und Fitness.",
+            link: "#contact",
+          },
+        ]}
+      />
+
+      {/* Image Slider -- Cards variant with thumbnails */}
+      <ImageSliderBlock
+        blockId="slider-cards"
+        headline="Behandlungsmethoden im Überblick"
+        subheadline="Therapien"
+        variant="cards"
+        aspect="video"
+        loop
+        slidesPerView={{ base: 1, md: 2, lg: 3 }}
+        controls={{ showArrows: true, showDots: false, showProgress: true }}
+        containerBackgroundMode="gradient"
+        containerBackgroundGradientPreset="soft"
+        containerShadow="md"
+        containerBorder
+        slides={[
+          {
+            id: "sc1",
+            url: "/images/slider-1.jpg",
+            alt: "Manuelle Therapie",
+            title: "Manuelle Therapie",
+            text: "Gezielte Handgriffe zur Mobilisierung und Schmerzlinderung.",
+          },
+          {
+            id: "sc2",
+            url: "/images/slider-2.jpg",
+            alt: "Gerätegestützte Therapie",
+            title: "Gerätegestützte Therapie",
+            text: "Training an modernen medizinischen Geräten für Kraft und Ausdauer.",
+          },
+          {
+            id: "sc3",
+            url: "/images/slider-3.jpg",
+            alt: "Gleichgewichtstraining",
+            title: "Koordination & Balance",
+            text: "Propriozeptives Training zur Verbesserung der Körperstabilität.",
+          },
+          {
+            id: "sc4",
+            url: "/images/slider-4.jpg",
+            alt: "Gruppentherapie",
+            title: "Gruppentherapie",
+            text: "Gemeinsame Übungen in kleinen Gruppen für mehr Motivation.",
           },
         ]}
       />

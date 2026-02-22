@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/command"
 import { cn } from "@/lib/utils"
 import type { NavConfig, NavLink } from "@/types/navigation"
-import type { BrandKey } from "@/components/brand/brandAssets"
+import type { BrandKey } from "@/types/navigation"
 import { getNavTheme } from "@/lib/theme/navTheme"
 import {
   getLogoSizeClasses,
@@ -58,52 +58,19 @@ function resolveFontClass(
 }
 
 /* ------------------------------------------------------------------ */
-/*  Motion preset transitions                                          */
-/* ------------------------------------------------------------------ */
-
-function getMotionTransition(
-  preset?: NavConfig["headerMotionPreset"],
-  prefersReducedMotion?: boolean
-): { type?: "spring"; stiffness?: number; damping?: number; duration: number } {
-  if (prefersReducedMotion) return { duration: 0 }
-
-  switch (preset) {
-    case "glassy":
-      return { type: "spring", stiffness: 300, damping: 25, duration: 0.3 }
-    case "snappy":
-      return { type: "spring", stiffness: 500, damping: 20, duration: 0.25 }
-    case "subtle":
-    default:
-      return { type: "spring", stiffness: 400, damping: 30, duration: 0.3 }
-  }
-}
-
-function getStaggerMultiplier(preset?: NavConfig["headerMotionPreset"]): number {
-  switch (preset) {
-    case "snappy":
-      return 0.08
-    case "none":
-      return 0
-    default:
-      return 0.05
-  }
-}
-
-/* ------------------------------------------------------------------ */
 /*  Grid column templates (desktop)                                    */
 /* ------------------------------------------------------------------ */
 
 function getGridTemplate(cols: 3 | 4 | 5, hasSecondary: boolean, hasInfo: boolean): string {
-  // Deterministic grid template based on column count and presence of content
-  if (cols === 5) {
-    if (hasSecondary && hasInfo) return "auto 1fr auto auto auto"
-    if (hasSecondary) return "auto 1fr auto auto"
+  // Collapse empty columns gracefully
+  if (cols === 5 && hasInfo && hasSecondary)
+    return "auto 1fr auto auto auto"
+  if (cols === 5 && hasSecondary)
+    return "auto 1fr auto auto"
+  if (cols === 4 && hasSecondary)
+    return "auto 1fr auto auto"
+  if (cols === 4)
     return "auto 1fr auto"
-  }
-  if (cols === 4) {
-    if (hasSecondary) return "auto 1fr auto auto"
-    return "auto 1fr auto"
-  }
   // 3 columns (default)
   return "auto 1fr auto"
 }
@@ -294,9 +261,11 @@ export function HeaderClient({ brand, navConfig }: HeaderClientProps) {
   )
 
   /* ---- motion presets ---- */
-  const motionPreset = navConfig.headerMotionPreset ?? "subtle"
-  const transition = getMotionTransition(motionPreset, prefersReducedMotion ?? false)
-  const staggerChildren = getStaggerMultiplier(motionPreset)
+  const transition = prefersReducedMotion
+    ? { duration: 0 }
+    : { type: "spring" as const, stiffness: 400, damping: 30 }
+
+  const staggerChildren = prefersReducedMotion ? 0 : 0.05
 
   /* ---- Desktop Nav Link ---- */
   const DesktopLink = ({
@@ -330,7 +299,7 @@ export function HeaderClient({ brand, navConfig }: HeaderClientProps) {
             layoutId={secondary ? "nav-indicator-sec" : "nav-indicator"}
             className={cn(
               "absolute -bottom-1 left-0 right-0 h-0.5 rounded-full",
-              secondary ? "bg-zinc-900 dark:bg-[#ff7a18]" : "bg-zinc-900 dark:bg-[#ff7a18]"
+              theme.indicator
             )}
             transition={transition}
           />
@@ -352,18 +321,14 @@ export function HeaderClient({ brand, navConfig }: HeaderClientProps) {
         className={cn(
           "sticky top-0 z-50 w-full transition-colors duration-300",
           theme.wrapper,
-          isScrolled && motionPreset === "glassy" && "backdrop-blur-md"
+          isScrolled && theme.wrapperScrolled
         )}
       >
         <motion.div
-          variants={
-            motionPreset === "none"
-              ? { top: { paddingTop: 6, paddingBottom: 6 }, scrolled: { paddingTop: 6, paddingBottom: 6 } }
-              : {
-                  top: { paddingTop: 6, paddingBottom: 6 },
-                  scrolled: { paddingTop: 2, paddingBottom: 2 },
-                }
-          }
+          variants={{
+            top: { paddingTop: 6, paddingBottom: 6 },
+            scrolled: { paddingTop: 2, paddingBottom: 2 },
+          }}
           animate={isScrolled ? "scrolled" : "top"}
           transition={
             prefersReducedMotion ? { duration: 0 } : { duration: 0.25 }
@@ -377,14 +342,10 @@ export function HeaderClient({ brand, navConfig }: HeaderClientProps) {
           >
             {/* Col 1: Logo */}
             <motion.div
-              variants={
-                motionPreset === "none"
-                  ? { top: { scale: 1 }, scrolled: { scale: 1 } }
-                  : {
-                      top: { scale: 1 },
-                      scrolled: { scale: 0.92 },
-                    }
-              }
+              variants={{
+                top: { scale: 1 },
+                scrolled: { scale: 0.92 },
+              }}
               animate={isScrolled ? "scrolled" : "top"}
               transition={
                 prefersReducedMotion
@@ -440,14 +401,10 @@ export function HeaderClient({ brand, navConfig }: HeaderClientProps) {
             <motion.nav
               className="flex items-center gap-6 justify-center"
               aria-label="Hauptnavigation"
-              variants={
-                motionPreset === "none"
-                  ? { top: { gap: 24 }, scrolled: { gap: 24 } }
-                  : {
-                      top: { gap: 24 },
-                      scrolled: { gap: 16 },
-                    }
-              }
+              variants={{
+                top: { gap: 24 },
+                scrolled: { gap: 16 },
+              }}
               animate={isScrolled ? "scrolled" : "top"}
               transition={
                 prefersReducedMotion
