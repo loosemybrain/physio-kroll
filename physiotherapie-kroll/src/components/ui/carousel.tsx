@@ -431,7 +431,7 @@ export function CarouselPrevButton({ className, variant = 'outline', size = 'ico
         props.onClick?.(e)
         if (!e.defaultPrevented) prev()
       }}
-      className={cn('rounded-full', className)}
+      className={cn('rounded-full h-10 w-10 border border-border bg-background shadow-sm hover:bg-muted/50 transition', className)}
       {...props}
     />
   )
@@ -450,7 +450,7 @@ export function CarouselNextButton({ className, variant = 'outline', size = 'ico
         props.onClick?.(e)
         if (!e.defaultPrevented) next()
       }}
-      className={cn('rounded-full', className)}
+      className={cn('rounded-full h-10 w-10 border border-border bg-background shadow-sm hover:bg-muted/50 transition', className)}
       {...props}
     />
   )
@@ -476,8 +476,8 @@ export function CarouselDots({ className, ...props }: CarouselDotsProps) {
             aria-label={`Gehe zu Slide ${i + 1}`}
             aria-current={isActive ? 'true' : undefined}
             className={cn(
-              'h-2.5 w-2.5 rounded-full border border-border transition-colors',
-              isActive ? 'bg-foreground' : 'bg-transparent hover:bg-muted',
+              'h-2.5 w-2.5 rounded-full transition-colors',
+              isActive ? 'bg-primary' : 'bg-muted ring-1 ring-border/20 hover:opacity-70',
             )}
           />
         )

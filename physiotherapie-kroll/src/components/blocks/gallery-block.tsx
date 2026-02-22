@@ -4,7 +4,7 @@ import React, { useState, useCallback, useRef, useEffect } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
-import { motion, AnimatePresence, useReducedMotion } from "framer-motion"
+import { motion, AnimatePresence, useReducedMotion, cubicBezier } from "framer-motion"
 import { ChevronLeft, ChevronRight, X, ZoomIn } from "lucide-react"
 import { resolveSectionBg } from "@/lib/theme/resolveSectionBg"
 import { resolveContainerBg } from "@/lib/theme/resolveContainerBg"
@@ -128,7 +128,7 @@ function resolveAlt(item: GalleryImageItem): string {
 const stagger = { hidden: {}, visible: { transition: { staggerChildren: 0.06, delayChildren: 0.08 } } }
 const fadeUp = {
   hidden: { opacity: 0, y: 16 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] } },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: cubicBezier(0.22, 1, 0.36, 1) } },
 }
 
 /* ------------------------------------------------------------------ */
@@ -703,11 +703,7 @@ export function GalleryBlock({
         style={sectionBg.style}
         aria-label={headline || "Galerie"}
       >
-        {(background !== "none" || usesContainerPanel) && (
-          <div className="pointer-events-none absolute inset-0" aria-hidden="true">
-            <div className="absolute left-1/2 top-0 h-[500px] w-[700px] -translate-x-1/2 -translate-y-1/3 rounded-full bg-primary/[0.025] blur-3xl" />
-          </div>
-        )}
+        
 
         <div className={cn("relative mx-auto px-4 sm:px-6", maxWidthCls)}>
           {(headline || subheadline) && (
@@ -764,7 +760,7 @@ export function GalleryBlock({
             className={cn(
               usesContainerPanel && "rounded-3xl p-6 md:p-10",
               usesContainerPanel && containerBackgroundMode === "gradient" && "backdrop-blur-sm",
-              usesContainerPanel && containerBorder && containerBackgroundMode !== "transparent" && "border border-border/40"
+              usesContainerPanel && containerBorder && "border border-border/40"
             )}
             style={
               usesContainerPanel

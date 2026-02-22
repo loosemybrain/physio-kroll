@@ -778,31 +778,63 @@ export interface ImageSliderBlock extends BaseBlock {
   type: "imageSlider"
   props: {
     section?: BlockSectionProps
+    typography?: Record<string, unknown>
+
+    eyebrow?: string
     headline?: string
     subheadline?: string
+    eyebrowColor?: string
     headlineColor?: string
     subheadlineColor?: string
+
     slides: Array<{
       id: string
       url: string
       alt: string
       title?: string
       text?: string
+      link?: string
+      focalPoint?: { x: number; y: number }
       titleColor?: string
       textColor?: string
       cardBgColor?: string
       cardBorderColor?: string
     }>
+
+    variant?: "classic" | "progress" | "thumbnails" | "hero" | "cards"
+    aspect?: "video" | "square" | "portrait" | "auto"
+    slidesPerView?: { base?: number; md?: number; lg?: number }
+
+    controls?: {
+      showArrows?: boolean
+      showDots?: boolean
+      showProgress?: boolean
+      showThumbnails?: boolean
+    }
+
     loop?: boolean
     autoplay?: boolean
     autoplayDelayMs?: number
     pauseOnHover?: boolean
     peek?: boolean
+
     background?: "none" | "muted" | "gradient"
     cardBgColor?: string
     cardBorderColor?: string
     slideTitleColor?: string
     slideTextColor?: string
+
+    containerBackgroundMode?: "transparent" | "color" | "gradient"
+    containerBackgroundColor?: string
+    containerBackgroundGradientPreset?: "soft" | "aurora" | "ocean" | "sunset" | "hero" | "none"
+    containerGradientFrom?: string
+    containerGradientVia?: string
+    containerGradientTo?: string
+    containerGradientAngle?: number
+    containerShadow?: ElementShadow
+    containerBorder?: boolean
+
+    ariaLabel?: string
   }
 }
 

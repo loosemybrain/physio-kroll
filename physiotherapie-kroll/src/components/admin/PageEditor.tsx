@@ -1803,7 +1803,7 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="physiotherapy">Physiotherapie</SelectItem>
-                <SelectItem value="physio-konzept">Physio-Konzept</SelectItem>
+                <SelectItem value="physio-konzept">PhysioKonzept</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -2024,7 +2024,7 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
                       Physiotherapie
                     </TabsTrigger>
                     <TabsTrigger value="physio-konzept" onClick={() => handlePageBrandChange("physio-konzept")}>
-                      Physio-Konzept
+                      PhysioKonzept
                     </TabsTrigger>
                   </TabsList>
                 </Tabs>
@@ -2352,7 +2352,7 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
                       <Tabs value={currentBrandTab} onValueChange={(v) => handleBrandTabChange(v as typeof currentBrandTab)}>
                         <TabsList className="grid w-full grid-cols-2">
                           <TabsTrigger value="physiotherapy">Physiotherapie</TabsTrigger>
-                          <TabsTrigger value="physio-konzept">Physio-Konzept</TabsTrigger>
+                          <TabsTrigger value="physio-konzept">PhysioKonzept</TabsTrigger>
                         </TabsList>
                         <TabsContent value="physiotherapy" className="space-y-4 mt-4">
                           {currentBrandTab !== "physiotherapy" ? null : (
@@ -3411,7 +3411,7 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
   const def = getBlockDefinition(selectedBlock.type)
   const fields = def.inspectorFields ?? []
 
-  const primaryKeys = new Set(["headline", "subheadline", "title", "subtitle"])
+  const primaryKeys = new Set(["eyebrow", "headline", "subheadline", "title", "subtitle"])
   const lateKeys = new Set(["autoplay", "interval", "showArrows", "showDots"])
 
   const isArrayItemField = (key: string) => {
@@ -3962,7 +3962,7 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
             },
             createImageSlide,
             [
-              { key: "url", label: "Bild URL", type: "url" as const, required: true },
+              { key: "url", label: "Bild", type: "image" as const, required: true },
               { key: "alt", label: "Alt-Text", type: "text" as const, required: true },
               { key: "title", label: "Titel (optional)", type: "text" as const },
               { key: "text", label: "Text (optional)", type: "textarea" as const },

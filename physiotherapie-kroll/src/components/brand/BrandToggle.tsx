@@ -78,7 +78,7 @@ export function BrandToggle({
       <button
         type="button"
         aria-pressed={!isPhysiotherapy}
-        aria-label="Wechsel zu Physio-Konzept"
+        aria-label="Wechsel zu PhysioKonzept"
         className={cn(
           "shrink-0 sm:flex-1 sm:min-w-0 rounded-full font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
           "px-2.5 sm:px-6 py-1.5 sm:py-2 text-xs sm:text-sm",
@@ -90,7 +90,7 @@ export function BrandToggle({
         onClick={() => handleNavigate("physio-konzept")}
       >
         <span className="sm:hidden">Konzept</span>
-        <span className="hidden sm:inline">Physio-Konzept</span>
+        <span className="hidden sm:inline">PhysioKonzept</span>
       </button>
     </nav>
   )

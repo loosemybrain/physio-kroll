@@ -731,26 +731,81 @@ const galleryPropsSchema = panelPropsSchema.merge(z.object({
     .max(18),
 }))
 
+// Section layout schema for BlockSectionProps
+const sectionLayoutSchema = z.object({
+  width: z.enum(["contained", "full"]),
+  paddingY: z.enum(["none", "sm", "md", "lg", "xl"]),
+  paddingX: z.enum(["none", "sm", "md", "lg"]).optional(),
+  minHeight: z.enum(["auto", "sm", "md", "lg", "screen"]).optional(),
+})
+
+// Section background schema with required type field
+const sectionBackgroundSchema = z.object({
+  type: z.enum(["none", "color", "gradient", "image", "video"]),
+})
+
+// Block section props schema - use minimal structure to match BlockSectionProps
+const blockSectionPropsSchema = z.any().optional()
+
 const imageSliderPropsSchema = z.object({
+  section: blockSectionPropsSchema,
+  typography: z.object({}).passthrough().optional(),
+
+  eyebrow: z.string().optional(),
   headline: z.string().optional(),
   subheadline: z.string().optional(),
+  eyebrowColor: z.string().optional(),
   headlineColor: z.string().optional(),
   subheadlineColor: z.string().optional(),
-  cardBgColor: z.string().optional(),
-  cardBorderColor: z.string().optional(),
-  slideTitleColor: z.string().optional(),
-  slideTextColor: z.string().optional(),
-  loop: z.boolean().optional(),
-  autoplay: z.boolean().optional(),
+
+  variant: z.enum(["classic", "progress", "thumbnails", "hero", "cards"]).optional().default("classic"),
+  aspect: z.enum(["video", "square", "portrait", "auto"]).optional().default("video"),
+  slidesPerView: z.object({
+    base: z.coerce.number().int().min(1).max(3).optional().default(1),
+    md: z.coerce.number().int().min(1).max(3).optional().default(2),
+    lg: z.coerce.number().int().min(1).max(3).optional().default(3),
+  }).optional(),
+
+  controls: z.object({
+    showArrows: z.boolean().optional().default(true),
+    showDots: z.boolean().optional().default(true),
+    showProgress: z.boolean().optional().default(true),
+    showThumbnails: z.boolean().optional().default(true),
+  }).optional(),
+
+  loop: z.boolean().optional().default(true),
+  autoplay: z.boolean().optional().default(false),
   autoplayDelayMs: z
     .preprocess(
       (v) => (v === "" || v === null || typeof v === "undefined" ? undefined : v),
       z.coerce.number().int().min(500).max(60000)
     )
-    .optional(),
-  pauseOnHover: z.boolean().optional(),
-  peek: z.boolean().optional(),
-  background: z.enum(["none", "muted", "gradient"]).optional(),
+    .optional()
+    .default(5000),
+  pauseOnHover: z.boolean().optional().default(true),
+  peek: z.boolean().optional().default(true),
+
+  cardBgColor: z.string().optional(),
+  cardBorderColor: z.string().optional(),
+  slideTitleColor: z.string().optional(),
+  slideTextColor: z.string().optional(),
+  background: z.enum(["none", "muted", "gradient"]).optional().default("none"),
+
+  containerBackgroundMode: z.enum(["transparent", "color", "gradient"]).optional(),
+  containerBackgroundColor: z.string().optional(),
+  containerBackgroundGradientPreset: z.enum(["soft", "aurora", "ocean", "sunset", "hero", "none"]).optional(),
+  containerGradientFrom: z.string().optional(),
+  containerGradientVia: z.string().optional(),
+  containerGradientTo: z.string().optional(),
+  containerGradientAngle: z.coerce.number().optional().default(135),
+  containerShadow: z.object({
+    enabled: z.boolean().optional(),
+    preset: z.string().optional(),
+  }).passthrough().optional(),
+  containerBorder: z.boolean().optional().default(false),
+
+  ariaLabel: z.string().optional(),
+
   slides: z
     .array(
       z.object({
@@ -759,6 +814,11 @@ const imageSliderPropsSchema = z.object({
         alt: z.string(),
         title: z.string().optional(),
         text: z.string().optional(),
+        link: z.string().optional(),
+        focalPoint: z.object({
+          x: z.coerce.number().min(0).max(1),
+          y: z.coerce.number().min(0).max(1),
+        }).optional(),
         titleColor: z.string().optional(),
         textColor: z.string().optional(),
         cardBgColor: z.string().optional(),
@@ -1399,18 +1459,50 @@ const openingHoursDefaults: OpeningHoursBlock["props"] = {
 }
 
 const imageSliderDefaults: ImageSliderBlock["props"] = {
+  eyebrow: "Galerie",
   headline: "Impressionen",
   subheadline: "Ein kleiner Einblick – wischen oder klicken Sie sich durch.",
+  eyebrowColor: undefined,
+  headlineColor: undefined,
+  subheadlineColor: undefined,
+  variant: "classic",
+  aspect: "video",
+  slidesPerView: { base: 1, md: 2, lg: 3 },
+  controls: {
+    showArrows: true,
+    showDots: true,
+    showProgress: true,
+    showThumbnails: true,
+  },
   loop: true,
   autoplay: false,
   autoplayDelayMs: 5000,
   pauseOnHover: true,
   peek: true,
   background: "none",
+  containerBorder: false,
   slides: [
-    { id: generateUniqueId("slide", 0), url: "/placeholder.svg", alt: "", title: "Behandlungsraum", text: "Ruhige Atmosphäre für Ihre Therapie." },
-    { id: generateUniqueId("slide", 1), url: "/placeholder.svg", alt: "", title: "Trainingsbereich", text: "Modernes Equipment für gezieltes Training." },
-    { id: generateUniqueId("slide", 2), url: "/placeholder.svg", alt: "", title: "Empfang", text: "Freundlich. Persönlich. Organisiert." },
+    {
+      id: generateUniqueId("slide", 0),
+      url: "/placeholder.svg",
+      alt: "Behandlungsraum",
+      title: "Behandlungsraum",
+      text: "Ruhige Atmosphäre für Ihre Therapie.",
+    },
+    {
+      id: generateUniqueId("slide", 1),
+      url: "/placeholder.svg",
+      alt: "Trainingsbereich",
+      title: "Trainingsbereich",
+      text: "Modernes Equipment für gezieltes Training.",
+    },
+    {
+      id: generateUniqueId("slide", 2),
+      url: "/placeholder.svg",
+      alt: "Empfang",
+      title: "Empfang",
+      text: "Freundlich. Persönlich. Organisiert.",
+    },
   ],
 }
 
@@ -2727,16 +2819,74 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
     label: "Bild-Slider",
     defaults: imageSliderDefaults,
     zodSchema: imageSliderPropsSchema,
-    allowInlineEdit: false,
+    allowInlineEdit: true,
+    enableInnerPanel: true,
+    elements: [
+      { id: "imageSlider.eyebrow", label: "Eyebrow", path: "eyebrow", supportsTypography: true },
+      { id: "imageSlider.headline", label: "Headline", path: "headline", supportsTypography: true },
+      { id: "imageSlider.subheadline", label: "Subheadline", path: "subheadline", supportsTypography: true },
+    ],
     inspectorFields: [
-      { key: "headline", label: "Headline", type: "text", placeholder: "Überschrift" },
-      { key: "subheadline", label: "Subheadline", type: "textarea", placeholder: "Kurzer erklärender Text" },
-      { key: "loop", label: "Loop", type: "boolean" },
-      { key: "peek", label: "Peek (nächstes Bild sichtbar)", type: "boolean" },
-      { key: "autoplay", label: "Autoplay", type: "boolean" },
+      // BASICS
+      { key: "eyebrow", label: "Eyebrow (optional)", type: "text", placeholder: "Kurzer Hinweis", group: "basics" },
+      { key: "headline", label: "Headline", type: "text", placeholder: "Überschrift", group: "basics" },
+      { key: "subheadline", label: "Subheadline", type: "textarea", placeholder: "Kurzer erklärender Text", group: "basics" },
+
+      // LAYOUT
+      {
+        key: "variant",
+        label: "Variante",
+        type: "select",
+        options: [
+          { value: "classic", label: "Classic (Pfeile + Punkte)" },
+          { value: "progress", label: "Progress (Fortschrittsbalken)" },
+          { value: "thumbnails", label: "Thumbnails (Thumbnail Strip)" },
+          { value: "hero", label: "Hero (Overlay Text)" },
+          { value: "cards", label: "Cards (Multi-View)" },
+        ],
+        group: "layout",
+      },
+      {
+        key: "aspect",
+        label: "Seitenverhältnis",
+        type: "select",
+        options: [
+          { value: "video", label: "Video (16:9)" },
+          { value: "square", label: "Square (1:1)" },
+          { value: "portrait", label: "Portrait (3:4)" },
+          { value: "auto", label: "Auto" },
+        ],
+        group: "layout",
+      },
+      {
+        key: "slidesPerView.base",
+        label: "Slides pro Ansicht (Mobile)",
+        type: "number",
+        showWhen: { key: "variant", equals: "cards" },
+        group: "layout",
+      },
+      {
+        key: "slidesPerView.md",
+        label: "Slides pro Ansicht (Tablet)",
+        type: "number",
+        showWhen: { key: "variant", equals: "cards" },
+        group: "layout",
+      },
+      {
+        key: "slidesPerView.lg",
+        label: "Slides pro Ansicht (Desktop)",
+        type: "number",
+        showWhen: { key: "variant", equals: "cards" },
+        group: "layout",
+      },
+      { key: "peek", label: "Peek (nächstes Bild sichtbar)", type: "boolean", group: "layout" },
+
+      // INTERACTIONS
+      { key: "loop", label: "Loop aktivieren", type: "boolean", group: "interactions" },
+      { key: "autoplay", label: "Autoplay", type: "boolean", group: "interactions" },
       {
         key: "autoplayDelayMs",
-        label: "Autoplay Delay",
+        label: "Autoplay Delay (ms)",
         type: "select",
         options: [
           { value: "3000", label: "3s" },
@@ -2744,25 +2894,38 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
           { value: "7000", label: "7s" },
           { value: "10000", label: "10s" },
         ],
-        helpText: "Wird nur genutzt, wenn Autoplay aktiv ist.",
+        showWhen: { key: "autoplay", equals: true },
+        group: "interactions",
       },
-      { key: "pauseOnHover", label: "Autoplay pausieren bei Hover/Fokus", type: "boolean" },
-      { key: "headlineColor", label: "Headline Farbe", type: "color", placeholder: "#111111" },
-      { key: "subheadlineColor", label: "Subheadline Farbe", type: "color", placeholder: "#666666" },
-      { key: "cardBgColor", label: "Slide Card Hintergrund (global)", type: "color", placeholder: "#ffffff" },
-      { key: "cardBorderColor", label: "Slide Card Border (global)", type: "color", placeholder: "#e5e7eb" },
-      { key: "slideTitleColor", label: "Slide Titel Farbe (global)", type: "color", placeholder: "#111111" },
-      { key: "slideTextColor", label: "Slide Text Farbe (global)", type: "color", placeholder: "#666666" },
+      { key: "pauseOnHover", label: "Autoplay pausieren bei Hover", type: "boolean", group: "interactions" },
+
+      { key: "controls.showArrows", label: "Pfeile anzeigen", type: "boolean", group: "interactions" },
+      { key: "controls.showDots", label: "Punkte anzeigen", type: "boolean", group: "interactions" },
+      { key: "controls.showProgress", label: "Fortschrittsbalken anzeigen", type: "boolean", showWhen: { key: "variant", equals: "progress" }, group: "interactions" },
+      { key: "controls.showThumbnails", label: "Thumbnails anzeigen", type: "boolean", showWhen: { key: "variant", equals: "thumbnails" }, group: "interactions" },
+
+      // DESIGN
+      { key: "eyebrowColor", label: "Eyebrow Farbe (optional)", type: "color", placeholder: "#666666", group: "design" },
+      { key: "headlineColor", label: "Headline Farbe", type: "color", placeholder: "#111111", group: "design" },
+      { key: "subheadlineColor", label: "Subheadline Farbe", type: "color", placeholder: "#666666", group: "design" },
+      { key: "cardBgColor", label: "Slide Card Hintergrund (global)", type: "color", placeholder: "#ffffff", group: "design" },
+      { key: "cardBorderColor", label: "Slide Card Border (global)", type: "color", placeholder: "#e5e7eb", group: "design" },
+      { key: "slideTitleColor", label: "Slide Titel Farbe (global)", type: "color", placeholder: "#111111", group: "design" },
+      { key: "slideTextColor", label: "Slide Text Farbe (global)", type: "color", placeholder: "#666666", group: "design" },
       {
         key: "background",
-        label: "Background",
+        label: "Hintergrund",
         type: "select",
         options: [
-          { value: "none", label: "None" },
+          { value: "none", label: "Keine" },
           { value: "muted", label: "Muted" },
           { value: "gradient", label: "Gradient" },
         ],
+        group: "design",
       },
+
+      // ADVANCED
+      { key: "ariaLabel", label: "Aria Label (für Screenreader)", type: "text", placeholder: "Bild-Slider", group: "elements" },
     ],
   },
   openingHours: {

@@ -224,7 +224,7 @@ function MemberAvatar({
   return (
     <div
       className={cn(
-        "relative flex shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br font-bold text-white ring-[3px] ring-border/40 ring-offset-2 ring-offset-card transition-all duration-500 group-hover:ring-primary/40 group-hover:shadow-lg",
+        "relative flex shrink-0 items-center justify-center rounded-2xl bg-linear-to-br font-bold text-white ring-[3px] ring-border/40 ring-offset-2 ring-offset-card transition-all duration-500 group-hover:ring-primary/40 group-hover:shadow-lg",
         gradient,
         sizeClasses,
         textSize,
@@ -348,7 +348,7 @@ function MemberCard({
     >
       {/* Top accent bar (cards layout only) */}
       {!isCompact && (
-        <div className="h-1 w-full bg-gradient-to-r from-primary/60 via-primary/30 to-transparent" />
+        <div className="h-1 w-full bg-linear-to-r from-primary/60 via-primary/30 to-transparent" />
       )}
 
       {/* Hover spotlight */}
@@ -582,7 +582,7 @@ export function TeamGridBlock({
             {/* Eyebrow */}
             {eyebrow && (
               <div className="mb-5 flex items-center justify-center gap-4">
-                <div className="h-px w-12 bg-gradient-to-r from-transparent to-primary/40" />
+                <div className="h-px w-12 bg-linear-to-r from-transparent to-primary/40" />
                 <span
                   onClick={(e) => handleInlineEdit(e, "eyebrow")}
                   className={cn(
@@ -596,7 +596,7 @@ export function TeamGridBlock({
                 >
                   {eyebrow}
                 </span>
-                <div className="h-px w-12 bg-gradient-to-l from-transparent to-primary/40" />
+                <div className="h-px w-12 bg-linear-to-l from-transparent to-primary/40" />
               </div>
             )}
 
