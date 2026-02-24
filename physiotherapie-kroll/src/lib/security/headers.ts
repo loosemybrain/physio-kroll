@@ -13,7 +13,7 @@ export const securityHeaders = {
     "style-src 'self' 'unsafe-inline'",
     "font-src 'self'", // ⚠️ KEY: Only allow self-hosted fonts, block googleapis/gstatic
     "img-src 'self' data: https:",
-    "connect-src 'self' https://supabase.co",
+    "connect-src 'self' connect-src 'self' https://*.supabase.co wss://*.supabase.co;",
     "frame-src 'self'",
     "base-uri 'self'",
     "form-action 'self'",
