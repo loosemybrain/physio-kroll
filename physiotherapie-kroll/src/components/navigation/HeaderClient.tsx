@@ -26,6 +26,8 @@ import { cn } from "@/lib/utils"
 import type { NavConfig, NavLink } from "@/types/navigation"
 import type { BrandKey } from "@/components/brand/brandAssets"
 import { getNavTheme } from "@/lib/theme/navTheme"
+import { applyPresetToTheme } from "@/lib/navigation/nav-style-presets"
+import { getNavHoverPreset } from "@/lib/navigation/nav-hover-presets"
 import {
   getLogoSizeClasses,
   getLogoImageDimensions,
@@ -108,9 +110,9 @@ function getGridTemplate(cols: 3 | 4 | 5, hasSecondary: boolean, hasInfo: boolea
   return "auto 1fr auto"
 }
 
-/* ------------------------------------------------------------------ */
-/*  HeaderClient                                                       */
-/* ------------------------------------------------------------------ */
+/* ================================================================ */
+/*  HeaderClient - Fully theme-driven, no hardcoded colors          */
+/* ================================================================ */
 
 interface HeaderClientProps {
   brand: BrandKey
@@ -125,15 +127,17 @@ export function HeaderClient({ brand, navConfig }: HeaderClientProps) {
   const prefersReducedMotion = useReducedMotion()
   const headerRef = useRef<HTMLElement>(null)
 
-  /* ---- theme, sizing, font ---- */
-  const theme = getNavTheme(brand)
+  /* ---- Resolve theme with style preset (brand-aware) ---- */
+  const baseTheme = getNavTheme(brand)
+  const theme = applyPresetToTheme(baseTheme, navConfig.navStylePresetId, brand)
+
+  /* ---- sizing, font, layout ---- */
   const logoSize = navConfig.logoSize || "md"
   const logoFit = navConfig.logoFit || "contain"
   const logoClasses = getLogoSizeClasses(logoSize)
   const logoDimensions = getLogoImageDimensions(logoSize)
   const fontClass = resolveFontClass(brand, navConfig.headerFontPreset)
 
-  /* ---- layout ---- */
   const cols = navConfig.headerLayoutColumns ?? 4
   const hasSecondary =
     (navConfig.secondaryLinks ?? []).length > 0
@@ -298,6 +302,9 @@ export function HeaderClient({ brand, navConfig }: HeaderClientProps) {
   const transition = getMotionTransition(motionPreset, prefersReducedMotion ?? false)
   const staggerChildren = getStaggerMultiplier(motionPreset)
 
+  /* ---- Scroll state styling (theme-driven) ---- */
+  const wrapperClass = isScrolled ? theme.wrapperScrolled : theme.wrapper
+
   /* ---- Desktop Nav Link ---- */
   const DesktopLink = ({
     link,
@@ -308,21 +315,13 @@ export function HeaderClient({ brand, navConfig }: HeaderClientProps) {
   }) => {
     const href = getLinkHref(link)
     const active = isLinkActive(href)
-    return (
-      <Link
-        href={href}
-        target={link.newTab ? "_blank" : undefined}
-        rel={link.newTab ? "noopener noreferrer" : undefined}
-        className={cn(
-          "relative py-1 text-sm font-medium transition-colors duration-200",
-          fontClass,
-          secondary ? "text-xs" : "",
-          theme.link.base,
-          theme.link.hover,
-          active && theme.link.active,
-          theme.focus
-        )}
-      >
+    const hoverPreset = getNavHoverPreset(navConfig.navHoverPresetId)
+    
+    // Check if we should apply motion (respect reduced motion)
+    const hasMotion = hoverPreset.motion && !prefersReducedMotion
+    
+    const linkContent = (
+      <>
         {link.label}
         {/* Animated active indicator -- layout-safe absolute underline */}
         {active && (
@@ -330,17 +329,59 @@ export function HeaderClient({ brand, navConfig }: HeaderClientProps) {
             layoutId={secondary ? "nav-indicator-sec" : "nav-indicator"}
             className={cn(
               "absolute -bottom-1 left-0 right-0 h-0.5 rounded-full",
-              secondary ? "bg-zinc-900 dark:bg-[#ff7a18]" : "bg-zinc-900 dark:bg-[#ff7a18]"
+              theme.indicator
             )}
             transition={transition}
           />
         )}
+      </>
+    )
+
+    const linkClass = cn(
+      "relative py-1 text-sm font-medium transition-colors duration-200",
+      fontClass,
+      secondary ? "text-xs" : "",
+      theme.link.base,
+      theme.link.hover,
+      active && theme.link.active,
+      hoverPreset.linkClass,
+      theme.focus,
+      // Apply CSS variables for custom link colors (override theme if set)
+      navConfig.navLinkColor && "text-(--nav-link)",
+      navConfig.navLinkHoverColor && "hover:text-(--nav-link-hover)",
+      navConfig.navLinkActiveColor && active && "text-(--nav-link-active)"
+    )
+
+    // Use motion wrapper if preset has motion and reduced motion is not set
+    if (hasMotion) {
+      return (
+        <motion.a
+          href={href}
+          target={link.newTab ? "_blank" : undefined}
+          rel={link.newTab ? "noopener noreferrer" : undefined}
+          className={linkClass}
+          whileHover={hoverPreset.motion?.whileHover as any}
+          transition={hoverPreset.motion?.transition as any}
+        >
+          {linkContent}
+        </motion.a>
+      )
+    }
+
+    return (
+      <Link
+        href={href}
+        target={link.newTab ? "_blank" : undefined}
+        rel={link.newTab ? "noopener noreferrer" : undefined}
+        className={linkClass}
+      >
+        {linkContent}
       </Link>
     )
   }
 
   /* ================================================================ */
-  /*  RENDER                                                          */
+  /*  RENDER - All styling from theme, no hardcoded colors            */
   /* ================================================================ */
 
   return (
@@ -351,8 +392,7 @@ export function HeaderClient({ brand, navConfig }: HeaderClientProps) {
         animate={isScrolled ? "scrolled" : "top"}
         className={cn(
           "sticky top-0 z-50 w-full transition-colors duration-300",
-          theme.wrapper,
-          isScrolled && motionPreset === "glassy" && "backdrop-blur-md"
+          wrapperClass
         )}
       >
         <motion.div
@@ -440,6 +480,12 @@ export function HeaderClient({ brand, navConfig }: HeaderClientProps) {
             <motion.nav
               className="flex items-center gap-6 justify-center"
               aria-label="Hauptnavigation"
+              style={{
+                "--nav-link": navConfig.navLinkColor ?? "currentColor",
+                "--nav-link-hover": navConfig.navLinkHoverColor ?? "var(--nav-link)",
+                "--nav-link-active": navConfig.navLinkActiveColor ?? "var(--nav-link-hover)",
+                "--nav-glow": navConfig.navLinkHoverColor ?? "rgba(59,130,246,0.3)",
+              } as React.CSSProperties}
               variants={
                 motionPreset === "none"
                   ? { top: { gap: 24 }, scrolled: { gap: 24 } }
@@ -465,6 +511,12 @@ export function HeaderClient({ brand, navConfig }: HeaderClientProps) {
               <nav
                 className="flex items-center gap-4 justify-end"
                 aria-label="Sekundäre Navigation"
+                style={{
+                  "--nav-link": navConfig.navLinkColor ?? "currentColor",
+                  "--nav-link-hover": navConfig.navLinkHoverColor ?? "var(--nav-link)",
+                  "--nav-link-active": navConfig.navLinkActiveColor ?? "var(--nav-link-hover)",
+                  "--nav-glow": navConfig.navLinkHoverColor ?? "rgba(59,130,246,0.3)",
+                } as React.CSSProperties}
               >
                 {visibleSecondary.map((link) => (
                   <DesktopLink key={link.id} link={link} secondary />
@@ -576,6 +628,12 @@ export function HeaderClient({ brand, navConfig }: HeaderClientProps) {
                   theme.mobile.container,
                   theme.border
                 )}
+                style={{
+                  "--nav-link": navConfig.navLinkColor ?? "currentColor",
+                  "--nav-link-hover": navConfig.navLinkHoverColor ?? "var(--nav-link)",
+                  "--nav-link-active": navConfig.navLinkActiveColor ?? "var(--nav-link-hover)",
+                  "--nav-glow": navConfig.navLinkHoverColor ?? "rgba(59,130,246,0.3)",
+                } as React.CSSProperties}
               >
                 <SheetHeader>
                   <SheetTitle className="sr-only">Navigation</SheetTitle>
@@ -619,7 +677,10 @@ export function HeaderClient({ brand, navConfig }: HeaderClientProps) {
                               theme.mobile.link.base,
                               theme.mobile.link.hover,
                               active && theme.mobile.link.active,
-                              theme.focus
+                              theme.focus,
+                              navConfig.navLinkColor && "text-(--nav-link)",
+                              navConfig.navLinkHoverColor && "hover:text-(--nav-link-hover)",
+                              navConfig.navLinkActiveColor && active && "text-(--nav-link-active)"
                             )}
                           >
                             {link.label}
@@ -669,7 +730,10 @@ export function HeaderClient({ brand, navConfig }: HeaderClientProps) {
                                   theme.mobile.link.base,
                                   theme.mobile.link.hover,
                                   active && theme.mobile.link.active,
-                                  theme.focus
+                                  theme.focus,
+                                  navConfig.navLinkColor && "text-(--nav-link)",
+                                  navConfig.navLinkHoverColor && "hover:text-(--nav-link-hover)",
+                                  navConfig.navLinkActiveColor && active && "text-(--nav-link-active)"
                                 )}
                               >
                                 {link.label}

@@ -3978,6 +3978,40 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
       {selectedBlock.type === "openingHours" && (
         <>
           <Separator />
+          
+          {/* Element Shadow Inspector for selected element */}
+          {selectedElementId && (
+            <>
+              <div className="space-y-3">
+                <h3 className="text-sm font-semibold mb-4">Element Shadow</h3>
+                <ShadowInspector
+                  config={
+                    ((selectedBlock.props as Record<string, unknown>)?.elements as Record<string, ElementConfig> | undefined)?.[selectedElementId]?.style?.shadow
+                  }
+                  onChange={(shadowConfig) => {
+                    const currentElements = ((selectedBlock.props as Record<string, unknown>)?.elements ?? {}) as Record<string, ElementConfig>
+                    const currentElement = currentElements[selectedElementId] ?? { style: {} }
+                    const nextElement: ElementConfig = {
+                      ...currentElement,
+                      style: {
+                        ...currentElement.style,
+                        shadow: shadowConfig,
+                      },
+                    }
+                    const nextElements = {
+                      ...currentElements,
+                      [selectedElementId]: nextElement,
+                    }
+                    const updatedProps = setByPath(selectedBlock.props as Record<string, unknown>, "elements", nextElements) as CMSBlock["props"]
+                    updateSelectedProps(updatedProps)
+                  }}
+                  onClose={() => setSelectedElementId(null)}
+                />
+              </div>
+              <Separator />
+            </>
+          )}
+          
           {renderArrayItemsControls(
             selectedBlock,
             "hours",

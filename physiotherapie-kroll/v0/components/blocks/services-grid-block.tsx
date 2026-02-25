@@ -243,17 +243,18 @@ function ServiceCardItem({
     <article
       onClick={onElementClick ? handleElementClick : undefined}
       className={cn(
-        "group relative flex h-full flex-col overflow-hidden rounded-2xl border bg-card",
+        "group relative flex h-full flex-col overflow-hidden rounded-2xl border bg-card/80 backdrop-blur-sm",
         // Premium layered shadow
-        "shadow-[0_1px_3px_rgba(0,0,0,0.06),0_18px_50px_-20px_rgba(0,0,0,0.18)]",
+        "shadow-[0_1px_2px_rgba(0,0,0,0.04),0_12px_40px_-16px_rgba(0,0,0,0.12)]",
         // Hover
         !isSlider && [
           "transition-all duration-500 ease-out",
-          "hover:border-primary/30",
-          "hover:shadow-[0_1px_3px_rgba(0,0,0,0.06),0_28px_60px_-16px_rgba(0,0,0,0.22)]",
+          "hover:border-primary/25 hover:bg-card",
+          "hover:shadow-[0_1px_2px_rgba(0,0,0,0.04),0_24px_56px_-12px_rgba(0,0,0,0.16)]",
+          "hover:-translate-y-1",
         ],
         // Border
-        resolvedBorder ? "" : "border-border/50",
+        resolvedBorder ? "" : "border-border/40",
         // Selection ring
         isSelected && "ring-2 ring-primary/60",
         // Clickable in editor
@@ -265,14 +266,14 @@ function ServiceCardItem({
       }}
     >
       {/* Top accent gradient */}
-      <div className="h-1 w-full bg-gradient-to-r from-primary/60 via-primary/30 to-transparent" />
+      <div className="h-0.5 w-full bg-gradient-to-r from-primary/50 via-accent/30 to-transparent" />
 
       {/* Hover spotlight overlay */}
       <div
         className="pointer-events-none absolute inset-0 rounded-2xl opacity-0 transition-opacity duration-500 group-hover:opacity-100"
         style={{
           background:
-            "radial-gradient(circle at 30% 20%, oklch(0.45 0.12 160 / 0.07), transparent 55%)",
+            "radial-gradient(circle at 30% 20%, oklch(0.48 0.14 220 / 0.06), transparent 55%)",
         }}
         aria-hidden="true"
       />
@@ -282,8 +283,8 @@ function ServiceCardItem({
         {/* Icon */}
         <div
           className={cn(
-            "mb-5 flex h-14 w-14 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-110",
-            !resolvedIconBg && "bg-primary/10",
+            "mb-5 flex h-12 w-12 items-center justify-center rounded-xl transition-all duration-300 group-hover:scale-105 group-hover:shadow-md group-hover:shadow-primary/10",
+            !resolvedIconBg && "bg-primary/[0.08]",
           )}
           style={{
             backgroundColor: resolvedIconBg || undefined,

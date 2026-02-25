@@ -1,11 +1,16 @@
 import type { BrandKey } from "@/components/brand/brandAssets"
+import type { NavStylePresetId } from "@/lib/navigation/nav-style-presets"
 
 /**
  * Navigation theme configuration
  * Build-safe: Only uses fixed Tailwind classes, no string interpolation
+ * Aligned with v0 design tokens and behavior
  */
 export interface NavTheme {
   wrapper: string
+  wrapperScrolled: string
+  shadow: string
+  shadowScrolled: string
   link: {
     base: string
     hover: string
@@ -28,77 +33,89 @@ export interface NavTheme {
     }
   }
   border: string
-  shadow: string
+  indicator: string
   focus: string
 }
 
 /**
  * Navigation theme for physiotherapy (light theme)
+ * Parity with v0 behavior: light background regardless of system dark mode
  */
 const physiotherapyTheme: NavTheme = {
-  wrapper: "bg-white/95 backdrop-blur-sm border-b border-zinc-200",
+  wrapper: "bg-white/95 backdrop-blur-md border-b border-zinc-200",
+  wrapperScrolled: "bg-white/98 backdrop-blur-xl shadow-lg shadow-primary/5",
+  shadow: "shadow-sm",
+  shadowScrolled: "shadow-lg shadow-primary/8",
   link: {
-    base: "text-zinc-900",
-    hover: "hover:text-zinc-900 hover:bg-zinc-100/70",
-    active: "text-zinc-900 border-b-2 border-zinc-900",
+    base: "text-muted-foreground",
+    hover: "hover:text-foreground",
+    active: "text-primary font-semibold",
   },
   iconButton: {
-    base: "text-zinc-700",
-    hover: "hover:text-zinc-900 hover:bg-zinc-100/70",
+    base: "text-muted-foreground",
+    hover: "hover:text-foreground hover:bg-muted",
   },
   cta: {
-    default: "bg-zinc-900 text-white",
-    hover: "hover:bg-zinc-800",
+    default: "bg-primary text-primary-foreground",
+    hover: "hover:bg-primary/90",
   },
   mobile: {
-    container: "bg-white text-zinc-900 border-zinc-200",
+    container: "bg-white",
     link: {
-      base: "text-zinc-900",
-      hover: "hover:bg-zinc-100",
-      active: "bg-zinc-100 text-zinc-900",
+      base: "text-foreground",
+      hover: "hover:bg-muted",
+      active: "bg-primary/10 text-primary font-semibold",
     },
   },
   border: "border-zinc-200",
-  shadow: "shadow-sm",
-  focus: "focus-visible:ring-zinc-400",
+  indicator: "bg-primary",
+  focus: "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
 }
 
 /**
- * Navigation theme for physio-konzept (dark theme with orange accents)
+ * Navigation theme for physio-konzept (dark theme with accent color)
+ * Parity with v0 behavior: dark background regardless of system dark mode
  */
 const physioKonzeptTheme: NavTheme = {
-  wrapper: "bg-[#0f0f10]/90 backdrop-blur-sm border-b border-white/10",
+  wrapper: "bg-[#0f0f10]/95 backdrop-blur-md border-b border-white/10",
+  wrapperScrolled: "bg-[#0f0f10]/98 backdrop-blur-xl shadow-lg shadow-accent/10",
+  shadow: "shadow-sm",
+  shadowScrolled: "shadow-lg shadow-accent/8",
   link: {
-    base: "text-zinc-100",
-    hover: "hover:text-white hover:bg-white/5",
-    active: "text-[#ff7a18] border-b-2 border-[#ff7a18]",
+    base: "text-muted-foreground",
+    hover: "hover:text-foreground",
+    active: "text-accent font-semibold",
   },
   iconButton: {
-    base: "text-zinc-200",
-    hover: "hover:text-white hover:bg-white/5",
+    base: "text-muted-foreground",
+    hover: "hover:text-foreground hover:bg-muted",
   },
   cta: {
-    default: "bg-[#ff7a18] text-black",
-    hover: "hover:bg-[#ff8a33]",
+    default: "bg-accent text-accent-foreground",
+    hover: "hover:bg-accent/90",
   },
   mobile: {
-    container: "bg-[#0f0f10] text-zinc-100 border-white/10",
+    container: "bg-[#0f0f10]",
     link: {
-      base: "text-zinc-100",
-      hover: "hover:bg-white/5",
-      active: "bg-white/5 text-[#ff7a18]",
+      base: "text-foreground",
+      hover: "hover:bg-muted",
+      active: "bg-accent/10 text-accent font-semibold",
     },
   },
   border: "border-white/10",
-  shadow: "shadow-none",
-  focus: "focus-visible:ring-[#ff7a18]",
+  indicator: "bg-accent",
+  focus: "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
 }
 
 /**
- * Get navigation theme for a specific brand
+ * Get navigation theme for a specific brand and style preset
  * @param brand - The brand key
+ * @param stylePreset - Optional style preset ID to apply overrides
  * @returns Navigation theme configuration
  */
-export function getNavTheme(brand: BrandKey): NavTheme {
+export function getNavTheme(
+  brand: BrandKey,
+  stylePreset?: NavStylePresetId
+): NavTheme {
   return brand === "physio-konzept" ? physioKonzeptTheme : physiotherapyTheme
 }

@@ -1,5 +1,7 @@
 import type { MediaValue, SectionBackgroundPreset } from "./cms"
 import type { BrandKey } from "@/components/brand/brandAssets"
+import type { NavStylePresetId } from "@/lib/navigation/nav-style-presets"
+import type { NavHoverPresetId } from "@/lib/navigation/nav-hover-presets"
 
 /**
  * Navigation link configuration
@@ -46,6 +48,15 @@ export type NavConfig = {
   headerMotionPreset?: "none" | "subtle" | "glassy" | "snappy"
   secondaryLinks?: NavLink[]
   infoBadge?: string
+  // Navigation style preset (determines theme overrides)
+  navStylePresetId?: NavStylePresetId
+  // Navigation link hover preset (determines hover effect)
+  navHoverPresetId?: NavHoverPresetId
+  // Navigation link colors (optional CSS overrides)
+  navLinkColor?: string | null
+  navLinkHoverColor?: string | null
+  navLinkActiveColor?: string | null
+  navIndicatorColor?: string | null
 }
 
 /**

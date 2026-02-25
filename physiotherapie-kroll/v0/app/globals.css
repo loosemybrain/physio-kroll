@@ -3,72 +3,76 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* Physiotherapy Theme - Calm, Medical, Trustworthy */
+/* ─────────────────────────────────────────────────────────────
+   Physiotherapy Theme – Cool teal-blue, premium medical modern
+   ───────────────────────────────────────────────────────────── */
 :root {
-  --background: oklch(0.985 0.005 150);
-  --foreground: oklch(0.25 0.02 160);
+  --background: oklch(0.98 0.004 220);
+  --foreground: oklch(0.15 0.015 230);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.25 0.02 160);
+  --card-foreground: oklch(0.15 0.015 230);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.25 0.02 160);
-  --primary: oklch(0.45 0.12 160);
+  --popover-foreground: oklch(0.15 0.015 230);
+  --primary: oklch(0.48 0.14 220);
   --primary-foreground: oklch(0.99 0 0);
-  --secondary: oklch(0.95 0.01 150);
-  --secondary-foreground: oklch(0.25 0.02 160);
-  --muted: oklch(0.93 0.01 150);
-  --muted-foreground: oklch(0.5 0.02 160);
-  --accent: oklch(0.55 0.1 160);
+  --secondary: oklch(0.96 0.006 220);
+  --secondary-foreground: oklch(0.2 0.015 230);
+  --muted: oklch(0.95 0.005 220);
+  --muted-foreground: oklch(0.48 0.02 230);
+  --accent: oklch(0.56 0.12 195);
   --accent-foreground: oklch(0.99 0 0);
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(0.577 0.245 27.325);
-  --border: oklch(0.88 0.02 150);
-  --input: oklch(0.92 0.01 150);
-  --ring: oklch(0.45 0.12 160);
-  --chart-1: oklch(0.45 0.12 160);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0.005 150);
-  --sidebar-foreground: oklch(0.25 0.02 160);
-  --sidebar-primary: oklch(0.45 0.12 160);
+  --border: oklch(0.91 0.008 220);
+  --input: oklch(0.94 0.006 220);
+  --ring: oklch(0.48 0.14 220);
+  --chart-1: oklch(0.48 0.14 220);
+  --chart-2: oklch(0.56 0.12 195);
+  --chart-3: oklch(0.4 0.08 260);
+  --chart-4: oklch(0.75 0.16 170);
+  --chart-5: oklch(0.65 0.14 40);
+  --radius: 0.75rem;
+  --sidebar: oklch(0.98 0.004 220);
+  --sidebar-foreground: oklch(0.15 0.015 230);
+  --sidebar-primary: oklch(0.48 0.14 220);
   --sidebar-primary-foreground: oklch(0.99 0 0);
-  --sidebar-accent: oklch(0.95 0.01 150);
-  --sidebar-accent-foreground: oklch(0.25 0.02 160);
-  --sidebar-border: oklch(0.88 0.02 150);
-  --sidebar-ring: oklch(0.45 0.12 160);
+  --sidebar-accent: oklch(0.96 0.006 220);
+  --sidebar-accent-foreground: oklch(0.2 0.015 230);
+  --sidebar-border: oklch(0.91 0.008 220);
+  --sidebar-ring: oklch(0.48 0.14 220);
 
-  /* Custom hero tokens for Physiotherapy */
-  --hero-bg: oklch(0.97 0.008 150);
-  --hero-accent: oklch(0.45 0.12 160);
-  --hero-highlight: oklch(0.92 0.03 150);
+  /* Hero tokens */
+  --hero-bg: oklch(0.98 0.006 220);
+  --hero-accent: oklch(0.48 0.14 220);
+  --hero-highlight: oklch(0.94 0.02 210);
 }
 
-/* PhysioKonzept Theme - Energetic, Sporty, Motivational */
+/* ─────────────────────────────────────────────────────────────
+   PhysioKonzept Theme – Dark, energetic, sporty
+   ───────────────────────────────────────────────────────────── */
 .physio-konzept {
-  --background: oklch(0.15 0 0);
-  --foreground: oklch(0.98 0 0);
-  --card: oklch(0.18 0 0);
-  --card-foreground: oklch(0.98 0 0);
-  --popover: oklch(0.18 0 0);
-  --popover-foreground: oklch(0.98 0 0);
-  --primary: oklch(0.7 0.18 45);
-  --primary-foreground: oklch(0.12 0 0);
-  --secondary: oklch(0.25 0 0);
-  --secondary-foreground: oklch(0.98 0 0);
-  --muted: oklch(0.22 0 0);
-  --muted-foreground: oklch(0.7 0 0);
-  --accent: oklch(0.7 0.18 45);
-  --accent-foreground: oklch(0.12 0 0);
-  --border: oklch(0.28 0 0);
-  --input: oklch(0.22 0 0);
-  --ring: oklch(0.7 0.18 45);
+  --background: oklch(0.13 0 0);
+  --foreground: oklch(0.97 0 0);
+  --card: oklch(0.16 0.005 260);
+  --card-foreground: oklch(0.97 0 0);
+  --popover: oklch(0.16 0.005 260);
+  --popover-foreground: oklch(0.97 0 0);
+  --primary: oklch(0.72 0.19 55);
+  --primary-foreground: oklch(0.1 0 0);
+  --secondary: oklch(0.22 0.005 260);
+  --secondary-foreground: oklch(0.97 0 0);
+  --muted: oklch(0.2 0.005 260);
+  --muted-foreground: oklch(0.65 0 0);
+  --accent: oklch(0.72 0.19 55);
+  --accent-foreground: oklch(0.1 0 0);
+  --border: oklch(0.26 0.005 260);
+  --input: oklch(0.2 0.005 260);
+  --ring: oklch(0.72 0.19 55);
 
-  /* Custom hero tokens for PhysioKonzept */
-  --hero-bg: oklch(0.12 0 0);
-  --hero-accent: oklch(0.7 0.18 45);
-  --hero-highlight: oklch(0.2 0 0);
+  /* Hero tokens */
+  --hero-bg: oklch(0.1 0 0);
+  --hero-accent: oklch(0.72 0.19 55);
+  --hero-highlight: oklch(0.18 0.01 260);
 }
 
 @theme inline {

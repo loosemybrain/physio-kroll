@@ -1,5 +1,146 @@
 import { z } from "zod"
-import type { FooterConfig, FooterSection, FooterBlock, FooterBottomBar } from "@/types/footer"
+import type { FooterConfig, FooterSection, FooterBlock, FooterBottomBar, FooterDesign, FooterSpacing } from "@/types/footer"
+import type { SectionAlign, TypographySize, TypographyWeight } from "@/types/footer"
+
+/**
+ * Whitelisted spacing options
+ */
+export const SPACING_OPTIONS: FooterSpacing[] = ["compact", "normal", "spacious"]
+
+/**
+ * Whitelisted section alignment options
+ */
+export const SECTION_ALIGN_OPTIONS = ["left", "center", "right"] as const
+
+/**
+ * Whitelisted typography sizes
+ */
+export const TYPOGRAPHY_SIZES = ["sm", "base", "lg"] as const
+
+/**
+ * Whitelisted typography weights
+ */
+export const TYPOGRAPHY_WEIGHTS = ["normal", "semibold", "bold"] as const
+
+/**
+ * Whitelisted font families
+ */
+export const FONT_FAMILIES = [
+  { id: "sans", label: "Sans (Standard)" },
+  { id: "serif", label: "Serif" },
+  { id: "mono", label: "Monospace" },
+  { id: "geist-sans", label: "Geist Sans" },
+  { id: "geist-mono", label: "Geist Mono" },
+] as const
+
+/**
+ * Whitelisted divider classes
+ */
+export const DIVIDER_CLASS_OPTIONS = [
+  "border-zinc-200",
+  "border-zinc-300",
+  "border-zinc-400",
+  "border-white/10",
+  "border-white/20",
+  "border-orange-500/20",
+] as const
+
+/**
+ * Whitelisted color presets (hex values only)
+ */
+export const COLOR_PRESETS = {
+  backgrounds: [
+    { name: "White", value: "#ffffff" },
+    { name: "Zinc 50", value: "#fafafa" },
+    { name: "Zinc 100", value: "#f4f4f5" },
+    { name: "Zinc 900", value: "#18181b" },
+    { name: "Zinc 950", value: "#09090b" },
+  ],
+  text: [
+    { name: "White", value: "#ffffff" },
+    { name: "Zinc 100", value: "#f4f4f5" },
+    { name: "Zinc 300", value: "#d4d4d8" },
+    { name: "Zinc 700", value: "#3f3f46" },
+    { name: "Zinc 900", value: "#18181b" },
+  ],
+  headings: [
+    { name: "White", value: "#ffffff" },
+    { name: "Zinc 100", value: "#f4f4f5" },
+    { name: "Zinc 900", value: "#18181b" },
+    { name: "Orange 500", value: "#f97316" },
+    { name: "Blue 500", value: "#3b82f6" },
+  ],
+  accents: [
+    { name: "Orange 500", value: "#f97316" },
+    { name: "Blue 500", value: "#3b82f6" },
+    { name: "Green 500", value: "#22c55e" },
+    { name: "Slate 500", value: "#64748b" },
+  ],
+} as const
+export const DESIGN_PRESETS = [
+  {
+    id: "brand-default",
+    label: "Brand Default",
+    design: {}, // Empty object = use brand defaults from getFooterTheme
+  },
+  {
+    id: "light",
+    label: "Hell",
+    design: {
+      bgClass: "bg-zinc-50",
+      textClass: "text-zinc-900",
+      headingClass: "text-zinc-900",
+      borderClass: "border-zinc-200",
+      linkClass: "text-zinc-700",
+      linkHoverClass: "hover:text-zinc-900 hover:underline",
+      focus: "focus-visible:ring-zinc-900",
+      mutedText: "text-zinc-500",
+      spacing: { py: "spacious" },
+      bottomBar: {
+        dividerEnabled: true,
+        dividerClass: "border-zinc-200",
+      },
+    },
+  },
+  {
+    id: "dark",
+    label: "Dunkel",
+    design: {
+      bgClass: "bg-zinc-900",
+      textClass: "text-zinc-100",
+      headingClass: "text-white",
+      borderClass: "border-zinc-700",
+      linkClass: "text-zinc-300",
+      linkHoverClass: "hover:text-white hover:underline",
+      focus: "focus-visible:ring-zinc-100",
+      mutedText: "text-zinc-400",
+      spacing: { py: "spacious" },
+      bottomBar: {
+        dividerEnabled: true,
+        dividerClass: "border-zinc-700",
+      },
+    },
+  },
+  {
+    id: "concept-accent",
+    label: "Konzept Accent",
+    design: {
+      bgClass: "bg-zinc-950",
+      textClass: "text-zinc-100",
+      headingClass: "text-orange-500",
+      borderClass: "border-orange-500/20",
+      linkClass: "text-orange-400",
+      linkHoverClass: "hover:text-orange-300 hover:underline",
+      focus: "focus-visible:ring-orange-500",
+      mutedText: "text-zinc-400",
+      spacing: { py: "normal" },
+      bottomBar: {
+        dividerEnabled: true,
+        dividerClass: "border-orange-500/20",
+      },
+    },
+  },
+] as const
 
 /**
  * Footer block schemas
@@ -71,7 +212,58 @@ const footerSectionSchema: z.ZodType<FooterSection> = z.object({
 })
 
 /**
- * Footer bottom bar schema
+ * Footer design schema (only whitelisted fields)
+ */
+const footerDesignSchema: z.ZodType<FooterDesign> = z
+  .object({
+    bgClass: z.string().optional(),
+    textClass: z.string().optional(),
+    headingClass: z.string().optional(),
+    borderClass: z.string().optional(),
+    linkClass: z.string().optional(),
+    linkHoverClass: z.string().optional(),
+    focus: z.string().optional(),
+    mutedText: z.string().optional(),
+    spacing: z
+      .object({
+        py: z.enum(["compact", "normal", "spacious"]).optional(),
+      })
+      .optional(),
+    section: z
+      .object({
+        align: z.enum(["left", "center", "right"]).optional(),
+      })
+      .optional(),
+    typography: z
+      .object({
+        bodySize: z.enum(["sm", "base", "lg"]).optional(),
+        bodyWeight: z.enum(["normal", "semibold", "bold"]).optional(),
+        bodyFont: z.enum(["sans", "serif", "mono", "geist-sans", "geist-mono"]).optional(),
+        headingSize: z.enum(["sm", "base", "lg"]).optional(),
+        headingWeight: z.enum(["normal", "semibold", "bold"]).optional(),
+        headingFont: z.enum(["sans", "serif", "mono", "geist-sans", "geist-mono"]).optional(),
+      })
+      .optional(),
+    colors: z
+      .object({
+        bgCustom: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
+        textCustom: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
+        headingCustom: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
+        accentCustom: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
+      })
+      .optional(),
+    bottomBar: z
+      .object({
+        dividerEnabled: z.boolean().optional(),
+        dividerClass: z.enum(DIVIDER_CLASS_OPTIONS).optional(),
+        align: z.enum(["left", "center", "right"]).optional(),
+      })
+      .optional(),
+  })
+  .strict()
+
+/**
+ * Footer footer bottom bar schema
  */
 const footerBottomBarSchema: z.ZodType<FooterBottomBar> = z.object({
   enabled: z.boolean(),
@@ -87,6 +279,7 @@ export const footerConfigSchema = z
     variant: z.enum(["default"]).optional(),
     sections: z.array(footerSectionSchema).min(2).max(5),
     bottomBar: footerBottomBarSchema.optional(),
+    design: footerDesignSchema.optional(),
   })
   .refine(
     (data) => {

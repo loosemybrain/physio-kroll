@@ -25,7 +25,15 @@ import { useEffect } from "react"
 import { cn } from "@/lib/utils"
 import { ensureDefaultPresets } from "@/lib/cms/sectionPresets"
 import { HEADER_PRESETS } from "@/lib/admin/header-presets"
+import { NAV_STYLE_PRESETS, getPresetById } from "@/lib/navigation/nav-style-presets"
+import { NAV_HOVER_PRESETS, getNavHoverPreset } from "@/lib/navigation/nav-hover-presets"
 import { HeaderClient } from "@/components/navigation/HeaderClient"
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion"
 
 type NavigationEditorClientProps = {
   initialPhysio: NavConfig
@@ -407,7 +415,211 @@ export function NavigationEditorClient({
 
             <Separator />
 
-            {/* HEADER LAYOUT CUSTOMIZATION */}
+            {/* STYLE PRESET SELECTION */}
+            <div className="space-y-3">
+              <Label className="text-base font-semibold flex items-center gap-2">
+                <Zap className="h-5 w-5" />
+                Navigation Style
+              </Label>
+              
+              <div className="space-y-2">
+                <Label className="text-xs font-medium text-muted-foreground">Vordefinierter Stil</Label>
+                <Select
+                  value={navConfig.navStylePresetId ?? "minimal"}
+                  onValueChange={(value) => updateConfig({ navStylePresetId: value as any })}
+                >
+                  <SelectTrigger className="h-9">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {NAV_STYLE_PRESETS.map((preset) => (
+                      <SelectItem key={preset.id} value={preset.id}>
+                        <div className="flex flex-col">
+                          <span className="font-medium">{preset.label}</span>
+                          <span className="text-xs text-muted-foreground">{preset.description}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  {getPresetById(navConfig.navStylePresetId ?? "minimal")?.description}
+                </p>
+              </div>
+            </div>
+
+            <Separator />
+            
+            {/* Link Hover Preset */}
+            <div className="space-y-4">
+              <Label className="text-base font-semibold flex items-center gap-2">
+                <Zap className="h-5 w-5" />
+                Link Hover-Effekt
+              </Label>
+              
+              <div className="space-y-2">
+                <Label className="text-xs font-medium text-muted-foreground">Effekt-Voreinstellung</Label>
+                <Select
+                  value={navConfig.navHoverPresetId ?? "underline-slide"}
+                  onValueChange={(value) => updateConfig({ navHoverPresetId: value as any })}
+                >
+                  <SelectTrigger className="h-9">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {NAV_HOVER_PRESETS.map((preset) => (
+                      <SelectItem key={preset.id} value={preset.id}>
+                        <div className="flex flex-col">
+                          <span className="font-medium">{preset.label}</span>
+                          <span className="text-xs text-muted-foreground">{preset.description}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  {getNavHoverPreset(navConfig.navHoverPresetId)?.description}
+                </p>
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Link Farben */}
+            <div className="space-y-4">
+              <Label className="text-base font-semibold flex items-center gap-2">
+                <Zap className="h-5 w-5" />
+                Link Farben
+              </Label>
+
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                {/* Grundfarbe */}
+                <div className="space-y-2">
+                  <Label className="text-xs font-medium">Grundfarbe</Label>
+                  <div className="flex gap-2 items-center">
+                    <input
+                      type="color"
+                      value={navConfig.navLinkColor ?? "#000000"}
+                      onChange={(e) => updateConfig({ navLinkColor: e.target.value })}
+                      className="h-10 w-14 rounded border border-border cursor-pointer"
+                    />
+                    <Input
+                      type="text"
+                      value={navConfig.navLinkColor ?? ""}
+                      onChange={(e) => updateConfig({ navLinkColor: e.target.value || null })}
+                      placeholder="#000000"
+                      className="flex-1 h-9 text-xs font-mono"
+                    />
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => updateConfig({ navLinkColor: null })}
+                    className="w-full text-xs"
+                  >
+                    Zurücksetzen
+                  </Button>
+                </div>
+
+                {/* Hover-Farbe */}
+                <div className="space-y-2">
+                  <Label className="text-xs font-medium">Hover-Farbe</Label>
+                  <div className="flex gap-2 items-center">
+                    <input
+                      type="color"
+                      value={navConfig.navLinkHoverColor ?? "#0000ff"}
+                      onChange={(e) => updateConfig({ navLinkHoverColor: e.target.value })}
+                      className="h-10 w-14 rounded border border-border cursor-pointer"
+                    />
+                    <Input
+                      type="text"
+                      value={navConfig.navLinkHoverColor ?? ""}
+                      onChange={(e) => updateConfig({ navLinkHoverColor: e.target.value || null })}
+                      placeholder="#0000ff"
+                      className="flex-1 h-9 text-xs font-mono"
+                    />
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => updateConfig({ navLinkHoverColor: null })}
+                    className="w-full text-xs"
+                  >
+                    Zurücksetzen
+                  </Button>
+                </div>
+              </div>
+
+              {/* Active und Indicator (optional) */}
+              <details className="cursor-pointer">
+                <summary className="text-xs font-medium text-muted-foreground hover:text-foreground">
+                  Erweiterte Farben (optional)
+                </summary>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 mt-3">
+                  {/* Active-Farbe */}
+                  <div className="space-y-2">
+                    <Label className="text-xs font-medium">Active-Farbe</Label>
+                    <div className="flex gap-2 items-center">
+                      <input
+                        type="color"
+                        value={navConfig.navLinkActiveColor ?? "#00ff00"}
+                        onChange={(e) => updateConfig({ navLinkActiveColor: e.target.value })}
+                        className="h-10 w-14 rounded border border-border cursor-pointer"
+                      />
+                      <Input
+                        type="text"
+                        value={navConfig.navLinkActiveColor ?? ""}
+                        onChange={(e) => updateConfig({ navLinkActiveColor: e.target.value || null })}
+                        placeholder="#00ff00"
+                        className="flex-1 h-9 text-xs font-mono"
+                      />
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => updateConfig({ navLinkActiveColor: null })}
+                      className="w-full text-xs"
+                    >
+                      Zurücksetzen
+                    </Button>
+                  </div>
+
+                  {/* Glow/Indicator Farbe */}
+                  <div className="space-y-2">
+                    <Label className="text-xs font-medium">Glow-Farbe</Label>
+                    <div className="flex gap-2 items-center">
+                      <input
+                        type="color"
+                        value={navConfig.navIndicatorColor ?? "#ffaa00"}
+                        onChange={(e) => updateConfig({ navIndicatorColor: e.target.value })}
+                        className="h-10 w-14 rounded border border-border cursor-pointer"
+                      />
+                      <Input
+                        type="text"
+                        value={navConfig.navIndicatorColor ?? ""}
+                        onChange={(e) => updateConfig({ navIndicatorColor: e.target.value || null })}
+                        placeholder="#ffaa00"
+                        className="flex-1 h-9 text-xs font-mono"
+                      />
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => updateConfig({ navIndicatorColor: null })}
+                      className="w-full text-xs"
+                    >
+                      Zurücksetzen
+                    </Button>
+                  </div>
+                </div>
+              </details>
+
+              <p className="text-xs text-muted-foreground">
+                Leer lassen = Theme-Standard verwenden. Farben sind hex (#RRGGBB) oder mit Alpha (#RRGGBBAA).
+              </p>
+            </div>
+
+            <Separator />
             <div className="space-y-4">
               <Label className="text-base font-semibold flex items-center gap-2">
                 <Zap className="h-5 w-5" />
@@ -741,107 +953,118 @@ export function NavigationEditorClient({
 
             <Separator />
 
-            {/* Presets */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <Label className="text-base font-semibold">Section/Background Presets</Label>
-                <Button variant="outline" size="sm" onClick={addPreset}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Preset hinzufügen
-                </Button>
-              </div>
+            {/* Presets - In Accordion for Advanced Mode */}
+            <Accordion type="single" collapsible className="w-full">
+              <AccordionItem value="advanced-presets" className="border border-border rounded-lg px-4">
+                <AccordionTrigger className="text-base font-semibold hover:no-underline">
+                  Advanced Configuration (JSON) — Section/Background Presets
+                </AccordionTrigger>
+                <AccordionContent className="space-y-4 pt-4">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs text-muted-foreground">
+                      Definiere Hintergrund- und Layout-Presets für Abschnitte
+                    </p>
+                    <Button variant="outline" size="sm" onClick={addPreset}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Preset hinzufügen
+                    </Button>
+                  </div>
 
-              <div className="space-y-3">
-                {presets.length === 0 ? (
-                  <div className="text-sm text-muted-foreground">Keine Presets vorhanden.</div>
-                ) : (
-                  presets.map((p, index) => (
-                    <div key={p.id} className="rounded-lg border border-border bg-card p-4 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium">Preset {index + 1}</span>
-                        <div className="flex items-center gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7"
-                            onClick={() => movePreset(index, -1)}
-                            disabled={index === 0}
-                          >
-                            <ChevronUp className="h-3 w-3" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7"
-                            onClick={() => movePreset(index, 1)}
-                            disabled={index === presets.length - 1}
-                          >
-                            <ChevronDown className="h-3 w-3" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 text-destructive"
-                            onClick={() => removePreset(index)}
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        </div>
+                  <div className="space-y-3">
+                    {presets.length === 0 ? (
+                      <div className="text-sm text-muted-foreground py-4 text-center">
+                        Keine Section-Presets vorhanden. Fügen Sie eines hinzu, um zu beginnen.
                       </div>
+                    ) : (
+                      presets.map((p, index) => (
+                        <div key={p.id} className="rounded-lg border border-border bg-card p-4 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium">Preset {index + 1}: {p.name}</span>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7"
+                                onClick={() => movePreset(index, -1)}
+                                disabled={index === 0}
+                              >
+                                <ChevronUp className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7"
+                                onClick={() => movePreset(index, 1)}
+                                disabled={index === presets.length - 1}
+                              >
+                                <ChevronDown className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-destructive"
+                                onClick={() => removePreset(index)}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </div>
 
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1.5">
-                          <Label className="text-xs">Name</Label>
-                          <Input value={p.name} onChange={(e) => updatePreset(index, { name: e.target.value })} />
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label className="text-xs">Beschreibung</Label>
-                          <Input
-                            value={p.description || ""}
-                            onChange={(e) => updatePreset(index, { description: e.target.value })}
-                          />
-                        </div>
-                      </div>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-1.5">
+                              <Label className="text-xs">Name</Label>
+                              <Input value={p.name} onChange={(e) => updatePreset(index, { name: e.target.value })} />
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label className="text-xs">Beschreibung</Label>
+                              <Input
+                                value={p.description || ""}
+                                onChange={(e) => updatePreset(index, { description: e.target.value })}
+                              />
+                            </div>
+                          </div>
 
-                      <div className="space-y-1.5">
-                        <Label className="text-xs">Section JSON</Label>
-                        <Textarea
-                          className="min-h-40 font-mono text-xs"
-                          value={
-                            presetJsonDraft[p.id] ??
-                            JSON.stringify(p.section ?? {}, null, 2)
-                          }
-                          onChange={(e) => {
-                            const v = e.target.value
-                            setPresetJsonDraft((prev) => ({ ...prev, [p.id]: v }))
-                          }}
-                          onBlur={() => {
-                            const raw = presetJsonDraft[p.id]
-                            if (!raw) return
-                            try {
-                              const parsed = JSON.parse(raw)
-                              const err = validateSectionJson(parsed)
-                              if (err) throw new Error(err)
-                              updatePreset(index, { section: parsed as BlockSectionProps })
-                              toast({ title: "Preset aktualisiert", description: "Section JSON wurde übernommen." })
-                            } catch (e) {
-                              toast({
-                                title: "Ungültiges JSON",
-                                description: e instanceof Error ? e.message : "Section JSON ist ungültig",
-                                variant: "destructive",
-                              })
-                            }
-                          }}
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          Validierung: Gradient stops 2–5, pos 0–100. MediaIds optional.
-                        </p>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
+                          <div className="space-y-1.5">
+                            <Label className="text-xs">Section JSON</Label>
+                            <Textarea
+                              className="min-h-40 font-mono text-xs"
+                              value={
+                                presetJsonDraft[p.id] ??
+                                JSON.stringify(p.section ?? {}, null, 2)
+                              }
+                              onChange={(e) => {
+                                const v = e.target.value
+                                setPresetJsonDraft((prev) => ({ ...prev, [p.id]: v }))
+                              }}
+                              onBlur={() => {
+                                const raw = presetJsonDraft[p.id]
+                                if (!raw) return
+                                try {
+                                  const parsed = JSON.parse(raw)
+                                  const err = validateSectionJson(parsed)
+                                  if (err) throw new Error(err)
+                                  updatePreset(index, { section: parsed as BlockSectionProps })
+                                  toast({ title: "Preset aktualisiert", description: "Section JSON wurde übernommen." })
+                                } catch (e) {
+                                  toast({
+                                    title: "Ungültiges JSON",
+                                    description: e instanceof Error ? e.message : "Section JSON ist ungültig",
+                                    variant: "destructive",
+                                  })
+                                }
+                              }}
+                            />
+                            <p className="text-xs text-muted-foreground">
+                              Validierung: Gradient stops 2–5, pos 0–100. MediaIds optional.
+                            </p>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
 
             <Separator />
 

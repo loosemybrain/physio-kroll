@@ -11,9 +11,12 @@ import { SectionBlock } from "../components/blocks/section-block"
 import { FaqAccordionBlock } from "../components/blocks/faq-accordion-block"
 import { GalleryBlock } from "../components/blocks/gallery-block"
 import { ImageSliderBlock } from "../components/blocks/image-slider-block"
+import { OpeningHoursBlock } from "../components/blocks/opening-hours-block"
 import { HeaderClient } from "../components/header/HeaderClient"
+import { FooterClient } from "../components/layout/FooterClient"
 import { DEFAULT_NAV_CONFIG } from "@/types/navigation"
 import type { BrandKey } from "@/types/navigation"
+import { DEFAULT_FOOTER_CONFIG } from "@/types/footer"
 import { Button } from "@/components/ui/button"
 export default function Home() {
   const [mood, setMood] = useState<HeroMood>("physiotherapy")
@@ -557,6 +560,24 @@ export default function Home() {
         ]}
       />
 
+      {/* Opening Hours */}
+      <OpeningHoursBlock
+        headline="Unsere Sprechzeiten"
+        subheadline="Wir sind persönlich und telefonisch für Sie erreichbar."
+        background="muted"
+        layout="twoColumn"
+        hours={[
+          { id: "mo", label: "Montag", value: "08:00 – 18:00 Uhr" },
+          { id: "di", label: "Dienstag", value: "08:00 – 18:00 Uhr" },
+          { id: "mi", label: "Mittwoch", value: "08:00 – 14:00 Uhr" },
+          { id: "do", label: "Donnerstag", value: "08:00 – 18:00 Uhr" },
+          { id: "fr", label: "Freitag", value: "08:00 – 14:00 Uhr" },
+          { id: "sa", label: "Samstag", value: "nach Vereinbarung" },
+          { id: "so", label: "Sonntag", value: "geschlossen" },
+        ]}
+        note="Termine außerhalb der Sprechzeiten sind nach Absprache möglich. Bitte nutzen Sie unser Kontaktformular oder rufen Sie uns an."
+      />
+
       {/* Contact Form Section */}
       <section id="contact" className="bg-background py-20">
         <div className="container mx-auto px-4">
@@ -569,6 +590,9 @@ export default function Home() {
           />
         </div>
       </section>
+
+      {/* Footer */}
+      <FooterClient brand={brand} footerConfig={DEFAULT_FOOTER_CONFIG} />
     </main>
   )
 }

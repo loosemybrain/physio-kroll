@@ -18,7 +18,7 @@ interface FooterClientProps {
  * Client Component that renders footer with brand-aware theme
  */
 export function FooterClient({ brand, footerConfig, pagesMap }: FooterClientProps) {
-  const theme = getFooterTheme(brand)
+  const theme = getFooterTheme(brand, footerConfig?.design)
 
   if (!footerConfig || footerConfig.sections.length === 0) {
     return null
@@ -28,13 +28,14 @@ export function FooterClient({ brand, footerConfig, pagesMap }: FooterClientProp
     <footer
       className={cn(
         "w-full border-t",
-        theme.bg,
         theme.border,
-        theme.text
+        theme.text,
+        theme.spacing.py
       )}
       aria-label="Footer"
+      style={{ backgroundColor: theme.colors.bg }}
     >
-      <div className="container mx-auto px-4 py-12">
+      <div className="container mx-auto px-4">
         {/* Main Footer Sections */}
         <div className="grid grid-cols-1 md:grid-cols-12 gap-x-8 gap-y-10">
           {footerConfig.sections.map((section) => (
@@ -49,10 +50,10 @@ export function FooterClient({ brand, footerConfig, pagesMap }: FooterClientProp
 
         {/* Bottom Bar */}
         {footerConfig.bottomBar?.enabled && (
-          <div className={cn("mt-12 pt-8 border-t", theme.border)}>
-            <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+          <div className={cn("mt-12 pt-8", theme.bottomBar.enabled && "border-t", theme.bottomBar.class)}>
+            <div className={cn("flex flex-col sm:flex-row items-center gap-4", theme.bottomBar.align)}>
               {footerConfig.bottomBar.left && (
-                <div className="flex-1">
+                <div>
                   <FooterBlock
                     block={footerConfig.bottomBar.left}
                     theme={theme}
@@ -61,7 +62,7 @@ export function FooterClient({ brand, footerConfig, pagesMap }: FooterClientProp
                 </div>
               )}
               {footerConfig.bottomBar.right && (
-                <div className="flex-1 flex justify-end">
+                <div>
                   <FooterBlock
                     block={footerConfig.bottomBar.right}
                     theme={theme}
@@ -99,11 +100,19 @@ function FooterSection({
   return (
     <div className={cn(spanClassMap[section.span])}>
       {section.title && (
-        <h2 className={cn("text-sm font-semibold mb-4", theme.text)}>
+        <h2 
+          className={cn(
+            "mb-4",
+            theme.typography.heading.size,
+            theme.typography.heading.weight,
+            theme.typography.heading.font
+          )}
+          style={{ color: theme.colors.heading }}
+        >
           {section.title}
         </h2>
       )}
-      <div className="space-y-4">
+      <div className={cn("space-y-4", theme.section.align)}>
         {section.blocks.map((block) => (
           <FooterBlock
             key={block.id}
@@ -132,7 +141,15 @@ function FooterBlock({
   switch (block.type) {
     case "text":
       return (
-        <div className={cn("text-sm whitespace-pre-line", theme.text)}>
+        <div 
+          className={cn(
+            "whitespace-pre-line",
+            theme.typography.body.size,
+            theme.typography.body.weight,
+            theme.typography.body.font
+          )}
+          style={{ color: theme.colors.text }}
+        >
           {block.text}
         </div>
       )
@@ -141,7 +158,15 @@ function FooterBlock({
       return (
         <div>
           {block.title && (
-            <h3 className={cn("text-sm font-semibold mb-2", theme.text)}>
+            <h3 
+              className={cn(
+                "mb-2",
+                theme.typography.heading.size,
+                theme.typography.heading.weight,
+                theme.typography.heading.font
+              )}
+              style={{ color: theme.colors.heading }}
+            >
               {block.title}
             </h3>
           )}
@@ -153,9 +178,11 @@ function FooterBlock({
                   target={link.newTab ? "_blank" : undefined}
                   rel={link.newTab ? "noopener noreferrer" : undefined}
                   className={cn(
-                    "text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded",
+                    "transition-colors outline-none rounded",
+                    theme.typography.body.size,
                     theme.link,
-                    theme.linkHover
+                    theme.linkHover,
+                    theme.focus,
                   )}
                 >
                   {link.label}
@@ -167,8 +194,6 @@ function FooterBlock({
       )
 
     case "pages":
-      // For pages, we'd need to load them client-side or pass as prop
-      // For now, render slugs as fallback
       if (block.pageSlugs.length === 0) {
         return null
       }
@@ -176,7 +201,15 @@ function FooterBlock({
       return (
         <div>
           {block.title && (
-            <h3 className={cn("text-sm font-semibold mb-2", theme.text)}>
+            <h3 
+              className={cn(
+                "mb-2",
+                theme.typography.heading.size,
+                theme.typography.heading.weight,
+                theme.typography.heading.font
+              )}
+              style={{ color: theme.colors.heading }}
+            >
               {block.title}
             </h3>
           )}
@@ -186,9 +219,11 @@ function FooterBlock({
                 <Link
                   href={`/${slug}`}
                   className={cn(
-                    "text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded",
+                    "transition-colors outline-none rounded",
+                    theme.typography.body.size,
                     theme.link,
-                    theme.linkHover
+                    theme.linkHover,
+                    theme.focus,
                   )}
                 >
                   {pagesMap.get(slug) || slug}
@@ -235,7 +270,7 @@ function FooterBlock({
         return (
           <Link
             href={block.href}
-            className="inline-block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded"
+            className={cn("inline-block outline-none rounded", theme.focus)}
           >
             {logoContent}
           </Link>
@@ -247,7 +282,15 @@ function FooterBlock({
 
     case "copyright":
       return (
-        <div className={cn("text-xs", theme.text)}>
+        <div 
+          className={cn(
+            "text-xs",
+            theme.typography.body.size,
+            theme.typography.body.weight,
+            theme.typography.body.font
+          )}
+          style={{ color: theme.colors.text }}
+        >
           {block.text}
         </div>
       )

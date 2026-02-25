@@ -5,6 +5,7 @@ import Link from "next/link"
 import { Palette, Type } from "lucide-react"
 
 export const dynamic = "force-dynamic"
+export const runtime = "nodejs"
 
 export default async function AdminSettings() {
   const brands: BrandKey[] = ["physiotherapy", "physio-konzept"]

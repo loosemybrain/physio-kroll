@@ -3,6 +3,7 @@
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { ArrowRight, Play, Heart, Zap } from "lucide-react"
+import { motion, useReducedMotion } from "framer-motion"
 
 export type HeroMood = "physiotherapy" | "physio-konzept"
 
@@ -18,11 +19,14 @@ interface HeroSectionProps {
   onCtaClick?: () => void
 }
 
-const defaultContent: Record<HeroMood, { headline: string; subheadline: string; ctaText: string }> = {
+const defaultContent: Record<
+  HeroMood,
+  { headline: string; subheadline: string; ctaText: string }
+> = {
   physiotherapy: {
-    headline: "Ihre Gesundheit in besten Händen",
+    headline: "Ihre Gesundheit in besten Handen",
     subheadline:
-      "Professionelle Physiotherapie mit ganzheitlichem Ansatz. Wir begleiten Sie auf dem Weg zu mehr Wohlbefinden und Lebensqualität.",
+      "Professionelle Physiotherapie mit ganzheitlichem Ansatz. Wir begleiten Sie auf dem Weg zu mehr Wohlbefinden und Lebensqualitat.",
     ctaText: "Termin vereinbaren",
   },
   "physio-konzept": {
@@ -46,86 +50,141 @@ export function HeroSection({
 }: HeroSectionProps) {
   const content = defaultContent[mood]
   const isCalm = mood === "physiotherapy"
+  const prefersReducedMotion = useReducedMotion()
+
+  const container = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: {
+        staggerChildren: prefersReducedMotion ? 0 : 0.12,
+        delayChildren: prefersReducedMotion ? 0 : 0.1,
+      },
+    },
+  }
+
+  const fadeUp = {
+    hidden: prefersReducedMotion
+      ? { opacity: 1 }
+      : { opacity: 0, y: 24 },
+    show: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] },
+    },
+  }
+
+  const fadeScale = {
+    hidden: prefersReducedMotion
+      ? { opacity: 1 }
+      : { opacity: 0, scale: 0.96 },
+    show: {
+      opacity: 1,
+      scale: 1,
+      transition: { duration: 0.7, ease: [0.22, 1, 0.36, 1] },
+    },
+  }
 
   return (
     <section
-      className={cn("relative min-h-[90vh] w-full overflow-hidden", isCalm ? "" : "physio-konzept")}
+      className={cn(
+        "relative min-h-[92vh] w-full overflow-hidden",
+        isCalm ? "" : "physio-konzept",
+      )}
       aria-labelledby="hero-headline"
     >
-      {/* Background Layer */}
-      <div className={cn("absolute inset-0 -z-10", isCalm ? "bg-hero-bg" : "bg-hero-bg")} aria-hidden="true">
-        {/* Decorative elements - prepared for Framer Motion */}
+      {/* Background */}
+      <div
+        className="absolute inset-0 -z-10 bg-hero-bg"
+        aria-hidden="true"
+      >
         {isCalm ? (
-          <div className="hero-decoration-calm absolute inset-0 opacity-30">
-            <div className="absolute right-0 top-0 h-[600px] w-[600px] rounded-full bg-hero-accent/10 blur-3xl" />
-            <div className="absolute bottom-0 left-0 h-[400px] w-[400px] rounded-full bg-hero-highlight blur-2xl" />
-          </div>
+          <>
+            <div className="absolute -top-32 right-0 h-[700px] w-[700px] rounded-full bg-primary/[0.06] blur-[120px]" />
+            <div className="absolute -bottom-40 -left-20 h-[500px] w-[500px] rounded-full bg-accent/[0.05] blur-[100px]" />
+            <div className="absolute left-1/2 top-1/3 h-[300px] w-[300px] -translate-x-1/2 rounded-full bg-hero-highlight/50 blur-[80px]" />
+          </>
         ) : (
-          <div className="hero-decoration-energetic absolute inset-0">
-            <div className="absolute -right-20 top-20 h-[500px] w-[500px] rounded-full bg-hero-accent/20 blur-3xl" />
-            <div className="absolute bottom-0 left-1/4 h-[300px] w-[600px] rounded-full bg-hero-accent/10 blur-2xl" />
-          </div>
+          <>
+            <div className="absolute -right-32 top-16 h-[600px] w-[600px] rounded-full bg-primary/[0.12] blur-[120px]" />
+            <div className="absolute bottom-0 left-1/4 h-[400px] w-[700px] rounded-full bg-primary/[0.06] blur-[100px]" />
+          </>
         )}
       </div>
 
-      <div className="container mx-auto flex min-h-[90vh] flex-col items-center justify-center gap-8 px-4 py-16 lg:flex-row lg:gap-12 lg:py-24">
+      <div className="container mx-auto flex min-h-[92vh] flex-col items-center justify-center gap-10 px-4 py-20 lg:flex-row lg:gap-16 lg:py-28">
         {/* Content */}
-        <header
+        <motion.header
+          variants={container}
+          initial="hidden"
+          animate="show"
           className={cn(
-            "hero-content flex max-w-2xl flex-1 flex-col gap-6",
-            isCalm ? "items-start text-left" : "items-center text-center lg:items-start lg:text-left",
+            "flex max-w-2xl flex-1 flex-col gap-6",
+            isCalm
+              ? "items-start text-left"
+              : "items-center text-center lg:items-start lg:text-left",
           )}
         >
           {/* Badge */}
-          <div
-            className={cn(
-              "hero-badge inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium",
-              isCalm ? "bg-primary/10 text-primary" : "bg-primary/20 text-primary",
-            )}
-          >
-            {isCalm ? (
-              <>
-                <Heart className="h-4 w-4" aria-hidden="true" />
-                <span>Vertrauen & Fürsorge</span>
-              </>
-            ) : (
-              <>
-                <Zap className="h-4 w-4" aria-hidden="true" />
-                <span>Performance & Erfolg</span>
-              </>
-            )}
-          </div>
+          <motion.div variants={fadeUp}>
+            <div
+              className={cn(
+                "inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium backdrop-blur-sm",
+                isCalm
+                  ? "border-primary/15 bg-primary/[0.06] text-primary"
+                  : "border-primary/20 bg-primary/[0.08] text-primary",
+              )}
+            >
+              {isCalm ? (
+                <>
+                  <Heart className="h-3.5 w-3.5" aria-hidden="true" />
+                  <span>Vertrauen & Fürsorge</span>
+                </>
+              ) : (
+                <>
+                  <Zap className="h-3.5 w-3.5" aria-hidden="true" />
+                  <span>Performance & Erfolg</span>
+                </>
+              )}
+            </div>
+          </motion.div>
 
           {/* Headline */}
-          <h1
+          <motion.h1
             id="hero-headline"
+            variants={fadeUp}
             className={cn(
-              "hero-headline text-balance",
+              "text-balance",
               isCalm
-                ? "font-serif text-4xl font-semibold tracking-tight text-foreground md:text-5xl lg:text-6xl"
-                : "font-sans text-4xl font-bold uppercase tracking-tight text-foreground md:text-5xl lg:text-7xl",
+                ? "font-serif text-4xl font-semibold tracking-tight text-foreground md:text-5xl lg:text-6xl xl:text-7xl"
+                : "font-sans text-4xl font-bold uppercase tracking-tight text-foreground md:text-5xl lg:text-7xl xl:text-8xl",
             )}
           >
             {headline || content.headline}
-          </h1>
+          </motion.h1>
 
           {/* Subheadline */}
-          <p
+          <motion.p
+            variants={fadeUp}
             className={cn(
-              "hero-subheadline max-w-xl text-pretty leading-relaxed",
-              isCalm ? "text-lg text-muted-foreground md:text-xl" : "text-lg text-muted-foreground md:text-xl",
+              "max-w-xl text-pretty leading-relaxed",
+              isCalm
+                ? "text-lg text-muted-foreground md:text-xl"
+                : "text-lg text-muted-foreground md:text-xl",
             )}
           >
             {subheadline || content.subheadline}
-          </p>
+          </motion.p>
 
           {/* CTA */}
-          <div className="hero-cta mt-4 flex flex-wrap items-center gap-4">
+          <motion.div variants={fadeUp} className="mt-2 flex flex-wrap items-center gap-4">
             <Button
               size="lg"
               className={cn(
-                "group gap-2 text-base font-semibold",
-                isCalm ? "rounded-full px-8" : "rounded-md px-8 uppercase tracking-wide",
+                "group gap-2 text-base font-semibold shadow-lg shadow-primary/20 transition-all duration-300 hover:shadow-xl hover:shadow-primary/30",
+                isCalm
+                  ? "rounded-full px-8 py-6"
+                  : "rounded-xl px-8 py-6 uppercase tracking-wide",
               )}
               onClick={onCtaClick}
               asChild={!!ctaHref}
@@ -133,12 +192,18 @@ export function HeroSection({
               {ctaHref ? (
                 <a href={ctaHref}>
                   {ctaText || content.ctaText}
-                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" aria-hidden="true" />
+                  <ArrowRight
+                    className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1"
+                    aria-hidden="true"
+                  />
                 </a>
               ) : (
                 <>
                   {ctaText || content.ctaText}
-                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" aria-hidden="true" />
+                  <ArrowRight
+                    className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1"
+                    aria-hidden="true"
+                  />
                 </>
               )}
             </Button>
@@ -147,38 +212,48 @@ export function HeroSection({
               <Button
                 variant="outline"
                 size="lg"
-                className="group gap-2 rounded-md border-border/50 bg-transparent text-base uppercase tracking-wide text-foreground hover:bg-secondary hover:text-secondary-foreground"
+                className="group gap-2 rounded-xl border-border/50 bg-transparent px-8 py-6 text-base uppercase tracking-wide text-foreground hover:bg-secondary hover:text-secondary-foreground"
               >
                 <Play className="h-4 w-4" aria-hidden="true" />
                 Video ansehen
               </Button>
             )}
-          </div>
+          </motion.div>
 
-          {/* Trust indicators for calm mood */}
+          {/* Trust indicators */}
           {isCalm && (
-            <div className="hero-trust mt-6 flex flex-wrap items-center gap-6 text-sm text-muted-foreground">
-              <div className="flex items-center gap-2">
-                <div className="h-2 w-2 rounded-full bg-primary" aria-hidden="true" />
-                <span>Über 15 Jahre Erfahrung</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="h-2 w-2 rounded-full bg-primary" aria-hidden="true" />
-                <span>Alle Kassen</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="h-2 w-2 rounded-full bg-primary" aria-hidden="true" />
-                <span>Modernste Therapien</span>
-              </div>
-            </div>
+            <motion.div
+              variants={fadeUp}
+              className="mt-4 flex flex-wrap items-center gap-6 text-sm text-muted-foreground"
+            >
+              {["Über 15 Jahre Erfahrung", "Alle Kassen", "Modernste Therapien"].map(
+                (item) => (
+                  <div key={item} className="flex items-center gap-2.5">
+                    <div
+                      className="h-1.5 w-1.5 rounded-full bg-primary"
+                      aria-hidden="true"
+                    />
+                    <span>{item}</span>
+                  </div>
+                ),
+              )}
+            </motion.div>
           )}
-        </header>
+        </motion.header>
 
-        {/* Media Section */}
+        {/* Media */}
         {showMedia && (
-          <figure className={cn("hero-media relative flex-1", isCalm ? "max-w-lg" : "max-w-xl")}>
+          <motion.figure
+            variants={fadeScale}
+            initial="hidden"
+            animate="show"
+            className={cn(
+              "relative flex-1",
+              isCalm ? "max-w-lg" : "max-w-xl",
+            )}
+          >
             {mediaType === "video" && mediaUrl ? (
-              <div className="relative aspect-video overflow-hidden rounded-2xl shadow-2xl">
+              <div className="relative aspect-video overflow-hidden rounded-3xl shadow-2xl">
                 <video
                   src={mediaUrl}
                   autoPlay
@@ -192,61 +267,89 @@ export function HeroSection({
             ) : (
               <div
                 className={cn(
-                  "relative overflow-hidden shadow-2xl",
-                  isCalm ? "aspect-[4/5] rounded-3xl" : "aspect-[3/4] rounded-2xl",
+                  "relative overflow-hidden",
+                  isCalm
+                    ? "aspect-[4/5] rounded-[2rem] shadow-[0_8px_60px_-12px_rgba(0,0,0,0.15)]"
+                    : "aspect-[3/4] rounded-3xl shadow-[0_8px_60px_-12px_rgba(0,0,0,0.25)]",
                 )}
               >
                 <img
                   src={
                     mediaUrl ||
                     (isCalm
-                      ? "/placeholder.svg?height=800&width=640&query=calm physiotherapy treatment massage wellness"
-                      : "/placeholder.svg?height=800&width=600&query=athletic sports training fitness workout")
+                      ? "/images/hero-physio.jpg"
+                      : "/images/hero-sport.jpg")
                   }
                   alt={
                     isCalm
-                      ? "Professional physiotherapy treatment in a calm, welcoming environment"
-                      : "Athlete training with focused determination and energy"
+                      ? "Professionelle Physiotherapie in moderner Umgebung"
+                      : "Athlet beim intensiven Training"
                   }
                   className="h-full w-full object-cover"
                   loading="eager"
                 />
 
-                {/* Overlay decorations */}
+                {/* Overlay */}
                 {isCalm ? (
                   <div className="absolute inset-0 bg-gradient-to-t from-primary/10 to-transparent" />
                 ) : (
-                  <div className="absolute inset-0 bg-gradient-to-t from-background/60 via-transparent to-transparent" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-background/70 via-transparent to-transparent" />
                 )}
 
-                {/* Floating card for PhysioKonzept */}
+                {/* Floating card */}
                 {!isCalm && (
-                  <div className="absolute bottom-6 left-6 right-6 rounded-xl bg-card/90 p-4 backdrop-blur-sm">
+                  <div className="absolute bottom-6 left-6 right-6 rounded-2xl border border-border/20 bg-card/90 p-5 backdrop-blur-md">
                     <p className="text-sm font-semibold uppercase tracking-wide text-card-foreground">
                       Nächstes Training
                     </p>
-                    <p className="mt-1 text-2xl font-bold text-primary">Heute, 18:00</p>
+                    <p className="mt-1 text-2xl font-bold text-primary">
+                      Heute, 18:00
+                    </p>
                   </div>
                 )}
               </div>
             )}
 
-            {/* Decorative floating element for calm mood */}
+            {/* Stat card */}
             {isCalm && (
-              <div className="absolute -bottom-4 -right-4 rounded-2xl bg-card p-6 shadow-lg md:-bottom-6 md:-right-6">
+              <motion.div
+                initial={prefersReducedMotion ? false : { opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.5, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                className="absolute -bottom-5 -right-5 rounded-2xl border border-border/50 bg-card/95 p-6 shadow-xl backdrop-blur-sm md:-bottom-6 md:-right-6"
+              >
                 <p className="text-3xl font-bold text-primary">98%</p>
-                <p className="text-sm text-muted-foreground">Patientenzufriedenheit</p>
-              </div>
+                <p className="text-sm text-muted-foreground">
+                  Patientenzufriedenheit
+                </p>
+              </motion.div>
             )}
-          </figure>
+          </motion.figure>
         )}
       </div>
 
-      {/* Bottom scroll indicator */}
-      <div className="hero-scroll-indicator absolute bottom-8 left-1/2 -translate-x-1/2" aria-hidden="true">
-        <div className={cn("h-12 w-6 rounded-full border-2", isCalm ? "border-primary/30" : "border-primary/50")}>
-          <div
-            className={cn("mx-auto mt-2 h-2 w-1 animate-bounce rounded-full", isCalm ? "bg-primary/50" : "bg-primary")}
+      {/* Scroll indicator */}
+      <div
+        className="absolute bottom-8 left-1/2 -translate-x-1/2"
+        aria-hidden="true"
+      >
+        <div
+          className={cn(
+            "h-12 w-6 rounded-full border-2",
+            isCalm ? "border-primary/20" : "border-primary/40",
+          )}
+        >
+          <motion.div
+            animate={{ y: [0, 8, 0] }}
+            transition={{
+              duration: 1.6,
+              repeat: Infinity,
+              ease: "easeInOut",
+            }}
+            className={cn(
+              "mx-auto mt-2 h-2 w-1 rounded-full",
+              isCalm ? "bg-primary/40" : "bg-primary/70",
+            )}
           />
         </div>
       </div>

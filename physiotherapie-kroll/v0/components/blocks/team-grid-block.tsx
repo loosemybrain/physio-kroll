@@ -351,7 +351,7 @@ function MemberCard({
         className="pointer-events-none absolute inset-0 rounded-2xl opacity-0 transition-opacity duration-500 group-hover:opacity-100"
         style={{
           background:
-            "radial-gradient(ellipse at 30% 0%, oklch(0.45 0.12 160 / 0.06), transparent 60%)",
+            "radial-gradient(ellipse at 30% 0%, oklch(0.48 0.14 220 / 0.06), transparent 60%)",
         }}
         aria-hidden="true"
       />

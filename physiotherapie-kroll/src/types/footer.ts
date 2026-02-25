@@ -2,6 +2,62 @@ import type { MediaValue } from "./cms"
 import type { BrandKey } from "@/components/brand/brandAssets"
 
 /**
+ * Footer spacing options
+ */
+export type FooterSpacing = "compact" | "normal" | "spacious"
+
+/**
+ * Section alignment options
+ */
+export type SectionAlign = "left" | "center" | "right"
+
+/**
+ * Typography options
+ */
+export type TypographySize = "sm" | "base" | "lg"
+export type TypographyWeight = "normal" | "semibold" | "bold"
+export type FontFamily = "sans" | "serif" | "mono" | "geist-sans" | "geist-mono"
+
+/**
+ * Footer design configuration
+ */
+export type FooterDesign = {
+  bgClass?: string
+  textClass?: string
+  headingClass?: string
+  borderClass?: string
+  linkClass?: string
+  linkHoverClass?: string
+  focus?: string
+  mutedText?: string
+  spacing?: {
+    py?: FooterSpacing
+  }
+  section?: {
+    align?: SectionAlign
+  }
+  typography?: {
+    bodySize?: TypographySize
+    bodyWeight?: TypographyWeight
+    bodyFont?: FontFamily
+    headingSize?: TypographySize
+    headingWeight?: TypographyWeight
+    headingFont?: FontFamily
+  }
+  colors?: {
+    bgCustom?: string
+    textCustom?: string
+    headingCustom?: string
+    accentCustom?: string
+  }
+  bottomBar?: {
+    dividerEnabled?: boolean
+    dividerClass?: string
+    align?: SectionAlign
+  }
+}
+
+/**
  * Footer block types
  */
 export type FooterBlock =
@@ -57,6 +113,7 @@ export type FooterConfig = {
   variant?: "default"
   sections: FooterSection[] // min 2, max 5
   bottomBar?: FooterBottomBar
+  design?: FooterDesign
 }
 
 /**

@@ -241,7 +241,7 @@ export function SectionBlock({
             className="absolute left-1/2 top-0 h-[600px] w-[900px] -translate-x-1/2 -translate-y-1/4 rounded-full opacity-[0.12]"
             style={{
               background:
-                "radial-gradient(ellipse at center, oklch(0.55 0.1 160 / 0.5) 0%, transparent 70%)",
+                "radial-gradient(ellipse at center, oklch(0.56 0.12 220 / 0.5) 0%, transparent 70%)",
             }}
           />
           {/* Secondary subtle bottom-right warmth */}
@@ -262,7 +262,7 @@ export function SectionBlock({
             className="absolute left-1/2 top-0 h-[700px] w-[1000px] -translate-x-1/2 -translate-y-1/3 rounded-full opacity-[0.15]"
             style={{
               background:
-                "radial-gradient(ellipse at center, oklch(0.45 0.12 160 / 0.6) 0%, oklch(0.55 0.1 160 / 0.15) 40%, transparent 70%)",
+                "radial-gradient(ellipse at center, oklch(0.48 0.14 220 / 0.6) 0%, oklch(0.56 0.12 220 / 0.15) 40%, transparent 70%)",
             }}
           />
           {/* Subtle accent glow bottom-left */}
@@ -298,7 +298,7 @@ export function SectionBlock({
             "rounded-3xl px-8 py-14 md:px-14 md:py-20",
             // Soft outer shadow with blue tint for brand
             background === "gradient-brand"
-              ? "shadow-[0_4px_24px_-4px_oklch(0.45_0.12_160_/_0.06),0_12px_48px_-12px_oklch(0.45_0.12_160_/_0.08)]"
+              ? "shadow-[0_4px_24px_-4px_oklch(0.48_0.14_220_/_0.06),0_12px_48px_-12px_oklch(0.48_0.14_220_/_0.08)]"
               : "shadow-[0_4px_24px_-4px_rgba(0,0,0,0.04),0_12px_48px_-12px_rgba(0,0,0,0.06)]",
             // Background & border
             background === "muted"
@@ -314,7 +314,7 @@ export function SectionBlock({
               background !== "none" &&
               surfaceHovered &&
               (background === "gradient-brand"
-                ? "scale-[1.008] shadow-[0_8px_32px_-4px_oklch(0.45_0.12_160_/_0.1),0_20px_64px_-16px_oklch(0.45_0.12_160_/_0.12)]"
+                ? "scale-[1.008] shadow-[0_8px_32px_-4px_oklch(0.48_0.14_220_/_0.1),0_20px_64px_-16px_oklch(0.48_0.14_220_/_0.12)]"
                 : "scale-[1.008] shadow-[0_8px_32px_-4px_rgba(0,0,0,0.06),0_20px_64px_-16px_rgba(0,0,0,0.1)]"),
           )}
           onMouseEnter={() => setSurfaceHovered(true)}
