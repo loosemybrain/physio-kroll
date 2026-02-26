@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createSupabaseServerClient } from "@/lib/supabase/server"
-import { deleteCustomFont, deleteFontFile } from "@/lib/fonts/storage.custom"
+import { createSupabaseServerClient, getSupabaseAdmin } from "@/lib/supabase/server"
+import { deleteCustomFont } from "@/lib/fonts/storage.custom"
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,25 +24,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Font aus Datenbank abrufen
-    const { data: font, error: fetchError } = await supabase
-      .from("custom_fonts")
-      .select("*")
-      .eq("id", fontId)
-      .single()
+    // Admin client für DB/Storage Mutationen
+    const admin = await getSupabaseAdmin()
 
-    if (fetchError || !font) {
-      return NextResponse.json(
-        { error: "Font nicht gefunden" },
-        { status: 404 }
-      )
-    }
-
-    // Datei löschen
-    await deleteFontFile(font.file_name)
-
-    // Font deaktivieren (nicht wirklich löschen, für Audit-Trail)
-    await deleteCustomFont(fontId)
+    // Font löschen (Datei + DB entry)
+    await deleteCustomFont(admin, fontId)
 
     return NextResponse.json({
       success: true,

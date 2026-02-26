@@ -61,3 +61,17 @@ export async function setSansFontPreset(presetId: string): Promise<void> {
     throw new Error("Failed to update sans_preset in site_settings: " + updateError.message)
   }
 }
+
+/**
+ * Update the sans font preset (wrapper with error handling).
+ * Returns true on success, false on error.
+ */
+export async function updateSansFontPreset(presetId: string): Promise<boolean> {
+  try {
+    await setSansFontPreset(presetId)
+    return true
+  } catch (error) {
+    console.error("Failed to update sans font preset:", error)
+    return false
+  }
+}
