@@ -15,6 +15,9 @@ export interface CustomFont {
   label: string
   description?: string
   file_url: string
+  font_weight: string
+  font_style: string
+  created_at: string
 }
 
 interface UploadFontComponentProps {
