@@ -6,32 +6,25 @@
  */
 
 export const securityHeaders = {
-  // Content-Security-Policy: Block external font requests
   "Content-Security-Policy": [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // Next.js requires unsafe-eval for now
-    "style-src 'self' 'unsafe-inline'",
-    "font-src 'self'", // ⚠️ KEY: Only allow self-hosted fonts, block googleapis/gstatic
-    "img-src 'self' data: https:",
-    "connect-src 'self' connect-src 'self' https://*.supabase.co wss://*.supabase.co;",
-    "frame-src 'self'",
     "base-uri 'self'",
     "form-action 'self'",
+    "frame-ancestors 'none'",
+
+    // Next.js: Prod meist ohne unsafe-eval möglich; wenn nötig, später gezielt zuschalten
+    "script-src 'self' 'unsafe-inline'",
+
+    "style-src 'self' 'unsafe-inline'",
+    "font-src 'self'",
+    "img-src 'self' data: https:",
+    "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
+    "frame-src 'self'",
   ].join("; "),
 
-  // Prevent clickjacking
   "X-Frame-Options": "DENY",
-
-  // Disable MIME type sniffing
   "X-Content-Type-Options": "nosniff",
-
-  // Enable XSS protection
-  "X-XSS-Protection": "1; mode=block",
-
-  // Referrer policy
   "Referrer-Policy": "strict-origin-when-cross-origin",
-
-  // Permissions policy (formerly Feature-Policy)
   "Permissions-Policy": "geolocation=(), microphone=(), camera=()",
 }
 
