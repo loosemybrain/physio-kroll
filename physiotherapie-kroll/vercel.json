@@ -1,0 +1,4 @@
+{
+  "buildCommand": "TURBOPACK_UNSTABLE=false next build",
+  "installCommand": "npm install"
+}
