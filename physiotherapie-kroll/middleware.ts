@@ -8,7 +8,9 @@ import { NextResponse, type NextRequest } from "next/server"
  * - No process.env that could throw
  * - Only basic request/header manipulation
  * 
- * Stronger auth gating happens in src/app/admin/layout.tsx
+ * Auth gating is handled server-side:
+ * - /admin/* routes: see src/app/admin/layout.tsx
+ * - /api/admin/* routes: auth checks in individual route handlers
  */
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
@@ -25,37 +27,6 @@ export function middleware(request: NextRequest) {
     brand = "physio-konzept"
   }
   response.headers.set("x-brand", brand)
-
-  // 3) Admin route: minimal cookie-based pre-check
-  // Full auth validation happens in admin/layout.tsx
-  if (pathname.startsWith("/admin")) {
-    const hasAuthCookie =
-      request.cookies.has("sb-access-token") ||
-      request.cookies.has("sb-refresh-token") ||
-      request.cookies.has("supabase-auth-token")
-
-    if (!hasAuthCookie) {
-      const url = request.nextUrl.clone()
-      url.pathname = "/auth/login"
-      url.searchParams.set("next", pathname)
-      return NextResponse.redirect(url)
-    }
-  }
-
-  // 4) API /admin routes: same minimal pre-check, return 401 if no cookie
-  if (pathname.startsWith("/api/admin")) {
-    const hasAuthCookie =
-      request.cookies.has("sb-access-token") ||
-      request.cookies.has("sb-refresh-token") ||
-      request.cookies.has("supabase-auth-token")
-
-    if (!hasAuthCookie) {
-      return NextResponse.json(
-        { error: "Unauthorized", message: "Authentication required" },
-        { status: 401 }
-      )
-    }
-  }
 
   return response
 }

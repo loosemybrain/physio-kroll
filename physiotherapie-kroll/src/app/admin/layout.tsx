@@ -11,12 +11,20 @@ export const metadata: Metadata = {
   generator: "v0.app",
 }
 
+/**
+ * Admin Layout - Server-side auth gating
+ * 
+ * Redirects unauthenticated users to /auth/login.
+ * This is the only place where /admin auth is enforced.
+ * Middleware does NOT redirect to avoid loops.
+ */
 export default async function Layout({ children }: { children: React.ReactNode }) {
   const supabase = await createSupabaseServerClient()
   const { data: userData } = await supabase.auth.getUser()
 
   if (!userData.user) {
-    redirect("/auth/login?next=" + encodeURIComponent("/admin/pages"))
+    // Redirect to login; user will be sent back to /admin/pages after auth
+    redirect("/auth/login?next=/admin/pages")
   }
 
   return <AdminClientShell user={userData.user}>{children}</AdminClientShell>
