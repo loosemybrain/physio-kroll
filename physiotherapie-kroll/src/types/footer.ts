@@ -143,6 +143,7 @@ export type FooterGlassmorphism = {
   borderOpacity?: number
   borderColor?: string
   highlightLine?: boolean
+  highlightColor?: string
   shadowPreset?: string
   tintColor?: string
 }

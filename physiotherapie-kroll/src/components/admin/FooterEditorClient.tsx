@@ -646,6 +646,25 @@ export function FooterEditorClient({
                           <Label htmlFor="glass-highlight" className="text-xs font-medium">Highlight-Linie oben</Label>
                         </div>
 
+                        {footerConfig.glassmorphism?.highlightLine && (
+                          <div className="space-y-2">
+                            <Label className="text-xs">Highlight-Farbe</Label>
+                            <input
+                              type="color"
+                              value={footerConfig.glassmorphism?.highlightColor || "#e5e7eb"}
+                              onChange={(e) => {
+                                updateConfig({
+                                  glassmorphism: {
+                                    ...footerConfig.glassmorphism,
+                                    highlightColor: e.target.value,
+                                  },
+                                })
+                              }}
+                              className="h-8 w-full rounded border border-input cursor-pointer"
+                            />
+                          </div>
+                        )}
+
                         <div className="space-y-2 border-t pt-3">
                           <Label className="text-xs">Border-Farbe</Label>
                           <input
