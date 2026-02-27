@@ -70,7 +70,7 @@ export async function Footer({ brand }: FooterProps) {
     >
       <div className="container mx-auto px-4">
         {/* Main Footer Sections */}
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-x-8 gap-y-10">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-x-8 gap-y-10 auto-rows-max">
           {footerConfig.sections.map((section) => (
             <FooterSection
               key={section.id}
@@ -136,7 +136,7 @@ function FooterSection({
   } as const
 
   return (
-    <div className={cn(spanClassMap[section.span])}>
+    <div className={cn(spanClassMap[section.span], "h-full")}>
       {section.title && (
         <h2 
           className={cn(
@@ -150,7 +150,7 @@ function FooterSection({
           {section.title}
         </h2>
       )}
-      <div className={cn("space-y-4", theme.section.align)}>
+      <div className={cn("space-y-4 h-full", theme.section.align)}>
         {section.blocks.map((block) => (
           <FooterBlock
             key={block.id}
