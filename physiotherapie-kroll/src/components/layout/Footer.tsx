@@ -68,7 +68,7 @@ export async function Footer({ brand }: FooterProps) {
       aria-label="Footer"
       style={{ backgroundColor: theme.colors.bg }}
     >
-      <div className="container mx-auto px-4">
+      <div className="mx-auto w-full max-w-7xl px-4">
         {/* Main Footer Sections */}
         <div className="grid grid-cols-1 md:grid-cols-12 gap-x-8 gap-y-10 auto-rows-max">
           {footerConfig.sections.map((section) => (
