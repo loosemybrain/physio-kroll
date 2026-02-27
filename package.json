@@ -1,8 +1,0 @@
-{
-  "dependencies": {
-    "@supabase/supabase-js": "^2.90.1",
-    "framer-motion": "^12.26.2",
-    "tailwindcss": "^4.1.18",
-    "zod": "^4.3.5"
-  }
-}

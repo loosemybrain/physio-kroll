@@ -1,4 +1,5 @@
 {
-  "buildCommand": "TURBOPACK_UNSTABLE=false next build",
-  "installCommand": "npm install"
+  "buildCommand": "next build",
+  "installCommand": "npm install",
+  "outputDirectory": ".next"
 }
