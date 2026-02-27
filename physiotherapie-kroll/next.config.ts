@@ -4,9 +4,6 @@ import { securityHeaders } from "./src/lib/security/headers"
 const nextConfig: NextConfig = {
   /* config options here */
   reactCompiler: true,
-  turbopack: {
-    root: __dirname,
-  },
   images: {
     remotePatterns: [
       {
