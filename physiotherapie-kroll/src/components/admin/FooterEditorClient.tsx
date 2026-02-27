@@ -471,35 +471,29 @@ export function FooterEditorClient({
 
                     {(footerConfig.background?.mode === "image" || footerConfig.background?.mode === "video") && (
                       <div className="space-y-3">
-                        <div className="space-y-2">
-                          <Label className="text-xs">Media</Label>
-                          <div className="flex gap-2">
-                            <Input
-                              value={footerConfig.background?.mediaId || footerConfig.background?.mediaUrl || ""}
-                              onChange={(e) => {
-                                updateConfig({
-                                  background: {
-                                    ...footerConfig.background,
-                                    mediaId: e.target.value,
-                                  },
-                                })
-                              }}
-                              placeholder="Asset ID oder URL"
-                              className="text-sm flex-1"
-                            />
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                // MediaPickerDialog opening would go here
-                                // For now, just showing placeholder
-                              }}
-                              className="px-3"
-                            >
-                              Durchsuchen
-                            </Button>
-                          </div>
-                        </div>
+                        <ImageField
+                          id={`footer-background-${footerConfig.background?.mode}`}
+                          label={footerConfig.background?.mode === "video" ? "Video" : "Hintergrundbild"}
+                          value={footerConfig.background?.mediaUrl || ""}
+                          onChange={(url) => {
+                            updateConfig({
+                              background: {
+                                ...footerConfig.background,
+                                mediaUrl: url || undefined,
+                              },
+                            })
+                          }}
+                          onMediaSelect={(mediaId, url) => {
+                            updateConfig({
+                              background: {
+                                ...footerConfig.background,
+                                mediaId,
+                                mediaUrl: url,
+                              },
+                            })
+                          }}
+                          placeholder={footerConfig.background?.mode === "video" ? "/placeholder-video.mp4" : "/placeholder-image.jpg"}
+                        />
                       </div>
                     )}
 

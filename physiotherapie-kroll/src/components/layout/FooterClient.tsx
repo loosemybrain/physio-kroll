@@ -45,6 +45,25 @@ export function FooterClient({ brand, footerConfig, pagesMap }: FooterClientProp
           backgroundColor: theme.colors.bg,
         }}
       >
+        {/* Background Media (Image/Video) */}
+        {footerConfig?.background?.mode === "image" && footerConfig?.background?.mediaUrl && (
+          <img
+            src={footerConfig.background.mediaUrl}
+            alt="Footer background"
+            className="absolute inset-0 h-full w-full object-cover"
+          />
+        )}
+        {footerConfig?.background?.mode === "video" && footerConfig?.background?.mediaUrl && (
+          <video
+            src={footerConfig.background.mediaUrl}
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="absolute inset-0 h-full w-full object-cover"
+          />
+        )}
+
         {/* Overlay for readability */}
         {footerConfig?.background?.overlay?.enabled && (
           <div
