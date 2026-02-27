@@ -87,7 +87,7 @@ export function MediaLibrary(props: MediaLibraryProps) {
   const [renameFolderName, setRenameFolderName] = React.useState("")
   const [actionLoading, setActionLoading] = React.useState<string | null>(null)
   const fileRef = React.useRef<HTMLInputElement | null>(null)
-  const folderRef = React.useRef<HTMLInputElement | null>(null)
+  const folderInputRef = React.useRef<HTMLInputElement | null>(null)
 
   const loadFolders = React.useCallback(async (brand: BrandKey) => {
     try {
@@ -133,6 +133,14 @@ export function MediaLibrary(props: MediaLibraryProps) {
   React.useEffect(() => {
     loadAssets(activeBrand, selectedFolderId)
   }, [activeBrand, selectedFolderId, loadAssets])
+
+  // Set folder input attributes via DOM to bypass TS limitation
+  React.useEffect(() => {
+    const el = folderInputRef.current
+    if (!el) return
+    el.setAttribute("webkitdirectory", "")
+    el.setAttribute("directory", "")
+  }, [])
 
   const handleCreateFolder = React.useCallback(async () => {
     if (!newFolderName.trim()) {
@@ -558,12 +566,10 @@ export function MediaLibrary(props: MediaLibraryProps) {
               className="hidden"
             />
             <Input
-              ref={folderRef}
+              ref={folderInputRef}
               type="file"
               accept="image/*,video/*"
               multiple
-              webkitdirectory="true"
-              directory="true"
               onChange={(e) => {
                 const files = e.target.files
                 if (files && files.length > 0) {
@@ -577,7 +583,7 @@ export function MediaLibrary(props: MediaLibraryProps) {
               {uploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
               Hochladen
             </Button>
-            <Button onClick={() => folderRef.current?.click()} disabled={uploading} variant="outline" title="Ordner hochladen">
+            <Button onClick={() => folderInputRef.current?.click()} disabled={uploading} variant="outline" title="Ordner hochladen">
               <Folder className="mr-2 h-4 w-4" />
               Ordner
             </Button>
