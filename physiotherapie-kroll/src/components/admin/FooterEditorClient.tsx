@@ -382,6 +382,260 @@ export function FooterEditorClient({
 
                   <Separator />
 
+                  {/* Footer Background */}
+                  <div className="space-y-4 rounded-lg border border-border p-4">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-base font-semibold">Hintergrund</Label>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => updateConfig({ background: undefined })}
+                      >
+                        <RotateCcw className="mr-2 h-4 w-4" />
+                        Zurücksetzen
+                      </Button>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      <Label className="text-sm font-medium">Typ</Label>
+                      <Select
+                        value={footerConfig.background?.mode || "transparent"}
+                        onValueChange={(value) => {
+                          updateConfig({
+                            background: {
+                              ...footerConfig.background,
+                              mode: value as any,
+                            },
+                          })
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="transparent">Transparent</SelectItem>
+                          <SelectItem value="color">Farbe</SelectItem>
+                          <SelectItem value="gradient">Verlauf</SelectItem>
+                          <SelectItem value="image">Bild</SelectItem>
+                          <SelectItem value="video">Video</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {footerConfig.background?.mode === "color" && (
+                      <div className="space-y-2">
+                        <Label className="text-xs">Farbe</Label>
+                        <input
+                          type="color"
+                          value={footerConfig.background?.color || "#ffffff"}
+                          onChange={(e) => {
+                            updateConfig({
+                              background: {
+                                ...footerConfig.background,
+                                color: e.target.value,
+                              },
+                            })
+                          }}
+                          className="h-10 w-full rounded border border-input cursor-pointer"
+                        />
+                      </div>
+                    )}
+
+                    {footerConfig.background?.mode === "gradient" && (
+                      <div className="space-y-2">
+                        <Label className="text-xs">Preset</Label>
+                        <Select
+                          value={footerConfig.background?.gradientPreset || "soft"}
+                          onValueChange={(value) => {
+                            updateConfig({
+                              background: {
+                                ...footerConfig.background,
+                                gradientPreset: value as any,
+                              },
+                            })
+                          }}
+                        >
+                          <SelectTrigger className="h-8 text-sm">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="soft">Soft</SelectItem>
+                            <SelectItem value="aurora">Aurora</SelectItem>
+                            <SelectItem value="ocean">Ocean</SelectItem>
+                            <SelectItem value="sunset">Sunset</SelectItem>
+                            <SelectItem value="hero">Hero</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
+                    {(footerConfig.background?.mode === "image" || footerConfig.background?.mode === "video") && (
+                      <div className="space-y-2">
+                        <Label className="text-xs">Media (Asset ID oder URL)</Label>
+                        <Input
+                          value={footerConfig.background?.mediaId || footerConfig.background?.mediaUrl || ""}
+                          onChange={(e) => {
+                            updateConfig({
+                              background: {
+                                ...footerConfig.background,
+                                mediaId: e.target.value,
+                              },
+                            })
+                          }}
+                          placeholder="Asset ID oder URL"
+                          className="text-sm"
+                        />
+                      </div>
+                    )}
+
+                    {footerConfig.background?.mode && footerConfig.background?.mode !== "transparent" && (
+                      <div className="space-y-3 rounded-md bg-muted/50 p-3">
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="bg-overlay-enabled"
+                            checked={footerConfig.background?.overlay?.enabled || false}
+                            onCheckedChange={(checked) => {
+                              updateConfig({
+                                background: {
+                                  ...footerConfig.background,
+                                  overlay: {
+                                    ...footerConfig.background?.overlay,
+                                    enabled: checked as boolean,
+                                  },
+                                },
+                              })
+                            }}
+                          />
+                          <Label htmlFor="bg-overlay-enabled" className="text-xs font-medium">Overlay (für Lesbarkeit)</Label>
+                        </div>
+
+                        {footerConfig.background?.overlay?.enabled && (
+                          <div className="space-y-2">
+                            <div className="space-y-1">
+                              <Label className="text-xs">Farbe</Label>
+                              <input
+                                type="color"
+                                value={footerConfig.background?.overlay?.color || "#000000"}
+                                onChange={(e) => {
+                                  updateConfig({
+                                    background: {
+                                      ...footerConfig.background,
+                                      overlay: {
+                                        ...footerConfig.background?.overlay,
+                                        color: e.target.value,
+                                      },
+                                    },
+                                  })
+                                }}
+                                className="h-8 w-full rounded border border-input cursor-pointer"
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs">Opazität: {Math.round(((footerConfig.background?.overlay?.opacity || 0.3) * 100))}%</Label>
+                              <input
+                                type="range"
+                                min="0"
+                                max="100"
+                                value={Math.round(((footerConfig.background?.overlay?.opacity || 0.3) * 100))}
+                                onChange={(e) => {
+                                  updateConfig({
+                                    background: {
+                                      ...footerConfig.background,
+                                      overlay: {
+                                        ...footerConfig.background?.overlay,
+                                        opacity: Number(e.target.value) / 100,
+                                      },
+                                    },
+                                  })
+                                }}
+                                className="w-full"
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  <Separator />
+
+                  {/* Glassmorphism */}
+                  <div className="space-y-4 rounded-lg border border-border p-4">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-base font-semibold">Glassmorphism (Panel-Effekt)</Label>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => updateConfig({ glassmorphism: undefined })}
+                      >
+                        <RotateCcw className="mr-2 h-4 w-4" />
+                        Zurücksetzen
+                      </Button>
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        id="glass-enabled"
+                        checked={footerConfig.glassmorphism?.enabled ?? true}
+                        onCheckedChange={(enabled) => {
+                          updateConfig({
+                            glassmorphism: {
+                              ...footerConfig.glassmorphism,
+                              enabled,
+                            },
+                          })
+                        }}
+                      />
+                      <Label htmlFor="glass-enabled" className="text-sm font-medium">Aktiviert</Label>
+                    </div>
+
+                    {footerConfig.glassmorphism?.enabled !== false && (
+                      <div className="space-y-3">
+                        <div className="space-y-2">
+                          <Label className="text-sm font-medium">Intensität</Label>
+                          <Select
+                            value={footerConfig.glassmorphism?.intensity || "medium"}
+                            onValueChange={(value) => {
+                              updateConfig({
+                                glassmorphism: {
+                                  ...footerConfig.glassmorphism,
+                                  intensity: value as any,
+                                },
+                              })
+                            }}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="subtle">Subtil (kaum sichtbar)</SelectItem>
+                              <SelectItem value="medium">Medium (empfohlen)</SelectItem>
+                              <SelectItem value="strong">Stark (sehr glasmorphic)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="glass-highlight"
+                            checked={footerConfig.glassmorphism?.highlightLine ?? true}
+                            onCheckedChange={(checked) => {
+                              updateConfig({
+                                glassmorphism: {
+                                  ...footerConfig.glassmorphism,
+                                  highlightLine: checked as boolean,
+                                },
+                              })
+                            }}
+                          />
+                          <Label htmlFor="glass-highlight" className="text-xs font-medium">Highlight-Linie oben</Label>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <Separator />
+
                   {/* Sections */}
                   <div className="space-y-6">
                     <div className="flex items-center justify-between">

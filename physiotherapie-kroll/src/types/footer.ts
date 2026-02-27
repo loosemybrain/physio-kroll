@@ -107,6 +107,46 @@ export type FooterBottomBar = {
 }
 
 /**
+ * Footer background configuration (outer section)
+ */
+export type FooterBackground = {
+  mode?: "transparent" | "color" | "gradient" | "image" | "video"
+  color?: string
+  gradientPreset?: "soft" | "aurora" | "ocean" | "sunset" | "hero" | "none"
+  gradient?: {
+    from?: string
+    via?: string
+    to?: string
+    angle?: number
+  }
+  mediaId?: string
+  mediaUrl?: string
+  overlay?: {
+    enabled?: boolean
+    color?: string
+    opacity?: number
+  }
+  parallax?: {
+    enabled?: boolean
+    strength?: number
+  }
+}
+
+/**
+ * Footer glassmorphism panel configuration (inner container)
+ */
+export type FooterGlassmorphism = {
+  enabled?: boolean
+  intensity?: "subtle" | "medium" | "strong"
+  blurPx?: number
+  panelOpacity?: number
+  borderOpacity?: number
+  highlightLine?: boolean
+  shadowPreset?: string
+  tintColor?: string
+}
+
+/**
  * Footer configuration for a brand
  */
 export type FooterConfig = {
@@ -114,7 +154,9 @@ export type FooterConfig = {
   sections: FooterSection[] // min 2, max 5
   bottomBar?: FooterBottomBar
   design?: FooterDesign
-  layoutWidth?: "full" | "contained" // New: controls footer content width
+  layoutWidth?: "full" | "contained" // controls footer content width
+  background?: FooterBackground // outer section background
+  glassmorphism?: FooterGlassmorphism // inner panel glass effect
 }
 
 /**

@@ -3,6 +3,7 @@ import { resolveMedia } from "@/lib/cms/resolveMedia"
 import { getFooterTheme } from "@/lib/theme/footerTheme"
 import { getContainerClass } from "@/lib/layout/container"
 import { resolveContainerBg } from "@/lib/theme/resolveContainerBg"
+import { resolveFooterBg, getGlassmorphismPreset } from "@/lib/theme/resolveFooterBg"
 import type { BrandKey } from "@/components/brand/brandAssets"
 import type { FooterConfig, FooterBlock, FooterSection } from "@/types/footer"
 import Image from "next/image"
@@ -59,18 +60,66 @@ export async function Footer({ brand }: FooterProps) {
     }
   }
 
+  // Resolve footer background media if exists
+  let resolvedBgMedia: string | null = null
+  if (footerConfig?.background?.mediaId) {
+    resolvedBgMedia = await resolveMedia({ mediaId: footerConfig.background.mediaId })
+  } else if (footerConfig?.background?.mediaUrl) {
+    resolvedBgMedia = footerConfig.background.mediaUrl
+  }
+
   return (
     <footer
-      className={cn(
-        "relative w-full border-t overflow-hidden",
-        theme.border,
-        theme.text,
-        theme.spacing.py
-      )}
+      className="relative w-full border-t overflow-hidden"
       aria-label="Footer"
-      style={{ backgroundColor: theme.colors.bg }}
     >
-      {/* Subtle background orbs for depth (pointer-events-none) */}
+      {/* Outer Background Layer (resolveSectionBg-style) */}
+      <div
+        className="absolute inset-0"
+        style={{
+          ...resolveFooterBg({
+            mode: footerConfig?.background?.mode,
+            color: footerConfig?.background?.color,
+            gradientPreset: footerConfig?.background?.gradientPreset,
+            gradient: footerConfig?.background?.gradient,
+          }).style,
+          backgroundColor: theme.colors.bg,
+        }}
+      >
+        {/* Background Media (Image/Video) */}
+        {footerConfig?.background?.mode === "image" && resolvedBgMedia && (
+          <Image
+            src={resolvedBgMedia}
+            alt="Footer background"
+            fill
+            className="object-cover"
+            priority={false}
+          />
+        )}
+        {footerConfig?.background?.mode === "video" && resolvedBgMedia && (
+          <video
+            src={resolvedBgMedia}
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="absolute inset-0 h-full w-full object-cover"
+          />
+        )}
+
+        {/* Overlay for readability */}
+        {footerConfig?.background?.overlay?.enabled && (
+          <div
+            className="absolute inset-0"
+            style={{
+              backgroundColor: footerConfig.background.overlay.color || "#000000",
+              opacity: footerConfig.background.overlay.opacity || 0.3,
+            }}
+          />
+        )}
+      </div>
+
+      {/* Subtle background orbs (pointer-events-none) */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         <div 
           className="absolute -bottom-40 -left-20 h-96 w-96 rounded-full blur-3xl opacity-5"
@@ -82,68 +131,36 @@ export async function Footer({ brand }: FooterProps) {
         />
       </div>
 
-      {/* Main content wrapper - relative for layering over orbs */}
-      <div className="relative">
+      {/* Content Layer (relative z-index over background) */}
+      <div
+        className={cn(
+          "relative z-10",
+          theme.text,
+          theme.spacing.py
+        )}
+        style={{
+          color: theme.colors.text,
+        }}
+      >
         <div className={getContainerClass(footerConfig?.layoutWidth ?? "contained")}>
-          {/* Inner Container Panel */}
-          <div
-            className={cn(
-              "relative rounded-3xl px-6 py-10 md:px-10 md:py-12",
-              "border border-border/40"
-            )}
-            style={{
-              ...resolveContainerBg({
-                mode: "gradient",
-                gradientPreset: "soft",
-              }).style,
-              backdropFilter: "blur(10px)",
-              boxShadow: "0 4px 24px -2px rgba(0, 0, 0, 0.08), 0 8px 16px -4px rgba(0, 0, 0, 0.04)",
-            }}
-          >
-            {/* Subtle top divider line */}
-            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-border/40 to-transparent" />
-
-            {/* Main Footer Sections */}
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-x-8 gap-y-10 auto-rows-max">
-              {footerConfig.sections.map((section) => (
-                <FooterSection
-                  key={section.id}
-                  section={section}
-                  theme={theme}
-                  pagesMap={pagesMap}
-                  resolvedLogos={resolvedLogos}
-                />
-              ))}
-            </div>
-
-            {/* Bottom Bar */}
-            {footerConfig.bottomBar?.enabled && (
-              <div className={cn("mt-12 pt-8 border-t", theme.bottomBar.class)}>
-                <div className={cn("flex flex-col sm:flex-row items-center gap-4", theme.bottomBar.align)}>
-                  {footerConfig.bottomBar.left && (
-                    <div>
-                      <FooterBlock
-                        block={footerConfig.bottomBar.left}
-                        theme={theme}
-                        pagesMap={pagesMap}
-                        resolvedLogos={resolvedLogos}
-                      />
-                    </div>
-                  )}
-                  {footerConfig.bottomBar.right && (
-                    <div>
-                      <FooterBlock
-                        block={footerConfig.bottomBar.right}
-                        theme={theme}
-                        pagesMap={pagesMap}
-                        resolvedLogos={resolvedLogos}
-                      />
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
+          {/* Inner Glass Panel */}
+          {footerConfig?.glassmorphism?.enabled !== false ? (
+            <GlassPanelWrapper config={footerConfig}>
+              <FooterContent
+                footerConfig={footerConfig}
+                theme={theme}
+                pagesMap={pagesMap}
+                resolvedLogos={resolvedLogos}
+              />
+            </GlassPanelWrapper>
+          ) : (
+            <FooterContent
+              footerConfig={footerConfig}
+              theme={theme}
+              pagesMap={pagesMap}
+              resolvedLogos={resolvedLogos}
+            />
+          )}
         </div>
       </div>
     </footer>
@@ -377,4 +394,106 @@ function FooterBlock({
     default:
       return null
   }
+}
+
+/**
+ * Glass Panel Wrapper - applies glassmorphism styles
+ */
+function GlassPanelWrapper({
+  config,
+  children,
+}: {
+  config?: FooterConfig
+  children: React.ReactNode
+}) {
+  const intensity = config?.glassmorphism?.intensity || "medium"
+  const preset = getGlassmorphismPreset(intensity)
+
+  return (
+    <div
+      className={cn(
+        "relative rounded-3xl px-6 py-10 md:px-10 md:py-12",
+        "border",
+        preset.blur
+      )}
+      style={{
+        borderColor: `rgba(var(--border), ${config?.glassmorphism?.borderOpacity ?? preset.borderOpacity})`,
+        ...resolveContainerBg({
+          mode: "gradient",
+          gradientPreset: "soft",
+        }).style,
+        backgroundColor: `rgba(255, 255, 255, ${config?.glassmorphism?.panelOpacity ?? preset.panelOpacity})`,
+        backdropFilter: config?.glassmorphism?.blurPx 
+          ? `blur(${config.glassmorphism.blurPx}px)`
+          : `blur(${preset.blur === "backdrop-blur-sm" ? "4" : preset.blur === "backdrop-blur-md" ? "12" : "40"}px)`,
+        boxShadow: "0 4px 24px -2px rgba(0, 0, 0, 0.08), 0 8px 16px -4px rgba(0, 0, 0, 0.04)",
+      }}
+    >
+      {/* Highlight line */}
+      {(config?.glassmorphism?.highlightLine ?? preset.highlightLine) && (
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-border/40 to-transparent" />
+      )}
+      {children}
+    </div>
+  )
+}
+
+/**
+ * Footer Content - main grid and sections
+ */
+function FooterContent({
+  footerConfig,
+  theme,
+  pagesMap,
+  resolvedLogos,
+}: {
+  footerConfig: FooterConfig
+  theme: ReturnType<typeof getFooterTheme>
+  pagesMap: Map<string, string>
+  resolvedLogos: Map<string, string | null>
+}) {
+  return (
+    <>
+      {/* Main Footer Sections */}
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-x-8 gap-y-10 auto-rows-max">
+        {footerConfig.sections.map((section) => (
+          <FooterSection
+            key={section.id}
+            section={section}
+            theme={theme}
+            pagesMap={pagesMap}
+            resolvedLogos={resolvedLogos}
+          />
+        ))}
+      </div>
+
+      {/* Bottom Bar */}
+      {footerConfig.bottomBar?.enabled && (
+        <div className={cn("mt-12 pt-8 border-t", theme.bottomBar.class)}>
+          <div className={cn("flex flex-col sm:flex-row items-center gap-4", theme.bottomBar.align)}>
+            {footerConfig.bottomBar.left && (
+              <div>
+                <FooterBlock
+                  block={footerConfig.bottomBar.left}
+                  theme={theme}
+                  pagesMap={pagesMap}
+                  resolvedLogos={resolvedLogos}
+                />
+              </div>
+            )}
+            {footerConfig.bottomBar.right && (
+              <div>
+                <FooterBlock
+                  block={footerConfig.bottomBar.right}
+                  theme={theme}
+                  pagesMap={pagesMap}
+                  resolvedLogos={resolvedLogos}
+                />
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </>
+  )
 }
