@@ -29,7 +29,7 @@ export function FooterClient({ brand, footerConfig, pagesMap }: FooterClientProp
 
   return (
     <footer
-      className="relative w-full border-t overflow-hidden"
+      className="relative w-full border-t border-border overflow-hidden"
       aria-label="Footer"
     >
       {/* Outer Background Layer */}

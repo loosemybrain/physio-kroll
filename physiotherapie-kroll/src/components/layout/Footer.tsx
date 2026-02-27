@@ -70,7 +70,7 @@ export async function Footer({ brand }: FooterProps) {
 
   return (
     <footer
-      className="relative w-full border-t overflow-hidden"
+      className="relative w-full border-t border-border overflow-hidden"
       aria-label="Footer"
     >
       {/* Outer Background Layer (resolveSectionBg-style) */}
