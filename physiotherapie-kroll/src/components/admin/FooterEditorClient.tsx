@@ -353,6 +353,35 @@ export function FooterEditorClient({
 
                 {/* Content Tab */}
                 <TabsContent value="content" className="space-y-6 mt-6">
+                  {/* Layout Width */}
+                  <div className="space-y-4 rounded-lg border border-border p-4">
+                    <Label className="text-base font-semibold">Layout</Label>
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Footer Breite</Label>
+                      <Select
+                        value={footerConfig.layoutWidth || "contained"}
+                        onValueChange={(value) => {
+                          updateConfig({ layoutWidth: value as "full" | "contained" })
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="contained">Contained (wie Blocks)</SelectItem>
+                          <SelectItem value="full">Full Background (volle Breite)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        {footerConfig.layoutWidth === "full" 
+                          ? "Der Footer-Hintergrund und Inhalt erstrecken sich über die volle Breite."
+                          : "Der Footer-Inhalt nutzt die gleiche max-width wie die Content-Blöcke."}
+                      </p>
+                    </div>
+                  </div>
+
+                  <Separator />
+
                   {/* Sections */}
                   <div className="space-y-6">
                     <div className="flex items-center justify-between">

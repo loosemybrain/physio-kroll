@@ -1,6 +1,7 @@
 "use client"
 
 import { getFooterTheme } from "@/lib/theme/footerTheme"
+import { getContainerClass } from "@/lib/layout/container"
 import type { BrandKey } from "@/components/brand/brandAssets"
 import type { FooterConfig, FooterBlock, FooterSection } from "@/types/footer"
 import Image from "next/image"
@@ -35,7 +36,7 @@ export function FooterClient({ brand, footerConfig, pagesMap }: FooterClientProp
       aria-label="Footer"
       style={{ backgroundColor: theme.colors.bg }}
     >
-      <div className="mx-auto w-full max-w-7xl px-4">
+      <div className={getContainerClass(footerConfig?.layoutWidth ?? "contained")}>
         {/* Main Footer Sections */}
         <div className="grid grid-cols-1 md:grid-cols-12 gap-x-8 gap-y-10 auto-rows-max">
           {footerConfig.sections.map((section) => (

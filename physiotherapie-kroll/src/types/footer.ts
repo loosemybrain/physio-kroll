@@ -114,6 +114,7 @@ export type FooterConfig = {
   sections: FooterSection[] // min 2, max 5
   bottomBar?: FooterBottomBar
   design?: FooterDesign
+  layoutWidth?: "full" | "contained" // New: controls footer content width
 }
 
 /**
