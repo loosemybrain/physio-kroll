@@ -338,6 +338,12 @@ function GlassPanelWrapper({
   const intensity = config?.glassmorphism?.intensity || "medium"
   const preset = getGlassmorphismPreset(intensity)
 
+  // Helper: convert hex to rgb
+  const hexToRgb = (hex: string): string => {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
+    return result ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}` : "0, 0, 0"
+  }
+
   return (
     <div
       className={cn(
@@ -346,7 +352,9 @@ function GlassPanelWrapper({
         preset.blur
       )}
       style={{
-        borderColor: `rgba(var(--border), ${config?.glassmorphism?.borderOpacity ?? preset.borderOpacity})`,
+        borderColor: config?.glassmorphism?.borderColor 
+          ? `rgba(${hexToRgb(config.glassmorphism.borderColor)}, ${config?.glassmorphism?.borderOpacity ?? preset.borderOpacity})`
+          : `rgba(var(--border), ${config?.glassmorphism?.borderOpacity ?? preset.borderOpacity})`,
         ...resolveContainerBg({
           mode: "gradient",
           gradientPreset: "soft",

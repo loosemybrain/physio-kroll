@@ -141,6 +141,7 @@ export type FooterGlassmorphism = {
   blurPx?: number
   panelOpacity?: number
   borderOpacity?: number
+  borderColor?: string
   highlightLine?: boolean
   shadowPreset?: string
   tintColor?: string

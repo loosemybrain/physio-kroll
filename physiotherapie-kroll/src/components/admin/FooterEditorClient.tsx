@@ -470,21 +470,36 @@ export function FooterEditorClient({
                     )}
 
                     {(footerConfig.background?.mode === "image" || footerConfig.background?.mode === "video") && (
-                      <div className="space-y-2">
-                        <Label className="text-xs">Media (Asset ID oder URL)</Label>
-                        <Input
-                          value={footerConfig.background?.mediaId || footerConfig.background?.mediaUrl || ""}
-                          onChange={(e) => {
-                            updateConfig({
-                              background: {
-                                ...footerConfig.background,
-                                mediaId: e.target.value,
-                              },
-                            })
-                          }}
-                          placeholder="Asset ID oder URL"
-                          className="text-sm"
-                        />
+                      <div className="space-y-3">
+                        <div className="space-y-2">
+                          <Label className="text-xs">Media</Label>
+                          <div className="flex gap-2">
+                            <Input
+                              value={footerConfig.background?.mediaId || footerConfig.background?.mediaUrl || ""}
+                              onChange={(e) => {
+                                updateConfig({
+                                  background: {
+                                    ...footerConfig.background,
+                                    mediaId: e.target.value,
+                                  },
+                                })
+                              }}
+                              placeholder="Asset ID oder URL"
+                              className="text-sm flex-1"
+                            />
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                // MediaPickerDialog opening would go here
+                                // For now, just showing placeholder
+                              }}
+                              className="px-3"
+                            >
+                              Durchsuchen
+                            </Button>
+                          </div>
+                        </div>
                       </div>
                     )}
 
@@ -629,6 +644,24 @@ export function FooterEditorClient({
                             }}
                           />
                           <Label htmlFor="glass-highlight" className="text-xs font-medium">Highlight-Linie oben</Label>
+                        </div>
+
+                        <div className="space-y-2 border-t pt-3">
+                          <Label className="text-xs">Border-Farbe</Label>
+                          <input
+                            type="color"
+                            value={footerConfig.glassmorphism?.borderColor || "#e5e7eb"}
+                            onChange={(e) => {
+                              updateConfig({
+                                glassmorphism: {
+                                  ...footerConfig.glassmorphism,
+                                  borderColor: e.target.value,
+                                },
+                              })
+                            }}
+                            className="h-8 w-full rounded border border-input cursor-pointer"
+                          />
+                          <p className="text-xs text-muted-foreground">Border-Opazität wird über die Intensität gesteuert</p>
                         </div>
                       </div>
                     )}
