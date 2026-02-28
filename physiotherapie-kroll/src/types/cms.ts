@@ -507,7 +507,7 @@ export interface FaqBlock extends BaseBlock {
     // Panel Container Props
     containerBackgroundMode?: "transparent" | "color" | "gradient"
     containerBackgroundColor?: string
-    containerBackgroundGradientPreset?: string
+    containerBackgroundGradientPreset?: import("@/lib/theme/gradientPresets").GradientPresetValue
     containerGradientFrom?: string
     containerGradientVia?: string
     containerGradientTo?: string
@@ -567,7 +567,7 @@ export interface TeamBlock extends BaseBlock {
     // Inner Container Background (for Panel behind Header + Grid)
     containerBackgroundMode?: "transparent" | "color" | "gradient"
     containerBackgroundColor?: string
-    containerBackgroundGradientPreset?: "soft" | "aurora" | "ocean" | "sunset" | "hero" | "none"
+    containerBackgroundGradientPreset?: import("@/lib/theme/gradientPresets").GradientPresetValue
     containerGradientFrom?: string
     containerGradientVia?: string
     containerGradientTo?: string
@@ -759,7 +759,7 @@ export interface GalleryBlock extends BaseBlock {
     /** Inner container panel (team-grid pattern) */
     containerBackgroundMode?: "transparent" | "color" | "gradient"
     containerBackgroundColor?: string
-    containerBackgroundGradientPreset?: "soft" | "aurora" | "ocean" | "sunset" | "hero" | "none"
+    containerBackgroundGradientPreset?: import("@/lib/theme/gradientPresets").GradientPresetValue
     containerGradientFrom?: string
     containerGradientVia?: string
     containerGradientTo?: string
@@ -826,7 +826,7 @@ export interface ImageSliderBlock extends BaseBlock {
 
     containerBackgroundMode?: "transparent" | "color" | "gradient"
     containerBackgroundColor?: string
-    containerBackgroundGradientPreset?: "soft" | "aurora" | "ocean" | "sunset" | "hero" | "none"
+    containerBackgroundGradientPreset?: import("@/lib/theme/gradientPresets").GradientPresetValue
     containerGradientFrom?: string
     containerGradientVia?: string
     containerGradientTo?: string

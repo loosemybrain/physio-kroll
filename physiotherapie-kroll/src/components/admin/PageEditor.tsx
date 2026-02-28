@@ -18,6 +18,7 @@ import { usePage } from "@/lib/cms/useLocalCms"
 import { createEmptyPage, generateUniqueSlug, type AdminPage } from "@/lib/cms/supabaseStore"
 import type { BrandKey } from "@/components/brand/brandAssets"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { GradientPresetSelectContent } from "@/components/ui/GradientPresetSelectContent"
 import { blockRegistry, getBlockDefinition, createServiceCard, createFaqItem, createTeamMember, createFeatureItem, createContactFormField, createTestimonialItem, createGalleryImage, createImageSlide, createOpeningHour, createContactInfoCard, createHeroAction, sortInspectorFields, INSPECTOR_GROUP_LABELS, DEFAULT_GROUP_ORDER } from "@/cms/blocks/registry"
 import { normalizeBlock } from "@/cms/blocks/normalize"
 import type { InspectorField, InspectorFieldType } from "@/cms/blocks/registry"
@@ -4902,14 +4903,7 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
                         <SelectTrigger className="h-8 text-sm">
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="soft">Soft</SelectItem>
-                          <SelectItem value="aurora">Aurora</SelectItem>
-                          <SelectItem value="ocean">Ocean</SelectItem>
-                          <SelectItem value="sunset">Sunset</SelectItem>
-                          <SelectItem value="hero">Hero</SelectItem>
-                          <SelectItem value="none">Keine</SelectItem>
-                        </SelectContent>
+                        <GradientPresetSelectContent />
                       </Select>
                     </div>
                   )}

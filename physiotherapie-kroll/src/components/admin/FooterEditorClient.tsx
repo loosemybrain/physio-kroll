@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { GradientPresetSelectContent } from "@/components/ui/GradientPresetSelectContent"
 import { Switch } from "@/components/ui/switch"
 import { Separator } from "@/components/ui/separator"
 import { Textarea } from "@/components/ui/textarea"
@@ -458,13 +459,7 @@ export function FooterEditorClient({
                           <SelectTrigger className="h-8 text-sm">
                             <SelectValue />
                           </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="soft">Soft</SelectItem>
-                            <SelectItem value="aurora">Aurora</SelectItem>
-                            <SelectItem value="ocean">Ocean</SelectItem>
-                            <SelectItem value="sunset">Sunset</SelectItem>
-                            <SelectItem value="hero">Hero</SelectItem>
-                          </SelectContent>
+                          <GradientPresetSelectContent />
                         </Select>
                       </div>
                     )}
