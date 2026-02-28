@@ -36,13 +36,13 @@ export function FooterClient({ brand, footerConfig, pagesMap }: FooterClientProp
       <div
         className="absolute inset-0"
         style={{
+          backgroundColor: theme.colors.bg,
           ...resolveFooterBg({
             mode: footerConfig?.background?.mode,
             color: footerConfig?.background?.color,
             gradientPreset: footerConfig?.background?.gradientPreset,
             gradient: footerConfig?.background?.gradient,
           }).style,
-          backgroundColor: theme.colors.bg,
         }}
       >
         {/* Background Media (Image/Video) */}
