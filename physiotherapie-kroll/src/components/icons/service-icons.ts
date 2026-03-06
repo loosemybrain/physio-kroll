@@ -44,6 +44,8 @@ import {
   Accessibility,
   Smartphone,
   MapPin,
+  Columns,
+  Droplet,
 } from "lucide-react"
 
 /**
@@ -57,11 +59,13 @@ export const serviceIconMap = {
   HeartPulse,
   Brain,
   Bone,
+  Columns,
   Dumbbell,
   Stethoscope,
   Shield,
   HandHeart,
   Accessibility,
+  Droplet,
 
   // Performance & Goals
   Zap,
@@ -155,6 +159,15 @@ export const serviceIconAliases: Record<string, ServiceIconName> = {
   Place: "MapPin",
   Refresh: "Repeat",
   Reload: "Repeat",
+  Backache: "Columns",
+  BackPain: "Columns",
+  Spinal: "Columns",
+  SpinalCord: "Columns",
+  Vertebrae: "Columns",
+  Spine: "Columns",
+  Hydration: "Droplet",
+  Water: "Droplet",
+  Fluid: "Droplet",
 } as const
 
 /**

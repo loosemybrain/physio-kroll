@@ -14,12 +14,14 @@ import { resolveContainerBg } from "@/lib/theme/resolveContainerBg"
 import { resolveBoxShadow } from "@/lib/shadow/resolveBoxShadow"
 import { mergeTypographyClasses } from "@/lib/typography"
 import type { BlockSectionProps, ElementShadow } from "@/types/cms"
+import type { GradientPresetValue } from "@/lib/theme/gradientPresets"
 
 interface TeamMember {
   id: string
   name: string
   role?: string
   bio?: string
+  bioAlign?: "left" | "center" | "right"
   imageUrl?: string | { url?: string; src?: string; publicUrl?: string; path?: string }
   imageAlt?: string
   avatarGradient?: "auto" | "g1" | "g2" | "g3" | "g4" | "g5" | "g6" | "g7" | "g8" | "g9" | "g10"
@@ -73,6 +75,7 @@ export interface TeamGridBlockProps {
   nameColor?: string
   roleColor?: string
   bioColor?: string
+  bioAlign?: "left" | "center" | "right"
   ctaColor?: string
   cardBgColor?: string
   cardBorderColor?: string
@@ -80,7 +83,7 @@ export interface TeamGridBlockProps {
   // Inner Container Background (Panel behind Header + Grid)
   containerBackgroundMode?: "transparent" | "color" | "gradient"
   containerBackgroundColor?: string
-  containerBackgroundGradientPreset?: "soft" | "aurora" | "ocean" | "sunset" | "hero" | "none"
+  containerBackgroundGradientPreset?: GradientPresetValue
   containerGradientFrom?: string
   containerGradientVia?: string
   containerGradientTo?: string
@@ -240,11 +243,13 @@ function Bio({
   color,
   editable,
   onClick,
+  align = "center",
 }: {
   text: string
   color?: string
   editable?: boolean
   onClick?: (e: React.MouseEvent) => void
+  align?: "left" | "center" | "right"
 }) {
   const [expanded, setExpanded] = useState(false)
   const [needsClamp, setNeedsClamp] = useState(false)
@@ -255,6 +260,12 @@ function Bio({
     if (el) setNeedsClamp(el.scrollHeight > el.clientHeight + 2)
   }, [text])
 
+  const alignClass = {
+    left: "text-left",
+    center: "text-center",
+    right: "text-right",
+  }[align]
+
   return (
     <div className="relative">
       <p
@@ -264,6 +275,7 @@ function Bio({
           "text-sm leading-relaxed text-muted-foreground transition-all duration-300",
           !expanded && "line-clamp-3",
           editable && "cursor-pointer rounded px-1 hover:bg-primary/10",
+          alignClass,
         )}
         style={color ? { color } : undefined}
       >
@@ -289,6 +301,7 @@ function MemberCard({
   nameColor,
   roleColor,
   bioColor,
+  bioAlign,
   ctaColor,
   cardBgColor,
   cardBorderColor,
@@ -303,6 +316,7 @@ function MemberCard({
   nameColor?: string
   roleColor?: string
   bioColor?: string
+  bioAlign?: "left" | "center" | "right"
   ctaColor?: string
   cardBgColor?: string
   cardBorderColor?: string
@@ -406,6 +420,19 @@ function MemberCard({
           </p>
         )}
 
+        {/* Bio */}
+        {member.bio && (
+          <div className={cn("mt-4 w-full min-w-0")}>
+            <Bio
+              text={member.bio}
+              color={bioColor}
+              editable={editable}
+              onClick={(e) => handleEdit(e, `members.${index}.bio`)}
+              align={member.bioAlign ?? (isCompact ? "left" : "center")}
+            />
+          </div>
+        )}
+
         {/* Tags */}
         {member.tags && (
           (() => {
@@ -428,18 +455,6 @@ function MemberCard({
               </div>
             ) : null
           })()
-        )}
-
-        {/* Bio */}
-        {member.bio && (
-          <div className={cn("mt-4 w-full min-w-0", !isCompact && "text-left")}>
-            <Bio
-              text={member.bio}
-              color={bioColor}
-              editable={editable}
-              onClick={(e) => handleEdit(e, `members.${index}.bio`)}
-            />
-          </div>
         )}
 
         {/* Socials */}
@@ -513,6 +528,7 @@ export function TeamGridBlock({
   nameColor,
   roleColor,
   bioColor,
+  bioAlign,
   ctaColor,
   cardBgColor,
   cardBorderColor,
@@ -649,6 +665,7 @@ export function TeamGridBlock({
               nameColor={nameColor}
               roleColor={roleColor}
               bioColor={bioColor}
+              bioAlign={bioAlign}
               ctaColor={ctaColor}
               cardBgColor={cardBgColor}
               cardBorderColor={cardBorderColor}

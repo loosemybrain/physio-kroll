@@ -14,6 +14,7 @@ import { resolveContainerBg } from "@/lib/theme/resolveContainerBg"
 import { resolveBoxShadow } from "@/lib/shadow/resolveBoxShadow"
 import { mergeTypographyClasses } from "@/lib/typography"
 import type { BlockSectionProps } from "@/types/cms"
+import type { GradientPresetValue } from "@/lib/theme/gradientPresets"
 
 /* ================================================================ */
 /*  Props                                                            */
@@ -37,7 +38,7 @@ interface FaqAccordionProps {
   // Panel Container Props
   containerBackgroundMode?: "transparent" | "color" | "gradient"
   containerBackgroundColor?: string
-  containerBackgroundGradientPreset?: string
+  containerBackgroundGradientPreset?: GradientPresetValue
   containerGradientFrom?: string
   containerGradientVia?: string
   containerGradientTo?: string
@@ -242,7 +243,7 @@ export function FaqAccordion({
   const containerBg = resolveContainerBg({
     mode: containerBackgroundMode,
     color: containerBackgroundColor,
-    gradientPreset: containerBackgroundGradientPreset as "soft" | "aurora" | "ocean" | "sunset" | "hero" | "none" | undefined,
+    gradientPreset: containerBackgroundGradientPreset,
     gradient: {
       from: containerGradientFrom || "",
       via: containerGradientVia || "",

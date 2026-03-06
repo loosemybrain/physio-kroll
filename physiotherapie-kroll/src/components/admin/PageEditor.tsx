@@ -3,7 +3,7 @@
 import { useMemo, useState, useRef, useEffect, useCallback, useLayoutEffect } from "react"
 import { useLiveScrollLock } from "@/hooks/use-live-scroll-lock"
 import { useInspectorAutoscroll } from "@/hooks/use-inspector-autoscroll"
-import { ArrowLeft, Save, Send, Type, ImageIcon, Layout, Grid3X3, Megaphone, Trash2, Square, Grid, HelpCircle, Users, Plus, ChevronUp, ChevronDown, Copy, FileText, MessageSquareQuote, Images, Clock } from "lucide-react"
+import { ArrowLeft, Save, Send, Type, ImageIcon, Layout, Grid3X3, Megaphone, Trash2, Square, Grid, HelpCircle, Users, Plus, ChevronUp, ChevronDown, Copy, FileText, MessageSquareQuote, Images, Clock, CalendarDays } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
 import { Input } from "@/components/ui/input"
@@ -19,7 +19,7 @@ import { createEmptyPage, generateUniqueSlug, type AdminPage } from "@/lib/cms/s
 import type { BrandKey } from "@/components/brand/brandAssets"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { GradientPresetSelectContent } from "@/components/ui/GradientPresetSelectContent"
-import { blockRegistry, getBlockDefinition, createServiceCard, createFaqItem, createTeamMember, createFeatureItem, createContactFormField, createTestimonialItem, createGalleryImage, createImageSlide, createOpeningHour, createContactInfoCard, createHeroAction, sortInspectorFields, INSPECTOR_GROUP_LABELS, DEFAULT_GROUP_ORDER } from "@/cms/blocks/registry"
+import { blockRegistry, getBlockDefinition, createServiceCard, createFaqItem, createTeamMember, createFeatureItem, createContactFormField, createTestimonialItem, createGalleryImage, createImageSlide, createOpeningHour, createContactInfoCard, createHeroAction, createCourseSlot, sortInspectorFields, INSPECTOR_GROUP_LABELS, DEFAULT_GROUP_ORDER } from "@/cms/blocks/registry"
 import { normalizeBlock } from "@/cms/blocks/normalize"
 import type { InspectorField, InspectorFieldType } from "@/cms/blocks/registry"
 import { getAvailableIconNames, getAvailableIconsWithLabels } from "@/components/icons/service-icons"
@@ -64,6 +64,7 @@ const blockTypes: Array<{ icon: React.ElementType; label: string; type: CMSBlock
   { icon: MessageSquareQuote, label: "Testimonials", type: "testimonials" },
   { icon: Images, label: "Galerie", type: "gallery" },
   { icon: Images, label: "Bild-Slider", type: "imageSlider" },
+  { icon: CalendarDays, label: "Kursplan", type: "courseSchedule" },
   { icon: Clock, label: "Öffnungszeiten", type: "openingHours" },
   { icon: HelpCircle, label: "FAQ", type: "faq" },
   { icon: Users, label: "Team", type: "team" },
@@ -3428,6 +3429,7 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
     if (selectedBlock.type === "testimonialSlider" && key.startsWith("items.")) return true
     if (selectedBlock.type === "gallery" && key.startsWith("images.")) return true
     if (selectedBlock.type === "imageSlider" && key.startsWith("slides.")) return true
+    if (selectedBlock.type === "courseSchedule" && key.startsWith("slots.")) return true
     if (selectedBlock.type === "openingHours" && key.startsWith("hours.")) return true
     return false
   }
@@ -3622,27 +3624,52 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
             </div>
 
             {selectedBlock.props?.variant === "grid" && (
-              <div className="space-y-1.5">
-                <Label className="text-xs">Spalten</Label>
-                <Select
-                  value={String(selectedBlock.props?.columns || 3)}
-                  onValueChange={(v) => {
-                    if (!selectedBlock) return
-                    const currentProps = selectedBlock.props as Record<string, unknown>
-                    const updatedProps = { ...currentProps, columns: Number(v) } as CMSBlock["props"]
-                    updateSelectedProps(updatedProps)
-                  }}
-                >
-                  <SelectTrigger className="h-8 text-sm">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="2">2</SelectItem>
-                    <SelectItem value="3">3</SelectItem>
-                    <SelectItem value="4">4</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              <>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Spalten</Label>
+                  <Select
+                    value={String(selectedBlock.props?.columns || 3)}
+                    onValueChange={(v) => {
+                      if (!selectedBlock) return
+                      const currentProps = selectedBlock.props as Record<string, unknown>
+                      const updatedProps = { ...currentProps, columns: Number(v) } as CMSBlock["props"]
+                      updateSelectedProps(updatedProps)
+                    }}
+                  >
+                    <SelectTrigger className="h-8 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="2">2</SelectItem>
+                      <SelectItem value="3">3</SelectItem>
+                      <SelectItem value="4">4</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Text Ausrichtung</Label>
+                  <Select
+                    value={(selectedBlock.props?.textAlign || "left") as string}
+                    onValueChange={(v) => {
+                      if (!selectedBlock) return
+                      const currentProps = selectedBlock.props as Record<string, unknown>
+                      const updatedProps = { ...currentProps, textAlign: v } as CMSBlock["props"]
+                      updateSelectedProps(updatedProps)
+                    }}
+                  >
+                    <SelectTrigger className="h-8 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="left">Links</SelectItem>
+                      <SelectItem value="center">Mitte</SelectItem>
+                      <SelectItem value="right">Rechts</SelectItem>
+                      <SelectItem value="justify">Blocksatz</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </>
             )}
 
             {selectedBlock.props?.variant === "slider" && (
@@ -3765,6 +3792,17 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
               { key: "titleColor", label: "Titel Farbe (optional)", type: "color" as const, placeholder: "#111111" },
               { key: "text", label: "Text", type: "textarea" as const },
               { key: "textColor", label: "Text Farbe (optional)", type: "color" as const, placeholder: "#666666" },
+              {
+                key: "textAlign",
+                label: "Text Ausrichtung",
+                type: "select" as const,
+                options: [
+                  { value: "left", label: "Links" },
+                  { value: "center", label: "Mitte" },
+                  { value: "right", label: "Rechts" },
+                  { value: "justify", label: "Blocksatz" },
+                ],
+              },
               { key: "ctaText", label: "CTA Text", type: "text" as const },
               { key: "ctaColor", label: "CTA Farbe (optional)", type: "color" as const, placeholder: "#111111" },
               { key: "ctaHref", label: "CTA Link", type: "url" as const },
@@ -3972,6 +4010,210 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
             ],
             1,
             12
+          )}
+          
+          {/* Slide Shadow Inspector */}
+          {((selectedBlock.props as any)?.slides ?? []).map((slide: any, slideIndex: number) => (
+            <div key={slide.id || slideIndex} className="mt-4 pt-4 border-t border-border/50">
+              <div className="space-y-3">
+                <h4 className="text-sm font-semibold">
+                  {slide.title ? `Slide ${slideIndex + 1}: ${slide.title}` : `Slide ${slideIndex + 1}`} - Shadow
+                </h4>
+                <ShadowInspector
+                  config={slide.shadow}
+                  onChange={(shadowConfig) => {
+                    if (!selectedBlock) return
+                    const currentProps = selectedBlock.props as Record<string, unknown>
+                    const slides = Array.isArray(currentProps.slides) ? [...(currentProps.slides as any[])] : []
+                    if (slides[slideIndex]) {
+                      slides[slideIndex] = { ...slides[slideIndex], shadow: shadowConfig }
+                      const updatedProps = { ...currentProps, slides } as CMSBlock["props"]
+                      updateSelectedProps(updatedProps)
+                    }
+                  }}
+                />
+              </div>
+            </div>
+          ))}
+        </>
+      )}
+
+      {selectedBlock.type === "courseSchedule" && (
+        <>
+          <Separator />
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Anzeige</Label>
+              <Select
+                value={(selectedBlock.props as any)?.mode ?? "calendar"}
+                onValueChange={(v: "calendar" | "timeline") => {
+                  if (!selectedBlock) return
+                  const currentProps = selectedBlock.props as Record<string, unknown>
+                  updateSelectedProps({ ...currentProps, mode: v } as CMSBlock["props"])
+                }}
+              >
+                <SelectTrigger className="h-8 text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="calendar">Kalender</SelectItem>
+                  <SelectItem value="timeline">Timeline</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center justify-between">
+              <Label className="text-xs">Wochenende verstecken</Label>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!selectedBlock) return
+                  const currentProps = selectedBlock.props as Record<string, unknown>
+                  const updatedProps = { ...currentProps, hideWeekend: !currentProps.hideWeekend } as CMSBlock["props"]
+                  updateSelectedProps(updatedProps)
+                }}
+                className={cn(
+                  "h-6 w-11 rounded-full border border-border transition-colors",
+                  (selectedBlock.props as any)?.hideWeekend ? "bg-primary" : "bg-muted"
+                )}
+              >
+                <div
+                  className={cn(
+                    "h-5 w-5 rounded-full bg-white transition-transform",
+                    (selectedBlock.props as any)?.hideWeekend ? "translate-x-5" : "translate-x-0.5"
+                  )}
+                />
+              </button>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Überschrift</Label>
+              <Input
+                value={(selectedBlock.props as any)?.headline ?? ""}
+                onChange={(e) => {
+                  if (!selectedBlock) return
+                  const currentProps = selectedBlock.props as Record<string, unknown>
+                  updateSelectedProps({ ...currentProps, headline: e.target.value } as CMSBlock["props"])
+                }}
+                className="h-8 text-sm"
+                placeholder="Kursplan"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Untertitel (optional)</Label>
+              <Textarea
+                value={(selectedBlock.props as any)?.subheadline ?? ""}
+                onChange={(e) => {
+                  if (!selectedBlock) return
+                  const currentProps = selectedBlock.props as Record<string, unknown>
+                  updateSelectedProps({ ...currentProps, subheadline: e.target.value } as CMSBlock["props"])
+                }}
+                className="min-h-[60px] text-sm"
+                placeholder="Optionaler Hinweistext"
+              />
+            </div>
+          </div>
+          {(() => {
+            const blockDef = getBlockDefinition(selectedBlock.type)
+            return blockDef?.enableInnerPanel ? (
+              <div className="mt-4 space-y-1.5 rounded-lg bg-muted/30 p-3">
+                <Label className="text-xs font-semibold text-primary">CONTAINER-HINTERGRUND (inneres Panel)</Label>
+                <Select
+                  value={(selectedBlock.props as any)?.containerBackgroundMode ?? "transparent"}
+                  onValueChange={(v) => {
+                    if (!selectedBlock) return
+                    const currentProps = selectedBlock.props as Record<string, unknown>
+                    updateSelectedProps({ ...currentProps, containerBackgroundMode: v } as CMSBlock["props"])
+                  }}
+                >
+                  <SelectTrigger className="h-8 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="transparent">Transparent</SelectItem>
+                    <SelectItem value="color">Farbe</SelectItem>
+                    <SelectItem value="gradient">Verlauf</SelectItem>
+                  </SelectContent>
+                </Select>
+                {(selectedBlock.props as any)?.containerBackgroundMode === "color" && (
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Panel-Farbe</Label>
+                    <input
+                      type="color"
+                      value={(selectedBlock.props as any)?.containerBackgroundColor ?? "#ffffff"}
+                      onChange={(e) => {
+                        if (!selectedBlock) return
+                        const currentProps = selectedBlock.props as Record<string, unknown>
+                        updateSelectedProps({ ...currentProps, containerBackgroundColor: e.target.value } as CMSBlock["props"])
+                      }}
+                      className="h-8 w-full rounded border border-border bg-background"
+                    />
+                  </div>
+                )}
+                {(selectedBlock.props as any)?.containerBackgroundMode === "gradient" && (
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Verlauf-Preset</Label>
+                    <Select
+                      value={(selectedBlock.props as any)?.containerBackgroundGradientPreset ?? "soft"}
+                      onValueChange={(v) => {
+                        if (!selectedBlock) return
+                        const currentProps = selectedBlock.props as Record<string, unknown>
+                        updateSelectedProps({ ...currentProps, containerBackgroundGradientPreset: v } as CMSBlock["props"])
+                      }}
+                    >
+                      <SelectTrigger className="h-8 text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <GradientPresetSelectContent />
+                    </Select>
+                  </div>
+                )}
+                <div className="mt-3 pt-3 border-t border-border/50">
+                  <Label className="text-xs font-semibold">Shadow</Label>
+                  <ShadowInspector
+                    config={(selectedBlock.props as any)?.containerShadow}
+                    onChange={(shadowConfig) => {
+                      if (!selectedBlock) return
+                      const currentProps = selectedBlock.props as Record<string, unknown>
+                      updateSelectedProps({ ...currentProps, containerShadow: shadowConfig } as CMSBlock["props"])
+                    }}
+                  />
+                </div>
+              </div>
+            ) : null
+          })()}
+          <Separator />
+          {renderArrayItemsControls(
+            selectedBlock,
+            "slots",
+            "Slot",
+            (slot, index) => {
+              const s = slot as unknown as Record<string, unknown>
+              const title = String(s.title || "")
+              const weekday = String(s.weekday || "")
+              return `${index + 1}. ${weekday} ${title || "Slot"}`
+            },
+            createCourseSlot,
+            [
+              {
+                key: "weekday",
+                label: "Wochentag",
+                type: "select" as const,
+                options: [
+                  { value: "Montag", label: "Montag" },
+                  { value: "Dienstag", label: "Dienstag" },
+                  { value: "Mittwoch", label: "Mittwoch" },
+                  { value: "Donnerstag", label: "Donnerstag" },
+                  { value: "Freitag", label: "Freitag" },
+                  { value: "Samstag", label: "Samstag" },
+                  { value: "Sonntag", label: "Sonntag" },
+                ],
+              },
+              { key: "startTime", label: "Start (HH:MM)", type: "text" as const, placeholder: "09:00" },
+              { key: "endTime", label: "Ende (HH:MM)", type: "text" as const, placeholder: "10:00" },
+              { key: "title", label: "Titel", type: "text" as const, required: true },
+              { key: "instructor", label: "Referent/in (optional)", type: "text" as const },
+              { key: "location", label: "Ort (optional)", type: "text" as const },
+              { key: "highlight", label: "Hervorheben", type: "boolean" as const },
+            ]
           )}
         </>
       )}
@@ -4973,6 +5215,16 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
               { key: "roleColor", label: "Rolle Farbe (optional)", type: "color" as const, placeholder: "#666666" },
               { key: "bio", label: "Bio", type: "textarea" as const },
               { key: "bioColor", label: "Bio Farbe (optional)", type: "color" as const, placeholder: "#666666" },
+              {
+                key: "bioAlign",
+                label: "Bio Ausrichtung",
+                type: "select" as const,
+                options: [
+                  { value: "left", label: "Links" },
+                  { value: "center", label: "Mitte" },
+                  { value: "right", label: "Rechts" },
+                ],
+              },
               { key: "imageUrl", label: "Avatar", type: "image" as const },
               { key: "imageAlt", label: "Avatar Alt-Text", type: "text" as const },
               {

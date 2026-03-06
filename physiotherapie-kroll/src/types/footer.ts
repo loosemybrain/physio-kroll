@@ -1,5 +1,6 @@
 import type { MediaValue } from "./cms"
 import type { BrandKey } from "@/components/brand/brandAssets"
+import type { GradientPresetValue } from "@/lib/theme/gradientPresets"
 
 /**
  * Footer spacing options
@@ -112,7 +113,7 @@ export type FooterBottomBar = {
 export type FooterBackground = {
   mode?: "transparent" | "color" | "gradient" | "image" | "video"
   color?: string
-  gradientPreset?: "soft" | "aurora" | "ocean" | "sunset" | "hero" | "none"
+  gradientPreset?: GradientPresetValue
   gradient?: {
     from?: string
     via?: string

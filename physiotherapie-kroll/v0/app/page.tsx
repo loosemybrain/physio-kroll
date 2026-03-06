@@ -12,6 +12,7 @@ import { FaqAccordionBlock } from "../components/blocks/faq-accordion-block"
 import { GalleryBlock } from "../components/blocks/gallery-block"
 import { ImageSliderBlock } from "../components/blocks/image-slider-block"
 import { OpeningHoursBlock } from "../components/blocks/opening-hours-block"
+import { CourseScheduleBlock, EXAMPLE_SLOTS } from "../components/blocks/course-schedule-block"
 import { HeaderClient } from "../components/header/HeaderClient"
 import { FooterClient } from "../components/layout/FooterClient"
 import { DEFAULT_NAV_CONFIG } from "@/types/navigation"
@@ -558,6 +559,24 @@ export default function Home() {
             answer: "Sie können uns telefonisch erreichen, das <a href='#contact' class='text-primary underline hover:no-underline'>Kontaktformular</a> nutzen oder direkt online über unser Buchungssystem einen freien Termin wählen.",
           },
         ]}
+      />
+
+      {/* Course Schedule - Calendar View */}
+      <CourseScheduleBlock
+        mode="calendar"
+        headline="Unser Kursplan"
+        subheadline="Regelmäßige Gruppen- und Präventionskurse für Ihre Gesundheit"
+        background="muted"
+        slots={EXAMPLE_SLOTS}
+      />
+
+      {/* Course Schedule - Timeline View */}
+      <CourseScheduleBlock
+        mode="timeline"
+        headline="Wochenübersicht"
+        subheadline="Alle Kurse chronologisch sortiert"
+        background="gradient"
+        slots={EXAMPLE_SLOTS}
       />
 
       {/* Opening Hours */}

@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button"
 import { useReducedMotion } from "framer-motion"
 import type { ElementShadow } from "@/types/cms"
 import { resolveBoxShadow } from "@/lib/shadow/resolveBoxShadow"
+import type { GradientPresetValue } from "@/lib/theme/gradientPresets"
 
 /* ================================================================ */
 /*  Types                                                            */
@@ -35,6 +36,7 @@ export interface SlideItem {
   textColor?: string
   cardBgColor?: string
   cardBorderColor?: string
+  shadow?: ElementShadow
 }
 
 export interface ImageSliderBlockProps {
@@ -76,7 +78,7 @@ export interface ImageSliderBlockProps {
 
   containerBackgroundMode?: "transparent" | "color" | "gradient"
   containerBackgroundColor?: string
-  containerBackgroundGradientPreset?: "soft" | "aurora" | "ocean" | "sunset" | "hero" | "none"
+  containerBackgroundGradientPreset?: GradientPresetValue
   containerGradientFrom?: string
   containerGradientVia?: string
   containerGradientTo?: string
@@ -131,6 +133,8 @@ function SlideImage({
   slideTextColor?: string
   variant: string
 }) {
+  const shadowCss = resolveBoxShadow(slide.shadow)
+  
   return (
     <div
       className={cn(
@@ -141,6 +145,7 @@ function SlideImage({
       style={{
         backgroundColor: slide.cardBgColor || cardBgColor || undefined,
         borderColor: slide.cardBorderColor || cardBorderColor || undefined,
+        ...(shadowCss ? { boxShadow: shadowCss } : {}),
       }}
     >
       <div className={cn("relative w-full overflow-hidden bg-muted", aspect || "aspect-video")}>

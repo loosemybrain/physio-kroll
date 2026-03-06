@@ -11,6 +11,7 @@ import { resolveContainerBg } from "@/lib/theme/resolveContainerBg"
 import { resolveBoxShadow } from "@/lib/shadow/resolveBoxShadow"
 import { mergeTypographyClasses } from "@/lib/typography"
 import type { BlockSectionProps, ElementShadow } from "@/types/cms"
+import type { GradientPresetValue } from "@/lib/theme/gradientPresets"
 
 /* ------------------------------------------------------------------ */
 /*  Types (productive CMS props)                                      */
@@ -59,7 +60,7 @@ export interface GalleryBlockProps {
 
   containerBackgroundMode?: "transparent" | "color" | "gradient"
   containerBackgroundColor?: string
-  containerBackgroundGradientPreset?: "soft" | "aurora" | "ocean" | "sunset" | "hero" | "none"
+  containerBackgroundGradientPreset?: GradientPresetValue
   containerGradientFrom?: string
   containerGradientVia?: string
   containerGradientTo?: string

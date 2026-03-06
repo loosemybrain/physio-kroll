@@ -82,7 +82,7 @@ const teamPublishSchema = z.object({
     z.object({
       id: z.string(),
       name: z.string().min(2, "Name muss mindestens 2 Zeichen lang sein"),
-      role: z.string().min(2, "Rolle muss mindestens 2 Zeichen lang sein"),
+      role: z.string().optional(),
       imageUrl: z.string().min(1, "Bild URL erforderlich"),
       imageAlt: z.string().min(1, "Bild Alt-Text erforderlich"),
     })

@@ -58,6 +58,7 @@ export type BlockType =
   | "gallery"
   | "openingHours"
   | "imageSlider"
+  | "courseSchedule"
   | "testimonialSlider"
 
 /**
@@ -464,6 +465,7 @@ export interface ServicesGridBlock extends BaseBlock {
     iconBgColor?: string
     titleColor?: string
     textColor?: string
+    textAlign?: "left" | "center" | "right" | "justify"
     ctaColor?: string
     cardBgColor?: string
     cardBorderColor?: string
@@ -472,6 +474,7 @@ export interface ServicesGridBlock extends BaseBlock {
       icon: string
       title: string
       text: string
+      textAlign?: "left" | "center" | "right" | "justify"
       ctaText?: string
       ctaHref?: string
       iconColor?: string
@@ -534,6 +537,7 @@ export interface TeamBlock extends BaseBlock {
       name: string
       role?: string
       bio?: string
+      bioAlign?: "left" | "center" | "right"
       imageUrl?: string | { url?: string; src?: string; publicUrl?: string; path?: string }
       imageAlt?: string
       avatarGradient?: "auto" | "g1" | "g2" | "g3" | "g4" | "g5" | "g6" | "g7" | "g8" | "g9" | "g10"
@@ -560,6 +564,7 @@ export interface TeamBlock extends BaseBlock {
     nameColor?: string
     roleColor?: string
     bioColor?: string
+    bioAlign?: "left" | "center" | "right"
     ctaColor?: string
     cardBgColor?: string
     cardBorderColor?: string
@@ -799,6 +804,7 @@ export interface ImageSliderBlock extends BaseBlock {
       textColor?: string
       cardBgColor?: string
       cardBorderColor?: string
+      shadow?: ElementShadow
     }>
 
     variant?: "classic" | "progress" | "thumbnails" | "hero" | "cards"
@@ -835,6 +841,59 @@ export interface ImageSliderBlock extends BaseBlock {
     containerBorder?: boolean
 
     ariaLabel?: string
+  }
+}
+
+/**
+ * Weekday (German) for course schedule
+ */
+export type CourseScheduleWeekday =
+  | "Montag"
+  | "Dienstag"
+  | "Mittwoch"
+  | "Donnerstag"
+  | "Freitag"
+  | "Samstag"
+  | "Sonntag"
+
+/**
+ * Single course/slot in the schedule
+ */
+export interface CourseSlot {
+  id: string
+  weekday: CourseScheduleWeekday
+  startTime: string
+  endTime: string
+  title: string
+  instructor?: string
+  location?: string
+  highlight?: boolean
+}
+
+/**
+ * Course schedule block configuration
+ */
+export interface CourseScheduleBlock extends BaseBlock {
+  type: "courseSchedule"
+  props: {
+    section?: BlockSectionProps
+    typography?: Record<string, unknown>
+    mode: "calendar" | "timeline"
+    headline?: string
+    subheadline?: string
+    headlineColor?: string
+    subheadlineColor?: string
+    slots: CourseSlot[]
+    hideWeekend?: boolean
+    containerBackgroundMode?: "transparent" | "color" | "gradient"
+    containerBackgroundColor?: string
+    containerBackgroundGradientPreset?: import("@/lib/theme/gradientPresets").GradientPresetValue
+    containerGradientFrom?: string
+    containerGradientVia?: string
+    containerGradientTo?: string
+    containerGradientAngle?: number
+    containerShadow?: ElementShadow
+    containerBorder?: boolean
   }
 }
 
@@ -932,6 +991,7 @@ export type CMSBlock =
   | GalleryBlock
   | OpeningHoursBlock
   | ImageSliderBlock
+  | CourseScheduleBlock
 
 /**
  * CMS page content structure

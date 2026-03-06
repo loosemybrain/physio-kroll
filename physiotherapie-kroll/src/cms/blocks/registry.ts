@@ -1,5 +1,5 @@
 import { z } from "zod"
-import type { CMSBlock, BlockType, HeroBlock, TextBlock, ImageTextBlock, FeatureGridBlock, CtaBlock, SectionBlock, CardBlock, ServicesGridBlock, FaqBlock, TeamBlock, ContactFormBlock, TestimonialsBlock, GalleryBlock, OpeningHoursBlock, ImageSliderBlock, HeroAction } from "@/types/cms"
+import type { CMSBlock, BlockType, HeroBlock, TextBlock, ImageTextBlock, FeatureGridBlock, CtaBlock, SectionBlock, CardBlock, ServicesGridBlock, FaqBlock, TeamBlock, ContactFormBlock, TestimonialsBlock, GalleryBlock, OpeningHoursBlock, ImageSliderBlock, CourseScheduleBlock, HeroAction } from "@/types/cms"
 import type { BrandKey } from "@/components/brand/brandAssets"
 import { uuid } from "@/lib/cms/arrayOps"
 import { typographySchema, elementTypographySchema } from "@/lib/typography"
@@ -829,6 +829,34 @@ const imageSliderPropsSchema = z.object({
     .max(12),
 })
 
+const courseScheduleWeekdaySchema = z.enum([
+  "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag",
+])
+
+const courseScheduleSlotSchema = z.object({
+  id: z.string(),
+  weekday: courseScheduleWeekdaySchema,
+  startTime: z.string(),
+  endTime: z.string(),
+  title: z.string(),
+  instructor: z.string().optional(),
+  location: z.string().optional(),
+  highlight: z.boolean().optional(),
+})
+
+const courseSchedulePropsSchema = z.object({
+  ...panelPropsSchema.shape,
+  section: blockSectionPropsSchema,
+  typography: z.object({}).passthrough().optional(),
+  mode: z.enum(["calendar", "timeline"]),
+  headline: z.string().optional(),
+  subheadline: z.string().optional(),
+  headlineColor: z.string().optional(),
+  subheadlineColor: z.string().optional(),
+  slots: z.array(courseScheduleSlotSchema).min(0).max(200),
+  hideWeekend: z.boolean().optional(),
+})
+
 const openingHoursPropsSchema = z.object({
   headline: z.string().optional(),
   subheadline: z.string().optional(),
@@ -1197,6 +1225,19 @@ export function createImageSlide(): ImageSliderBlock["props"]["slides"][0] {
   }
 }
 
+export function createCourseSlot(): CourseScheduleBlock["props"]["slots"][0] {
+  return {
+    id: typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `slot-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+    weekday: "Montag",
+    startTime: "09:00",
+    endTime: "10:00",
+    title: "Neuer Kurs",
+    instructor: "",
+    location: "",
+    highlight: false,
+  }
+}
+
 export function createOpeningHour(): OpeningHoursBlock["props"]["hours"][0] {
   return {
     id: uuid(),
@@ -1504,6 +1545,38 @@ const imageSliderDefaults: ImageSliderBlock["props"] = {
       text: "Freundlich. Persönlich. Organisiert.",
     },
   ],
+}
+
+const exampleCourseSlots: CourseScheduleBlock["props"]["slots"] = [
+  { id: uuid(), weekday: "Montag", startTime: "09:00", endTime: "10:00", title: "Rückenschule", instructor: "M. Mustermann", location: "Raum 1", highlight: true },
+  { id: uuid(), weekday: "Montag", startTime: "10:30", endTime: "11:30", title: "Pilates", instructor: "A. Schmidt", location: "Raum 2" },
+  { id: uuid(), weekday: "Dienstag", startTime: "08:00", endTime: "09:00", title: "Physiotherapie", location: "Raum 1" },
+  { id: uuid(), weekday: "Mittwoch", startTime: "14:00", endTime: "15:00", title: "Yoga", instructor: "A. Schmidt", highlight: true },
+  { id: uuid(), weekday: "Donnerstag", startTime: "09:00", endTime: "10:00", title: "Rückenschule", location: "Raum 1" },
+  { id: uuid(), weekday: "Freitag", startTime: "11:00", endTime: "12:00", title: "Physiotherapie", location: "Raum 2" },
+]
+
+const courseScheduleDefaults: CourseScheduleBlock["props"] = {
+  section: {
+    layout: { width: "contained", paddingY: "lg", paddingX: "md" },
+    background: { type: "none" },
+  },
+  typography: {},
+  mode: "calendar",
+  headline: "Kursplan",
+  subheadline: "",
+  headlineColor: undefined,
+  subheadlineColor: undefined,
+  slots: exampleCourseSlots,
+  hideWeekend: false,
+  containerBackgroundMode: "transparent",
+  containerBackgroundColor: undefined,
+  containerBackgroundGradientPreset: "soft",
+  containerGradientFrom: "",
+  containerGradientVia: "",
+  containerGradientTo: "",
+  containerGradientAngle: 135,
+  containerShadow: undefined,
 }
 
 /**
@@ -2971,6 +3044,21 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
           { value: "gradient", label: "Gradient" },
         ],
       },
+    ],
+  },
+  courseSchedule: {
+    type: "courseSchedule",
+    label: "Kursplan",
+    defaults: courseScheduleDefaults,
+    zodSchema: courseSchedulePropsSchema,
+    allowInlineEdit: true,
+    enableInnerPanel: true,
+    inspectorFields: [
+      { key: "mode", label: "Anzeige", type: "select", options: [{ value: "calendar", label: "Kalender" }, { value: "timeline", label: "Timeline" }], group: "layout" },
+      { key: "headline", label: "Überschrift", type: "text", placeholder: "Kursplan", group: "basics" },
+      { key: "subheadline", label: "Untertitel", type: "textarea", placeholder: "Optionaler Hinweistext", group: "basics" },
+      { key: "headlineColor", label: "Überschrift Farbe", type: "color", placeholder: "#111111", group: "design" },
+      { key: "subheadlineColor", label: "Untertitel Farbe", type: "color", placeholder: "#666666", group: "design" },
     ],
   },
 }

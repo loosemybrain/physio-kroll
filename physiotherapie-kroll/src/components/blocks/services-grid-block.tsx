@@ -20,6 +20,7 @@ interface ServicesGridBlockProps {
     icon: string
     title: string
     text: string
+    textAlign?: "left" | "center" | "right" | "justify"
     ctaText?: string
     ctaHref?: string
     iconColor?: string
@@ -35,6 +36,7 @@ interface ServicesGridBlockProps {
   iconBgColor?: string
   titleColor?: string
   textColor?: string
+  textAlign?: "left" | "center" | "right" | "justify"
   ctaColor?: string
   cardBgColor?: string
   cardBorderColor?: string
@@ -72,6 +74,7 @@ export function ServicesGridBlock({
   iconBgColor,
   titleColor,
   textColor,
+  textAlign = "left",
   ctaColor,
   cardBgColor,
   cardBorderColor,
@@ -219,6 +222,12 @@ export function ServicesGridBlock({
                     }}
                     className={cn(
                       "flex-1 text-base leading-relaxed text-muted-foreground",
+                      {
+                        "text-left": card.textAlign === "left" || (!card.textAlign && textAlign === "left"),
+                        "text-center": card.textAlign === "center" || (!card.textAlign && textAlign === "center"),
+                        "text-right": card.textAlign === "right" || (!card.textAlign && textAlign === "right"),
+                        "text-justify": card.textAlign === "justify" || (!card.textAlign && textAlign === "justify"),
+                      },
                       editable && blockId && onEditField && "cursor-pointer rounded px-1 transition-colors hover:bg-primary/10"
                     )}
                     style={{ color: card.textColor || textColor || undefined }}

@@ -1,0 +1,423 @@
+"use client"
+
+import React from "react"
+import { cn } from "@/lib/utils"
+import { Calendar, Clock, MapPin, User } from "lucide-react"
+import { resolveSectionBg } from "@/lib/theme/resolveSectionBg"
+import { resolveContainerBg } from "@/lib/theme/resolveContainerBg"
+import { resolveBoxShadow } from "@/lib/shadow/resolveBoxShadow"
+import { mergeTypographyClasses } from "@/lib/typography"
+import type { BlockSectionProps, ElementShadow, CourseSlot } from "@/types/cms"
+import type { GradientPresetValue } from "@/lib/theme/gradientPresets"
+
+/* ------------------------------------------------------------------ */
+/*  Types                                                              */
+/* ------------------------------------------------------------------ */
+
+export type Weekday = "Montag" | "Dienstag" | "Mittwoch" | "Donnerstag" | "Freitag" | "Samstag" | "Sonntag"
+export type { CourseSlot }
+
+const ALL_WEEKDAYS: Weekday[] = ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"]
+
+function getWeekdays(hideWeekend: boolean): Weekday[] {
+  return hideWeekend ? ALL_WEEKDAYS.slice(0, 5) : ALL_WEEKDAYS
+}
+
+export interface CourseScheduleBlockProps {
+  blockId?: string
+  editable?: boolean
+  onEditField?: (blockId: string, fieldPath: string, anchorRect?: DOMRect) => void
+  section?: BlockSectionProps
+  typography?: Record<string, unknown>
+
+  mode: "calendar" | "timeline"
+  headline?: string
+  subheadline?: string
+  headlineColor?: string
+  subheadlineColor?: string
+  slots: CourseSlot[]
+  hideWeekend?: boolean
+
+  containerBackgroundMode?: "transparent" | "color" | "gradient"
+  containerBackgroundColor?: string
+  containerBackgroundGradientPreset?: GradientPresetValue
+  containerGradientFrom?: string
+  containerGradientVia?: string
+  containerGradientTo?: string
+  containerGradientAngle?: number
+  containerShadow?: ElementShadow
+  containerBorder?: boolean
+}
+
+/* ------------------------------------------------------------------ */
+/*  SlotCard                                                           */
+/* ------------------------------------------------------------------ */
+
+function SlotCard({
+  slot,
+  compact = false,
+}: {
+  slot: CourseSlot
+  compact?: boolean
+}) {
+  return (
+    <article
+      className={cn(
+        "group relative flex flex-col overflow-hidden rounded-xl border transition-all duration-300",
+        slot.highlight
+          ? "border-primary/30 bg-primary/[0.04]"
+          : "border-border/50 bg-card/80 backdrop-blur-sm",
+        "hover:border-primary/20 hover:shadow-[0_4px_20px_-8px_rgba(0,0,0,0.1)]",
+        "hover:-translate-y-0.5",
+        compact ? "p-3" : "p-4"
+      )}
+    >
+      {/* Highlight indicator */}
+      {slot.highlight && (
+        <div
+          className="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-primary/60 via-accent/40 to-transparent"
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Title */}
+      <h4
+        className={cn(
+          "font-medium text-foreground",
+          compact ? "text-sm" : "text-base"
+        )}
+      >
+        {slot.title}
+      </h4>
+
+      {/* Time */}
+      <div
+        className={cn(
+          "mt-1.5 flex items-center gap-1.5 text-muted-foreground",
+          compact ? "text-xs" : "text-sm"
+        )}
+      >
+        <Clock className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+        <time className="tabular-nums">
+          {slot.startTime} – {slot.endTime}
+        </time>
+      </div>
+
+      {/* Instructor */}
+      {slot.instructor && (
+        <div
+          className={cn(
+            "mt-1 flex items-center gap-1.5 text-muted-foreground",
+            compact ? "text-xs" : "text-sm"
+          )}
+        >
+          <User className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+          <span>{slot.instructor}</span>
+        </div>
+      )}
+
+      {/* Location */}
+      {slot.location && (
+        <div
+          className={cn(
+            "mt-1 flex items-center gap-1.5 text-muted-foreground",
+            compact ? "text-xs" : "text-sm"
+          )}
+        >
+          <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+          <span>{slot.location}</span>
+        </div>
+      )}
+    </article>
+  )
+}
+
+/* ------------------------------------------------------------------ */
+/*  Helpers                                                            */
+/* ------------------------------------------------------------------ */
+
+function groupByWeekday(slots: CourseSlot[], weekdaysToShow: Weekday[]): Record<Weekday, CourseSlot[]> {
+  const grouped = {} as Record<Weekday, CourseSlot[]>
+  for (const day of weekdaysToShow) {
+    grouped[day] = []
+  }
+  for (const slot of slots) {
+    if (grouped[slot.weekday]) {
+      grouped[slot.weekday].push(slot)
+    }
+  }
+  for (const day of weekdaysToShow) {
+    grouped[day].sort((a, b) => a.startTime.localeCompare(b.startTime))
+  }
+  return grouped
+}
+
+function sortSlots(slots: CourseSlot[], weekdaysToShow: Weekday[]): CourseSlot[] {
+  const dayIndex = (w: Weekday) => weekdaysToShow.indexOf(w)
+  return [...slots]
+    .filter((s) => weekdaysToShow.includes(s.weekday))
+    .sort((a, b) => {
+      const dayDiff = dayIndex(a.weekday) - dayIndex(b.weekday)
+      if (dayDiff !== 0) return dayDiff
+      return a.startTime.localeCompare(b.startTime)
+    })
+}
+
+/* ------------------------------------------------------------------ */
+/*  Calendar View                                                      */
+/* ------------------------------------------------------------------ */
+
+function CalendarView({ slots, hideWeekend = false }: { slots: CourseSlot[]; hideWeekend?: boolean }) {
+  const weekdaysToShow = getWeekdays(hideWeekend)
+  const grouped = groupByWeekday(slots, weekdaysToShow)
+  const gridCols = hideWeekend ? "md:grid-cols-5" : "md:grid-cols-7"
+
+  return (
+    <div
+      className={`grid gap-4 ${gridCols}`}
+      role="grid"
+      aria-label="Wochenkalender der Kurse"
+    >
+      {weekdaysToShow.map((day) => {
+        const daySlots = grouped[day]
+        const hasSlots = daySlots.length > 0
+
+        return (
+          <div
+            key={day}
+            role="gridcell"
+            className="flex flex-col"
+          >
+            {/* Day header */}
+            <div
+              className={cn(
+                "mb-3 rounded-lg px-3 py-2 text-center text-sm font-medium",
+                hasSlots
+                  ? "bg-primary/[0.08] text-foreground"
+                  : "bg-muted/50 text-muted-foreground"
+              )}
+            >
+              <span className="md:hidden">{day.slice(0, 2)}</span>
+              <span className="hidden md:inline">{day}</span>
+            </div>
+
+            {/* Slots */}
+            <div className="flex flex-1 flex-col gap-2">
+              {hasSlots ? (
+                daySlots.map((slot) => (
+                  <SlotCard key={slot.id} slot={slot} compact />
+                ))
+              ) : (
+                <div className="flex flex-1 items-center justify-center rounded-xl border border-dashed border-border/40 py-6 text-xs text-muted-foreground/60">
+                  <span className="hidden md:inline">Keine Kurse</span>
+                  <span className="md:hidden">—</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+/* ------------------------------------------------------------------ */
+/*  Timeline View                                                      */
+/* ------------------------------------------------------------------ */
+
+function TimelineView({ slots, hideWeekend = false }: { slots: CourseSlot[]; hideWeekend?: boolean }) {
+  const weekdaysToShow = getWeekdays(hideWeekend)
+  const sorted = sortSlots(slots, weekdaysToShow)
+  let lastDay: Weekday | null = null
+
+  return (
+    <div
+      className="relative pl-6 md:pl-8"
+      role="list"
+      aria-label="Kursübersicht als Timeline"
+    >
+      {/* Vertical line */}
+      <div
+        className="absolute left-2 top-0 h-full w-px bg-gradient-to-b from-primary/30 via-border to-border/30 md:left-3"
+        aria-hidden="true"
+      />
+
+      {sorted.map((slot, index) => {
+        const showDayLabel = slot.weekday !== lastDay
+        lastDay = slot.weekday
+
+        return (
+          <div
+            key={slot.id}
+            role="listitem"
+            className={cn(
+              "relative pb-6 last:pb-0",
+              "animate-in fade-in slide-in-from-left-4 duration-500",
+            )}
+            style={{ animationDelay: `${index * 80}ms` }}
+          >
+            {/* Day label */}
+            {showDayLabel && (
+              <div className="mb-3 -ml-6 flex items-center gap-2 md:-ml-8">
+                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground md:h-7 md:w-7">
+                  <Calendar className="h-3 w-3 md:h-3.5 md:w-3.5" aria-hidden="true" />
+                </div>
+                <span className="text-sm font-semibold text-foreground">
+                  {slot.weekday}
+                </span>
+              </div>
+            )}
+
+            {/* Timeline marker */}
+            <div
+              className={cn(
+                "absolute left-0 flex items-center justify-center md:left-1",
+                slot.highlight ? "-ml-1.5 md:-ml-1.5" : "-ml-1 md:-ml-1"
+              )}
+              style={{ top: showDayLabel ? "2.75rem" : "0.5rem" }}
+              aria-hidden="true"
+            >
+              <div
+                className={cn(
+                  "rounded-full border-2 border-background",
+                  slot.highlight
+                    ? "h-3.5 w-3.5 bg-primary shadow-[0_0_8px_rgba(var(--primary),0.4)]"
+                    : "h-2.5 w-2.5 bg-muted-foreground/40"
+                )}
+              />
+            </div>
+
+            {/* Content card */}
+            <div
+              className={cn(
+                "ml-4 md:ml-6",
+                slot.highlight && "scale-[1.02]"
+              )}
+            >
+              <SlotCard slot={slot} />
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+/* ------------------------------------------------------------------ */
+/*  Main Component                                                     */
+/* ------------------------------------------------------------------ */
+
+export function CourseScheduleBlock({
+  blockId,
+  editable = false,
+  onEditField,
+  section,
+  typography,
+  mode = "calendar",
+  headline,
+  subheadline,
+  headlineColor,
+  subheadlineColor,
+  slots,
+  hideWeekend = false,
+  containerBackgroundMode,
+  containerBackgroundColor,
+  containerBackgroundGradientPreset,
+  containerGradientFrom,
+  containerGradientVia,
+  containerGradientTo,
+  containerGradientAngle,
+  containerShadow,
+  containerBorder,
+}: CourseScheduleBlockProps) {
+  const sectionBg = resolveSectionBg(section)
+  const usesContainerPanel = containerBackgroundMode && containerBackgroundMode !== "transparent"
+  const containerBg = resolveContainerBg({
+    mode: containerBackgroundMode,
+    color: containerBackgroundColor,
+    gradientPreset: containerBackgroundGradientPreset,
+    gradient: {
+      from: containerGradientFrom || "",
+      via: containerGradientVia || "",
+      to: containerGradientTo || "",
+      angle: containerGradientAngle ?? 135,
+    },
+  })
+  const containerShadowCss = resolveBoxShadow(containerShadow)
+
+  const handleInlineEdit = (e: React.MouseEvent, fieldPath: string) => {
+    if (!editable || !blockId || !onEditField) return
+    e.preventDefault()
+    e.stopPropagation()
+    onEditField(blockId, fieldPath, (e.currentTarget as HTMLElement).getBoundingClientRect())
+  }
+
+  return (
+    <section
+      className={cn(
+        "py-16 md:py-20",
+        sectionBg.className
+      )}
+      style={sectionBg.style}
+      aria-label={headline || "Kursplan"}
+    >
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+        {/* Header */}
+        {(headline || subheadline) && (
+          <header className="mb-10 text-center md:mb-12">
+            {headline && (
+              <h2
+                onClick={(e) => handleInlineEdit(e, "headline")}
+                className={cn(
+                  mergeTypographyClasses(
+                    "text-2xl font-semibold tracking-tight text-foreground sm:text-3xl",
+                    (typography ?? {})["courseSchedule.headline"] as Record<string, string> | undefined
+                  ),
+                  editable && blockId && onEditField && "cursor-pointer rounded px-1 hover:bg-primary/10"
+                )}
+                style={headlineColor ? { color: headlineColor } : undefined}
+              >
+                {headline}
+              </h2>
+            )}
+            {subheadline && (
+              <p
+                onClick={(e) => handleInlineEdit(e, "subheadline")}
+                className={cn(
+                  mergeTypographyClasses(
+                    "mx-auto mt-3 max-w-2xl text-base leading-relaxed text-muted-foreground",
+                    (typography ?? {})["courseSchedule.subheadline"] as Record<string, string> | undefined
+                  ),
+                  editable && blockId && onEditField && "cursor-pointer rounded px-1 hover:bg-primary/10"
+                )}
+                style={subheadlineColor ? { color: subheadlineColor } : undefined}
+              >
+                {subheadline}
+              </p>
+            )}
+          </header>
+        )}
+
+        {/* Content panel */}
+        <div
+          className={cn(
+            "overflow-hidden rounded-2xl border border-border/60 bg-card/80 p-4 backdrop-blur-sm sm:p-6 md:p-8",
+            "shadow-[0_1px_2px_rgba(0,0,0,0.03),0_8px_32px_-12px_rgba(0,0,0,0.08)]"
+          )}
+          style={usesContainerPanel ? {
+            ...containerBg.style,
+            ...(containerShadowCss ? { boxShadow: containerShadowCss } : {}),
+          } : undefined}
+        >
+          {slots.length === 0 ? (
+            <p className="text-center text-muted-foreground">Keine Kurse eingetragen.</p>
+          ) : mode === "calendar" ? (
+            <CalendarView slots={slots} hideWeekend={hideWeekend} />
+          ) : (
+            <TimelineView slots={slots} hideWeekend={hideWeekend} />
+          )}
+        </div>
+      </div>
+    </section>
+  )
+}

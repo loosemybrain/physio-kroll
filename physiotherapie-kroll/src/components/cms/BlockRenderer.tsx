@@ -19,6 +19,7 @@ import { GalleryBlock } from "@/components/blocks/gallery-block"
 import { OpeningHoursBlock } from "@/components/blocks/opening-hours-block"
 import { ImageSliderBlock } from "@/components/blocks/image-slider-block"
 import { TestimonialSliderBlock } from "@/components/blocks/testimonial-slider"
+import { CourseScheduleBlock } from "@/components/blocks/course-schedule-block"
 import type { BlockSectionProps, HeroBlock } from "@/types/cms"
 import { blockRegistry } from "@/cms/blocks/registry"
 import { getTypographyClassName, type TypographySettings } from "@/lib/typography"
@@ -349,6 +350,18 @@ export function BlockRenderer({
             onEditField={onEditField}
             onElementClick={onElementClick}
             selectedElementId={selectedElementId}
+          />
+        )
+      }
+
+      case "courseSchedule": {
+        const props = block.props
+        return (
+          <CourseScheduleBlock
+            {...props}
+            editable={editable}
+            blockId={block.id}
+            onEditField={onEditField}
           />
         )
       }
