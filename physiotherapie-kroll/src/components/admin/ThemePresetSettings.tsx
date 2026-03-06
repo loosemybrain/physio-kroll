@@ -177,6 +177,28 @@ export function ThemePresetSettings({ initial }: ThemePresetSettingsProps) {
   const currentSelectedId = selectedPresetId[activeBrand] ?? null
   const isDirty = currentSelectedId !== current.activePresetId
 
+  // Filter and sort presets per brand (top-level useMemo to satisfy rules of hooks)
+  const filteredAndSortedPresetsByBrand = React.useMemo(() => {
+    const result: Record<BrandKey, ThemePreset[]> = {} as Record<BrandKey, ThemePreset[]>
+    for (const brand of ["physiotherapy", "physio-konzept"] as BrandKey[]) {
+      const b = state[brand] ?? { presets: [], activePresetId: null }
+      let filtered = b.presets ?? []
+      const activeId = b.activePresetId
+      if (searchQuery.trim()) {
+        const query = searchQuery.toLowerCase()
+        filtered = filtered.filter((p) => p.name.toLowerCase().includes(query))
+      }
+      result[brand] = [...filtered].sort((a, bPreset) => {
+        const aActive = a.id === activeId
+        const bActive = bPreset.id === activeId
+        if (aActive && !bActive) return -1
+        if (!aActive && bActive) return 1
+        return a.name.localeCompare(bPreset.name, "de")
+      })
+    }
+    return result
+  }, [state, searchQuery])
+
   // FIX: Use selectedPresetId for preview (not activePresetId)
   const selectedPreset = React.useMemo(() => {
     if (!currentSelectedId) {
@@ -627,27 +649,7 @@ export function ThemePresetSettings({ initial }: ThemePresetSettingsProps) {
         {(["physiotherapy", "physio-konzept"] as BrandKey[]).map((brand) => {
           const b = state[brand] ?? { presets: [], activePresetId: null }
           const selectedId = selectedPresetId[brand] ?? null
-
-          // Filter and sort presets for this brand
-          const filteredAndSortedPresets = React.useMemo(() => {
-            let filtered = b.presets ?? []
-            const activeId = b.activePresetId
-
-            // Filter by search query
-            if (searchQuery.trim()) {
-              const query = searchQuery.toLowerCase()
-              filtered = filtered.filter((p) => p.name.toLowerCase().includes(query))
-            }
-
-            // Sort: active first, then alphabetically
-            return [...filtered].sort((a, b) => {
-              const aActive = a.id === activeId
-              const bActive = b.id === activeId
-              if (aActive && !bActive) return -1
-              if (!aActive && bActive) return 1
-              return a.name.localeCompare(b.name, "de")
-            })
-          }, [b.presets, b.activePresetId, searchQuery])
+          const filteredAndSortedPresets = filteredAndSortedPresetsByBrand[brand] ?? []
 
           return (
             <TabsContent key={brand} value={brand} className="mt-6 space-y-6">
@@ -808,7 +810,7 @@ export function ThemePresetSettings({ initial }: ThemePresetSettingsProps) {
                   <div>
                     <div className="text-sm font-semibold text-foreground">Live Preview</div>
                     <div className="text-xs text-muted-foreground">
-                      Änderungen wirken nur hier – erst „Speichern" macht es global aktiv.
+                      Änderungen wirken nur hier – erst &quot;Speichern&quot; macht es global aktiv.
                     </div>
                   </div>
                   <Button type="button" variant="outline" size="sm" className="h-8" onClick={handleReset} disabled={!isDirty}>

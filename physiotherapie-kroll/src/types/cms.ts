@@ -894,6 +894,7 @@ export interface CourseScheduleBlock extends BaseBlock {
     containerGradientAngle?: number
     containerShadow?: ElementShadow
     containerBorder?: boolean
+    elements?: Record<string, ElementConfig>
   }
 }
 

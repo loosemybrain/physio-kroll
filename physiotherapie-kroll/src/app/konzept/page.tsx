@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { getSupabasePublic } from "@/lib/supabase/serverPublic";
 import type { CMSBlock } from "@/types/cms";
 import { HomePageClient } from "@/components/home-page-client";
@@ -45,7 +46,7 @@ export default async function KonzeptHomePage() {
             Erstellen Sie eine Homepage im CMS mit dem Slug &quot;home&quot;.
           </p>
           <p className="text-sm text-muted-foreground">
-            Gehen Sie zu <a href="/admin/pages" className="text-primary underline">Admin → Pages</a> und erstellen Sie eine neue Seite mit dem Slug &quot;home&quot;.
+            Gehen Sie zu <Link href="/admin/pages" className="text-primary underline">Admin → Pages</Link> und erstellen Sie eine neue Seite mit dem Slug &quot;home&quot;.
           </p>
         </div>
       </main>

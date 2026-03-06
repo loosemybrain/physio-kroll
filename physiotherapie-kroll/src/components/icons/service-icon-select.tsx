@@ -18,6 +18,28 @@ interface ServiceIconSelectProps {
   disabled?: boolean
 }
 
+function ServiceIconOption({ iconName }: { iconName: string }) {
+  const Icon = getServiceIcon(iconName)
+  return (
+    <SelectItem value={iconName} className="flex items-center gap-2">
+      <div className="flex items-center gap-2">
+        <Icon className="h-4 w-4" />
+        <span>{humanizeIconName(iconName)}</span>
+      </div>
+    </SelectItem>
+  )
+}
+
+function ServiceIconDisplay({ iconName }: { iconName: string }) {
+  const Icon = getServiceIcon(iconName)
+  return (
+    <div className="flex items-center gap-2">
+      <Icon className="h-4 w-4" />
+      <span>{humanizeIconName(iconName)}</span>
+    </div>
+  )
+}
+
 export function ServiceIconSelect({
   value,
   onValueChange,
@@ -26,38 +48,19 @@ export function ServiceIconSelect({
   disabled = false,
 }: ServiceIconSelectProps) {
   const icons = getAvailableIconNames()
-  const IconComponent = value ? getServiceIcon(value) : null
-  
+
   return (
     <Select value={value || ""} onValueChange={onValueChange} disabled={disabled}>
       <SelectTrigger className={cn("w-full", className)}>
-        <SelectValue 
-          placeholder={placeholder}
-          className="flex items-center gap-2"
-        >
-          {value && IconComponent ? (
-            <div className="flex items-center gap-2">
-              <IconComponent className="h-4 w-4" />
-              <span>{humanizeIconName(value)}</span>
-            </div>
-          ) : (
-            placeholder
-          )}
+        <SelectValue placeholder={placeholder} className="flex items-center gap-2">
+          {value ? <ServiceIconDisplay iconName={value} /> : placeholder}
         </SelectValue>
       </SelectTrigger>
-      
+
       <SelectContent className="max-h-[300px]">
-        {icons.map((iconName) => {
-          const Icon = getServiceIcon(iconName)
-          return (
-            <SelectItem key={iconName} value={iconName} className="flex items-center gap-2">
-              <div className="flex items-center gap-2">
-                <Icon className="h-4 w-4" />
-                <span>{humanizeIconName(iconName)}</span>
-              </div>
-            </SelectItem>
-          )
-        })}
+        {icons.map((iconName) => (
+          <ServiceIconOption key={iconName} iconName={iconName} />
+        ))}
       </SelectContent>
     </Select>
   )

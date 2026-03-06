@@ -1,4 +1,5 @@
 import type { NextConfig } from "next"
+import { securityHeaders } from "./src/lib/security/headers"
 
 const nextConfig: NextConfig = {
   reactCompiler: true,
@@ -10,6 +11,17 @@ const nextConfig: NextConfig = {
         pathname: "/storage/v1/object/public/**",
       },
     ],
+  },
+  async headers() {
+    return [
+      {
+        source: "/(.*)",
+        headers: Object.entries(securityHeaders).map(([key, value]) => ({
+          key,
+          value,
+        })),
+      },
+    ]
   },
 }
 

@@ -356,12 +356,18 @@ export function BlockRenderer({
 
       case "courseSchedule": {
         const props = block.props
+        const extras = (block.props ?? {}) as Record<string, unknown>
+        const elementsValue = extras.elements
+        const elements = elementsValue as Record<string, import("@/types/cms").ElementConfig> | undefined
         return (
           <CourseScheduleBlock
             {...props}
+            elements={elements}
             editable={editable}
             blockId={block.id}
             onEditField={onEditField}
+            onElementClick={onElementClick}
+            selectedElementId={selectedElementId}
           />
         )
       }

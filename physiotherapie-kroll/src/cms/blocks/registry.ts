@@ -855,6 +855,7 @@ const courseSchedulePropsSchema = z.object({
   subheadlineColor: z.string().optional(),
   slots: z.array(courseScheduleSlotSchema).min(0).max(200),
   hideWeekend: z.boolean().optional(),
+  elements: z.record(z.string(), z.any()).optional(),
 })
 
 const openingHoursPropsSchema = z.object({
@@ -1577,6 +1578,7 @@ const courseScheduleDefaults: CourseScheduleBlock["props"] = {
   containerGradientTo: "",
   containerGradientAngle: 135,
   containerShadow: undefined,
+  elements: {},
 }
 
 /**
@@ -3053,6 +3055,9 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
     zodSchema: courseSchedulePropsSchema,
     allowInlineEdit: true,
     enableInnerPanel: true,
+    elements: [
+      { id: "courseSchedule.container", label: "Container (Kursplan-Panel)", path: "", supportsTypography: false, supportsShadow: true, group: "Layout" },
+    ],
     inspectorFields: [
       { key: "mode", label: "Anzeige", type: "select", options: [{ value: "calendar", label: "Kalender" }, { value: "timeline", label: "Timeline" }], group: "layout" },
       { key: "headline", label: "Überschrift", type: "text", placeholder: "Kursplan", group: "basics" },

@@ -146,16 +146,13 @@ export function HeroSection({
 
   const animationKey = `${pathname || "unknown"}::${blockId || "no-block"}`
 
-  // Decide once per mount; never flip during this mount (prevents abrupt stop)
-  const shouldAnimateInRef = useRef<boolean | null>(null)
-  if (shouldAnimateInRef.current === null) {
-    shouldAnimateInRef.current = !heroAnimatedOnce.has(animationKey)
-  }
-  const shouldAnimateIn = shouldAnimateInRef.current
-
+  // Decide once per mount; never flip during this mount (prevents abrupt stop). State set in effect to avoid reading ref during render.
+  const [shouldAnimateIn, setShouldAnimateIn] = useState(false)
   useEffect(() => {
-    if (shouldAnimateIn) heroAnimatedOnce.add(animationKey)
-  }, [shouldAnimateIn, animationKey])
+    const first = !heroAnimatedOnce.has(animationKey)
+    if (first) heroAnimatedOnce.add(animationKey)
+    setShouldAnimateIn(first)
+  }, [animationKey])
 
   // Element shadows
   const heroHeadlineShadow = useElementShadowStyle({

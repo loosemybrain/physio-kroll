@@ -70,6 +70,33 @@ function getRect(el: EventTarget | null): DOMRect | undefined {
   return node.getBoundingClientRect()
 }
 
+function SliderArrowButton({
+  dir,
+  onClick,
+  disabled,
+}: {
+  dir: "prev" | "next"
+  onClick: (e: React.MouseEvent<HTMLButtonElement>) => void
+  disabled?: boolean
+}) {
+  const Icon = dir === "prev" ? ChevronLeft : ChevronRight
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={dir === "prev" ? "Vorheriges Testimonial" : "Nächstes Testimonial"}
+      className={cn(
+        "inline-flex h-10 w-10 items-center justify-center rounded-full border border-border bg-background shadow-sm transition",
+        "hover:bg-muted/50 focus:outline-none focus:ring-2 focus:ring-primary/30",
+        "disabled:opacity-40 disabled:hover:bg-background"
+      )}
+    >
+      <Icon className="h-5 w-5" />
+    </button>
+  )
+}
+
 export function TestimonialSliderBlock({
   data,
   brand = "physiotherapy",
@@ -83,7 +110,7 @@ export function TestimonialSliderBlock({
     const raw = Array.isArray(data?.items) ? data.items : []
     // Filter very broken items, but keep empty strings editable if user wants
     return raw.filter((it) => typeof it === "object" && it !== null) as TestimonialSliderItem[]
-  }, [data?.items])
+  }, [data])
 
   const headline =
     data?.headline ??
@@ -151,36 +178,6 @@ export function TestimonialSliderBlock({
   )
 
   const current = items[index]
-
-  const ArrowButton = React.useCallback(
-    ({
-      dir,
-      onClick,
-      disabled,
-    }: {
-      dir: "prev" | "next"
-      onClick: (e: React.MouseEvent<HTMLButtonElement>) => void
-      disabled?: boolean
-    }) => {
-      const Icon = dir === "prev" ? ChevronLeft : ChevronRight
-      return (
-        <button
-          type="button"
-          onClick={onClick}
-          disabled={disabled}
-          aria-label={dir === "prev" ? "Vorheriges Testimonial" : "Nächstes Testimonial"}
-          className={cn(
-            "inline-flex h-10 w-10 items-center justify-center rounded-full border border-border bg-background shadow-sm transition",
-            "hover:bg-muted/50 focus:outline-none focus:ring-2 focus:ring-primary/30",
-            "disabled:opacity-40 disabled:hover:bg-background"
-          )}
-        >
-          <Icon className="h-5 w-5" />
-        </button>
-      )
-    },
-    []
-  )
 
   return (
     <section className={cn("w-full py-16", bgClass || "bg-muted/30")}>
@@ -286,7 +283,7 @@ export function TestimonialSliderBlock({
         {(showArrows || showDots) && items.length > 1 && (
           <div className="mt-8 flex items-center justify-center gap-6">
             {showArrows ? (
-              <ArrowButton
+              <SliderArrowButton
                 dir="prev"
                 onClick={(e) => {
                   e.preventDefault()
@@ -318,7 +315,7 @@ export function TestimonialSliderBlock({
             ) : null}
 
             {showArrows ? (
-              <ArrowButton
+              <SliderArrowButton
                 dir="next"
                 onClick={(e) => {
                   e.preventDefault()

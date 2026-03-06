@@ -7,7 +7,7 @@ import { resolveSectionBg } from "@/lib/theme/resolveSectionBg"
 import { resolveContainerBg } from "@/lib/theme/resolveContainerBg"
 import { resolveBoxShadow } from "@/lib/shadow/resolveBoxShadow"
 import { mergeTypographyClasses } from "@/lib/typography"
-import type { BlockSectionProps, ElementShadow, CourseSlot } from "@/types/cms"
+import type { BlockSectionProps, ElementShadow, CourseSlot, ElementConfig } from "@/types/cms"
 import type { GradientPresetValue } from "@/lib/theme/gradientPresets"
 
 /* ------------------------------------------------------------------ */
@@ -23,10 +23,15 @@ function getWeekdays(hideWeekend: boolean): Weekday[] {
   return hideWeekend ? ALL_WEEKDAYS.slice(0, 5) : ALL_WEEKDAYS
 }
 
+const CONTAINER_ELEMENT_ID = "courseSchedule.container"
+
 export interface CourseScheduleBlockProps {
   blockId?: string
   editable?: boolean
   onEditField?: (blockId: string, fieldPath: string, anchorRect?: DOMRect) => void
+  onElementClick?: (blockId: string, elementId: string) => void
+  selectedElementId?: string | null
+  elements?: Record<string, ElementConfig>
   section?: BlockSectionProps
   typography?: Record<string, unknown>
 
@@ -65,7 +70,7 @@ function SlotCard({
       className={cn(
         "group relative flex flex-col overflow-hidden rounded-xl border transition-all duration-300",
         slot.highlight
-          ? "border-primary/30 bg-primary/[0.04]"
+          ? "border-primary/30 bg-primary/4"
           : "border-border/50 bg-card/80 backdrop-blur-sm",
         "hover:border-primary/20 hover:shadow-[0_4px_20px_-8px_rgba(0,0,0,0.1)]",
         "hover:-translate-y-0.5",
@@ -228,7 +233,6 @@ function CalendarView({ slots, hideWeekend = false }: { slots: CourseSlot[]; hid
 function TimelineView({ slots, hideWeekend = false }: { slots: CourseSlot[]; hideWeekend?: boolean }) {
   const weekdaysToShow = getWeekdays(hideWeekend)
   const sorted = sortSlots(slots, weekdaysToShow)
-  let lastDay: Weekday | null = null
 
   return (
     <div
@@ -243,8 +247,8 @@ function TimelineView({ slots, hideWeekend = false }: { slots: CourseSlot[]; hid
       />
 
       {sorted.map((slot, index) => {
-        const showDayLabel = slot.weekday !== lastDay
-        lastDay = slot.weekday
+        const prevSlot = sorted[index - 1]
+        const showDayLabel = !prevSlot || prevSlot.weekday !== slot.weekday
 
         return (
           <div
@@ -311,6 +315,9 @@ export function CourseScheduleBlock({
   blockId,
   editable = false,
   onEditField,
+  onElementClick,
+  selectedElementId,
+  elements,
   section,
   typography,
   mode = "calendar",
@@ -343,7 +350,10 @@ export function CourseScheduleBlock({
       angle: containerGradientAngle ?? 135,
     },
   })
-  const containerShadowCss = resolveBoxShadow(containerShadow)
+  // Prefer shadow from elements (inspector) over legacy containerShadow prop
+  const containerElementConfig = elements?.[CONTAINER_ELEMENT_ID]
+  const effectiveContainerShadow = containerElementConfig?.style?.shadow ?? containerShadow
+  const containerShadowCss = resolveBoxShadow(effectiveContainerShadow)
 
   const handleInlineEdit = (e: React.MouseEvent, fieldPath: string) => {
     if (!editable || !blockId || !onEditField) return
@@ -400,14 +410,24 @@ export function CourseScheduleBlock({
 
         {/* Content panel */}
         <div
+          data-element-id={CONTAINER_ELEMENT_ID}
+          role={editable && onElementClick ? "button" : undefined}
+          tabIndex={editable && onElementClick ? 0 : undefined}
+          onClick={
+            editable && blockId && onElementClick
+              ? () => onElementClick(blockId, CONTAINER_ELEMENT_ID)
+              : undefined
+          }
           className={cn(
             "overflow-hidden rounded-2xl border border-border/60 bg-card/80 p-4 backdrop-blur-sm sm:p-6 md:p-8",
-            "shadow-[0_1px_2px_rgba(0,0,0,0.03),0_8px_32px_-12px_rgba(0,0,0,0.08)]"
+            "shadow-[0_1px_2px_rgba(0,0,0,0.03),0_8px_32px_-12px_rgba(0,0,0,0.08)]",
+            editable && onElementClick && "cursor-pointer transition-[box-shadow,outline] hover:outline-2 hover:outline-primary/30 hover:outline-offset-2",
+            selectedElementId === CONTAINER_ELEMENT_ID && "outline-2 outline-primary outline-offset-2"
           )}
-          style={usesContainerPanel ? {
-            ...containerBg.style,
+          style={{
+            ...(usesContainerPanel ? containerBg.style : {}),
             ...(containerShadowCss ? { boxShadow: containerShadowCss } : {}),
-          } : undefined}
+          }}
         >
           {slots.length === 0 ? (
             <p className="text-center text-muted-foreground">Keine Kurse eingetragen.</p>

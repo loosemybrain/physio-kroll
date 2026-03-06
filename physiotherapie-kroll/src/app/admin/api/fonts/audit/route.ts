@@ -7,7 +7,7 @@
  */
 
 import { NextResponse } from "next/server"
-import { readFileSync, readdirSync } from "fs"
+import { readFileSync, readdirSync, statSync } from "fs"
 import { join } from "path"
 
 /**
@@ -39,7 +39,7 @@ function scanDirectory(dir: string, findings: Finding[] = [], depth = 0): Findin
       if (ignorePaths.includes(file)) continue
 
       const filePath = join(dir, file)
-      const stat = require("fs").statSync(filePath)
+      const stat = statSync(filePath)
 
       if (stat.isDirectory()) {
         scanDirectory(filePath, findings, depth + 1)
@@ -66,12 +66,12 @@ function scanDirectory(dir: string, findings: Finding[] = [], depth = 0): Findin
               }
             }
           })
-        } catch (err) {
+        } catch {
           // Skip unreadable files
         }
       }
     }
-  } catch (err) {
+  } catch {
     // Skip directories we can't read
   }
 

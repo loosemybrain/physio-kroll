@@ -42,6 +42,78 @@ const DEFAULT_CONTACT_INFO_CARDS: ContactInfoCard[] = [
   { id: "location", icon: "mapPin", title: "Lokale Betreuung", value: "Persönlich vor Ort für Sie da" },
 ]
 
+/** Single contact info card with shadow from element config (hook at top level) */
+function ContactInfoCardRow({
+  card,
+  renderIndex,
+  elements,
+  blockId,
+  onElementClick,
+  editable,
+  onEditField,
+  handleInlineEdit,
+}: {
+  card: ContactInfoCard
+  renderIndex: number
+  elements?: Record<string, import("@/types/cms").ElementConfig>
+  blockId?: string
+  onElementClick?: (blockId: string, elementId: string) => void
+  editable?: boolean
+  onEditField?: (blockId: string, fieldPath: string, anchorRect?: DOMRect) => void
+  handleInlineEdit: (fieldPath: string) => (e: React.MouseEvent) => void
+}) {
+  const cardElementId = `contact-info-${card.id}`
+  const cardShadow = useElementShadowStyle({
+    elementId: cardElementId,
+    elementConfig: (elements ?? {})[cardElementId],
+  })
+  const IconComponent =
+    card.icon === "mail"
+      ? Mail
+      : card.icon === "phone"
+        ? Phone
+        : card.icon === "clock"
+          ? Clock
+          : MapPin
+  return (
+    <div
+      data-element-id={cardElementId}
+      style={cardShadow as React.CSSProperties}
+      onClick={() => onElementClick?.(blockId || "", cardElementId)}
+      className="group flex items-center gap-4 rounded-xl border border-border/30 bg-card/40 p-4 backdrop-blur-sm transition-all duration-300 hover:border-border/60 hover:bg-card/60 cursor-pointer"
+    >
+      <div
+        className={cn(
+          "flex size-12 shrink-0 items-center justify-center rounded-lg bg-primary/10 transition-colors group-hover:bg-primary/20",
+          editable && blockId && onEditField && "cursor-pointer",
+        )}
+        onClick={handleInlineEdit(`contactInfoCards.${renderIndex}.icon`)}
+      >
+        <IconComponent className="size-5 text-primary" />
+      </div>
+      <div>
+        <p
+          className={cn(
+            "text-sm font-medium text-foreground",
+            editable && blockId && onEditField && "cursor-pointer rounded px-1 transition-colors hover:bg-primary/10",
+          )}
+          onClick={handleInlineEdit(`contactInfoCards.${renderIndex}.title`)}
+        >
+          {card.title}
+        </p>
+        <p
+          className={cn(
+            "text-sm text-muted-foreground",
+            editable && blockId && onEditField && "cursor-pointer rounded px-1 transition-colors hover:bg-primary/10",
+          )}
+          onClick={handleInlineEdit(`contactInfoCards.${renderIndex}.value`)}
+        >
+          {card.value}
+        </p>
+      </div>
+    </div>
+  )
+}
 
 /**
  * Builds Zod schema from form field definitions
@@ -322,10 +394,40 @@ export function ContactFormBlock({
   const renderTimeRef = useRef<number>(Date.now())
 
   // Collect props for shadow access (elements property from CommonBlockProps)
-  const propsFromBlock = { elements: (elements ?? {}) } as any
+  const propsFromBlock = { elements: (elements ?? {}) } as Record<string, unknown>
 
   // Normalize layout: accept "stacked" (legacy) and normalize to "split"
   const normalizedLayout = layout === "stacked" ? "split" : layout
+
+  // All shadow hooks at top level (no conditional/callback calls)
+  const formCardShadow = useElementShadowStyle({
+    elementId: "formCard",
+    elementConfig: (propsFromBlock?.elements as Record<string, unknown>)?.["formCard"] as import("@/types/cms").ElementConfig | undefined,
+  })
+  const formHeadingShadow = useElementShadowStyle({
+    elementId: "heading",
+    elementConfig: (propsFromBlock?.elements as Record<string, unknown>)?.["heading"] as import("@/types/cms").ElementConfig | undefined,
+  })
+  const submitButtonShadow = useElementShadowStyle({
+    elementId: "submitButton",
+    elementConfig: (propsFromBlock?.elements as Record<string, unknown>)?.["submitButton"] as import("@/types/cms").ElementConfig | undefined,
+  })
+  const contactCardShadow = useElementShadowStyle({
+    elementId: "contactCard",
+    elementConfig: (propsFromBlock?.elements as Record<string, unknown>)?.["contactCard"] as import("@/types/cms").ElementConfig | undefined,
+  })
+  const stackedHeadingShadow = useElementShadowStyle({
+    elementId: "stackedHeading",
+    elementConfig: (propsFromBlock?.elements as Record<string, unknown>)?.["stackedHeading"] as import("@/types/cms").ElementConfig | undefined,
+  })
+  const formCardStackedShadow = useElementShadowStyle({
+    elementId: "formCardStacked",
+    elementConfig: (propsFromBlock?.elements as Record<string, unknown>)?.["formCardStacked"] as import("@/types/cms").ElementConfig | undefined,
+  })
+  const stackedSubmitButtonShadow = useElementShadowStyle({
+    elementId: "stackedSubmitButton",
+    elementConfig: (propsFromBlock?.elements as Record<string, unknown>)?.["stackedSubmitButton"] as import("@/types/cms").ElementConfig | undefined,
+  })
 
   const formSchema = buildFormSchema(fields, requireConsent)
   type FormData = z.infer<typeof formSchema>
@@ -494,24 +596,7 @@ export function ContactFormBlock({
   const isUsingDefaults = effectiveCards.length === 0
   const cardsToRender: ContactInfoCard[] = isUsingDefaults ? DEFAULT_CONTACT_INFO_CARDS : effectiveCards
 
-    if (normalizedLayout === "split") {
-    const formCardShadow = useElementShadowStyle({
-      elementId: "formCard",
-      elementConfig: (propsFromBlock as any)?.elements?.["formCard"],
-    })
-    const formHeadingShadow = useElementShadowStyle({
-      elementId: "heading",
-      elementConfig: (propsFromBlock as any)?.elements?.["heading"],
-    })
-    const submitButtonShadow = useElementShadowStyle({
-      elementId: "submitButton",
-      elementConfig: (propsFromBlock as any)?.elements?.["submitButton"],
-    })
-    const contactCardShadow = useElementShadowStyle({
-      elementId: "contactCard",
-      elementConfig: (propsFromBlock as any)?.elements?.["contactCard"],
-    })    
-
+  if (normalizedLayout === "split") {
     return (
       <section className="relative w-full overflow-hidden py-12">
         {/* Decorative background elements - subtle ambient glow only */}
@@ -570,72 +655,19 @@ export function ContactFormBlock({
 
               {/* Contact Info Cards */}
               <div className="mt-12 space-y-4">
-                {cardsToRender.map((card, renderIndex) => {
-                  const cardElementId = `contact-info-${card.id}`
-
-                  const cardShadow = useElementShadowStyle({
-                    elementId: cardElementId,
-                    elementConfig: (elements ?? {})[cardElementId],
-                  })
-
-                  const IconComponent =
-                    card.icon === "mail"
-                      ? Mail
-                      : card.icon === "phone"
-                        ? Phone
-                        : card.icon === "clock"
-                          ? Clock
-                          : MapPin
-
-                  const editIndex = renderIndex
-
-                  return (
-                    <div
-                      key={card.id}
-                      data-element-id={cardElementId}
-                      style={cardShadow as any}
-                      onClick={() => onElementClick?.(blockId || "", cardElementId)}
-                      className="group flex items-center gap-4 rounded-xl border border-border/30 bg-card/40 p-4 backdrop-blur-sm transition-all duration-300 hover:border-border/60 hover:bg-card/60 cursor-pointer"
-                    >
-                      {/* Icon – inline edit */}
-                      <div
-                        className={cn(
-                          "flex size-12 shrink-0 items-center justify-center rounded-lg bg-primary/10 transition-colors group-hover:bg-primary/20",
-                          editable && blockId && onEditField && "cursor-pointer",
-                        )}
-                        onClick={handleInlineEdit(`contactInfoCards.${editIndex}.icon`)}
-                      >
-                        <IconComponent className="size-5 text-primary" />
-                      </div>
-
-                      <div>
-                        {/* Title – inline edit */}
-                        <p
-                          className={cn(
-                            "text-sm font-medium text-foreground",
-                            editable && blockId && onEditField &&
-                              "cursor-pointer rounded px-1 transition-colors hover:bg-primary/10",
-                          )}
-                          onClick={handleInlineEdit(`contactInfoCards.${editIndex}.title`)}
-                        >
-                          {card.title}
-                        </p>
-
-                        {/* Value – inline edit */}
-                        <p
-                          className={cn(
-                            "text-sm text-muted-foreground",
-                            editable && blockId && onEditField &&
-                              "cursor-pointer rounded px-1 transition-colors hover:bg-primary/10",
-                          )}
-                          onClick={handleInlineEdit(`contactInfoCards.${editIndex}.value`)}
-                        >
-                          {card.value}
-                        </p>
-                      </div>
-                    </div>
-                  )
-                })}
+                {cardsToRender.map((card, renderIndex) => (
+                  <ContactInfoCardRow
+                    key={card.id}
+                    card={card}
+                    renderIndex={renderIndex}
+                    elements={elements}
+                    blockId={blockId}
+                    onElementClick={onElementClick}
+                    editable={editable}
+                    onEditField={onEditField}
+                    handleInlineEdit={handleInlineEdit}
+                  />
+                ))}
               </div>
 
             </div>
@@ -826,19 +858,6 @@ export function ContactFormBlock({
   }
 
   // Stacked Layout (Default)
-  const stackedHeadingShadow = useElementShadowStyle({
-    elementId: "stackedHeading",
-    elementConfig: (propsFromBlock as any)?.elements?.["stackedHeading"],
-  })
-  const formCardStackedShadow = useElementShadowStyle({
-    elementId: "formCardStacked",
-    elementConfig: (propsFromBlock as any)?.elements?.["formCardStacked"],
-  })
-  const stackedSubmitButtonShadow = useElementShadowStyle({
-    elementId: "stackedSubmitButton",
-    elementConfig: (propsFromBlock as any)?.elements?.["stackedSubmitButton"],
-  })
-
   return (
     <section className="w-full py-12">
       <div className="mx-auto max-w-xl">

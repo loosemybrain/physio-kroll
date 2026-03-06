@@ -202,6 +202,126 @@ function prefersReducedMotion(): boolean {
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches
 }
 
+function FeatureCardWithShadow({
+  feature,
+  index,
+  elements,
+  effectiveBlockStyle,
+  effectiveBlockAnimation,
+  prefersNoMotion,
+  cardBgColor,
+  cardBorderColor,
+  iconColor,
+  titleColor,
+  descriptionColor,
+  editable,
+  blockId,
+  onEditField,
+  onElementClick,
+  handleInlineEdit,
+}: {
+  feature: Feature
+  index: number
+  elements?: Record<string, unknown>
+  effectiveBlockStyle: FeatureGridStyle
+  effectiveBlockAnimation: FeatureGridAnimation
+  prefersNoMotion: boolean
+  cardBgColor?: string
+  cardBorderColor?: string
+  iconColor?: string
+  titleColor?: string
+  descriptionColor?: string
+  editable?: boolean
+  blockId?: string
+  onEditField?: (blockId: string, fieldPath: string, anchorRect?: DOMRect) => void
+  onElementClick?: (blockId: string, elementId: string) => void
+  handleInlineEdit: (e: React.MouseEvent, fieldPath: string, elementId?: string) => void
+}) {
+  const cardShadow = useElementShadowStyle({
+    elementId: `card-${feature.id}`,
+    elementConfig: (elements ?? {})[`card-${feature.id}`] as import("@/types/cms").ElementConfig | undefined,
+  })
+  const featureStyle: FeatureGridStyle = feature.style || effectiveBlockStyle
+  const featureAnimation: FeatureGridAnimation = feature.animation || effectiveBlockAnimation
+  const variantClass = variantClasses[featureStyle.variant || "default"] || variantClasses.default
+  const radiusClass = radiusClasses[featureStyle.radius || "xl"] || radiusClasses.xl
+  const borderClass = borderClasses[featureStyle.border || "subtle"] || borderClasses.subtle
+  const shadowClass = shadowClasses[featureStyle.shadow || "sm"] || shadowClasses.sm
+  const accentClass = accentClasses[featureStyle.accent || "none"] || accentClasses.none
+  const cardClassName = cn(
+    "h-full",
+    variantClass,
+    radiusClass,
+    borderClass,
+    shadowClass,
+    accentClass,
+    featureStyle.variant === "soft" && "transition-all hover:shadow-md",
+    featureStyle.variant === "elevated" && "transition-all hover:shadow-xl",
+    (featureStyle.variant === "default" || featureStyle.variant === "outline") && "transition-all hover:shadow-md",
+  )
+  const entrance = featureAnimation.entrance || "fade"
+  const shouldAnimate = !prefersNoMotion && entrance !== "none"
+
+  return (
+    <motion.div
+      variants={shouldAnimate ? entranceVariants[entrance] : entranceVariants.none}
+      initial="hidden"
+      whileInView="visible"
+      viewport={{ once: true, margin: "0px 0px -50px 0px" }}
+      transition={{
+        duration: (featureAnimation.durationMs || 400) / 1000,
+        delay: (featureAnimation.delayMs || 0) / 1000,
+      }}
+    >
+      <CardSurface
+        className={cardClassName}
+        data-element-id={`card-${feature.id}`}
+        style={{
+          ...(cardShadow as React.CSSProperties),
+          backgroundColor: feature.cardBgColor || cardBgColor || undefined,
+          borderColor: feature.cardBorderColor || cardBorderColor || undefined,
+        }}
+        onClick={(e) => {
+          if ((e.target as HTMLElement).closest("[data-element-id]") === e.currentTarget && onElementClick) {
+            onElementClick(blockId || "", `card-${feature.id}`)
+          }
+        }}
+      >
+        <CardHeader>
+          {feature.icon && (
+            <div
+              className="mb-4 text-4xl"
+              style={{ color: feature.iconColor || iconColor || undefined }}
+              dangerouslySetInnerHTML={{ __html: feature.icon }}
+            />
+          )}
+          <CardTitle
+            onClick={(e) => handleInlineEdit(e, `features.${index}.title`)}
+            className={cn(
+              editable && blockId && onEditField && "cursor-pointer rounded px-1 transition-colors hover:bg-primary/10",
+            )}
+            style={{ color: feature.titleColor || titleColor || undefined }}
+          >
+            {feature.title || "Titel eingeben..."}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <CardDescription
+            onClick={(e) => handleInlineEdit(e, `features.${index}.description`)}
+            className={cn(
+              "text-base",
+              editable && blockId && onEditField && "cursor-pointer rounded px-1 transition-colors hover:bg-primary/10",
+            )}
+            style={{ color: feature.descriptionColor || descriptionColor || undefined }}
+          >
+            {feature.description || "Beschreibung eingeben..."}
+          </CardDescription>
+        </CardContent>
+      </CardSurface>
+    </motion.div>
+  )
+}
+
 export function FeatureGridBlock({
   features,
   columns = 3,
@@ -244,99 +364,27 @@ export function FeatureGridBlock({
   return (
     <section className="py-16">
       <div className={cn("grid gap-6", columnsMap[columns])}>
-        {features.map((feature, index) => {
-          const cardShadow = useElementShadowStyle({
-            elementId: `card-${feature.id}`,
-            elementConfig: (elements ?? {})[`card-${feature.id}`],
-          })
-
-          // Resolve per-feature style/animation (feature overrides > block > defaults)
-          const featureStyle: FeatureGridStyle = feature.style || effectiveBlockStyle
-          const featureAnimation: FeatureGridAnimation = feature.animation || effectiveBlockAnimation
-
-          // Build className from resolved style
-          const variantClass = variantClasses[featureStyle.variant || "default"] || variantClasses.default
-          const radiusClass = radiusClasses[featureStyle.radius || "xl"] || radiusClasses.xl
-          const borderClass = borderClasses[featureStyle.border || "subtle"] || borderClasses.subtle
-          const shadowClass = shadowClasses[featureStyle.shadow || "sm"] || shadowClasses.sm
-          const accentClass = accentClasses[featureStyle.accent || "none"] || accentClasses.none
-
-          const cardClassName = cn(
-            "h-full",
-            variantClass,
-            radiusClass,
-            borderClass,
-            shadowClass,
-            accentClass,
-            // Hover effects
-            featureStyle.variant === "soft" && "transition-all hover:shadow-md",
-            featureStyle.variant === "elevated" && "transition-all hover:shadow-xl",
-            (featureStyle.variant === "default" || featureStyle.variant === "outline") && "transition-all hover:shadow-md",
-          )
-
-          const entrance = featureAnimation.entrance || "fade"
-          const shouldAnimate = !prefersNoMotion && entrance !== "none"
-
-          return (
-            <motion.div
-              key={feature.id}
-              variants={shouldAnimate ? entranceVariants[entrance] : entranceVariants.none}
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true, margin: "0px 0px -50px 0px" }}
-              transition={{
-                duration: (featureAnimation.durationMs || 400) / 1000,
-                delay: (featureAnimation.delayMs || 0) / 1000,
-              }}
-            >
-              <CardSurface
-                className={cardClassName}
-                data-element-id={`card-${feature.id}`}
-                style={{
-                  ...(cardShadow as any),
-                  backgroundColor: feature.cardBgColor || cardBgColor || undefined,
-                  borderColor: feature.cardBorderColor || cardBorderColor || undefined,
-                }}
-                onClick={(e) => {
-                  if ((e.target as HTMLElement).closest("[data-element-id]") === e.currentTarget && onElementClick) {
-                    onElementClick(blockId || "", `card-${feature.id}`)
-                  }
-                }}
-              >
-                <CardHeader>
-                  {feature.icon && (
-                    <div
-                      className="mb-4 text-4xl"
-                      style={{ color: feature.iconColor || iconColor || undefined }}
-                      dangerouslySetInnerHTML={{ __html: feature.icon }}
-                    />
-                  )}
-                  <CardTitle
-                    onClick={(e) => handleInlineEdit(e, `features.${index}.title`)}
-                    className={cn(
-                      editable && blockId && onEditField && "cursor-pointer rounded px-1 transition-colors hover:bg-primary/10",
-                    )}
-                    style={{ color: feature.titleColor || titleColor || undefined }}
-                  >
-                    {feature.title || "Titel eingeben..."}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <CardDescription
-                    onClick={(e) => handleInlineEdit(e, `features.${index}.description`)}
-                    className={cn(
-                      "text-base",
-                      editable && blockId && onEditField && "cursor-pointer rounded px-1 transition-colors hover:bg-primary/10",
-                    )}
-                    style={{ color: feature.descriptionColor || descriptionColor || undefined }}
-                  >
-                    {feature.description || "Beschreibung eingeben..."}
-                  </CardDescription>
-                </CardContent>
-              </CardSurface>
-            </motion.div>
-          )
-        })}
+        {features.map((feature, index) => (
+          <FeatureCardWithShadow
+            key={feature.id}
+            feature={feature}
+            index={index}
+            elements={elements}
+            effectiveBlockStyle={effectiveBlockStyle}
+            effectiveBlockAnimation={effectiveBlockAnimation}
+            prefersNoMotion={prefersNoMotion}
+            cardBgColor={cardBgColor}
+            cardBorderColor={cardBorderColor}
+            iconColor={iconColor}
+            titleColor={titleColor}
+            descriptionColor={descriptionColor}
+            editable={editable}
+            blockId={blockId}
+            onEditField={onEditField}
+            onElementClick={onElementClick}
+            handleInlineEdit={handleInlineEdit}
+          />
+        ))}
       </div>
     </section>
   )

@@ -764,7 +764,7 @@ export function ImageSliderBlock({
   const aspectClass = aspectMap[aspect] || ""
   
   // Resolve container background styles
-  let containerStyle: React.CSSProperties = {}
+  const containerStyle: React.CSSProperties = {}
   if (containerBackgroundMode === "color" && containerBackgroundColor) {
     containerStyle.backgroundColor = containerBackgroundColor
   } else if (containerBackgroundMode === "gradient" && containerBackgroundGradientPreset) {

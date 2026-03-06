@@ -291,6 +291,32 @@ function CardButtonRenderer({
   return buttonElement
 }
 
+function CardButtonWithShadow({
+  button,
+  elements,
+  ...rest
+}: {
+  button: CardButton
+  elements?: Record<string, unknown>
+  editable?: boolean
+  blockId?: string
+  onEditField?: CardBlockProps["onEditField"]
+  onElementClick?: CardBlockProps["onElementClick"]
+  buttonPreset?: string
+}) {
+  const buttonShadow = useElementShadowStyle({
+    elementId: `card.button.${button.id}`,
+    elementConfig: (elements ?? {})[`card.button.${button.id}`] as import("@/types/cms").ElementConfig | undefined,
+  })
+  return (
+    <CardButtonRenderer
+      button={button}
+      buttonShadow={buttonShadow as React.CSSProperties}
+      {...rest}
+    />
+  )
+}
+
 function ActionSlotRenderer({
   actionSlot,
   actionLabel,
@@ -570,24 +596,18 @@ export function CardBlock({
         {/* Footer with Buttons */}
         {hasFooter && (
           <CardFooter className={cn("flex flex-wrap gap-2", resolveJustify(footerAlign))}>
-            {buttons.map((button) => {
-              const buttonShadow = useElementShadowStyle({
-                elementId: `card.button.${button.id}`,
-                elementConfig: (elements ?? {})[`card.button.${button.id}`],
-              })
-              return (
-                <CardButtonRenderer
-                  key={button.id}
-                  button={button}
-                  editable={editable}
-                  blockId={blockId}
-                  onEditField={onEditField}
-                  buttonShadow={buttonShadow}
-                  onElementClick={onElementClick}
-                  buttonPreset={buttonPreset}
-                />
-              )
-            })}
+            {buttons.map((button) => (
+              <CardButtonWithShadow
+                key={button.id}
+                button={button}
+                elements={elements}
+                editable={editable}
+                blockId={blockId}
+                onEditField={onEditField}
+                onElementClick={onElementClick}
+                buttonPreset={buttonPreset}
+              />
+            ))}
           </CardFooter>
         )}
       </Card>
