@@ -85,6 +85,7 @@ export interface ImageSliderBlockProps {
   containerGradientAngle?: number
   containerShadow?: ElementShadow
   containerBorder?: boolean
+  containerBorderColor?: string
 
   ariaLabel?: string
 
@@ -93,6 +94,10 @@ export interface ImageSliderBlockProps {
   onElementClick?: (blockId: string, elementId: string) => void
   selectedElementId?: string | null
   elements?: Record<string, unknown>
+  /** Admin Live-Preview: Klick auf Slide öffnet zugehörige Inspector-Card */
+  interactivePreview?: boolean
+  activeItemId?: string | null
+  onItemSelect?: (itemId: string) => void
 }
 
 /* ================================================================ */
@@ -202,6 +207,9 @@ function ClassicVariant({
   peek,
   ariaLabel,
   headline,
+  interactivePreview = false,
+  activeItemId = null,
+  onItemSelect,
 }: {
   slides: SlideItem[]
   aspect: string
@@ -217,6 +225,9 @@ function ClassicVariant({
   peek: boolean
   ariaLabel?: string
   headline?: string
+  interactivePreview?: boolean
+  activeItemId?: string | null
+  onItemSelect?: (itemId: string) => void
 }) {
   return (
     <Carousel
@@ -230,8 +241,10 @@ function ClassicVariant({
       draggable
     >
       <CarouselTrack className="items-stretch">
-        {slides.map((slide, index) => (
-          <CarouselSlide key={slide.id} index={index}>
+        {slides.map((slide, index) => {
+          const isPreviewActive = interactivePreview && activeItemId === slide.id
+          const clickable = interactivePreview && !!onItemSelect
+          const content = (
             <SlideImage
               slide={slide}
               aspect={aspect}
@@ -241,8 +254,23 @@ function ClassicVariant({
               slideTextColor={slideTextColor}
               variant="classic"
             />
-          </CarouselSlide>
-        ))}
+          )
+          return (
+            <CarouselSlide key={slide.id} index={index}>
+              {clickable ? (
+                <div
+                  role="button"
+                  tabIndex={0}
+                  onClick={(e) => { e.stopPropagation(); onItemSelect?.(slide.id) }}
+                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onItemSelect?.(slide.id) } }}
+                  className={cn("cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-2xl", isPreviewActive && "ring-2 ring-primary/60")}
+                >
+                  {content}
+                </div>
+              ) : content}
+            </CarouselSlide>
+          )
+        })}
       </CarouselTrack>
 
       {slides.length > 1 && (
@@ -293,6 +321,9 @@ function ProgressVariant({
   peek,
   ariaLabel,
   headline,
+  interactivePreview = false,
+  activeItemId = null,
+  onItemSelect,
 }: {
   slides: SlideItem[]
   aspect: string
@@ -308,6 +339,9 @@ function ProgressVariant({
   peek: boolean
   ariaLabel?: string
   headline?: string
+  interactivePreview?: boolean
+  activeItemId?: string | null
+  onItemSelect?: (itemId: string) => void
 }) {
   return (
     <Carousel
@@ -321,8 +355,10 @@ function ProgressVariant({
       draggable
     >
       <CarouselTrack className="items-stretch">
-        {slides.map((slide, index) => (
-          <CarouselSlide key={slide.id} index={index}>
+        {slides.map((slide, index) => {
+          const isPreviewActive = interactivePreview && activeItemId === slide.id
+          const clickable = interactivePreview && !!onItemSelect
+          const content = (
             <SlideImage
               slide={slide}
               aspect={aspect}
@@ -332,8 +368,23 @@ function ProgressVariant({
               slideTextColor={slideTextColor}
               variant="progress"
             />
-          </CarouselSlide>
-        ))}
+          )
+          return (
+            <CarouselSlide key={slide.id} index={index}>
+              {clickable ? (
+                <div
+                  role="button"
+                  tabIndex={0}
+                  onClick={(e) => { e.stopPropagation(); onItemSelect?.(slide.id) }}
+                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onItemSelect?.(slide.id) } }}
+                  className={cn("cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-2xl", isPreviewActive && "ring-2 ring-primary/60")}
+                >
+                  {content}
+                </div>
+              ) : content}
+            </CarouselSlide>
+          )
+        })}
       </CarouselTrack>
 
       <ProgressBar />
@@ -406,6 +457,9 @@ function ThumbnailsVariant({
   peek,
   ariaLabel,
   headline,
+  interactivePreview = false,
+  activeItemId = null,
+  onItemSelect,
 }: {
   slides: SlideItem[]
   aspect: string
@@ -421,6 +475,9 @@ function ThumbnailsVariant({
   peek: boolean
   ariaLabel?: string
   headline?: string
+  interactivePreview?: boolean
+  activeItemId?: string | null
+  onItemSelect?: (itemId: string) => void
 }) {
   return (
     <Carousel
@@ -434,8 +491,10 @@ function ThumbnailsVariant({
       draggable
     >
       <CarouselTrack className="items-stretch">
-        {slides.map((slide, index) => (
-          <CarouselSlide key={slide.id} index={index}>
+        {slides.map((slide, index) => {
+          const isPreviewActive = interactivePreview && activeItemId === slide.id
+          const clickable = interactivePreview && !!onItemSelect
+          const content = (
             <SlideImage
               slide={slide}
               aspect={aspect}
@@ -445,8 +504,23 @@ function ThumbnailsVariant({
               slideTextColor={slideTextColor}
               variant="thumbnails"
             />
-          </CarouselSlide>
-        ))}
+          )
+          return (
+            <CarouselSlide key={slide.id} index={index}>
+              {clickable ? (
+                <div
+                  role="button"
+                  tabIndex={0}
+                  onClick={(e) => { e.stopPropagation(); onItemSelect?.(slide.id) }}
+                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onItemSelect?.(slide.id) } }}
+                  className={cn("cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-2xl", isPreviewActive && "ring-2 ring-primary/60")}
+                >
+                  {content}
+                </div>
+              ) : content}
+            </CarouselSlide>
+          )
+        })}
       </CarouselTrack>
 
       <ThumbnailStrip slides={slides} />
@@ -534,6 +608,9 @@ function HeroVariant({
   peek,
   ariaLabel,
   headline,
+  interactivePreview = false,
+  activeItemId = null,
+  onItemSelect,
 }: {
   slides: SlideItem[]
   cardBgColor?: string
@@ -548,6 +625,9 @@ function HeroVariant({
   peek: boolean
   ariaLabel?: string
   headline?: string
+  interactivePreview?: boolean
+  activeItemId?: string | null
+  onItemSelect?: (itemId: string) => void
 }) {
   return (
     <Carousel
@@ -561,8 +641,10 @@ function HeroVariant({
       draggable
     >
       <CarouselTrack className="items-stretch">
-        {slides.map((slide, index) => (
-          <CarouselSlide key={slide.id} index={index}>
+        {slides.map((slide, index) => {
+          const isPreviewActive = interactivePreview && activeItemId === slide.id
+          const clickable = interactivePreview && !!onItemSelect
+          const inner = (
             <div className="group relative w-full overflow-hidden rounded-2xl aspect-video">
               <Image
                 src={slide.url}
@@ -606,8 +688,23 @@ function HeroVariant({
                 </div>
               )}
             </div>
-          </CarouselSlide>
-        ))}
+          )
+          return (
+            <CarouselSlide key={slide.id} index={index}>
+              {clickable ? (
+                <div
+                  role="button"
+                  tabIndex={0}
+                  onClick={(e) => { e.stopPropagation(); onItemSelect?.(slide.id) }}
+                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onItemSelect?.(slide.id) } }}
+                  className={cn("cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-2xl", isPreviewActive && "ring-2 ring-primary/60")}
+                >
+                  {inner}
+                </div>
+              ) : inner}
+            </CarouselSlide>
+          )
+        })}
       </CarouselTrack>
 
       {controls?.showArrows !== false && slides.length > 1 && (
@@ -655,6 +752,9 @@ function CardsVariant({
   peek,
   ariaLabel,
   headline,
+  interactivePreview = false,
+  activeItemId = null,
+  onItemSelect,
 }: {
   slides: SlideItem[]
   aspect: string
@@ -671,6 +771,9 @@ function CardsVariant({
   peek: boolean
   ariaLabel?: string
   headline?: string
+  interactivePreview?: boolean
+  activeItemId?: string | null
+  onItemSelect?: (itemId: string) => void
 }) {
   const base = slidesPerView?.base ?? 1
   const md = slidesPerView?.md ?? 2
@@ -690,8 +793,10 @@ function CardsVariant({
 
   return (
     <div className={cn("grid gap-4 sm:gap-6", gridClass)}>
-      {slides.map((slide) => (
-        <div key={slide.id}>
+      {slides.map((slide) => {
+        const isPreviewActive = interactivePreview && activeItemId === slide.id
+        const clickable = interactivePreview && !!onItemSelect
+        const content = (
           <SlideImage
             slide={slide}
             aspect={aspect}
@@ -701,8 +806,23 @@ function CardsVariant({
             slideTextColor={slideTextColor}
             variant="cards"
           />
-        </div>
-      ))}
+        )
+        return (
+          <div key={slide.id}>
+            {clickable ? (
+              <div
+                role="button"
+                tabIndex={0}
+                onClick={(e) => { e.stopPropagation(); onItemSelect?.(slide.id) }}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onItemSelect?.(slide.id) } }}
+                className={cn("cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-2xl", isPreviewActive && "ring-2 ring-primary/60")}
+              >
+                {content}
+              </div>
+            ) : content}
+          </div>
+        )
+      })}
     </div>
   )
 }
@@ -741,12 +861,16 @@ export function ImageSliderBlock({
   containerBackgroundGradientPreset,
   containerShadow,
   containerBorder,
+  containerBorderColor,
   ariaLabel,
   editable,
   onEditField,
   onElementClick,
   selectedElementId,
   elements,
+  interactivePreview = false,
+  activeItemId = null,
+  onItemSelect,
 }: ImageSliderBlockProps) {
   if (!slides || slides.length === 0) return null
 
@@ -787,7 +911,10 @@ export function ImageSliderBlock({
   }
 
   if (containerBorder) {
-    containerStyle.border = "1px solid var(--border)"
+    containerStyle.borderWidth = "1px"
+    containerStyle.borderStyle = "solid"
+    const hex = containerBorderColor?.trim()
+    containerStyle.borderColor = hex && /^#[0-9A-Fa-f]{6}$/.test(hex) ? hex : "var(--border)"
   }
 
   return (
@@ -828,7 +955,10 @@ export function ImageSliderBlock({
           </header>
         )}
 
-        <div style={containerStyle} className={cn("rounded-3xl p-8 md:p-12", containerBorder && "border border-border")}>
+        <div
+          style={containerStyle}
+          className="rounded-3xl p-8 md:p-12"
+        >
           {variant === "classic" && (
             <ClassicVariant
               slides={slides}
@@ -845,6 +975,9 @@ export function ImageSliderBlock({
               peek={peek}
               ariaLabel={ariaLabel}
               headline={headline}
+              interactivePreview={interactivePreview}
+              activeItemId={activeItemId}
+              onItemSelect={onItemSelect}
             />
           )}
 
@@ -864,6 +997,9 @@ export function ImageSliderBlock({
               peek={peek}
               ariaLabel={ariaLabel}
               headline={headline}
+              interactivePreview={interactivePreview}
+              activeItemId={activeItemId}
+              onItemSelect={onItemSelect}
             />
           )}
 
@@ -883,6 +1019,9 @@ export function ImageSliderBlock({
               peek={peek}
               ariaLabel={ariaLabel}
               headline={headline}
+              interactivePreview={interactivePreview}
+              activeItemId={activeItemId}
+              onItemSelect={onItemSelect}
             />
           )}
 
@@ -901,6 +1040,9 @@ export function ImageSliderBlock({
               peek={peek}
               ariaLabel={ariaLabel}
               headline={headline}
+              interactivePreview={interactivePreview}
+              activeItemId={activeItemId}
+              onItemSelect={onItemSelect}
             />
           )}
 
@@ -921,6 +1063,9 @@ export function ImageSliderBlock({
               peek={peek}
               ariaLabel={ariaLabel}
               headline={headline}
+              interactivePreview={interactivePreview}
+              activeItemId={activeItemId}
+              onItemSelect={onItemSelect}
             />
           )}
         </div>

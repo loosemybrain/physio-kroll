@@ -418,6 +418,8 @@ const panelPropsSchema = z.object({
   containerGradientTo: z.string().optional(),
   containerGradientAngle: z.number().optional(),
   containerShadow: z.any().optional(),
+  containerBorder: z.boolean().optional(),
+  containerBorderColor: z.string().optional(),
 })
 
 const panelDefaults = {
@@ -429,6 +431,8 @@ const panelDefaults = {
   containerGradientTo: "",
   containerGradientAngle: 135,
   containerShadow: undefined,
+  containerBorder: false,
+  containerBorderColor: "",
 }
 
 const panelInspectorFields: InspectorField[] = [
@@ -803,6 +807,7 @@ const imageSliderPropsSchema = z.object({
     preset: z.string().optional(),
   }).passthrough().optional(),
   containerBorder: z.boolean().optional().default(false),
+  containerBorderColor: z.string().optional(),
 
   ariaLabel: z.string().optional(),
 
@@ -1523,6 +1528,7 @@ const imageSliderDefaults: ImageSliderBlock["props"] = {
   peek: true,
   background: "none",
   containerBorder: false,
+  containerBorderColor: undefined,
   slides: [
     {
       id: generateUniqueId("slide", 0),

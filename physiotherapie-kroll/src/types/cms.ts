@@ -516,6 +516,8 @@ export interface FaqBlock extends BaseBlock {
     containerGradientTo?: string
     containerGradientAngle?: number
     containerShadow?: any
+    containerBorder?: boolean
+    containerBorderColor?: string
   }
 }
 
@@ -839,6 +841,7 @@ export interface ImageSliderBlock extends BaseBlock {
     containerGradientAngle?: number
     containerShadow?: ElementShadow
     containerBorder?: boolean
+    containerBorderColor?: string
 
     ariaLabel?: string
   }

@@ -50,6 +50,10 @@ export interface TestimonialsBlockProps {
   elements?: Record<string, unknown>
   onElementClick?: (blockId: string, elementId: string) => void
   selectedElementId?: string | null
+  /** Admin Live-Preview: Klick auf Item öffnet zugehörige Inspector-Card */
+  interactivePreview?: boolean
+  activeItemId?: string | null
+  onItemSelect?: (itemId: string) => void
 }
 
 const columnsMap: Record<1 | 2 | 3 | 4, string> = {
@@ -182,6 +186,9 @@ function TestimonialCard({
   roleColor,
   onInlineEdit,
   typography,
+  interactivePreview,
+  activeItemId,
+  onItemSelect,
 }: {
   item: TestimonialsBlockProps["items"][number]
   index: number
@@ -191,12 +198,21 @@ function TestimonialCard({
   roleColor?: string
   typography?: Record<string, unknown>
   onInlineEdit: (e: React.MouseEvent, fieldPath: string) => void
+  interactivePreview?: boolean
+  activeItemId?: string | null
+  onItemSelect?: (itemId: string) => void
 }) {
   const rating =
     Number.isInteger(item.rating) && item.rating! >= 1 && item.rating! <= 5 ? item.rating! : null
+  const isPreviewActive = interactivePreview && activeItemId === item.id
+  const clickable = interactivePreview && !!onItemSelect
 
   return (
     <Card
+      role={clickable ? "button" : undefined}
+      tabIndex={clickable ? 0 : undefined}
+      onClick={clickable ? (e) => { if ((e.target as HTMLElement).closest("button, a, [data-inline-edit]")) return; e.stopPropagation(); onItemSelect?.(item.id) } : undefined}
+      onKeyDown={clickable ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onItemSelect?.(item.id) } } : undefined}
       className={cn(
         "group relative flex flex-col overflow-hidden rounded-2xl border border-border/50 bg-card",
         "shadow-[0_1px_3px_rgba(0,0,0,0.04),0_8px_24px_-8px_rgba(0,0,0,0.08)]",
@@ -205,7 +221,9 @@ function TestimonialCard({
           "hover:-translate-y-2 hover:border-primary/30",
           "hover:shadow-[0_1px_3px_rgba(0,0,0,0.04),0_20px_48px_-12px_rgba(0,0,0,0.15)]",
         ],
-        isSlider && "border-border/40"
+        isSlider && "border-border/40",
+        clickable && "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+        isPreviewActive && "ring-2 ring-primary/60"
       )}
     >
       <div className="h-1 w-full bg-linear-to-r from-primary/60 via-primary/30 to-transparent" />
@@ -287,6 +305,9 @@ export function TestimonialsBlock({
   editable = false,
   blockId,
   onEditField,
+  interactivePreview = false,
+  activeItemId = null,
+  onItemSelect,
 }: TestimonialsBlockProps) {
   const handleInlineEdit = useCallback(
     (e: React.MouseEvent, fieldPath: string) => {
@@ -367,6 +388,9 @@ export function TestimonialsBlock({
                     roleColor={roleColor}
                     typography={typography}
                     onInlineEdit={handleInlineEdit}
+                    interactivePreview={interactivePreview}
+                    activeItemId={activeItemId}
+                    onItemSelect={onItemSelect}
                   />
                 </CarouselSlide>
               ))}
@@ -409,6 +433,9 @@ export function TestimonialsBlock({
                 roleColor={roleColor}
                 typography={typography}
                 onInlineEdit={handleInlineEdit}
+                interactivePreview={interactivePreview}
+                activeItemId={activeItemId}
+                onItemSelect={onItemSelect}
               />
             ))}
           </div>

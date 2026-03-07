@@ -12,7 +12,7 @@ import { Separator } from "@/components/ui/separator"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
 import { cn } from "@/lib/utils"
-import type { BlockSectionProps, CMSBlock, HeroBlock } from "@/types/cms"
+import type { BlockSectionProps, CMSBlock, HeroBlock, CourseScheduleBlock, CourseSlot, CourseScheduleWeekday } from "@/types/cms"
 import { BlockRenderer } from "@/components/cms/BlockRenderer"
 import { usePage } from "@/lib/cms/useLocalCms"
 import { createEmptyPage, generateUniqueSlug, type AdminPage } from "@/lib/cms/supabaseStore"
@@ -44,6 +44,8 @@ import { LivePreviewTheme } from "./LivePreviewTheme"
 import { ShadowInspector } from "./ShadowInspector"
 import { resolveBoxShadow } from "@/lib/shadow/resolveBoxShadow"
 import type { ElementShadow, ElementConfig } from "@/types/cms"
+import { InspectorCardList } from "./inspector/InspectorCardList"
+import { INSPECTOR_CARD_ID_ATTR } from "./inspector/InspectorCardItem"
 import { resolveMediaClient } from "@/lib/cms/resolveMediaClient"
 import { BUTTON_PRESET_OPTIONS } from "@/lib/buttonPresets"
 
@@ -325,8 +327,9 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
   useEffect(() => {
     setSelectedElementId(null)
     setAccordionValue(undefined)
+    setExpandedRepeaterCards({})
   }, [selectedBlockId])
-  
+
   // Inline editor state
   const [inlineOpen, setInlineOpen] = useState(false)
   const [inlineBlockId, setInlineBlockId] = useState<string | null>(null)
@@ -342,7 +345,29 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
 
   // Brand tab state for Hero blocks (per block ID)
   const [activeBrandTab, setActiveBrandTab] = useState<Record<string, "physiotherapy" | "physio-konzept">>({})
-  
+  /** Global: welche Repeater-Card pro Block+Feld offen ist. Key = `${blockId}:${fieldPath}` → itemId. */
+  const [expandedRepeaterCards, setExpandedRepeaterCards] = useState<Record<string, string | null>>({})
+  /** Nach "Item hinzufügen": Fokus auf erste Eingabe der neuen Card (key + itemId). */
+  const lastAddedRepeaterRef = useRef<{ key: string; itemId: string } | null>(null)
+
+  // Nach "Item hinzufügen": Card in den sichtbaren Bereich scrollen und Fokus auf erste Eingabe
+  useEffect(() => {
+    const added = lastAddedRepeaterRef.current
+    if (!added) return
+    const currentExpanded = expandedRepeaterCards[added.key]
+    if (currentExpanded !== added.itemId) return
+    lastAddedRepeaterRef.current = null
+    const container = inspectorScrollRef.current
+    const card = container?.querySelector(`[${INSPECTOR_CARD_ID_ATTR}="${added.itemId}"]`) as HTMLElement | null
+    if (card) {
+      card.scrollIntoView({ behavior: "smooth", block: "nearest" })
+      setTimeout(() => {
+        const firstInput = card.querySelector<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>("input, select, textarea")
+        firstInput?.focus({ preventScroll: true })
+      }, 200)
+    }
+  }, [expandedRepeaterCards])
+
   // Track which Hero blocks have been migrated to avoid re-migration loops
   const migratedHeroBlocksRef = useRef<Set<string>>(new Set())
 
@@ -582,6 +607,28 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
     return field?.label || "Feld bearbeiten"
   }, [inlineBlockId, inlineFieldPath, current?.blocks])
 
+  /** Preview → Inspector: Repeater-Item angeklickt → Block auswählen, passende Card öffnen, scroll/focus. (Must be before any early return.) */
+  const handleSelectRepeaterItem = useCallback(
+    (blockId: string, fieldPath: string, itemId: string) => {
+      setSelectedBlockId(blockId)
+      setSelectedElementId(null)
+      setActiveFieldPath(null)
+      const key = `${blockId}:${fieldPath}`
+      setExpandedRepeaterCards((prev) => ({ ...prev, [key]: itemId }))
+      requestAnimationFrame(() => {
+        const container = inspectorScrollRef.current
+        if (!container) return
+        const card = container.querySelector(`[${INSPECTOR_CARD_ID_ATTR}="${itemId}"]`) as HTMLElement | null
+        if (card) {
+          card.scrollIntoView({ behavior: "smooth", block: "nearest" })
+          const firstInput = card.querySelector<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>("input, select, textarea")
+          setTimeout(() => firstInput?.focus({ preventScroll: true }), 150)
+        }
+      })
+    },
+    []
+  )
+
   // Return early until mounted + page state is ready (prevents SSR/client mismatch)
   // This must come AFTER all hooks to follow Rules of Hooks
   if (!mounted || !page) {
@@ -642,14 +689,16 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
     updatePage({ brand })
   }
 
-  const addBlock = (type: CMSBlock["type"]) => {
+  const addBlock = (type: CMSBlock["type"], propsOverride?: Record<string, unknown>) => {
     setPage((prev) => {
       if (!prev) return prev
-      const b = defaultBlock(type, prev.brand)
-    setSelectedBlockId(b.id)
+      const b = defaultBlock(type, prev.brand) as CMSBlock
+      const merged = propsOverride ? { ...b.props, ...propsOverride } : b.props
+      const block = { ...b, props: merged } as CMSBlock
+      setSelectedBlockId(block.id)
       return {
         ...prev,
-        blocks: [...prev.blocks, b],
+        blocks: [...prev.blocks, block],
       }
     })
   }
@@ -1154,6 +1203,103 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
     )
   }
 
+  /** Rendert die Feld-Controls für ein einzelnes Repeater-Item (für InspectorCardList und renderArrayItemsControls). */
+  const renderOneRepeaterItemFields = (
+    block: CMSBlock,
+    arrayPath: string,
+    index: number,
+    item: Record<string, unknown>,
+    itemFields: Array<{ key: string; label: string; type: InspectorFieldType; placeholder?: string; required?: boolean; options?: Array<{ value: string; label: string }> }>
+  ): React.ReactNode => (
+    <div className="space-y-3 pt-2 border-t border-border">
+      {itemFields.map((itemField) => {
+        const itemFieldKey = `${arrayPath}.${index}.${itemField.key}`
+        const itemFieldValue = getByPath(item, itemField.key) ?? ""
+        const itemFieldId = `${block.id}.${itemFieldKey}`
+        const isActive = activeFieldPath === itemFieldKey
+        const handleItemFieldChange = (newValue: unknown) => {
+          if (!selectedBlock) return
+          isTypingRef.current = true
+          const currentProps = selectedBlock.props as Record<string, unknown>
+          const updatedProps = setByPath(currentProps, itemFieldKey, newValue) as CMSBlock["props"]
+          updateSelectedProps(updatedProps)
+          setTimeout(() => { isTypingRef.current = false }, 50)
+        }
+        switch (itemField.type) {
+          case "text":
+            return (
+              <div key={itemField.key} className="space-y-1.5">
+                <Label htmlFor={itemFieldId} className="text-xs">{itemField.label}</Label>
+                <Input id={itemFieldId} value={String(itemFieldValue)} onChange={(e) => handleItemFieldChange(e.target.value)} className={cn("h-8 text-sm", isActive && "ring-2 ring-primary")} placeholder={itemField.label} />
+              </div>
+            )
+          case "textarea":
+            return (
+              <div key={itemField.key} className="space-y-1.5">
+                <Label htmlFor={itemFieldId} className="text-xs">{itemField.label}</Label>
+                <Textarea id={itemFieldId} value={String(itemFieldValue)} onChange={(e) => handleItemFieldChange(e.target.value)} className={cn("text-sm min-h-[60px]", isActive && "ring-2 ring-primary")} placeholder={itemField.label} />
+              </div>
+            )
+          case "color":
+            return (
+              <div key={itemField.key} className="space-y-1.5">
+                <Label htmlFor={itemFieldId} className="text-xs">{itemField.label}</Label>
+                <div className={cn(isActive && "ring-2 ring-primary rounded-md")}>
+                  <ColorField value={String(itemFieldValue)} onChange={(v) => handleItemFieldChange(v)} placeholder={itemField.placeholder || "#rrggbb"} inputRef={(el) => { fieldRefs.current[itemFieldId] = el }} />
+                </div>
+              </div>
+            )
+          case "select":
+            if (itemField.key === "type" && block.type === "contactForm") {
+              const typeOptions = [{ value: "name", label: "Name" }, { value: "email", label: "E-Mail" }, { value: "phone", label: "Telefon" }, { value: "subject", label: "Betreff" }, { value: "message", label: "Nachricht" }]
+              return (
+                <div key={itemField.key} className="space-y-1.5">
+                  <Label htmlFor={itemFieldId} className="text-xs">{itemField.label}</Label>
+                  <Select value={String(itemFieldValue)} onValueChange={(v: string) => handleItemFieldChange(v)}>
+                    <SelectTrigger id={itemFieldId} className={cn("h-8 text-sm", isActive && "ring-2 ring-primary")}><SelectValue placeholder="Typ wählen" /></SelectTrigger>
+                    <SelectContent>{typeOptions.map((opt) => (<SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>))}</SelectContent>
+                  </Select>
+                </div>
+              )
+            }
+            const options = itemField.options ?? []
+            if (options.length > 0) {
+              return (
+                <div key={itemField.key} className="space-y-1.5">
+                  <Label htmlFor={itemFieldId} className="text-xs">{itemField.label}</Label>
+                  <Select value={itemFieldValue == null || itemFieldValue === "" ? "none" : String(itemFieldValue)} onValueChange={(v) => { if (itemField.key === "rating") { if (v === "none") handleItemFieldChange(undefined); else handleItemFieldChange(Number(v)) } else handleItemFieldChange(v) }}>
+                    <SelectTrigger id={itemFieldId} className={cn("h-8 text-sm", isActive && "ring-2 ring-primary")}><SelectValue placeholder={itemField.placeholder || "Auswählen"} /></SelectTrigger>
+                    <SelectContent>{options.map((opt) => (<SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>))}</SelectContent>
+                  </Select>
+                </div>
+              )
+            }
+            return null
+          case "boolean":
+            return (
+              <div key={itemField.key} className="flex items-center justify-between gap-3 rounded-md border border-border bg-background/40 px-3 py-2">
+                <div className="space-y-0.5"><Label htmlFor={itemFieldId} className="text-xs">{itemField.label}</Label><p className="text-[11px] text-muted-foreground">Pflichtfeld im Formular</p></div>
+                <Checkbox id={itemFieldId} checked={Boolean(itemFieldValue)} onCheckedChange={(v) => handleItemFieldChange(Boolean(v))} className={cn(isActive && "ring-2 ring-primary")} />
+              </div>
+            )
+          case "url":
+            return (
+              <div key={itemField.key} className="space-y-1.5">
+                <Label htmlFor={itemFieldId} className="text-xs">{itemField.label}</Label>
+                <Input id={itemFieldId} type="url" value={String(itemFieldValue)} onChange={(e) => handleItemFieldChange(e.target.value)} className={cn("h-8 text-sm", isActive && "ring-2 ring-primary")} placeholder="/path" />
+              </div>
+            )
+          case "image":
+            return (
+              <ImageField key={itemField.key} id={itemFieldId} label={itemField.label} value={String(itemFieldValue)} onChange={(v) => handleItemFieldChange(v)} placeholder={itemField.placeholder} required={itemField.required} className="text-sm" isActive={isActive} />
+            )
+          default:
+            return null
+        }
+      })}
+    </div>
+  )
+
   // Render array items with controls (Add/Remove/Move)
   const renderArrayItemsControls = <T extends object>(
     block: CMSBlock,
@@ -1228,211 +1374,7 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
                 </div>
               </div>
 
-              <div className="space-y-3 pt-2 border-t border-border">
-                {itemFields.map((itemField) => {
-                  const itemFieldKey = `${arrayPath}.${index}.${itemField.key}`
-                  const itemFieldValue = getByPath(item as Record<string, unknown>, itemField.key) ?? ""
-                  const itemFieldId = `${block.id}.${itemFieldKey}`
-                  const isActive = activeFieldPath === itemFieldKey
-
-                  const handleItemFieldChange = (newValue: unknown) => {
-                    if (!selectedBlock) return
-                    isTypingRef.current = true
-                    const currentProps = selectedBlock.props as Record<string, unknown>
-                    const updatedProps = setByPath(currentProps, itemFieldKey, newValue) as CMSBlock["props"]
-                    updateSelectedProps(updatedProps)
-                    setTimeout(() => {
-                      isTypingRef.current = false
-                    }, 50)
-                  }
-
-                  switch (itemField.type) {
-                    case "text":
-                      return (
-                        <div key={itemField.key} className="space-y-1.5">
-                          <Label htmlFor={itemFieldId} className="text-xs">
-                            {itemField.label}
-                          </Label>
-                          <Input
-                            id={itemFieldId}
-                            value={String(itemFieldValue)}
-                            onChange={(e) => handleItemFieldChange(e.target.value)}
-                            className={cn("h-8 text-sm", isActive && "ring-2 ring-primary")}
-                            placeholder={itemField.label}
-                          />
-                        </div>
-                      )
-
-                    case "textarea":
-                      return (
-                        <div key={itemField.key} className="space-y-1.5">
-                          <Label htmlFor={itemFieldId} className="text-xs">
-                            {itemField.label}
-                          </Label>
-                          <Textarea
-                            id={itemFieldId}
-                            value={String(itemFieldValue)}
-                            onChange={(e) => handleItemFieldChange(e.target.value)}
-                            className={cn("text-sm min-h-[60px]", isActive && "ring-2 ring-primary")}
-                            placeholder={itemField.label}
-                          />
-                        </div>
-                      )
-
-                    case "color":
-                      return (
-                        <div key={itemField.key} className="space-y-1.5">
-                          <Label htmlFor={itemFieldId} className="text-xs">
-                            {itemField.label}
-                          </Label>
-                          <div className={cn(isActive && "ring-2 ring-primary rounded-md")}>
-                            <ColorField
-                              value={String(itemFieldValue)}
-                              onChange={(v) => handleItemFieldChange(v)}
-                              placeholder={itemField.placeholder || "#rrggbb"}
-                              inputRef={(el) => {
-                                fieldRefs.current[itemFieldId] = el
-                              }}
-                            />
-                          </div>
-                        </div>
-                      )
-
-                    case "select":
-                      // Handle contact form field type select
-                      if (itemField.key === "type" && block.type === "contactForm") {
-                        const typeOptions = [
-                          { value: "name", label: "Name" },
-                          { value: "email", label: "E-Mail" },
-                          { value: "phone", label: "Telefon" },
-                          { value: "subject", label: "Betreff" },
-                          { value: "message", label: "Nachricht" },
-                        ]
-                        return (
-                          <div key={itemField.key} className="space-y-1.5">
-                            <Label htmlFor={itemFieldId} className="text-xs">
-                              {itemField.label}
-                            </Label>
-                            <Select value={String(itemFieldValue)} onValueChange={(v: string) => handleItemFieldChange(v)}>
-                              <SelectTrigger
-                                id={itemFieldId}
-                                className={cn("h-8 text-sm", isActive && "ring-2 ring-primary")}
-                              >
-                                <SelectValue placeholder="Typ wählen" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {typeOptions.map((opt) => (
-                                  <SelectItem key={opt.value} value={opt.value}>
-                                    {opt.label}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        )
-                      }
-                      
-                      const options = itemField.options ?? []
-
-                      if (options.length > 0) {
-                        return (
-                          <div key={itemField.key} className="space-y-1.5">
-                            <Label htmlFor={itemFieldId} className="text-xs">
-                              {itemField.label}
-                            </Label>
-
-                            <Select
-                              value={itemFieldValue == null || itemFieldValue === "" ? "none" : String(itemFieldValue)}
-                              onValueChange={(v) => {
-                                // Special handling for rating: convert to number or undefined
-                                if (itemField.key === "rating") {
-                                  if (v === "none") {
-                                    handleItemFieldChange(undefined)
-                                  } else {
-                                    handleItemFieldChange(Number(v))
-                                  }
-                                } else {
-                                  // For all other select fields (avatarGradient, etc.), keep as string
-                                  handleItemFieldChange(v)
-                                }
-                              }}
-                            >
-                              <SelectTrigger
-                                id={itemFieldId}
-                                className={cn("h-8 text-sm", isActive && "ring-2 ring-primary")}
-                              >
-                                <SelectValue placeholder={itemField.placeholder || "Auswählen"} />
-                              </SelectTrigger>
-
-                              <SelectContent>
-                                {options.map((opt) => (
-                                  <SelectItem key={opt.value} value={opt.value}>
-                                    {opt.label}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        )
-                      }
-
-                      return null
-
-                    case "boolean":
-                      return (
-                        <div key={itemField.key} className="flex items-center justify-between gap-3 rounded-md border border-border bg-background/40 px-3 py-2">
-                          <div className="space-y-0.5">
-                            <Label htmlFor={itemFieldId} className="text-xs">
-                              {itemField.label}
-                            </Label>
-                            <p className="text-[11px] text-muted-foreground">Pflichtfeld im Formular</p>
-                          </div>
-                          <Checkbox
-                            id={itemFieldId}
-                            checked={Boolean(itemFieldValue)}
-                            onCheckedChange={(v) => handleItemFieldChange(Boolean(v))}
-                            className={cn(isActive && "ring-2 ring-primary")}
-                          />
-                        </div>
-                      )
-
-                    case "url":
-                      return (
-                        <div key={itemField.key} className="space-y-1.5">
-                          <Label htmlFor={itemFieldId} className="text-xs">
-                            {itemField.label}
-                          </Label>
-                          <Input
-                            id={itemFieldId}
-                            type="url"
-                            value={String(itemFieldValue)}
-                            onChange={(e) => handleItemFieldChange(e.target.value)}
-                            className={cn("h-8 text-sm", isActive && "ring-2 ring-primary")}
-                            placeholder="/path"
-                          />
-                        </div>
-                      )
-
-                    case "image":
-                      return (
-                        <ImageField
-                          key={itemField.key}
-                          id={itemFieldId}
-                          label={itemField.label}
-                          value={String(itemFieldValue)}
-                          onChange={(v) => handleItemFieldChange(v)}
-                          placeholder={itemField.placeholder}
-                          required={itemField.required}
-                          className="text-sm"
-                          isActive={isActive}
-                        />
-                      )
-
-                    default:
-                      return null
-                  }
-                })}
-              </div>
+              {renderOneRepeaterItemFields(block, arrayPath, index, item as Record<string, unknown>, itemFields)}
             </div>
           ))}
         </div>
@@ -1986,6 +1928,39 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
                       }
                     }}
                     selectedElementId={selectedBlockId === block.id ? selectedElementId : null}
+                    courseSchedulePreview={
+                      block.type === "courseSchedule" && selectedBlockId === block.id
+                        ? {
+                            interactivePreview: true,
+                            activeSlotId: expandedRepeaterCards[`${block.id}:slots`] ?? null,
+                            onSlotSelect: (slotId: string) => handleSelectRepeaterItem(block.id, "slots", slotId),
+                          }
+                        : undefined
+                    }
+                    repeaterPreview={
+                      selectedBlockId === block.id &&
+                      (block.type === "team" ||
+                        block.type === "servicesGrid" ||
+                        block.type === "testimonials" ||
+                        block.type === "faq" ||
+                        block.type === "imageSlider")
+                        ? (() => {
+                            const fieldPath =
+                              block.type === "team"
+                                ? "members"
+                                : block.type === "servicesGrid"
+                                  ? "cards"
+                                  : block.type === "imageSlider"
+                                    ? "slides"
+                                    : "items"
+                            const key = `${block.id}:${fieldPath}`
+                            return {
+                              activeItemId: expandedRepeaterCards[key] ?? null,
+                              onItemSelect: (itemId: string) => handleSelectRepeaterItem(block.id, fieldPath, itemId),
+                            }
+                          })()
+                        : undefined
+                    }
                   />
                 </div>
               )
@@ -2038,7 +2013,7 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
           <div className="p-4">
             <h3 className="mb-4 font-semibold text-foreground">Add Blocks</h3>
             <div className="grid grid-cols-2 gap-2">
-              {blockTypes.map((blockType) => {
+              {blockTypes.filter((bt) => bt.type !== "courseSchedule").map((blockType) => {
                 const Icon = blockType.icon
                 return (
                   <Button
@@ -2052,6 +2027,24 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
                   </Button>
                 )
               })}
+              <Button
+                key="courseSchedule-calendar"
+                variant="outline"
+                className="h-auto flex-col gap-2 py-4 bg-transparent col-span-2 sm:col-span-1"
+                onClick={() => addBlock("courseSchedule")}
+              >
+                <CalendarDays className="h-5 w-5" />
+                <span className="text-xs">Kursplan – Kalender</span>
+              </Button>
+              <Button
+                key="courseSchedule-timeline"
+                variant="outline"
+                className="h-auto flex-col gap-2 py-4 bg-transparent col-span-2 sm:col-span-1"
+                onClick={() => addBlock("courseSchedule", { mode: "timeline" })}
+              >
+                <CalendarDays className="h-5 w-5" />
+                <span className="text-xs">Kursplan – Timeline</span>
+              </Button>
             </div>
           </div>
 
@@ -2241,6 +2234,156 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
                     <Separator />
                   </>
                 )}
+
+              {/* Inner Panel (Container) – for all blocks with enableInnerPanel (FAQ, courseSchedule, team, etc.) */}
+              {getBlockDefinition(selectedBlock.type)?.enableInnerPanel && (
+                <>
+                  <Separator />
+                  <div className="space-y-1.5 rounded-lg bg-muted/30 p-3">
+                    <Label className="text-xs font-semibold text-primary">CONTAINER (inneres Panel)</Label>
+                    <Select
+                      value={(() => {
+                        const v = (selectedBlock.props as Record<string, unknown>)?.containerBackgroundMode
+                        return v === "color" || v === "gradient" ? v : "transparent"
+                      })()}
+                      onValueChange={(v) => {
+                        if (!selectedBlock) return
+                        const currentProps = selectedBlock.props as Record<string, unknown>
+                        updateSelectedProps({ ...currentProps, containerBackgroundMode: v } as CMSBlock["props"])
+                      }}
+                    >
+                      <SelectTrigger className="h-8 text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="transparent">Transparent</SelectItem>
+                        <SelectItem value="color">Farbe</SelectItem>
+                        <SelectItem value="gradient">Verlauf</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {(selectedBlock.props as Record<string, unknown>)?.containerBackgroundMode === "color" && (
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Panel-Farbe</Label>
+                        <input
+                          type="color"
+                          value={((selectedBlock.props as Record<string, unknown>)?.containerBackgroundColor as string) ?? "#ffffff"}
+                          onChange={(e) => {
+                            if (!selectedBlock) return
+                            const currentProps = selectedBlock.props as Record<string, unknown>
+                            updateSelectedProps({ ...currentProps, containerBackgroundColor: e.target.value } as CMSBlock["props"])
+                          }}
+                          className="h-8 w-full rounded border border-border bg-background"
+                        />
+                      </div>
+                    )}
+                    {(selectedBlock.props as Record<string, unknown>)?.containerBackgroundMode === "gradient" && (
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Verlauf-Preset</Label>
+                        <Select
+                          value={((selectedBlock.props as Record<string, unknown>)?.containerBackgroundGradientPreset as string) ?? "soft"}
+                          onValueChange={(v) => {
+                            if (!selectedBlock) return
+                            const currentProps = selectedBlock.props as Record<string, unknown>
+                            updateSelectedProps({ ...currentProps, containerBackgroundGradientPreset: v } as CMSBlock["props"])
+                          }}
+                        >
+                          <SelectTrigger className="h-8 text-sm">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <GradientPresetSelectContent />
+                        </Select>
+                      </div>
+                    )}
+                    <div className="mt-3 pt-3 border-t border-border/50 space-y-3">
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="checkbox"
+                          id="container-border"
+                          checked={!!(selectedBlock.props as Record<string, unknown>)?.containerBorder}
+                          onChange={(e) => {
+                            if (!selectedBlock) return
+                            const enabled = e.target.checked
+                            updateBlockPropsById(selectedBlock.id, (prev) => ({
+                              ...prev,
+                              containerBorder: enabled,
+                              containerBorderColor: enabled ? (String((prev as Record<string, unknown>).containerBorderColor || "").trim() || "#e5e7eb") : (prev as Record<string, unknown>).containerBorderColor,
+                            } as CMSBlock["props"]))
+                          }}
+                          className="h-4 w-4 rounded border-border"
+                        />
+                        <Label htmlFor="container-border" className="text-xs font-medium cursor-pointer">Rahmen anzeigen</Label>
+                      </div>
+                      {!!(selectedBlock.props as Record<string, unknown>)?.containerBorder && (
+                        <div className="space-y-1.5">
+                          <Label className="text-xs">Rahmenfarbe</Label>
+                          <div className="flex gap-2 items-center">
+                            <input
+                              key={`${selectedBlock?.id}-border-color-picker`}
+                              type="color"
+                              value={(() => {
+                                const v = String((selectedBlock.props as Record<string, unknown>)?.containerBorderColor || "").trim()
+                                return v && /^#[0-9A-Fa-f]{6}$/.test(v) ? v : "#e5e7eb"
+                              })()}
+                              onChange={(e) => {
+                                if (!selectedBlock) return
+                                updateBlockPropsById(selectedBlock.id, (prev) => ({
+                                  ...prev,
+                                  containerBorderColor: e.target.value,
+                                } as CMSBlock["props"]))
+                              }}
+                              className="h-8 w-12 shrink-0 rounded border border-border bg-background cursor-pointer"
+                            />
+                            <Input
+                              placeholder="#e5e7eb (Standard)"
+                              value={String((selectedBlock.props as Record<string, unknown>)?.containerBorderColor ?? "")}
+                              onChange={(e) => {
+                                if (!selectedBlock) return
+                                const v = e.target.value
+                                updateBlockPropsById(selectedBlock.id, (prev) => ({
+                                  ...prev,
+                                  containerBorderColor: v === "" ? undefined : v,
+                                } as CMSBlock["props"]))
+                              }}
+                              onBlur={(e) => {
+                                if (!selectedBlock) return
+                                const raw = e.target.value.trim()
+                                if (raw === "") {
+                                  updateBlockPropsById(selectedBlock.id, (prev) => ({
+                                    ...prev,
+                                    containerBorderColor: undefined,
+                                  } as CMSBlock["props"]))
+                                  return
+                                }
+                                const hexChars = raw.replace(/^#/, "").replace(/[^0-9A-Fa-f]/g, "").slice(0, 6)
+                                if (hexChars.length === 6) {
+                                  updateBlockPropsById(selectedBlock.id, (prev) => ({
+                                    ...prev,
+                                    containerBorderColor: `#${hexChars}`,
+                                  } as CMSBlock["props"]))
+                                }
+                              }}
+                              className="h-8 flex-1 font-mono text-sm"
+                            />
+                          </div>
+                          <p className="text-[10px] text-muted-foreground">Leer = Standardfarbe (Rahmen-Farbe des Themes)</p>
+                        </div>
+                      )}
+                    </div>
+                    <div className="mt-3 pt-3 border-t border-border/50">
+                      <Label className="text-xs font-semibold">Shadow</Label>
+                      <ShadowInspector
+                        config={(selectedBlock.props as Record<string, unknown>)?.containerShadow as ElementShadow | undefined}
+                        onChange={(shadowConfig) => {
+                          if (!selectedBlock) return
+                          const currentProps = selectedBlock.props as Record<string, unknown>
+                          updateSelectedProps({ ...currentProps, containerShadow: shadowConfig } as CMSBlock["props"])
+                        }}
+                      />
+                    </div>
+                  </div>
+                  <Separator />
+                </>
+              )}
 
               {/* Generic Inspector from Registry */}
               <div className="space-y-4">
@@ -3773,43 +3916,67 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
 
           <Separator />
 
-          {renderArrayItemsControls(
-            selectedBlock,
-            "cards",
-            "Card",
-            (card, index) => `Card ${index + 1}`,
-            createServiceCard,
-            [
-              {
-                key: "icon",
-                label: "Icon",
-                type: "select" as const,
-                options: getAvailableIconsWithLabels(),
-              },
+          {(() => {
+            const props = selectedBlock.props as Record<string, unknown>
+            const cards = ((getByPath(props, "cards") as Array<{ id: string; title?: string }>) || [])
+            const repeaterKey = `${selectedBlock.id}:cards`
+            const expandedId = expandedRepeaterCards[repeaterKey] ?? null
+            const updateCards = (next: typeof cards) => updateSelectedProps({ ...props, cards: next } as CMSBlock["props"])
+            const getItemId = (c: { id: string }) => c.id
+            const updateItem = (id: string, patch: Record<string, unknown>) => {
+              const idx = cards.findIndex((c) => c.id === id)
+              if (idx === -1) return
+              const next = [...cards]
+              next[idx] = { ...next[idx], ...patch }
+              updateCards(next)
+            }
+            const removeItem = (id: string) => {
+              if (expandedId === id) setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: null }))
+              updateCards(cards.filter((c) => c.id !== id))
+            }
+            const addItem = () => {
+              const newItem = createServiceCard()
+              updateCards([...cards, newItem])
+              setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: newItem.id }))
+              lastAddedRepeaterRef.current = { key: repeaterKey, itemId: newItem.id }
+            }
+            const serviceCardFields = [
+              { key: "icon", label: "Icon", type: "select" as const, options: getAvailableIconsWithLabels() },
               { key: "iconColor", label: "Icon Farbe (optional)", type: "color" as const, placeholder: "#111111" },
               { key: "iconBgColor", label: "Icon Hintergrund (optional)", type: "color" as const, placeholder: "#e5e7eb" },
               { key: "title", label: "Titel", type: "text" as const },
               { key: "titleColor", label: "Titel Farbe (optional)", type: "color" as const, placeholder: "#111111" },
               { key: "text", label: "Text", type: "textarea" as const },
               { key: "textColor", label: "Text Farbe (optional)", type: "color" as const, placeholder: "#666666" },
-              {
-                key: "textAlign",
-                label: "Text Ausrichtung",
-                type: "select" as const,
-                options: [
-                  { value: "left", label: "Links" },
-                  { value: "center", label: "Mitte" },
-                  { value: "right", label: "Rechts" },
-                  { value: "justify", label: "Blocksatz" },
-                ],
-              },
+              { key: "textAlign", label: "Text Ausrichtung", type: "select" as const, options: [{ value: "left", label: "Links" }, { value: "center", label: "Mitte" }, { value: "right", label: "Rechts" }, { value: "justify", label: "Blocksatz" }] },
               { key: "ctaText", label: "CTA Text", type: "text" as const },
               { key: "ctaColor", label: "CTA Farbe (optional)", type: "color" as const, placeholder: "#111111" },
               { key: "ctaHref", label: "CTA Link", type: "url" as const },
               { key: "cardBgColor", label: "Card Hintergrund (optional)", type: "color" as const, placeholder: "#ffffff" },
               { key: "cardBorderColor", label: "Card Border (optional)", type: "color" as const, placeholder: "#e5e7eb" },
             ]
-          )}
+            return (
+              <InspectorCardList
+                items={cards}
+                getItemId={getItemId}
+                mode="single"
+                expandedId={expandedId}
+                onToggle={(id) => setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: expandedId === id ? null : id }))}
+                onCollapseAll={() => setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: null }))}
+                countLabel={`${cards.length} Cards`}
+                addAction={<Button type="button" variant="outline" size="sm" className="w-full h-8 text-sm" onClick={addItem}><Plus className="h-4 w-4 mr-1.5" />Card hinzufügen</Button>}
+                renderSummary={(card) => <span className="truncate">{card.title || "Card"}</span>}
+                renderHeaderActions={(card) => (
+                  <div className="flex items-center gap-0.5">
+                    <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); const i = cards.findIndex((c) => c.id === card.id); if (i > 0) handleMoveArrayItem(selectedBlock.id, "cards", i, i - 1) }} disabled={cards.findIndex((c) => c.id === card.id) === 0} title="Nach oben"><ChevronUp className="h-3 w-3" /></Button>
+                    <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); const i = cards.findIndex((c) => c.id === card.id); if (i < cards.length - 1) handleMoveArrayItem(selectedBlock.id, "cards", i, i + 1) }} disabled={cards.findIndex((c) => c.id === card.id) === cards.length - 1} title="Nach unten"><ChevronDown className="h-3 w-3" /></Button>
+                    <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={(e) => { e.stopPropagation(); confirmDeleteItem(selectedBlock.id, "cards", cards.findIndex((c) => c.id === card.id)) }} title="Löschen"><Trash2 className="h-3.5 w-3.5" /></Button>
+                  </div>
+                )}
+                renderContent={(card) => renderOneRepeaterItemFields(selectedBlock, "cards", cards.findIndex((c) => c.id === card.id), card as Record<string, unknown>, serviceCardFields)}
+              />
+            )
+          })()}
         </>
       )}
 
@@ -3871,60 +4038,64 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
             </div>
           )}
 
-          {renderArrayItemsControls(
-            selectedBlock,
-            "items",
-            "Testimonial",
-            (item, index) => {
-              const it = item as unknown as Record<string, unknown>
-              const name = String(it.name || "")
-              return `${index + 1}. ${name || "Testimonial"}`
-            },
-            createTestimonialItem,
-            [
+          {(() => {
+            const props = selectedBlock.props as Record<string, unknown>
+            const items = ((getByPath(props, "items") as Array<{ id: string; name?: string }>) || [])
+            const repeaterKey = `${selectedBlock.id}:items`
+            const expandedId = expandedRepeaterCards[repeaterKey] ?? null
+            const updateItems = (next: typeof items) => updateSelectedProps({ ...props, items: next } as CMSBlock["props"])
+            const getItemId = (i: { id: string }) => i.id
+            const updateItem = (id: string, patch: Record<string, unknown>) => {
+              const idx = items.findIndex((i) => i.id === id)
+              if (idx === -1) return
+              const next = [...items]
+              next[idx] = { ...next[idx], ...patch }
+              updateItems(next)
+            }
+            const removeItem = (id: string) => {
+              if (expandedId === id) setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: null }))
+              updateItems(items.filter((i) => i.id !== id))
+            }
+            const addItem = () => {
+              const newItem = createTestimonialItem()
+              updateItems([...items, newItem])
+              setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: newItem.id }))
+              lastAddedRepeaterRef.current = { key: repeaterKey, itemId: newItem.id }
+            }
+            const testimonialFields = [
               { key: "quote", label: "Zitat", type: "textarea" as const, required: true },
               { key: "quoteColor", label: "Zitat Farbe (optional)", type: "color" as const, placeholder: "#111111" },
               { key: "avatar", label: "Avatar (optional)", type: "image" as const, placeholder: "/avatar.jpg" },
-              {
-                key: "avatarGradient",
-                label: "Avatar Gradient",
-                type: "select" as const,
-                options: [
-                  { value: "auto", label: "Auto" },
-                  { value: "g1", label: "Primary" },
-                  { value: "g2", label: "Accent" },
-                  { value: "g3", label: "Chart 1" },
-                  { value: "g4", label: "Chart 2" },
-                  { value: "g5", label: "Chart 3" },
-                  { value: "g6", label: "Blue" },
-                  { value: "g7", label: "Purple" },
-                  { value: "g8", label: "Green" },
-                  { value: "g9", label: "Rose" },
-                  { value: "g10", label: "Amber" },
-                ],
-              },
+              { key: "avatarGradient", label: "Avatar Gradient", type: "select" as const, options: [{ value: "auto", label: "Auto" }, { value: "g1", label: "Primary" }, { value: "g2", label: "Accent" }, { value: "g3", label: "Chart 1" }, { value: "g4", label: "Chart 2" }, { value: "g5", label: "Chart 3" }, { value: "g6", label: "Blue" }, { value: "g7", label: "Purple" }, { value: "g8", label: "Green" }, { value: "g9", label: "Rose" }, { value: "g10", label: "Amber" }] },
               { key: "avatarColor", label: "Avatar Farbe (optional)", type: "color" as const, placeholder: "#111111" },
               { key: "name", label: "Name", type: "text" as const, required: true },
               { key: "nameColor", label: "Name Farbe (optional)", type: "color" as const, placeholder: "#111111" },
               { key: "role", label: "Rolle (optional)", type: "text" as const },
               { key: "roleColor", label: "Rolle Farbe (optional)", type: "color" as const, placeholder: "#666666" },
-              {
-                key: "rating",
-                label: "Rating (optional)",
-                type: "select" as const,
-                options: [
-                  { value: "none", label: "—" },
-                  { value: "5", label: "★★★★★ (5)" },
-                  { value: "4", label: "★★★★☆ (4)" },
-                  { value: "3", label: "★★★☆☆ (3)" },
-                  { value: "2", label: "★★☆☆☆ (2)" },
-                  { value: "1", label: "★☆☆☆☆ (1)" },
-                ],
-              },
-            ],
-            1,
-            12
-          )}
+              { key: "rating", label: "Rating (optional)", type: "select" as const, options: [{ value: "none", label: "—" }, { value: "5", label: "★★★★★ (5)" }, { value: "4", label: "★★★★☆ (4)" }, { value: "3", label: "★★★☆☆ (3)" }, { value: "2", label: "★★☆☆☆ (2)" }, { value: "1", label: "★☆☆☆☆ (1)" }] },
+            ]
+            return (
+              <InspectorCardList
+                items={items}
+                getItemId={getItemId}
+                mode="single"
+                expandedId={expandedId}
+                onToggle={(id) => setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: expandedId === id ? null : id }))}
+                onCollapseAll={() => setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: null }))}
+                countLabel={`${items.length} Testimonials`}
+                addAction={<Button type="button" variant="outline" size="sm" className="w-full h-8 text-sm" onClick={addItem} disabled={items.length >= 12}><Plus className="h-4 w-4 mr-1.5" />Testimonial hinzufügen</Button>}
+                renderSummary={(item) => <span className="truncate">{(item as Record<string, unknown>).name as string || "Testimonial"}</span>}
+                renderHeaderActions={(item) => (
+                  <div className="flex items-center gap-0.5">
+                    <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); const i = items.findIndex((x) => x.id === item.id); if (i > 0) handleMoveArrayItem(selectedBlock.id, "items", i, i - 1) }} disabled={items.findIndex((c) => c.id === item.id) === 0} title="Nach oben"><ChevronUp className="h-3 w-3" /></Button>
+                    <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); const i = items.findIndex((x) => x.id === item.id); if (i < items.length - 1) handleMoveArrayItem(selectedBlock.id, "items", i, i + 1) }} disabled={items.findIndex((c) => c.id === item.id) === items.length - 1} title="Nach unten"><ChevronDown className="h-3 w-3" /></Button>
+                    <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={(e) => { e.stopPropagation(); handleRemoveArrayItem(selectedBlock.id, "items", items.findIndex((c) => c.id === item.id)) }} disabled={items.length <= 1} title="Löschen"><Trash2 className="h-3.5 w-3.5" /></Button>
+                  </div>
+                )}
+                renderContent={(item) => renderOneRepeaterItemFields(selectedBlock, "items", items.findIndex((i) => i.id === item.id), item as Record<string, unknown>, testimonialFields)}
+              />
+            )
+          })()}
         </>
       )}
 
@@ -3990,28 +4161,54 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
       {selectedBlock.type === "imageSlider" && (
         <>
           <Separator />
-          {renderArrayItemsControls(
-            selectedBlock,
-            "slides",
-            "Slide",
-            (slide, index) => {
-              const s = slide as unknown as Record<string, unknown>
-              const title = String(s.title || "")
-              return `${index + 1}. ${title || "Slide"}`
-            },
-            createImageSlide,
-            [
+          {(() => {
+            const props = selectedBlock.props as Record<string, unknown>
+            const slides = ((getByPath(props, "slides") as Array<{ id: string; title?: string }>) || [])
+            const repeaterKey = `${selectedBlock.id}:slides`
+            const expandedId = expandedRepeaterCards[repeaterKey] ?? null
+            const updateSlides = (next: typeof slides) => updateSelectedProps({ ...props, slides: next } as CMSBlock["props"])
+            const getItemId = (s: { id: string }) => s.id
+            const removeSlide = (id: string) => {
+              if (expandedId === id) setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: null }))
+              updateSlides(slides.filter((s) => s.id !== id))
+            }
+            const addSlide = () => {
+              const newItem = createImageSlide()
+              updateSlides([...slides, newItem])
+              setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: newItem.id }))
+              lastAddedRepeaterRef.current = { key: repeaterKey, itemId: newItem.id }
+            }
+            const slideFields = [
               { key: "url", label: "Bild", type: "image" as const, required: true },
               { key: "alt", label: "Alt-Text", type: "text" as const, required: true },
               { key: "title", label: "Titel (optional)", type: "text" as const },
               { key: "text", label: "Text (optional)", type: "textarea" as const },
               { key: "titleColor", label: "Titel Farbe", type: "color" as const, placeholder: "#111111" },
               { key: "textColor", label: "Text Farbe", type: "color" as const, placeholder: "#666666" },
-            ],
-            1,
-            12
-          )}
-          
+            ]
+            return (
+              <InspectorCardList
+                items={slides}
+                getItemId={getItemId}
+                mode="single"
+                expandedId={expandedId}
+                onToggle={(id) => setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: expandedId === id ? null : id }))}
+                onCollapseAll={() => setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: null }))}
+                countLabel={`${slides.length} Slides`}
+                addAction={<Button type="button" variant="outline" size="sm" className="w-full h-8 text-sm" onClick={addSlide} disabled={slides.length >= 12}><Plus className="h-4 w-4 mr-1.5" />Slide hinzufügen</Button>}
+                renderSummary={(slide) => <span className="truncate">{(slide as Record<string, unknown>).title as string || "Slide"}</span>}
+                renderHeaderActions={(slide) => (
+                  <div className="flex items-center gap-0.5">
+                    <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); const i = slides.findIndex((s) => s.id === slide.id); if (i > 0) handleMoveArrayItem(selectedBlock.id, "slides", i, i - 1) }} disabled={slides.findIndex((s) => s.id === slide.id) === 0} title="Nach oben"><ChevronUp className="h-3 w-3" /></Button>
+                    <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); const i = slides.findIndex((s) => s.id === slide.id); if (i < slides.length - 1) handleMoveArrayItem(selectedBlock.id, "slides", i, i + 1) }} disabled={slides.findIndex((s) => s.id === slide.id) === slides.length - 1} title="Nach unten"><ChevronDown className="h-3 w-3" /></Button>
+                    <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={(e) => { e.stopPropagation(); removeSlide(slide.id) }} disabled={slides.length <= 1} title="Löschen"><Trash2 className="h-3.5 w-3.5" /></Button>
+                  </div>
+                )}
+                renderContent={(slide) => renderOneRepeaterItemFields(selectedBlock, "slides", slides.findIndex((s) => s.id === slide.id), slide as Record<string, unknown>, slideFields)}
+              />
+            )
+          })()}
+
           {/* Slide Shadow Inspector */}
           {((selectedBlock.props as any)?.slides ?? []).map((slide: any, slideIndex: number) => (
             <div key={slide.id || slideIndex} className="mt-4 pt-4 border-t border-border/50">
@@ -4038,185 +4235,219 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
         </>
       )}
 
-      {selectedBlock.type === "courseSchedule" && (
-        <>
-          <Separator />
-          <div className="space-y-3">
-            <div className="space-y-1.5">
-              <Label className="text-xs">Anzeige</Label>
-              <Select
-                value={(selectedBlock.props as any)?.mode ?? "calendar"}
-                onValueChange={(v: "calendar" | "timeline") => {
-                  if (!selectedBlock) return
-                  const currentProps = selectedBlock.props as Record<string, unknown>
-                  updateSelectedProps({ ...currentProps, mode: v } as CMSBlock["props"])
-                }}
-              >
-                <SelectTrigger className="h-8 text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="calendar">Kalender</SelectItem>
-                  <SelectItem value="timeline">Timeline</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex items-center justify-between">
-              <Label className="text-xs">Wochenende verstecken</Label>
-              <button
-                type="button"
-                onClick={() => {
-                  if (!selectedBlock) return
-                  const currentProps = selectedBlock.props as Record<string, unknown>
-                  const updatedProps = { ...currentProps, hideWeekend: !currentProps.hideWeekend } as CMSBlock["props"]
-                  updateSelectedProps(updatedProps)
-                }}
-                className={cn(
-                  "h-6 w-11 rounded-full border border-border transition-colors",
-                  (selectedBlock.props as any)?.hideWeekend ? "bg-primary" : "bg-muted"
-                )}
-              >
-                <div
-                  className={cn(
-                    "h-5 w-5 rounded-full bg-white transition-transform",
-                    (selectedBlock.props as any)?.hideWeekend ? "translate-x-5" : "translate-x-0.5"
-                  )}
-                />
-              </button>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Überschrift</Label>
-              <Input
-                value={(selectedBlock.props as any)?.headline ?? ""}
-                onChange={(e) => {
-                  if (!selectedBlock) return
-                  const currentProps = selectedBlock.props as Record<string, unknown>
-                  updateSelectedProps({ ...currentProps, headline: e.target.value } as CMSBlock["props"])
-                }}
-                className="h-8 text-sm"
-                placeholder="Kursplan"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Untertitel (optional)</Label>
-              <Textarea
-                value={(selectedBlock.props as any)?.subheadline ?? ""}
-                onChange={(e) => {
-                  if (!selectedBlock) return
-                  const currentProps = selectedBlock.props as Record<string, unknown>
-                  updateSelectedProps({ ...currentProps, subheadline: e.target.value } as CMSBlock["props"])
-                }}
-                className="min-h-[60px] text-sm"
-                placeholder="Optionaler Hinweistext"
-              />
-            </div>
-          </div>
-          {(() => {
-            const blockDef = getBlockDefinition(selectedBlock.type)
-            return blockDef?.enableInnerPanel ? (
-              <div className="mt-4 space-y-1.5 rounded-lg bg-muted/30 p-3">
-                <Label className="text-xs font-semibold text-primary">CONTAINER-HINTERGRUND (inneres Panel)</Label>
+      {selectedBlock.type === "courseSchedule" && (() => {
+        const props = selectedBlock.props as CourseScheduleBlock["props"]
+        const slots: CourseSlot[] = props.slots ?? []
+        const weekdays: CourseScheduleWeekday[] = ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"]
+        const repeaterKey = `${selectedBlock.id}:slots`
+        const expandedSlotId = expandedRepeaterCards[repeaterKey] ?? null
+        const updateSlots = (nextSlots: CourseSlot[]) => updateSelectedProps({ ...props, slots: nextSlots } as CMSBlock["props"])
+        const updateSlot = (slotId: string, patch: Partial<CourseSlot>) => {
+          const idx = slots.findIndex((s) => s.id === slotId)
+          if (idx === -1) return
+          const next = [...slots]
+          next[idx] = { ...next[idx], ...patch }
+          updateSlots(next)
+        }
+        const removeSlot = (slotId: string) => {
+          const next = slots.filter((s) => s.id !== slotId)
+          if (expandedSlotId === slotId) {
+            setExpandedRepeaterCards((prev) => ({ ...prev, [repeaterKey]: null }))
+          }
+          updateSlots(next)
+        }
+        const addSlot = () => {
+          const newSlot = createCourseSlot()
+          updateSlots([...slots, newSlot])
+          setExpandedRepeaterCards((prev) => ({ ...prev, [repeaterKey]: newSlot.id }))
+          lastAddedRepeaterRef.current = { key: repeaterKey, itemId: newSlot.id }
+        }
+        const toggleSlot = (slotId: string) => {
+          setExpandedRepeaterCards((prev) => ({
+            ...prev,
+            [repeaterKey]: expandedSlotId === slotId ? null : slotId,
+          }))
+        }
+        return (
+          <>
+            <Separator />
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Anzeige</Label>
                 <Select
-                  value={(selectedBlock.props as any)?.containerBackgroundMode ?? "transparent"}
-                  onValueChange={(v) => {
+                  value={props.mode ?? "calendar"}
+                  onValueChange={(v: "calendar" | "timeline") => {
                     if (!selectedBlock) return
-                    const currentProps = selectedBlock.props as Record<string, unknown>
-                    updateSelectedProps({ ...currentProps, containerBackgroundMode: v } as CMSBlock["props"])
+                    updateSelectedProps({ ...props, mode: v } as CMSBlock["props"])
                   }}
                 >
                   <SelectTrigger className="h-8 text-sm">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="transparent">Transparent</SelectItem>
-                    <SelectItem value="color">Farbe</SelectItem>
-                    <SelectItem value="gradient">Verlauf</SelectItem>
+                    <SelectItem value="calendar">Kalender</SelectItem>
+                    <SelectItem value="timeline">Timeline</SelectItem>
                   </SelectContent>
                 </Select>
-                {(selectedBlock.props as any)?.containerBackgroundMode === "color" && (
+              </div>
+              <div className="flex items-center justify-between">
+                <Label className="text-xs">Wochenende verstecken</Label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!selectedBlock) return
+                    updateSelectedProps({ ...props, hideWeekend: !props.hideWeekend } as CMSBlock["props"])
+                  }}
+                  className={cn(
+                    "h-6 w-11 rounded-full border border-border transition-colors",
+                    props.hideWeekend ? "bg-primary" : "bg-muted"
+                  )}
+                >
+                  <div
+                    className={cn(
+                      "h-5 w-5 rounded-full bg-white transition-transform",
+                      props.hideWeekend ? "translate-x-5" : "translate-x-0.5"
+                    )}
+                  />
+                </button>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Überschrift</Label>
+                <Input
+                  value={props.headline ?? ""}
+                  onChange={(e) => updateSelectedProps({ ...props, headline: e.target.value } as CMSBlock["props"])}
+                  className="h-8 text-sm"
+                  placeholder="Kursplan"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Untertitel (optional)</Label>
+                <Textarea
+                  value={props.subheadline ?? ""}
+                  onChange={(e) => updateSelectedProps({ ...props, subheadline: e.target.value } as CMSBlock["props"])}
+                  className="min-h-[60px] text-sm"
+                  placeholder="Optionaler Hinweistext"
+                />
+              </div>
+            </div>
+            <Separator />
+            <InspectorCardList<CourseSlot>
+              items={slots}
+              getItemId={(s) => s.id}
+              mode="single"
+              expandedId={expandedSlotId}
+              onToggle={toggleSlot}
+              onCollapseAll={() => setExpandedRepeaterCards((prev) => ({ ...prev, [repeaterKey]: null }))}
+              countLabel={`${slots.length} Kurse`}
+              addAction={
+                <Button type="button" variant="outline" size="sm" className="w-full h-8 text-sm" onClick={addSlot}>
+                  <Plus className="h-4 w-4 mr-1.5" />
+                  Slot hinzufügen
+                </Button>
+              }
+              emptyState={<p className="text-xs text-muted-foreground py-2">Keine Kurse. Slot hinzufügen.</p>}
+              renderSummary={(slot) => (
+                <div className="flex items-center gap-2 min-w-0 w-full">
+                  <span className="truncate text-sm font-medium">{slot.title || "Neuer Kurs"}</span>
+                  <span className="shrink-0 text-xs text-muted-foreground">
+                    {slot.weekday} {slot.startTime}–{slot.endTime}
+                  </span>
+                </div>
+              )}
+              renderHeaderActions={(slot) => (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 text-destructive hover:text-destructive"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    removeSlot(slot.id)
+                  }}
+                  title="Slot löschen"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              )}
+              renderContent={(slot) => (
+                <>
                   <div className="space-y-1.5">
-                    <Label className="text-xs">Panel-Farbe</Label>
-                    <input
-                      type="color"
-                      value={(selectedBlock.props as any)?.containerBackgroundColor ?? "#ffffff"}
-                      onChange={(e) => {
-                        if (!selectedBlock) return
-                        const currentProps = selectedBlock.props as Record<string, unknown>
-                        updateSelectedProps({ ...currentProps, containerBackgroundColor: e.target.value } as CMSBlock["props"])
-                      }}
-                      className="h-8 w-full rounded border border-border bg-background"
-                    />
-                  </div>
-                )}
-                {(selectedBlock.props as any)?.containerBackgroundMode === "gradient" && (
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Verlauf-Preset</Label>
+                    <Label className="text-xs">Wochentag</Label>
                     <Select
-                      value={(selectedBlock.props as any)?.containerBackgroundGradientPreset ?? "soft"}
-                      onValueChange={(v) => {
-                        if (!selectedBlock) return
-                        const currentProps = selectedBlock.props as Record<string, unknown>
-                        updateSelectedProps({ ...currentProps, containerBackgroundGradientPreset: v } as CMSBlock["props"])
-                      }}
+                      value={slot.weekday}
+                      onValueChange={(v) => updateSlot(slot.id, { weekday: v as CourseScheduleWeekday })}
                     >
                       <SelectTrigger className="h-8 text-sm">
                         <SelectValue />
                       </SelectTrigger>
-                      <GradientPresetSelectContent />
+                      <SelectContent>
+                        {weekdays.map((d) => (
+                          <SelectItem key={d} value={d}>{d}</SelectItem>
+                        ))}
+                      </SelectContent>
                     </Select>
                   </div>
-                )}
-                <div className="mt-3 pt-3 border-t border-border/50">
-                  <Label className="text-xs font-semibold">Shadow</Label>
-                  <ShadowInspector
-                    config={(selectedBlock.props as any)?.containerShadow}
-                    onChange={(shadowConfig) => {
-                      if (!selectedBlock) return
-                      const currentProps = selectedBlock.props as Record<string, unknown>
-                      updateSelectedProps({ ...currentProps, containerShadow: shadowConfig } as CMSBlock["props"])
-                    }}
-                  />
-                </div>
-              </div>
-            ) : null
-          })()}
-          <Separator />
-          {renderArrayItemsControls(
-            selectedBlock,
-            "slots",
-            "Slot",
-            (slot, index) => {
-              const s = slot as unknown as Record<string, unknown>
-              const title = String(s.title || "")
-              const weekday = String(s.weekday || "")
-              return `${index + 1}. ${weekday} ${title || "Slot"}`
-            },
-            createCourseSlot,
-            [
-              {
-                key: "weekday",
-                label: "Wochentag",
-                type: "select" as const,
-                options: [
-                  { value: "Montag", label: "Montag" },
-                  { value: "Dienstag", label: "Dienstag" },
-                  { value: "Mittwoch", label: "Mittwoch" },
-                  { value: "Donnerstag", label: "Donnerstag" },
-                  { value: "Freitag", label: "Freitag" },
-                  { value: "Samstag", label: "Samstag" },
-                  { value: "Sonntag", label: "Sonntag" },
-                ],
-              },
-              { key: "startTime", label: "Start (HH:MM)", type: "text" as const, placeholder: "09:00" },
-              { key: "endTime", label: "Ende (HH:MM)", type: "text" as const, placeholder: "10:00" },
-              { key: "title", label: "Titel", type: "text" as const, required: true },
-              { key: "instructor", label: "Referent/in (optional)", type: "text" as const },
-              { key: "location", label: "Ort (optional)", type: "text" as const },
-              { key: "highlight", label: "Hervorheben", type: "boolean" as const },
-            ]
-          )}
-        </>
-      )}
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Start</Label>
+                      <Input
+                        type="time"
+                        value={slot.startTime}
+                        onChange={(e) => updateSlot(slot.id, { startTime: e.target.value })}
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Ende</Label>
+                      <Input
+                        type="time"
+                        value={slot.endTime}
+                        onChange={(e) => updateSlot(slot.id, { endTime: e.target.value })}
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Titel</Label>
+                    <Input
+                      value={slot.title}
+                      onChange={(e) => updateSlot(slot.id, { title: e.target.value })}
+                      className="h-8 text-sm"
+                      placeholder="Kursname"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Referent/in (optional)</Label>
+                    <Input
+                      value={slot.instructor ?? ""}
+                      onChange={(e) => updateSlot(slot.id, { instructor: e.target.value })}
+                      className="h-8 text-sm"
+                      placeholder="Name"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Ort (optional)</Label>
+                    <Input
+                      value={slot.location ?? ""}
+                      onChange={(e) => updateSlot(slot.id, { location: e.target.value })}
+                      className="h-8 text-sm"
+                      placeholder="Raum / Adresse"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id={`slot-highlight-${slot.id}`}
+                      checked={!!slot.highlight}
+                      onCheckedChange={(checked) => updateSlot(slot.id, { highlight: !!checked })}
+                    />
+                    <Label htmlFor={`slot-highlight-${slot.id}`} className="text-xs cursor-pointer">Hervorheben</Label>
+                  </div>
+                </>
+              )}
+            />
+          </>
+        )
+      })()}
 
       {selectedBlock.type === "openingHours" && (
         <>
@@ -4993,19 +5224,51 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
       {selectedBlock.type === "faq" && (
         <>
           <Separator />
-          {renderArrayItemsControls(
-            selectedBlock,
-            "items",
-            "FAQ",
-            (item, index) => `FAQ ${index + 1}`,
-            createFaqItem,
-            [
+          {(() => {
+            const props = selectedBlock.props as Record<string, unknown>
+            const items = ((getByPath(props, "items") as Array<{ id: string; question?: string }>) || [])
+            const repeaterKey = `${selectedBlock.id}:items`
+            const expandedId = expandedRepeaterCards[repeaterKey] ?? null
+            const updateItems = (next: typeof items) => updateSelectedProps({ ...props, items: next } as CMSBlock["props"])
+            const getItemId = (i: { id: string }) => i.id
+            const removeItem = (id: string) => {
+              if (expandedId === id) setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: null }))
+              updateItems(items.filter((i) => i.id !== id))
+            }
+            const addItem = () => {
+              const newItem = createFaqItem()
+              updateItems([...items, newItem])
+              setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: newItem.id }))
+              lastAddedRepeaterRef.current = { key: repeaterKey, itemId: newItem.id }
+            }
+            const faqFields = [
               { key: "question", label: "Frage", type: "text" as const },
               { key: "questionColor", label: "Frage Farbe (optional)", type: "color" as const, placeholder: "#111111" },
               { key: "answer", label: "Antwort", type: "textarea" as const },
               { key: "answerColor", label: "Antwort Farbe (optional)", type: "color" as const, placeholder: "#666666" },
             ]
-          )}
+            return (
+              <InspectorCardList
+                items={items}
+                getItemId={getItemId}
+                mode="single"
+                expandedId={expandedId}
+                onToggle={(id) => setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: expandedId === id ? null : id }))}
+                onCollapseAll={() => setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: null }))}
+                countLabel={`${items.length} FAQs`}
+                addAction={<Button type="button" variant="outline" size="sm" className="w-full h-8 text-sm" onClick={addItem}><Plus className="h-4 w-4 mr-1.5" />FAQ hinzufügen</Button>}
+                renderSummary={(item) => <span className="truncate">{(item as Record<string, unknown>).question as string || "FAQ"}</span>}
+                renderHeaderActions={(item) => (
+                  <div className="flex items-center gap-0.5">
+                    <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); const i = items.findIndex((x) => x.id === item.id); if (i > 0) handleMoveArrayItem(selectedBlock.id, "items", i, i - 1) }} disabled={items.findIndex((c) => c.id === item.id) === 0} title="Nach oben"><ChevronUp className="h-3 w-3" /></Button>
+                    <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); const i = items.findIndex((x) => x.id === item.id); if (i < items.length - 1) handleMoveArrayItem(selectedBlock.id, "items", i, i + 1) }} disabled={items.findIndex((c) => c.id === item.id) === items.length - 1} title="Nach unten"><ChevronDown className="h-3 w-3" /></Button>
+                    <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={(e) => { e.stopPropagation(); removeItem(item.id) }} title="Löschen"><Trash2 className="h-3.5 w-3.5" /></Button>
+                  </div>
+                )}
+                renderContent={(item) => renderOneRepeaterItemFields(selectedBlock, "items", items.findIndex((i) => i.id === item.id), item as Record<string, unknown>, faqFields)}
+              />
+            )
+          })()}
         </>
       )}
 
@@ -5077,100 +5340,6 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
               </Select>
             </div>
 
-            {/* Container Background (Inner Panel - for block content) */}
-            {(() => {
-              const blockDef = getBlockDefinition(selectedBlock.type)
-              return blockDef?.enableInnerPanel ? (
-                <div className="space-y-1.5 rounded-lg bg-muted/30 p-3">
-                  <Label className="text-xs font-semibold text-primary">CONTAINER-HINTERGRUND (inneres Panel)</Label>
-                  <Select
-                    value={(selectedBlock.props as any)?.containerBackgroundMode || "transparent"}
-                    onValueChange={(v) => {
-                      if (!selectedBlock) return
-                      const currentProps = selectedBlock.props as Record<string, unknown>
-                      const updatedProps = {
-                        ...currentProps,
-                        containerBackgroundMode: v,
-                      } as CMSBlock["props"]
-                      updateSelectedProps(updatedProps)
-                    }}
-                  >
-                    <SelectTrigger className="h-8 text-sm">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="transparent">Transparent</SelectItem>
-                      <SelectItem value="color">Farbe</SelectItem>
-                      <SelectItem value="gradient">Verlauf</SelectItem>
-                    </SelectContent>
-                  </Select>
-
-                  {/* Conditional: Container Color */}
-                  {(selectedBlock.props as any)?.containerBackgroundMode === "color" && (
-                    <div className="space-y-1.5">
-                      <Label className="text-xs">Panel-Farbe</Label>
-                      <input
-                        type="color"
-                        value={(selectedBlock.props as any)?.containerBackgroundColor || "#ffffff"}
-                        onChange={(e) => {
-                          if (!selectedBlock) return
-                          const currentProps = selectedBlock.props as Record<string, unknown>
-                          const updatedProps = {
-                            ...currentProps,
-                            containerBackgroundColor: e.target.value,
-                          } as CMSBlock["props"]
-                          updateSelectedProps(updatedProps)
-                        }}
-                        className="h-8 w-full rounded border border-border bg-background"
-                      />
-                    </div>
-                  )}
-
-                  {/* Conditional: Container Gradient Preset */}
-                  {(selectedBlock.props as any)?.containerBackgroundMode === "gradient" && (
-                    <div className="space-y-1.5">
-                      <Label className="text-xs">Verlauf-Preset</Label>
-                      <Select
-                        value={(selectedBlock.props as any)?.containerBackgroundGradientPreset || "soft"}
-                        onValueChange={(v) => {
-                          if (!selectedBlock) return
-                          const currentProps = selectedBlock.props as Record<string, unknown>
-                          const updatedProps = {
-                            ...currentProps,
-                            containerBackgroundGradientPreset: v,
-                          } as CMSBlock["props"]
-                          updateSelectedProps(updatedProps)
-                        }}
-                      >
-                        <SelectTrigger className="h-8 text-sm">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <GradientPresetSelectContent />
-                      </Select>
-                    </div>
-                  )}
-
-                  {/* Container Shadow Inspector */}
-                  <div className="mt-3 pt-3 border-t border-border/50">
-                    <Label className="text-xs font-semibold">Shadow</Label>
-                    <ShadowInspector
-                      config={(selectedBlock.props as any)?.containerShadow}
-                      onChange={(shadowConfig) => {
-                        if (!selectedBlock) return
-                        const currentProps = selectedBlock.props as Record<string, unknown>
-                        const updatedProps = {
-                          ...currentProps,
-                          containerShadow: shadowConfig,
-                        } as CMSBlock["props"]
-                        updateSelectedProps(updatedProps)
-                      }}
-                      onClose={() => {}}
-                    />
-                  </div>
-                </div>
-              ) : null
-            })()}
-
             {/* Columns */}
             <div className="space-y-1.5">
               <Label className="text-xs">Spalten</Label>
@@ -5198,74 +5367,36 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
           <Separator />
 
           {/* Members Array */}
-          {renderArrayItemsControls(
-            selectedBlock,
-            "members",
-            "Mitglied",
-            (member, index) => {
-              const m = member as unknown as Record<string, unknown>
-              const name = String(m.name || "")
-              return `${index + 1}. ${name || "Mitglied"}`
-            },
-            createTeamMember,
-            [
+          {(() => {
+            const props = selectedBlock.props as Record<string, unknown>
+            const members = ((getByPath(props, "members") as Array<{ id: string; name?: string }>) || [])
+            const repeaterKey = `${selectedBlock.id}:members`
+            const expandedId = expandedRepeaterCards[repeaterKey] ?? null
+            const updateMembers = (next: typeof members) => updateSelectedProps({ ...props, members: next } as CMSBlock["props"])
+            const getItemId = (m: { id: string }) => m.id
+            const removeMember = (id: string) => {
+              if (expandedId === id) setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: null }))
+              updateMembers(members.filter((m) => m.id !== id))
+            }
+            const addMember = () => {
+              const newItem = createTeamMember()
+              updateMembers([...members, newItem])
+              setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: newItem.id }))
+              lastAddedRepeaterRef.current = { key: repeaterKey, itemId: newItem.id }
+            }
+            const memberFields = [
               { key: "name", label: "Name", type: "text" as const, required: true },
               { key: "nameColor", label: "Name Farbe (optional)", type: "color" as const, placeholder: "#111111" },
               { key: "role", label: "Rolle", type: "text" as const },
               { key: "roleColor", label: "Rolle Farbe (optional)", type: "color" as const, placeholder: "#666666" },
               { key: "bio", label: "Bio", type: "textarea" as const },
               { key: "bioColor", label: "Bio Farbe (optional)", type: "color" as const, placeholder: "#666666" },
-              {
-                key: "bioAlign",
-                label: "Bio Ausrichtung",
-                type: "select" as const,
-                options: [
-                  { value: "left", label: "Links" },
-                  { value: "center", label: "Mitte" },
-                  { value: "right", label: "Rechts" },
-                ],
-              },
+              { key: "bioAlign", label: "Bio Ausrichtung", type: "select" as const, options: [{ value: "left", label: "Links" }, { value: "center", label: "Mitte" }, { value: "right", label: "Rechts" }] },
               { key: "imageUrl", label: "Avatar", type: "image" as const },
               { key: "imageAlt", label: "Avatar Alt-Text", type: "text" as const },
-              {
-                key: "avatarGradient",
-                label: "Avatar Gradient",
-                type: "select" as const,
-                options: [
-                  { value: "auto", label: "Auto" },
-                  { value: "g1", label: "Emerald" },
-                  { value: "g2", label: "Sky" },
-                  { value: "g3", label: "Amber" },
-                  { value: "g4", label: "Rose" },
-                  { value: "g5", label: "Violet" },
-                  { value: "g6", label: "Cyan" },
-                  { value: "g7", label: "Lime" },
-                  { value: "g8", label: "Fuchsia" },
-                  { value: "g9", label: "Indigo" },
-                  { value: "g10", label: "Red" },
-                ],
-              },
-              {
-                key: "avatarFit",
-                label: "Bildanpassung",
-                type: "select" as const,
-                options: [
-                  { value: "cover", label: "Füllen (Cover)" },
-                  { value: "contain", label: "Vollständig (Contain)" },
-                ],
-              },
-              {
-                key: "avatarFocus",
-                label: "Bildfokus",
-                type: "select" as const,
-                options: [
-                  { value: "center", label: "Mitte" },
-                  { value: "top", label: "Oben" },
-                  { value: "bottom", label: "Unten" },
-                  { value: "left", label: "Links" },
-                  { value: "right", label: "Rechts" },
-                ],
-              },
+              { key: "avatarGradient", label: "Avatar Gradient", type: "select" as const, options: [{ value: "auto", label: "Auto" }, { value: "g1", label: "Emerald" }, { value: "g2", label: "Sky" }, { value: "g3", label: "Amber" }, { value: "g4", label: "Rose" }, { value: "g5", label: "Violet" }, { value: "g6", label: "Cyan" }, { value: "g7", label: "Lime" }, { value: "g8", label: "Fuchsia" }, { value: "g9", label: "Indigo" }, { value: "g10", label: "Red" }] },
+              { key: "avatarFit", label: "Bildanpassung", type: "select" as const, options: [{ value: "cover", label: "Füllen (Cover)" }, { value: "contain", label: "Vollständig (Contain)" }] },
+              { key: "avatarFocus", label: "Bildfokus", type: "select" as const, options: [{ value: "center", label: "Mitte" }, { value: "top", label: "Oben" }, { value: "bottom", label: "Unten" }, { value: "left", label: "Links" }, { value: "right", label: "Rechts" }] },
               { key: "tags", label: "Tags (komma-getrennt)", type: "text" as const, placeholder: "Tag1, Tag2, Tag3" },
               { key: "ctaText", label: "CTA Text", type: "text" as const },
               { key: "ctaColor", label: "CTA Farbe (optional)", type: "color" as const, placeholder: "#111111" },
@@ -5273,8 +5404,28 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
               { key: "cardBgColor", label: "Card Hintergrund (optional)", type: "color" as const, placeholder: "#ffffff" },
               { key: "cardBorderColor", label: "Card Border (optional)", type: "color" as const, placeholder: "#e5e7eb" },
             ]
-          )}
-
+            return (
+              <InspectorCardList
+                items={members}
+                getItemId={getItemId}
+                mode="single"
+                expandedId={expandedId}
+                onToggle={(id) => setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: expandedId === id ? null : id }))}
+                onCollapseAll={() => setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: null }))}
+                countLabel={`${members.length} Mitglieder`}
+                addAction={<Button type="button" variant="outline" size="sm" className="w-full h-8 text-sm" onClick={addMember}><Plus className="h-4 w-4 mr-1.5" />Mitglied hinzufügen</Button>}
+                renderSummary={(member) => <span className="truncate">{(member as Record<string, unknown>).name as string || "Mitglied"}</span>}
+                renderHeaderActions={(member) => (
+                  <div className="flex items-center gap-0.5">
+                    <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); const i = members.findIndex((m) => m.id === member.id); if (i > 0) handleMoveArrayItem(selectedBlock.id, "members", i, i - 1) }} disabled={members.findIndex((m) => m.id === member.id) === 0} title="Nach oben"><ChevronUp className="h-3 w-3" /></Button>
+                    <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); const i = members.findIndex((m) => m.id === member.id); if (i < members.length - 1) handleMoveArrayItem(selectedBlock.id, "members", i, i + 1) }} disabled={members.findIndex((m) => m.id === member.id) === members.length - 1} title="Nach unten"><ChevronDown className="h-3 w-3" /></Button>
+                    <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={(e) => { e.stopPropagation(); confirmDeleteItem(selectedBlock.id, "members", members.findIndex((m) => m.id === member.id)) }} title="Löschen"><Trash2 className="h-3.5 w-3.5" /></Button>
+                  </div>
+                )}
+                renderContent={(member) => renderOneRepeaterItemFields(selectedBlock, "members", members.findIndex((m) => m.id === member.id), member as Record<string, unknown>, memberFields)}
+              />
+            )
+          })()}
         </>
       )}
 
@@ -5434,28 +5585,6 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
         )
       })()}
 
-      {/* Panel Container Shadow Inspector (for blocks with enableInnerPanel) */}
-      {getBlockDefinition(selectedBlock.type)?.enableInnerPanel && (
-        <>
-          <Separator />
-          <div className="mt-3 pt-3 border-t border-border/50">
-            <Label className="text-xs font-semibold">Panel Shadow</Label>
-            <ShadowInspector
-              config={(selectedBlock.props as any)?.containerShadow}
-              onChange={(shadowConfig) => {
-                if (!selectedBlock) return
-                const currentProps = selectedBlock.props as Record<string, unknown>
-                const updatedProps = {
-                  ...currentProps,
-                  containerShadow: shadowConfig,
-                } as CMSBlock["props"]
-                updateSelectedProps(updatedProps)
-              }}
-              onClose={() => {}}
-            />
-          </div>
-        </>
-      )}
     </>
   )
 })()}</div>

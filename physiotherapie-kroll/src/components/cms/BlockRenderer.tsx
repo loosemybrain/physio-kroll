@@ -35,6 +35,17 @@ interface BlockRendererProps {
   pageSlug?: string
   isFirst?: boolean
   brand?: string
+  /** Admin Live-Preview: Klick auf Kurs-Slot öffnet zugehörige Inspector-Card */
+  courseSchedulePreview?: {
+    interactivePreview: boolean
+    activeSlotId: string | null
+    onSlotSelect: (slotId: string) => void
+  }
+  /** Admin Live-Preview: Klick auf Repeater-Item (Card/Member/FAQ/Slide) öffnet zugehörige Inspector-Card */
+  repeaterPreview?: {
+    activeItemId: string | null
+    onItemSelect: (itemId: string) => void
+  }
 }
 
 /**
@@ -50,6 +61,8 @@ export function BlockRenderer({
   pageSlug,
   isFirst,
   brand,
+  courseSchedulePreview,
+  repeaterPreview,
 }: BlockRendererProps) {
   const definition = blockRegistry[block.type]
   const allowInlineEdit = definition?.allowInlineEdit ?? false
@@ -205,6 +218,9 @@ export function BlockRenderer({
             onEditField={onEditField}
             onElementClick={onElementClick}
             selectedElementId={selectedElementId}
+            interactivePreview={!!repeaterPreview}
+            activeItemId={repeaterPreview?.activeItemId ?? null}
+            onItemSelect={repeaterPreview?.onItemSelect}
           />
         )
       }
@@ -223,6 +239,9 @@ export function BlockRenderer({
             onEditField={onEditField}
             onElementClick={onElementClick}
             selectedElementId={selectedElementId}
+            interactivePreview={!!repeaterPreview}
+            activeItemId={repeaterPreview?.activeItemId ?? null}
+            onItemSelect={repeaterPreview?.onItemSelect}
           />
         )
       }
@@ -241,6 +260,9 @@ export function BlockRenderer({
             onEditField={onEditField}
             onElementClick={onElementClick}
             selectedElementId={selectedElementId}
+            interactivePreview={!!repeaterPreview}
+            activeItemId={repeaterPreview?.activeItemId ?? null}
+            onItemSelect={repeaterPreview?.onItemSelect}
           />
         )
       }
@@ -277,6 +299,9 @@ export function BlockRenderer({
             onEditField={onEditField}
             onElementClick={onElementClick}
             selectedElementId={selectedElementId}
+            interactivePreview={!!repeaterPreview}
+            activeItemId={repeaterPreview?.activeItemId ?? null}
+            onItemSelect={repeaterPreview?.onItemSelect}
           />
         )
       }
@@ -350,6 +375,9 @@ export function BlockRenderer({
             onEditField={onEditField}
             onElementClick={onElementClick}
             selectedElementId={selectedElementId}
+            interactivePreview={!!repeaterPreview}
+            activeItemId={repeaterPreview?.activeItemId ?? null}
+            onItemSelect={repeaterPreview?.onItemSelect}
           />
         )
       }
@@ -368,6 +396,9 @@ export function BlockRenderer({
             onEditField={onEditField}
             onElementClick={onElementClick}
             selectedElementId={selectedElementId}
+            interactivePreview={courseSchedulePreview?.interactivePreview}
+            activeSlotId={courseSchedulePreview?.activeSlotId ?? null}
+            onSlotSelect={courseSchedulePreview?.onSlotSelect}
           />
         )
       }

@@ -91,6 +91,11 @@ export interface TeamGridBlockProps {
   
   // Container Shadow
   containerShadow?: ElementShadow
+
+  /** Admin Live-Preview: Klick auf Member-Card öffnet zugehörige Inspector-Card */
+  interactivePreview?: boolean
+  activeItemId?: string | null
+  onItemSelect?: (itemId: string) => void
 }
 
 /* Gradient presets keyed g1..g10 */
@@ -309,6 +314,9 @@ function MemberCard({
   blockId,
   onEditField,
   typography,
+  interactivePreview,
+  activeItemId,
+  onItemSelect,
 }: {
   member: TeamMember
   index: number
@@ -324,6 +332,9 @@ function MemberCard({
   blockId?: string
   onEditField?: TeamGridBlockProps["onEditField"]
   typography?: Record<string, any>
+  interactivePreview?: boolean
+  activeItemId?: string | null
+  onItemSelect?: (itemId: string) => void
 }) {
   const handleEdit = useCallback(
     (e: React.MouseEvent, fieldPath: string) => {
@@ -341,19 +352,39 @@ function MemberCard({
 
   const isCompact = layout === "compact"
 
+  const isActive = interactivePreview && activeItemId === member.id
   return (
     <article
+      role={interactivePreview && onItemSelect ? "button" : undefined}
+      tabIndex={interactivePreview && onItemSelect ? 0 : undefined}
+      onClick={
+        interactivePreview && onItemSelect
+          ? (e) => {
+              if ((e.target as HTMLElement).closest("button, a, [data-inline-edit]")) return
+              onItemSelect(member.id)
+            }
+          : undefined
+      }
+      onKeyDown={
+        interactivePreview && onItemSelect
+          ? (e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault()
+                onItemSelect(member.id)
+              }
+            }
+          : undefined
+      }
       className={cn(
         "group relative flex overflow-hidden rounded-2xl border bg-card/60 backdrop-blur-sm",
-        // Shadow & hover
         "shadow-[0_1px_3px_rgba(0,0,0,0.04),0_10px_32px_-10px_rgba(0,0,0,0.10)]",
         "transition-all duration-500 ease-out",
         "hover:-translate-y-1.5 hover:border-primary/30",
         "hover:shadow-[0_1px_3px_rgba(0,0,0,0.04),0_24px_56px_-16px_rgba(0,0,0,0.18)]",
-        // Layout
         isCompact ? "flex-row items-center gap-5 p-5" : "flex-col",
-        // Border
         !cardBorderColor && "border-border/30",
+        interactivePreview && onItemSelect && "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+        isActive && "ring-2 ring-primary ring-offset-2",
       )}
       style={{
         backgroundColor: cardBgColor || undefined,
@@ -541,6 +572,9 @@ export function TeamGridBlock({
   containerGradientAngle,
   containerShadow,
   typography,
+  interactivePreview = false,
+  activeItemId = null,
+  onItemSelect,
 }: TeamGridBlockProps) {
   const sectionBg = resolveSectionBg(section)
   const containerBg = resolveContainerBg({
@@ -673,6 +707,9 @@ export function TeamGridBlock({
               blockId={blockId}
               onEditField={onEditField}
               typography={typography}
+              interactivePreview={interactivePreview}
+              activeItemId={activeItemId}
+              onItemSelect={onItemSelect}
             />
           ))}
         </div>

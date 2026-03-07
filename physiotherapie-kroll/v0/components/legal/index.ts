@@ -1,0 +1,10 @@
+// Legal Page Components
+export { LegalPageHero } from "./LegalPageHero"
+export { LegalSection } from "./LegalSection"
+export { LegalTableBlock } from "./LegalTableBlock"
+export { LegalInfoBox } from "./LegalInfoBox"
+export { LegalContactCard } from "./LegalContactCard"
+export { CookieCategoryCards } from "./CookieCategoryCards"
+export { AnchorNavigation } from "./AnchorNavigation"
+export { LegalDivider } from "./LegalDivider"
+export { LegalPageRenderer } from "./LegalPageRenderer"

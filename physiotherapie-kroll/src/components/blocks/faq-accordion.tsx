@@ -45,6 +45,8 @@ interface FaqAccordionProps {
   containerGradientAngle?: number
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   containerShadow?: any
+  containerBorder?: boolean
+  containerBorderColor?: string
   editable?: boolean
   blockId?: string
   onEditField?: (blockId: string, fieldPath: string, anchorRect?: DOMRect) => void
@@ -53,6 +55,10 @@ interface FaqAccordionProps {
   elements?: Record<string, any>
   onElementClick?: (blockId: string, elementId: string) => void
   selectedElementId?: string | null
+  /** Admin Live-Preview: Klick auf Item öffnet zugehörige Inspector-Card */
+  interactivePreview?: boolean
+  activeItemId?: string | null
+  onItemSelect?: (itemId: string) => void
 }
 
 /* ================================================================ */
@@ -79,6 +85,9 @@ interface FaqItemProps {
   onElementClick?: (blockId: string, elementId: string) => void
   selectedElementId?: string | null
   typography?: Record<string, any>
+  interactivePreview?: boolean
+  activeItemId?: string | null
+  onItemSelect?: (itemId: string) => void
 }
 
 function FaqItemComponent({
@@ -95,27 +104,29 @@ function FaqItemComponent({
   onElementClick,
   selectedElementId,
   typography,
+  interactivePreview,
+  activeItemId,
+  onItemSelect,
 }: FaqItemProps) {
   const itemSurfaceId = `faq.item.${item.id}`
-  const itemQuestionId = `faq.item.${item.id}.question`
-  const itemAnswerId = `faq.item.${item.id}.answer`
-
+  const isPreviewActive = interactivePreview && activeItemId === item.id
   const itemSurfaceShadow = useElementShadowStyle({
     elementId: itemSurfaceId,
     elementConfig: (elements ?? {})[itemSurfaceId],
   })
+  // Use registry element IDs for question/answer so Shadow Inspector (faq.question, faq.answer) applies
   const itemQuestionShadow = useElementShadowStyle({
-    elementId: itemQuestionId,
-    elementConfig: (elements ?? {})[itemQuestionId],
+    elementId: "faq.question",
+    elementConfig: (elements ?? {})["faq.question"],
   })
   const itemAnswerShadow = useElementShadowStyle({
-    elementId: itemAnswerId,
-    elementConfig: (elements ?? {})[itemAnswerId],
+    elementId: "faq.answer",
+    elementConfig: (elements ?? {})["faq.answer"],
   })
 
   const isItemSelected = selectedElementId === itemSurfaceId
-  const isQuestionSelected = selectedElementId === itemQuestionId
-  const isAnswerSelected = selectedElementId === itemAnswerId
+  const isQuestionSelected = selectedElementId === "faq.question"
+  const isAnswerSelected = selectedElementId === "faq.answer"
 
   const handleInlineEdit = useCallback(
     (e: React.MouseEvent, fieldPath: string) => {
@@ -128,18 +139,26 @@ function FaqItemComponent({
     [canInlineEdit, blockId, onEditField],
   )
 
+  const handleItemClick = () => {
+    if (interactivePreview && onItemSelect) {
+      onItemSelect(item.id)
+      return
+    }
+    onElementClick?.(blockId || "", itemSurfaceId)
+  }
+
   return (
     <AccordionItem
       key={item.id}
       value={item.id}
       data-element-id={itemSurfaceId}
       style={itemSurfaceShadow}
-      onClick={() => onElementClick?.(blockId || "", itemSurfaceId)}
+      onClick={handleItemClick}
       className={cn(
         "rounded-xl border border-border/40 bg-transparent px-5 transition-all duration-300",
         "hover:border-primary/30 hover:bg-primary/5",
         "data-[state=open]:border-primary/25 data-[state=open]:bg-primary/3",
-        isItemSelected && "ring-2 ring-primary/30 border-primary/50",
+        (isItemSelected || isPreviewActive) && "ring-2 ring-primary/30 border-primary/50",
         /* remove default shadcn bottom border */
         "border-b!",
       )}
@@ -151,13 +170,13 @@ function FaqItemComponent({
         )}
       >
         <span
-          data-element-id={itemQuestionId}
+          data-element-id="faq.question"
           onClick={(e) => {
             e.stopPropagation()
             if (canInlineEdit) {
               handleInlineEdit(e, `items.${index}.question`)
             }
-            onElementClick?.(blockId || "", itemQuestionId)
+            onElementClick?.(blockId || "", "faq.question")
           }}
           className={cn(
             mergeTypographyClasses(
@@ -178,13 +197,13 @@ function FaqItemComponent({
 
       <AccordionContent className="pb-5">
         <div
-          data-element-id={itemAnswerId}
+          data-element-id="faq.answer"
           onClick={(e) => {
             e.stopPropagation()
             if (canInlineEdit) {
               handleInlineEdit(e, `items.${index}.answer`)
             }
-            onElementClick?.(blockId || "", itemAnswerId)
+            onElementClick?.(blockId || "", "faq.answer")
           }}
           className={cn(
             mergeTypographyClasses(
@@ -226,6 +245,8 @@ export function FaqAccordion({
   containerGradientTo,
   containerGradientAngle,
   containerShadow,
+  containerBorder,
+  containerBorderColor,
   typography,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   variant = "default",
@@ -235,6 +256,9 @@ export function FaqAccordion({
   elements,
   onElementClick,
   selectedElementId,
+  interactivePreview = false,
+  activeItemId = null,
+  onItemSelect,
 }: FaqAccordionProps) {
   const canInlineEdit = Boolean(editable && blockId && onEditField)
 
@@ -252,6 +276,13 @@ export function FaqAccordion({
     },
   })
   const containerShadowCss = resolveBoxShadow(containerShadow)
+  const containerBorderStyle: React.CSSProperties = {}
+  if (containerBorder) {
+    containerBorderStyle.borderWidth = "1px"
+    containerBorderStyle.borderStyle = "solid"
+    const hex = containerBorderColor?.trim()
+    containerBorderStyle.borderColor = hex && /^#[0-9A-Fa-f]{6}$/.test(hex) ? hex : "var(--border)"
+  }
 
   // Element shadows
   const surfaceShadow = useElementShadowStyle({
@@ -299,7 +330,7 @@ export function FaqAccordion({
           }}
           className={cn(
             "relative rounded-3xl px-8 py-8 md:px-14 md:py-10",
-            containerBackgroundMode && containerBackgroundMode !== "transparent" && "border border-border/20",
+            !containerBorder && containerBackgroundMode && containerBackgroundMode !== "transparent" && "border border-border/20",
             containerBackgroundMode === "gradient" && "backdrop-blur-sm",
             isElementSelected("faq.surface") && "ring-2 ring-primary/30",
             editable && blockId && onElementClick && "cursor-pointer"
@@ -307,6 +338,7 @@ export function FaqAccordion({
           style={{
             ...surfaceShadow,
             ...containerBg.style,
+            ...containerBorderStyle,
             ...(containerShadowCss ? { boxShadow: containerShadowCss } : {}),
           }}
         >
@@ -372,6 +404,9 @@ export function FaqAccordion({
                 onElementClick={onElementClick}
                 selectedElementId={selectedElementId}
                 typography={(typography as Record<string, any>) ?? {}}
+                interactivePreview={interactivePreview}
+                activeItemId={activeItemId}
+                onItemSelect={onItemSelect}
               />
             ))}
           </Accordion>

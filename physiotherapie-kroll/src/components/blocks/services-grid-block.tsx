@@ -48,6 +48,10 @@ interface ServicesGridBlockProps {
   elements?: Record<string, any>
   onElementClick?: (blockId: string, elementId: string) => void
   selectedElementId?: string | null
+  /** Admin Live-Preview: Klick auf Card öffnet zugehörige Inspector-Card */
+  interactivePreview?: boolean
+  activeItemId?: string | null
+  onItemSelect?: (itemId: string) => void
 }
 
 const columnsMap = {
@@ -85,6 +89,9 @@ export function ServicesGridBlock({
   elements,
   onElementClick,
   selectedElementId,
+  interactivePreview = false,
+  activeItemId = null,
+  onItemSelect,
 }: ServicesGridBlockProps) {
   // Inline edit helper
   const handleInlineEdit = (e: React.MouseEvent, fieldPath: string) => {
@@ -150,23 +157,41 @@ export function ServicesGridBlock({
             const isSelected = selectedElementId === elementId
             const isPadded = columns === 2 || columns === 4
 
+            const isPreviewActive = interactivePreview && activeItemId === card.id
             return (
               <CardSurface
                 key={card.id}
+                role={interactivePreview && onItemSelect ? "button" : undefined}
+                tabIndex={interactivePreview && onItemSelect ? 0 : undefined}
                 onClick={(e) => {
-                  // 2) Editor Click Handling
+                  if (interactivePreview && onItemSelect) {
+                    e.stopPropagation()
+                    onItemSelect(card.id)
+                    return
+                  }
                   if (editable && blockId && onElementClick) {
                     e.stopPropagation()
                     onElementClick(blockId, elementId)
                   }
                 }}
+                onKeyDown={
+                  interactivePreview && onItemSelect
+                    ? (e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault()
+                          onItemSelect(card.id)
+                        }
+                      }
+                    : undefined
+                }
                 className={cn(
                   "group relative flex h-full flex-col overflow-hidden rounded-2xl border border-border/50 bg-card",
                   "shadow-[0_1px_3px_rgba(0,0,0,0.06),0_18px_50px_-20px_rgba(0,0,0,0.18)]",
                   "transition-shadow duration-300 ease-out",
                   "hover:shadow-[0_1px_3px_rgba(0,0,0,0.06),0_28px_60px_-16px_rgba(0,0,0,0.22)]",
-                  editable && blockId && onElementClick && "cursor-pointer",
-                  isSelected && "ring-2 ring-primary/60"
+                  (editable && blockId && onElementClick) || (interactivePreview && onItemSelect) ? "cursor-pointer" : "",
+                  (isSelected || isPreviewActive) && "ring-2 ring-primary/60",
+                  interactivePreview && onItemSelect && "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 )}
                 style={{
                   backgroundColor: card.cardBgColor || cardBgColor || undefined,

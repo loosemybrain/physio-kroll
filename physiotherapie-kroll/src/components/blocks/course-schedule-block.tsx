@@ -52,6 +52,10 @@ export interface CourseScheduleBlockProps {
   containerGradientAngle?: number
   containerShadow?: ElementShadow
   containerBorder?: boolean
+  /** Admin Live-Preview: Slots klickbar, öffnen zugehörige Inspector-Card */
+  interactivePreview?: boolean
+  activeSlotId?: string | null
+  onSlotSelect?: (slotId: string) => void
 }
 
 /* ------------------------------------------------------------------ */
@@ -61,22 +65,26 @@ export interface CourseScheduleBlockProps {
 function SlotCard({
   slot,
   compact = false,
+  interactive = false,
+  isActive = false,
+  onSlotSelect,
 }: {
   slot: CourseSlot
   compact?: boolean
+  interactive?: boolean
+  isActive?: boolean
+  onSlotSelect?: (slotId: string) => void
 }) {
-  return (
-    <article
-      className={cn(
-        "group relative flex flex-col overflow-hidden rounded-xl border transition-all duration-300",
-        slot.highlight
-          ? "border-primary/30 bg-primary/4"
-          : "border-border/50 bg-card/80 backdrop-blur-sm",
-        "hover:border-primary/20 hover:shadow-[0_4px_20px_-8px_rgba(0,0,0,0.1)]",
-        "hover:-translate-y-0.5",
-        compact ? "p-3" : "p-4"
-      )}
-    >
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (!interactive || !onSlotSelect) return
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault()
+      onSlotSelect(slot.id)
+    }
+  }
+
+  const content = (
+    <>
       {/* Highlight indicator */}
       {slot.highlight && (
         <div
@@ -133,8 +141,40 @@ function SlotCard({
           <span>{slot.location}</span>
         </div>
       )}
-    </article>
+    </>
   )
+
+  const className = cn(
+    "group relative flex flex-col overflow-hidden rounded-xl border transition-all duration-300",
+    slot.highlight
+      ? "border-primary/30 bg-primary/4"
+      : "border-border/50 bg-card/80 backdrop-blur-sm",
+    "hover:border-primary/20 hover:shadow-[0_4px_20px_-8px_rgba(0,0,0,0.1)]",
+    "hover:-translate-y-0.5",
+    compact ? "p-3" : "p-4",
+    interactive && "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+    isActive && "ring-2 ring-primary ring-offset-2"
+  )
+
+  if (interactive && onSlotSelect) {
+    return (
+      <article
+        role="button"
+        tabIndex={0}
+        onClick={(e) => {
+          e.stopPropagation()
+          onSlotSelect(slot.id)
+        }}
+        onKeyDown={handleKeyDown}
+        className={className}
+        aria-label={`Kurs ${slot.title}, ${slot.weekday} ${slot.startTime}–${slot.endTime}`}
+      >
+        {content}
+      </article>
+    )
+  }
+
+  return <article className={className}>{content}</article>
 }
 
 /* ------------------------------------------------------------------ */
@@ -172,7 +212,19 @@ function sortSlots(slots: CourseSlot[], weekdaysToShow: Weekday[]): CourseSlot[]
 /*  Calendar View                                                      */
 /* ------------------------------------------------------------------ */
 
-function CalendarView({ slots, hideWeekend = false }: { slots: CourseSlot[]; hideWeekend?: boolean }) {
+function CalendarView({
+  slots,
+  hideWeekend = false,
+  interactivePreview = false,
+  activeSlotId = null,
+  onSlotSelect,
+}: {
+  slots: CourseSlot[]
+  hideWeekend?: boolean
+  interactivePreview?: boolean
+  activeSlotId?: string | null
+  onSlotSelect?: (slotId: string) => void
+}) {
   const weekdaysToShow = getWeekdays(hideWeekend)
   const grouped = groupByWeekday(slots, weekdaysToShow)
   const gridCols = hideWeekend ? "md:grid-cols-5" : "md:grid-cols-7"
@@ -210,7 +262,14 @@ function CalendarView({ slots, hideWeekend = false }: { slots: CourseSlot[]; hid
             <div className="flex flex-1 flex-col gap-2">
               {hasSlots ? (
                 daySlots.map((slot) => (
-                  <SlotCard key={slot.id} slot={slot} compact />
+                  <SlotCard
+                    key={slot.id}
+                    slot={slot}
+                    compact
+                    interactive={interactivePreview}
+                    isActive={activeSlotId === slot.id}
+                    onSlotSelect={onSlotSelect}
+                  />
                 ))
               ) : (
                 <div className="flex flex-1 items-center justify-center rounded-xl border border-dashed border-border/40 py-6 text-xs text-muted-foreground/60">
@@ -230,7 +289,19 @@ function CalendarView({ slots, hideWeekend = false }: { slots: CourseSlot[]; hid
 /*  Timeline View                                                      */
 /* ------------------------------------------------------------------ */
 
-function TimelineView({ slots, hideWeekend = false }: { slots: CourseSlot[]; hideWeekend?: boolean }) {
+function TimelineView({
+  slots,
+  hideWeekend = false,
+  interactivePreview = false,
+  activeSlotId = null,
+  onSlotSelect,
+}: {
+  slots: CourseSlot[]
+  hideWeekend?: boolean
+  interactivePreview?: boolean
+  activeSlotId?: string | null
+  onSlotSelect?: (slotId: string) => void
+}) {
   const weekdaysToShow = getWeekdays(hideWeekend)
   const sorted = sortSlots(slots, weekdaysToShow)
 
@@ -298,7 +369,12 @@ function TimelineView({ slots, hideWeekend = false }: { slots: CourseSlot[]; hid
                 slot.highlight && "scale-[1.02]"
               )}
             >
-              <SlotCard slot={slot} />
+              <SlotCard
+                slot={slot}
+                interactive={interactivePreview}
+                isActive={activeSlotId === slot.id}
+                onSlotSelect={onSlotSelect}
+              />
             </div>
           </div>
         )
@@ -336,6 +412,9 @@ export function CourseScheduleBlock({
   containerGradientAngle,
   containerShadow,
   containerBorder,
+  interactivePreview = false,
+  activeSlotId = null,
+  onSlotSelect,
 }: CourseScheduleBlockProps) {
   const sectionBg = resolveSectionBg(section)
   const usesContainerPanel = containerBackgroundMode && containerBackgroundMode !== "transparent"
@@ -432,9 +511,21 @@ export function CourseScheduleBlock({
           {slots.length === 0 ? (
             <p className="text-center text-muted-foreground">Keine Kurse eingetragen.</p>
           ) : mode === "calendar" ? (
-            <CalendarView slots={slots} hideWeekend={hideWeekend} />
+            <CalendarView
+              slots={slots}
+              hideWeekend={hideWeekend}
+              interactivePreview={interactivePreview}
+              activeSlotId={activeSlotId}
+              onSlotSelect={onSlotSelect}
+            />
           ) : (
-            <TimelineView slots={slots} hideWeekend={hideWeekend} />
+            <TimelineView
+              slots={slots}
+              hideWeekend={hideWeekend}
+              interactivePreview={interactivePreview}
+              activeSlotId={activeSlotId}
+              onSlotSelect={onSlotSelect}
+            />
           )}
         </div>
       </div>

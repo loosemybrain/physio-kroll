@@ -102,7 +102,7 @@ function SlotCard({
       className={cn(
         "group relative flex flex-col overflow-hidden rounded-xl border transition-all duration-300",
         slot.highlight
-          ? "border-primary/30 bg-primary/4"
+          ? "border-primary/30 bg-primary/0.04"
           : "border-border/50 bg-card/80 backdrop-blur-sm",
         "hover:border-primary/20 hover:shadow-[0_4px_20px_-8px_rgba(0,0,0,0.1)]",
         "hover:-translate-y-0.5",
@@ -197,7 +197,7 @@ function CalendarView({ slots }: { slots: CourseSlot[] }) {
               className={cn(
                 "mb-3 rounded-lg px-3 py-2 text-center text-sm font-medium",
                 hasSlots
-                  ? "bg-primary/8 text-foreground"
+                  ? "bg-primary/0.08 text-foreground"
                   : "bg-muted/50 text-muted-foreground"
               )}
             >
