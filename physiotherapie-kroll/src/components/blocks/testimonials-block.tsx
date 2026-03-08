@@ -401,7 +401,7 @@ export function TestimonialsBlock({
                 <CarouselPrevButton
                   variant="outline"
                   size="icon"
-                  className="h-12 w-12 rounded-full border-2 border-border/80 bg-card/50 shadow-lg backdrop-blur-sm transition-all duration-300 hover:scale-105 hover:border-primary/40 hover:bg-card hover:shadow-xl"
+                  className="h-12 w-12 rounded-full border-2 border-primary/80 bg-card/50 shadow-lg backdrop-blur-sm transition-all duration-300 hover:scale-105 hover:border-primary/40 hover:bg-card hover:shadow-xl text-primary dark:border-primary/10"
                   aria-label="Vorheriges Testimonial"
                 >
                   <ChevronLeft className="h-5 w-5" />
@@ -412,7 +412,7 @@ export function TestimonialsBlock({
                 <CarouselNextButton
                   variant="outline"
                   size="icon"
-                  className="h-12 w-12 rounded-full border-2 border-border/80 bg-card/50 shadow-lg backdrop-blur-sm transition-all duration-300 hover:scale-105 hover:border-primary/40 hover:bg-card hover:shadow-xl"
+                  className="h-12 w-12 rounded-full border-2 border-primary/80 bg-card/50 shadow-lg backdrop-blur-sm transition-all duration-300 hover:scale-105 hover:border-primary/40 hover:bg-card hover:shadow-xl text-primary dark:border-primary/10"
                   aria-label="Nächstes Testimonial"
                 >
                   <ChevronRight className="h-5 w-5" />

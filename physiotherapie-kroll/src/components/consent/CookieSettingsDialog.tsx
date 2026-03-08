@@ -177,7 +177,7 @@ export function CookieSettingsDialog() {
             <Button
               variant="outline"
               onClick={rejectAll}
-              className="rounded-full px-6 font-medium"
+              className="rounded-full px-6 font-medium text-foreground"
               size="sm"
               type="button"
             >

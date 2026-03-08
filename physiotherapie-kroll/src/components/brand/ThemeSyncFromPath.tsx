@@ -1,0 +1,62 @@
+"use client"
+
+import { useEffect, useRef } from "react"
+import { usePathname } from "next/navigation"
+import type { BrandKey } from "./brandAssets"
+
+function brandFromPath(pathname: string): BrandKey {
+  if (pathname === "/konzept" || pathname?.startsWith("/konzept/")) {
+    return "physio-konzept"
+  }
+  return "physiotherapy"
+}
+
+/**
+ * When the user navigates client-side (e.g. BrandToggle from /konzept to /),
+ * the root layout's html style is not re-applied, so the document keeps the
+ * previous brand's theme. This component fetches the correct theme for the
+ * current path and applies it to <html>, so the design stays in sync.
+ */
+export function ThemeSyncFromPath() {
+  const pathname = usePathname()
+  const brand = brandFromPath(pathname ?? "/")
+  const appliedBrandRef = useRef<BrandKey | null>(null)
+
+  useEffect(() => {
+    if (typeof document === "undefined") return
+
+    const root = document.documentElement
+
+    const apply = (vars: Record<string, string>, targetBrand: BrandKey) => {
+      Object.entries(vars).forEach(([key, value]) => {
+        root.style.setProperty(key, value)
+      })
+      root.dataset.brand = targetBrand
+      if (targetBrand === "physio-konzept") {
+        root.classList.add("physio-konzept")
+      } else {
+        root.classList.remove("physio-konzept")
+      }
+      appliedBrandRef.current = targetBrand
+    }
+
+    if (appliedBrandRef.current === brand) return
+
+    let cancelled = false
+    fetch(`/api/theme?brand=${encodeURIComponent(brand)}`)
+      .then((res) => {
+        if (!res.ok || cancelled) return null
+        return res.json()
+      })
+      .then((data: { brand: BrandKey; vars: Record<string, string> } | null) => {
+        if (!cancelled && data?.vars) apply(data.vars, data.brand)
+      })
+      .catch(() => {})
+
+    return () => {
+      cancelled = true
+    }
+  }, [brand])
+
+  return null
+}

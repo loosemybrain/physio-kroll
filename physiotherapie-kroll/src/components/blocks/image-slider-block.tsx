@@ -278,7 +278,7 @@ function ClassicVariant({
         <CarouselPrevButton
           variant="outline"
           size="icon"
-          className="h-12 w-12 rounded-full border-2 border-border/80 bg-card/50 shadow-lg backdrop-blur-sm transition-all duration-300 hover:scale-105 hover:border-primary/40 hover:bg-card hover:shadow-xl"
+          className="h-12 w-12 rounded-full border-2 border-primary/50 bg-card/50 shadow-lg backdrop-blur-sm transition-all duration-300 hover:scale-105 hover:border-primary/40 hover:bg-card hover:shadow-xl text-primary dark:border-primary/50"
           aria-label="Vorheriges Testimonial"
         >
           <ChevronLeft className="h-5 w-5" />
@@ -290,7 +290,7 @@ function ClassicVariant({
             <CarouselNextButton
             variant="outline"
             size="icon"
-            className="h-12 w-12 rounded-full border-2 border-border/80 bg-card/50 shadow-lg backdrop-blur-sm transition-all duration-300 hover:scale-105 hover:border-primary/40 hover:bg-card hover:shadow-xl"
+            className="h-12 w-12 rounded-full border-2 border-primary/50 bg-card/50 shadow-lg backdrop-blur-sm transition-all duration-300 hover:scale-105 hover:border-primary/40 hover:bg-card hover:shadow-xl text-primary dark:border-primary/50"
             aria-label="Nächstes Testimonial"
           >
             <ChevronRight className="h-5 w-5" />
@@ -394,7 +394,7 @@ function ProgressVariant({
         <CarouselPrevButton
           variant="outline"
           size="icon"
-          className="h-12 w-12 rounded-full border-2 border-border/80 bg-card/50 shadow-lg backdrop-blur-sm transition-all duration-300 hover:scale-105 hover:border-primary/40 hover:bg-card hover:shadow-xl"
+          className="h-12 w-12 rounded-full border-2 border-primary/50 bg-card/50 shadow-lg backdrop-blur-sm transition-all duration-300 hover:scale-105 hover:border-primary/40 hover:bg-card hover:shadow-xl text-primary dark:border-primary/50"
           aria-label="Vorheriges Testimonial"
         >
           <ChevronLeft className="h-5 w-5" />
@@ -403,7 +403,7 @@ function ProgressVariant({
           <CarouselNextButton
                   variant="outline"
                   size="icon"
-                  className="h-12 w-12 rounded-full border-2 border-border/80 bg-card/50 shadow-lg backdrop-blur-sm transition-all duration-300 hover:scale-105 hover:border-primary/40 hover:bg-card hover:shadow-xl"
+                  className="h-12 w-12 rounded-full border-2 border-primary/50 bg-card/50 shadow-lg backdrop-blur-sm transition-all duration-300 hover:scale-105 hover:border-primary/40 hover:bg-card hover:shadow-xl text-primary dark:border-primary/50"
                   aria-label="Nächstes Testimonial"
                 >
               <ChevronRight className="h-5 w-5" />
@@ -530,7 +530,7 @@ function ThumbnailsVariant({
         <CarouselPrevButton
           variant="outline"
           size="icon"
-          className="h-12 w-12 rounded-full border-2 border-border/80 bg-card/50 shadow-lg backdrop-blur-sm transition-all duration-300 hover:scale-105 hover:border-primary/40 hover:bg-card hover:shadow-xl"
+          className="h-12 w-12 rounded-full border-2 border-primary/50 bg-card/50 shadow-lg backdrop-blur-sm transition-all duration-300 hover:scale-105 hover:border-primary/40 hover:bg-card hover:shadow-xl text-primary dark:border-primary/50"
           aria-label="Vorheriges Testimonial"
         >
           <ChevronLeft className="h-5 w-5" />
@@ -538,7 +538,7 @@ function ThumbnailsVariant({
         <CarouselNextButton
                   variant="outline"
                   size="icon"
-                  className="h-12 w-12 rounded-full border-2 border-border/80 bg-card/50 shadow-lg backdrop-blur-sm transition-all duration-300 hover:scale-105 hover:border-primary/40 hover:bg-card hover:shadow-xl"
+                  className="h-12 w-12 rounded-full border-2 border-primary/50 bg-card/50 shadow-lg backdrop-blur-sm transition-all duration-300 hover:scale-105 hover:border-primary/40 hover:bg-card hover:shadow-xl text-primary dark:border-primary/50"
                   aria-label="Nächstes Testimonial"
                 >
           <ChevronRight className="h-5 w-5" />
@@ -712,7 +712,7 @@ function HeroVariant({
         <CarouselPrevButton
           variant="outline"
           size="icon"
-          className="h-12 w-12 rounded-full border-2 border-border/80 bg-card/50 shadow-lg backdrop-blur-sm transition-all duration-300 hover:scale-105 hover:border-primary/40 hover:bg-card hover:shadow-xl"
+          className="h-12 w-12 rounded-full border-2 border-primary/50 bg-card/50 shadow-lg backdrop-blur-sm transition-all duration-300 hover:scale-105 hover:border-primary/40 hover:bg-card hover:shadow-xl text-primary dark:border-primary/50"
           aria-label="Vorheriges Testimonial"
         >
           <ChevronLeft className="h-5 w-5" />
@@ -721,7 +721,7 @@ function HeroVariant({
           <CarouselNextButton
                   variant="outline"
                   size="icon"
-                  className="h-12 w-12 rounded-full border-2 border-border/80 bg-card/50 shadow-lg backdrop-blur-sm transition-all duration-300 hover:scale-105 hover:border-primary/40 hover:bg-card hover:shadow-xl"
+                  className="h-12 w-12 rounded-full border-2 border-primary/50 bg-card/50 shadow-lg backdrop-blur-sm transition-all duration-300 hover:scale-105 hover:border-primary/40 hover:bg-card hover:shadow-xl text-primary dark:border-primary/50"
                   aria-label="Nächstes Testimonial"
                 >
             <ChevronRight className="h-5 w-5" />

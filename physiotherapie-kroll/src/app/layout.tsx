@@ -1,6 +1,7 @@
 import type React from "react"
 import { BrandShell } from "@/components/brand/BrandShell"
 import { BrandProvider } from "@/components/brand/BrandProvider"
+import { ThemeSyncFromPath } from "@/components/brand/ThemeSyncFromPath"
 import { ThemeProvider } from "@/components/theme-provider"
 import type { Metadata } from "next";
 import { Toaster } from "@/components/ui/toaster"
@@ -9,6 +10,7 @@ import { FooterWrapper } from "@/components/layout/FooterWrapper"
 import { CookieProvider } from "@/components/consent/CookieProvider"
 import { CookieBanner } from "@/components/consent/CookieBanner"
 import { CookieFloatingButton } from "@/components/consent/CookieFloatingButton"
+import { ScrollToTopButton } from "@/components/layout/ScrollToTopButton"
 import { CookieSettingsDialog } from "@/components/consent/CookieSettingsDialog"
 import { getThemePresetInlineVars } from "@/lib/theme/themePresetCss.server"
 import type { BrandKey } from "@/components/brand/brandAssets"
@@ -86,6 +88,7 @@ export default async function RootLayout({
         <ThemeProvider attribute="class" enableSystem={false} storageKey="pk-theme">
           <CookieProvider>
             <BrandShell>
+              <ThemeSyncFromPath />
               <BrandProvider>
                 <HeaderWrapper>
                   {children}
@@ -95,6 +98,7 @@ export default async function RootLayout({
             </BrandShell>
             <CookieBanner />
             <CookieFloatingButton />
+            <ScrollToTopButton />
             <CookieSettingsDialog />
             <Toaster />
           </CookieProvider>

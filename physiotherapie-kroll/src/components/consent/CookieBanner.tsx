@@ -154,7 +154,7 @@ export function CookieBanner() {
               <Button
                 onClick={rejectAll}
                 variant="outline"
-                className="flex-1 rounded-xl bg-transparent px-6 font-medium"
+                className="flex-1 rounded-xl bg-transparent px-6 font-medium text-foreground"
                 size="lg"
               >
                 Nur notwendige
