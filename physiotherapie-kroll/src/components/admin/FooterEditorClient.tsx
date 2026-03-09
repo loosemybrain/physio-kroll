@@ -13,6 +13,12 @@ import { Separator } from "@/components/ui/separator"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import {
+  Accordion,
+  AccordionItem,
+  AccordionTrigger,
+  AccordionContent
+} from "@/components/ui/accordion"
 import { ImageField } from "./ImageField"
 import { MediaPickerDialog } from "./MediaPickerDialog"
 import { ShadowInspector } from "./ShadowInspector"
@@ -325,13 +331,14 @@ export function FooterEditorClient({
   }
 
   return (
-    <div className="flex h-full flex-col lg:flex-row">
+    <div className="grid lg:grid-cols-[1fr_420px] gap-8 min-h-0">
       {/* Live Preview (Left) */}
-      <div className="lg:flex-1 lg:border-r border-border bg-muted/30 p-6 overflow-y-auto hidden lg:block">
+      <div className="hidden bg-muted/30 p-6 lg:block sticky top-6 self-start">
         <div className="mb-4">
           <h2 className="text-sm font-semibold text-muted-foreground">Live Preview</h2>
         </div>
-        <div className="bg-background rounded-lg border border-border overflow-hidden">
+        <div className="group relative border border-border bg-background rounded-lg overflow-hidden hover:border-primary transition-colors">
+          <div className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 border border-primary/50 rounded-lg"/>
           <FooterClient
             brand={activeBrand}
             footerConfig={footerConfig}
@@ -342,8 +349,8 @@ export function FooterEditorClient({
       </div>
 
       {/* Inspector (Right) */}
-      <div className="lg:flex-1 flex flex-col overflow-hidden">
-        <div className="border-b border-border bg-background px-6 py-4">
+      <div className="min-w-0">
+        <div className="border-b border-border bg-background sticky top-0 z-40 px-6 py-4">
           <div className="flex items-center justify-between">
             <h1 className="text-2xl font-semibold">Footer</h1>
             <Button onClick={handleSave} disabled={saving}>
@@ -353,7 +360,7 @@ export function FooterEditorClient({
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="p-6 space-y-6 overflow-y-auto pr-3 max-h-[calc(100dvh-140px)]">
           {validationError && (
             <Alert variant="destructive" className="mb-4">
               <AlertCircle className="h-4 w-4" />
@@ -383,37 +390,43 @@ export function FooterEditorClient({
 
                 {/* Content Tab */}
                 <TabsContent value="content" className="space-y-6 mt-6">
-                  {/* Layout Width */}
-                  <div className="space-y-4 rounded-lg border border-border p-4">
-                    <Label className="text-base font-semibold">Layout</Label>
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium">Footer Breite</Label>
-                      <Select
-                        value={footerConfig.layoutWidth || "contained"}
-                        onValueChange={(value) => {
-                          updateConfig({ layoutWidth: value as "full" | "contained" })
-                        }}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="contained">Contained (wie Blocks)</SelectItem>
-                          <SelectItem value="full">Full Background (volle Breite)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <p className="text-xs text-muted-foreground mt-2">
-                        {footerConfig.layoutWidth === "full" 
-                          ? "Der Footer-Hintergrund und Inhalt erstrecken sich über die volle Breite."
-                          : "Der Footer-Inhalt nutzt die gleiche max-width wie die Content-Blöcke."}
-                      </p>
-                    </div>
-                  </div>
+                  <Accordion type="multiple" className="space-y-2">
+                    {/* Layout Section */}
+                    <AccordionItem value="layout">
+                      <AccordionTrigger>Layout</AccordionTrigger>
+                      <AccordionContent>
+                        <div className="space-y-4 pt-2">
+                          <div className="space-y-2">
+                            <Label className="text-sm font-medium">Footer Breite</Label>
+                            <Select
+                              value={footerConfig.layoutWidth || "contained"}
+                              onValueChange={(value) => {
+                                updateConfig({ layoutWidth: value as "full" | "contained" })
+                              }}
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="contained">Contained (wie Blocks)</SelectItem>
+                                <SelectItem value="full">Full Background (volle Breite)</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <p className="text-xs text-muted-foreground mt-2">
+                              {footerConfig.layoutWidth === "full" 
+                                ? "Der Footer-Hintergrund und Inhalt erstrecken sich über die volle Breite."
+                                : "Der Footer-Inhalt nutzt die gleiche max-width wie die Content-Blöcke."}
+                            </p>
+                          </div>
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
 
-                  <Separator />
-
-                  {/* Legal-Seiten (dedizierter Legal-Bereich) */}
-                  <div className="space-y-4 rounded-lg border border-border p-4">
+                    {/* Legal-Seiten Section */}
+                    <AccordionItem value="legal">
+                      <AccordionTrigger>Legal-Seiten</AccordionTrigger>
+                      <AccordionContent>
+                        <div className="space-y-4 rounded-lg border border-border p-4 pt-2">
                     <Label className="text-base font-semibold">Legal-Seiten</Label>
                     <p className="text-xs text-muted-foreground">
                       Datenschutz, Cookies, Impressum – nur veröffentlichte CMS-Seiten werden verlinkt.
@@ -869,12 +882,15 @@ export function FooterEditorClient({
                         </div>
                       </>
                     )}
-                  </div>
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
 
-                  <Separator />
-
-                  {/* Footer Background */}
-                  <div className="space-y-4 rounded-lg border border-border p-4">
+                    {/* Footer Background Section */}
+                    <AccordionItem value="background">
+                      <AccordionTrigger>Hintergrund</AccordionTrigger>
+                      <AccordionContent>
+                        <div className="space-y-4 rounded-lg border border-border p-4 pt-2">
                     <div className="flex items-center justify-between">
                       <Label className="text-base font-semibold">Hintergrund</Label>
                       <Button
@@ -1049,12 +1065,15 @@ export function FooterEditorClient({
                         )}
                       </div>
                     )}
-                  </div>
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
 
-                  <Separator />
-
-                  {/* Glassmorphism */}
-                  <div className="space-y-4 rounded-lg border border-border p-4">
+                    {/* Glassmorphism Section */}
+                    <AccordionItem value="glassmorphism">
+                      <AccordionTrigger>Glassmorphism (Panel-Effekt)</AccordionTrigger>
+                      <AccordionContent>
+                        <div className="space-y-4 rounded-lg border border-border p-4 pt-2">
                     <div className="flex items-center justify-between">
                       <Label className="text-base font-semibold">Glassmorphism (Panel-Effekt)</Label>
                       <Button
@@ -1196,14 +1215,16 @@ export function FooterEditorClient({
                         </div>
                       </div>
                     )}
-                  </div>
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
 
-                  <Separator />
-
-                  {/* Sections */}
-                  <div className="space-y-6">
-                    <div className="flex items-center justify-between">
-                      <Label className="text-base font-semibold">Sektionen ({footerConfig.sections.length}/5)</Label>
+                    {/* Sections */}
+                    <AccordionItem value="sections">
+                      <AccordionTrigger>Sektionen ({footerConfig.sections.length}/5)</AccordionTrigger>
+                      <AccordionContent>
+                        <div className="space-y-6 pt-2">
+                          <div className="flex items-center justify-between">
                       <Button
                         variant="outline"
                         size="sm"
@@ -1536,13 +1557,16 @@ export function FooterEditorClient({
                         </div>
                       </div>
                     ))}
-                  </div>
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
 
-                  <Separator />
-
-                  {/* Bottom Bar */}
-                  <div className="space-y-4">
-                    <div className="flex items-center space-x-2">
+                    {/* Bottom Bar */}
+                    <AccordionItem value="bottombar">
+                      <AccordionTrigger>Bottom Bar</AccordionTrigger>
+                      <AccordionContent>
+                        <div className="space-y-4 pt-2">
+                          <div className="flex items-center space-x-2">
                       <Switch
                         id="bottom-bar-enabled"
                         checked={footerConfig.bottomBar?.enabled || false}
@@ -1592,7 +1616,10 @@ export function FooterEditorClient({
                         </div>
                       </div>
                     )}
-                  </div>
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  </Accordion>
                 </TabsContent>
 
                 {/* Design Tab */}
