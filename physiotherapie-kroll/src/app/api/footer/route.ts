@@ -22,22 +22,29 @@ export async function GET(request: Request) {
           bottomBar: { enabled: false },
         },
         pages: [],
+        legalPages: [],
       })
     }
 
-    // Load pages for pages blocks (only published)
     const supabase = await getSupabasePublic()
     const { data: pages } = await supabase
       .from("pages")
-      .select("id, slug, title, status")
+      .select("id, slug, title, status, page_type, page_subtype")
+      .eq("brand", brand)
       .eq("status", "published")
       .order("title", { ascending: true })
 
     const pagesMap = pages?.map((p) => ({ slug: p.slug, title: p.title })) || []
+    const legalSubtypes = new Set(["privacy", "cookies", "imprint"])
+    const legalPages =
+      pages?.filter(
+        (p) => p.page_type === "legal" && p.page_subtype && legalSubtypes.has(p.page_subtype)
+      ).map((p) => ({ slug: p.slug, title: p.title, page_subtype: p.page_subtype! })) ?? []
 
     return NextResponse.json({
       config: footerConfig,
       pages: pagesMap,
+      legalPages,
     })
   } catch (error) {
     console.error("Error in footer API:", error)
@@ -48,6 +55,7 @@ export async function GET(request: Request) {
           bottomBar: { enabled: false },
         },
         pages: [],
+        legalPages: [],
       },
       { status: 500 }
     )

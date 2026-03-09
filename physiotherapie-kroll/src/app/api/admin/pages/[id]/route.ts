@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { PAGE_TYPE_VALUES, PAGE_SUBTYPE_VALUES } from "@/types/cms";
 
 type PageStatus = "draft" | "published";
+
+const PAGE_TYPES_SET = new Set<string>(PAGE_TYPE_VALUES);
+const PAGE_SUBTYPES_SET = new Set<string>(PAGE_SUBTYPE_VALUES);
 
 type IncomingBlock = {
   id: string;
@@ -16,6 +20,8 @@ type IncomingPage = {
   slug: string;
   brand: string;
   status: PageStatus;
+  pageType?: string;
+  pageSubtype?: string | null;
   blocks: IncomingBlock[];
 };
 
@@ -77,7 +83,7 @@ export async function GET(
 
     const { data: page, error: pageErr } = await admin
       .from("pages")
-      .select("id, title, slug, brand, status, updated_at")
+      .select("id, title, slug, brand, status, page_type, page_subtype, updated_at")
       .eq("id", id)
       .single();
 
@@ -103,6 +109,9 @@ export async function GET(
       })
     );
 
+    const pageType = page.page_type ?? "default";
+    const pageSubtype = page.page_subtype ?? null;
+
     return NextResponse.json(
       {
         id: page.id,
@@ -110,6 +119,8 @@ export async function GET(
         slug: page.slug,
         brand: page.brand,
         status: page.status,
+        pageType,
+        pageSubtype,
         updatedAt: page.updated_at,
         blocks: mappedBlocks,
       },
@@ -154,21 +165,37 @@ export async function PUT(
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
+    const pageType = body.pageType ?? "default";
+    if (!PAGE_TYPES_SET.has(pageType)) {
+      return NextResponse.json({ error: "Invalid pageType" }, { status: 400 });
+    }
+    let pageSubtype: string | null = body.pageSubtype ?? null;
+    if (pageSubtype !== null && pageSubtype !== "") {
+      if (!PAGE_SUBTYPES_SET.has(pageSubtype)) {
+        return NextResponse.json({ error: "Invalid pageSubtype" }, { status: 400 });
+      }
+    } else {
+      pageSubtype = null;
+    }
+
     const rawBlocks: unknown[] = Array.isArray(body.blocks) ? (body.blocks as unknown[]) : [];
     const blocks: IncomingBlock[] = [];
 
-    // Validate blocks early (fail fast)
+    // Validate blocks; normalize non-UUID block ids so DB (uuid column) accepts them
     for (const b of rawBlocks) {
       if (!isRecord(b)) {
         return NextResponse.json({ error: "Invalid block" }, { status: 400 });
       }
 
-      const id = b.id;
+      let id = typeof b.id === "string" ? b.id : String(b.id ?? "");
       const type = b.type;
       const props = b.props;
 
+      if (!id.trim()) {
+        return NextResponse.json({ error: "Missing block id" }, { status: 400 });
+      }
       if (!isUuid(id)) {
-        return NextResponse.json({ error: `Invalid block id: ${String(id)}` }, { status: 400 });
+        id = crypto.randomUUID();
       }
       if (typeof type !== "string" || !type.trim()) {
         return NextResponse.json({ error: "Invalid block type" }, { status: 400 });
@@ -189,10 +216,12 @@ export async function PUT(
           slug: body.slug,
           brand: body.brand,
           status: body.status,
+          page_type: pageType,
+          page_subtype: pageSubtype,
         },
         { onConflict: "id" }
       )
-      .select("id, title, slug, brand, status, updated_at")
+      .select("id, title, slug, brand, status, page_type, page_subtype, updated_at")
       .single();
 
     if (pageErr || !savedPage) {
@@ -239,6 +268,9 @@ export async function PUT(
       props: b.props ?? {},
     }));
 
+    const resPageType = savedPage.page_type ?? "default";
+    const resPageSubtype = savedPage.page_subtype ?? null;
+
     return NextResponse.json(
       {
         id: savedPage.id,
@@ -246,6 +278,8 @@ export async function PUT(
         slug: savedPage.slug,
         brand: savedPage.brand,
         status: savedPage.status,
+        pageType: resPageType,
+        pageSubtype: resPageSubtype,
         updatedAt: savedPage.updated_at,
         blocks: mappedFreshBlocks,
       },

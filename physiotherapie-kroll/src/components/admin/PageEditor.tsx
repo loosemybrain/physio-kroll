@@ -3,7 +3,7 @@
 import { useMemo, useState, useRef, useEffect, useCallback, useLayoutEffect } from "react"
 import { useLiveScrollLock } from "@/hooks/use-live-scroll-lock"
 import { useInspectorAutoscroll } from "@/hooks/use-inspector-autoscroll"
-import { ArrowLeft, Save, Send, Type, ImageIcon, Layout, Grid3X3, Megaphone, Trash2, Square, Grid, HelpCircle, Users, Plus, ChevronUp, ChevronDown, Copy, FileText, MessageSquareQuote, Images, Clock, CalendarDays } from "lucide-react"
+import { ArrowLeft, Save, Send, Type, ImageIcon, Layout, Grid3X3, Megaphone, Trash2, Square, Grid, HelpCircle, Users, User, Plus, ChevronUp, ChevronDown, Copy, FileText, MessageSquareQuote, Images, Clock, CalendarDays, Table2, Info, Cookie } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
 import { Input } from "@/components/ui/input"
@@ -12,15 +12,18 @@ import { Separator } from "@/components/ui/separator"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
 import { cn } from "@/lib/utils"
-import type { BlockSectionProps, CMSBlock, HeroBlock, CourseScheduleBlock, CourseSlot, CourseScheduleWeekday } from "@/types/cms"
+import type { BlockSectionProps, CMSBlock, HeroBlock, CourseScheduleBlock, CourseSlot, CourseScheduleWeekday, PageSubtype, PageType } from "@/types/cms"
+import { isLegalPageType, PAGE_TYPE_VALUES, PAGE_SUBTYPE_VALUES } from "@/types/cms"
+import { useSearchParams } from "next/navigation"
 import { BlockRenderer } from "@/components/cms/BlockRenderer"
 import { usePage } from "@/lib/cms/useLocalCms"
 import { createEmptyPage, generateUniqueSlug, type AdminPage } from "@/lib/cms/supabaseStore"
 import type { BrandKey } from "@/components/brand/brandAssets"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { GradientPresetSelectContent } from "@/components/ui/GradientPresetSelectContent"
-import { blockRegistry, getBlockDefinition, createServiceCard, createFaqItem, createTeamMember, createFeatureItem, createContactFormField, createTestimonialItem, createGalleryImage, createImageSlide, createOpeningHour, createContactInfoCard, createHeroAction, createCourseSlot, sortInspectorFields, INSPECTOR_GROUP_LABELS, DEFAULT_GROUP_ORDER } from "@/cms/blocks/registry"
+import { blockRegistry, getBlockDefinition, getBlockTypesForPageType, createServiceCard, createFaqItem, createTeamMember, createFeatureItem, createContactFormField, createTestimonialItem, createGalleryImage, createImageSlide, createOpeningHour, createContactInfoCard, createHeroAction, createCourseSlot, createLegalTableColumn, createLegalTableRow, createLegalContactLine, createLegalCookieCategory, createLegalCookieItem, sortInspectorFields, INSPECTOR_GROUP_LABELS, DEFAULT_GROUP_ORDER } from "@/cms/blocks/registry"
 import { normalizeBlock } from "@/cms/blocks/normalize"
+import { getDefaultBlocksForPageType, doBlocksMatchDefaultLegalSet } from "@/cms/blocks/defaultPageBlocks"
 import type { InspectorField, InspectorFieldType } from "@/cms/blocks/registry"
 import { getAvailableIconNames, getAvailableIconsWithLabels } from "@/components/icons/service-icons"
 import { arrayRemove, arrayMove, arrayInsert } from "@/lib/cms/arrayOps"
@@ -71,7 +74,12 @@ const blockTypes: Array<{ icon: React.ElementType; label: string; type: CMSBlock
   { icon: HelpCircle, label: "FAQ", type: "faq" },
   { icon: Users, label: "Team", type: "team" },
   { icon: FileText, label: "Kontaktformular", type: "contactForm" },
-/*   { icon: MessageSquareQuote, label: "Testimonial Slider", type: "testimonialSlider" }, */
+  { icon: FileText, label: "Seitenkopf", type: "legalHero" },
+  { icon: Type, label: "Fließtext", type: "legalRichText" },
+  { icon: Table2, label: "Tabelle", type: "legalTable" },
+  { icon: Info, label: "Info-Box", type: "legalInfoBox" },
+  { icon: Cookie, label: "Cookie-Kategorien", type: "legalCookieCategories" },
+  { icon: User, label: "Kontakt-Karte", type: "legalContactCard" },
 ]
 
 function uuid() {
@@ -299,13 +307,26 @@ function isMultilineField(blockType: CMSBlock["type"], fieldPath: string): boole
 }
 
 export function PageEditor({ pageId, onBack }: PageEditorProps) {
-  const { page, setPage, save } = usePage(pageId)
+  const searchParams = useSearchParams()
+  const newPageParams = useMemo(() => {
+    if (pageId && pageId !== "new") return undefined
+    const pt = searchParams.get("pageType")
+    const st = searchParams.get("pageSubtype")
+    const pageType = pt && PAGE_TYPE_VALUES.includes(pt as PageType) ? (pt as PageType) : undefined
+    const pageSubtype = st && PAGE_SUBTYPE_VALUES.includes(st as NonNullable<PageSubtype>) ? (st as PageSubtype) : undefined
+    if (!pageType && !pageSubtype) return undefined
+    return { pageType, pageSubtype }
+  }, [pageId, searchParams])
+  const { page, setPage, save } = usePage(pageId, { newPageParams })
   const { toast } = useToast()
   const isNewPage = !pageId || pageId === "new"
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null)
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null)
   const [activeFieldPath, setActiveFieldPath] = useState<string | null>(null)
   const fieldRefs = useRef<Record<string, HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null>>({})
+
+  /** Internal marker: true only while the page is a new legal page with untouched default start blocks. Used to allow automatic block replacement on pageSubtype change. Not persisted. */
+  const [initialLegalDefaultsActive, setInitialLegalDefaultsActive] = useState(false)
   
   // Inspector scroll ref and accordion state (must be defined before hooks that use it)
   const inspectorScrollRef = useRef<HTMLDivElement>(null)
@@ -329,6 +350,17 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
     setAccordionValue(undefined)
     setExpandedRepeaterCards({})
   }, [selectedBlockId])
+
+  // Set marker true only when a new page is first loaded with legal params from URL (no re-derivation from page.blocks)
+  useEffect(() => {
+    if (!page || !isNewPage) {
+      setInitialLegalDefaultsActive(false)
+      return
+    }
+    if (newPageParams?.pageType === "legal" && newPageParams?.pageSubtype) {
+      setInitialLegalDefaultsActive(true)
+    }
+  }, [page?.id, isNewPage, newPageParams?.pageType, newPageParams?.pageSubtype])
 
   // Inline editor state
   const [inlineOpen, setInlineOpen] = useState(false)
@@ -642,13 +674,45 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
   }
 
   const updatePage = (patch: Partial<AdminPage>) => {
+    const next = { ...current, ...patch }
+    const isSwitchingToLegalSubtype =
+      (patch.pageType !== undefined || patch.pageSubtype !== undefined) &&
+      next.pageType === "legal" &&
+      next.pageSubtype != null &&
+      ["privacy", "cookies", "imprint"].includes(next.pageSubtype)
+    const isReplacingFromDefault =
+      isSwitchingToLegalSubtype &&
+      current &&
+      current.blocks.length === 2 &&
+      current.blocks[0]?.type === "hero" &&
+      current.blocks[1]?.type === "text"
+
     setPage((prev) => {
       if (!prev) return prev
-      return { ...prev, ...patch }
+      const nextState = { ...prev, ...patch }
+      if (
+        (initialLegalDefaultsActive || isReplacingFromDefault) &&
+        isSwitchingToLegalSubtype
+      ) {
+        const defaultBlocks = getDefaultBlocksForPageType(nextState.pageType, nextState.pageSubtype!, nextState.brand)
+        if (defaultBlocks?.length) {
+          const comingFromDefault =
+            prev.blocks.length === 2 && prev.blocks[0]?.type === "hero" && prev.blocks[1]?.type === "text"
+          const comingFromOtherLegalSubtype =
+            prev.pageType === "legal" &&
+            prev.pageSubtype != null &&
+            doBlocksMatchDefaultLegalSet(prev.blocks, prev.pageSubtype)
+          if (comingFromDefault || comingFromOtherLegalSubtype) return { ...nextState, blocks: defaultBlocks }
+        }
+      }
+      return nextState
     })
+
+    if (isReplacingFromDefault) setInitialLegalDefaultsActive(true)
   }
 
   const applyPageBrand = (brand: BrandKey) => {
+    setInitialLegalDefaultsActive(false)
     setPage((prev) => {
       // If user clicks the brand toggle before the new page state is initialized,
       // create the page with the selected brand (robust for slow devices / strict-mode double effects).
@@ -690,6 +754,7 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
   }
 
   const addBlock = (type: CMSBlock["type"], propsOverride?: Record<string, unknown>) => {
+    setInitialLegalDefaultsActive(false)
     setPage((prev) => {
       if (!prev) return prev
       const b = defaultBlock(type, prev.brand) as CMSBlock
@@ -704,6 +769,7 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
   }
 
   const removeBlock = (id: string) => {
+    setInitialLegalDefaultsActive(false)
     setPage((prev) => {
       if (!prev) return prev
       return {
@@ -718,6 +784,7 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
   }
 
   const moveBlock = (index: number, direction: -1 | 1) => {
+    setInitialLegalDefaultsActive(false)
     setPage((prev) => {
       if (!prev) return prev
       const to = index + direction
@@ -742,6 +809,7 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
   }
 
   const duplicateAt = (index: number) => {
+    setInitialLegalDefaultsActive(false)
     setPage((prev) => {
       if (!prev) return prev
       const original = prev.blocks[index]
@@ -759,7 +827,7 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
 
   const updateSelectedProps = (nextProps: CMSBlock["props"]) => {
     if (!selectedBlock) return
-    
+    setInitialLegalDefaultsActive(false)
     // Lock Live Preview scroll during update
     withLiveScrollLock(() => {
       // Use functional update with prev.blocks to avoid stale state
@@ -785,6 +853,7 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
     blockId: string,
     updater: (prevProps: Record<string, unknown>) => CMSBlock["props"]
   ) => {
+    setInitialLegalDefaultsActive(false)
     withLiveScrollLock(() => {
       setPage((prev) => {
         if (!prev) return prev
@@ -839,7 +908,7 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
   // Handle inline editor change
   const handleInlineChange = (next: string) => {
     if (!inlineBlockId || !inlineFieldPath) return
-
+    setInitialLegalDefaultsActive(false)
     setPage((prev) => {
       if (!prev) return prev
       const block = prev.blocks.find((b) => b.id === inlineBlockId)
@@ -983,6 +1052,7 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
 
   // Array operations handlers
   const handleAddArrayItem = (blockId: string, arrayPath: string, createFn: () => unknown) => {
+    setInitialLegalDefaultsActive(false)
     setPage((prev) => {
       if (!prev) return prev
       const block = prev.blocks.find((b) => b.id === blockId)
@@ -992,7 +1062,16 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
       const currentArray = (getByPath(props, arrayPath) as unknown[]) || []
       const newItem = createFn()
       const updatedArray = [...currentArray, newItem]
-      const updatedProps = setByPath(props, arrayPath, updatedArray) as CMSBlock["props"]
+      let updatedProps = setByPath(props, arrayPath, updatedArray) as CMSBlock["props"]
+
+      // legalTable: when adding a column, add empty cell for new column in every row
+      const newItemWithId = newItem as { id?: string } | null
+      if (block.type === "legalTable" && arrayPath === "columns" && newItemWithId?.id) {
+        const newColId = newItemWithId.id
+        const rows = (getByPath(updatedProps, "rows") as Array<{ id: string; cells: Record<string, string> }>) || []
+        const syncedRows = rows.map((r) => ({ ...r, cells: { ...r.cells, [newColId]: "" } }))
+        updatedProps = setByPath(updatedProps, "rows", syncedRows) as CMSBlock["props"]
+      }
 
       // Auto-select first field of new item
       const newIndex = updatedArray.length - 1
@@ -1008,6 +1087,11 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
       else if (arrayPath === "images") defaultFieldPath = `images.${newIndex}.url`
       else if (arrayPath === "hours") defaultFieldPath = `hours.${newIndex}.label`
       else if (arrayPath === "slides") defaultFieldPath = `slides.${newIndex}.url`
+      else if (arrayPath === "columns") defaultFieldPath = `columns.${newIndex}.label`
+      else if (arrayPath === "rows") defaultFieldPath = `rows.${newIndex}.id`
+      else if (arrayPath === "lines") defaultFieldPath = `lines.${newIndex}.label`
+      else if (arrayPath === "categories") defaultFieldPath = `categories.${newIndex}.name`
+      else if (arrayPath.match(/^categories\.\d+\.cookies$/)) defaultFieldPath = `${arrayPath}.${newIndex}.name`
 
       setActiveFieldPath(defaultFieldPath)
 
@@ -1021,6 +1105,7 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
   }
 
   const handleRemoveArrayItem = (blockId: string, arrayPath: string, index: number) => {
+    setInitialLegalDefaultsActive(false)
     setPage((prev) => {
       if (!prev) return prev
       const block = prev.blocks.find((b) => b.id === blockId)
@@ -1028,8 +1113,26 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
 
       const props = block.props as Record<string, unknown>
       const currentArray = (getByPath(props, arrayPath) as unknown[]) || []
-      const updatedArray = arrayRemove(currentArray, index)
-      const updatedProps = setByPath(props, arrayPath, updatedArray) as CMSBlock["props"]
+
+      // legalTable: when removing a column, remove that column's key from every row.cells
+      let updatedProps: CMSBlock["props"]
+      if (block.type === "legalTable" && arrayPath === "columns") {
+        const removedCol = currentArray[index] as { id: string } | undefined
+        const removedColId = removedCol?.id
+        const updatedArray = arrayRemove(currentArray, index)
+        updatedProps = setByPath(props, arrayPath, updatedArray) as CMSBlock["props"]
+        if (removedColId) {
+          const rows = (getByPath(updatedProps, "rows") as Array<{ id: string; cells: Record<string, string> }>) || []
+          const syncedRows = rows.map((r) => {
+            const { [removedColId]: _, ...rest } = r.cells ?? {}
+            return { ...r, cells: rest }
+          })
+          updatedProps = setByPath(updatedProps, "rows", syncedRows) as CMSBlock["props"]
+        }
+      } else {
+        const updatedArray = arrayRemove(currentArray, index)
+        updatedProps = setByPath(props, arrayPath, updatedArray) as CMSBlock["props"]
+      }
 
       // Reset activeFieldPath if it points to deleted item
       if (activeFieldPath && activeFieldPath.startsWith(`${arrayPath}.${index}`)) {
@@ -1056,6 +1159,7 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
   }
 
   const handleMoveArrayItem = (blockId: string, arrayPath: string, fromIndex: number, toIndex: number) => {
+    setInitialLegalDefaultsActive(false)
     setPage((prev) => {
       if (!prev) return prev
       const block = prev.blocks.find((b) => b.id === blockId)
@@ -1750,6 +1854,40 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
                 <SelectItem value="physio-konzept">PhysioKonzept</SelectItem>
               </SelectContent>
             </Select>
+
+            <Select
+              value={current.pageType ?? "default"}
+              onValueChange={(v: string) => {
+                const nextType = v as PageType
+                updatePage(isLegalPageType(nextType) ? { pageType: nextType } : { pageType: nextType, pageSubtype: null })
+              }}
+            >
+              <SelectTrigger className="h-8 w-40">
+                <SelectValue placeholder="Seitentyp" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="default">Standard</SelectItem>
+                <SelectItem value="landing">Landingpage</SelectItem>
+                <SelectItem value="legal">Rechtliches</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {isLegalPageType((current.pageType ?? "default") as PageType) && (
+              <Select
+                value={current.pageSubtype ?? "__none__"}
+                onValueChange={(v: string) => updatePage({ pageSubtype: v === "__none__" ? null : (v as PageSubtype) })}
+              >
+                <SelectTrigger className="h-8 w-40">
+                  <SelectValue placeholder="Untertyp" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">—</SelectItem>
+                  <SelectItem value="privacy">Datenschutz</SelectItem>
+                  <SelectItem value="cookies">Cookies</SelectItem>
+                  <SelectItem value="imprint">Impressum</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
           </div>
         </div>
 
@@ -2012,40 +2150,71 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
 
           <div className="p-4">
             <h3 className="mb-4 font-semibold text-foreground">Add Blocks</h3>
-            <div className="grid grid-cols-2 gap-2">
-              {blockTypes.filter((bt) => bt.type !== "courseSchedule").map((blockType) => {
-                const Icon = blockType.icon
-                return (
-                  <Button
-                    key={blockType.type}
-                    variant="outline"
-                    className="h-auto flex-col gap-2 py-4 bg-transparent"
-                    onClick={() => addBlock(blockType.type)}
-                  >
-                    <Icon className="h-5 w-5" />
-                    <span className="text-xs">{blockType.label}</span>
-                  </Button>
-                )
-              })}
-              <Button
-                key="courseSchedule-calendar"
-                variant="outline"
-                className="h-auto flex-col gap-2 py-4 bg-transparent col-span-2 sm:col-span-1"
-                onClick={() => addBlock("courseSchedule")}
-              >
-                <CalendarDays className="h-5 w-5" />
-                <span className="text-xs">Kursplan – Kalender</span>
-              </Button>
-              <Button
-                key="courseSchedule-timeline"
-                variant="outline"
-                className="h-auto flex-col gap-2 py-4 bg-transparent col-span-2 sm:col-span-1"
-                onClick={() => addBlock("courseSchedule", { mode: "timeline" })}
-              >
-                <CalendarDays className="h-5 w-5" />
-                <span className="text-xs">Kursplan – Timeline</span>
-              </Button>
-            </div>
+            {(() => {
+              const pageType = current.pageType ?? "default"
+              const allowedTypes = getBlockTypesForPageType(pageType)
+              const pickerBlockTypes = blockTypes.filter((bt) => bt.type !== "courseSchedule" && allowedTypes.includes(bt.type))
+              const showCourseSchedule = allowedTypes.includes("courseSchedule")
+              const isLegal = pageType === "legal"
+              const count = pickerBlockTypes.length + (showCourseSchedule ? 2 : 0)
+              return (
+                <>
+                  {isLegal && (
+                    <p className="mb-3 text-xs text-muted-foreground">
+                      Für Rechtlich-Seiten ist die Blockauswahl eingeschränkt. Spezielle Rechtlich-Blöcke folgen in einem weiteren Schritt.
+                    </p>
+                  )}
+                  {!isLegal && count < blockTypes.length && (
+                    <p className="mb-3 text-xs text-muted-foreground">
+                      Für diesen Seitentyp sind nur bestimmte Blocktypen verfügbar.
+                    </p>
+                  )}
+                  <div className="grid grid-cols-2 gap-2">
+                    {pickerBlockTypes.map((blockType) => {
+                      const Icon = blockType.icon
+                      return (
+                        <Button
+                          key={blockType.type}
+                          variant="outline"
+                          className="h-auto flex-col gap-2 py-4 bg-transparent"
+                          onClick={() => addBlock(blockType.type)}
+                        >
+                          <Icon className="h-5 w-5" />
+                          <span className="text-xs">{blockType.label}</span>
+                        </Button>
+                      )
+                    })}
+                    {showCourseSchedule && (
+                      <>
+                        <Button
+                          key="courseSchedule-calendar"
+                          variant="outline"
+                          className="h-auto flex-col gap-2 py-4 bg-transparent col-span-2 sm:col-span-1"
+                          onClick={() => addBlock("courseSchedule")}
+                        >
+                          <CalendarDays className="h-5 w-5" />
+                          <span className="text-xs">Kursplan – Kalender</span>
+                        </Button>
+                        <Button
+                          key="courseSchedule-timeline"
+                          variant="outline"
+                          className="h-auto flex-col gap-2 py-4 bg-transparent col-span-2 sm:col-span-1"
+                          onClick={() => addBlock("courseSchedule", { mode: "timeline" })}
+                        >
+                          <CalendarDays className="h-5 w-5" />
+                          <span className="text-xs">Kursplan – Timeline</span>
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                  {count === 0 && (
+                    <p className="mt-3 text-sm text-muted-foreground">
+                      Für diesen Seitentyp sind aktuell keine Blöcke zum Hinzufügen verfügbar.
+                    </p>
+                  )}
+                </>
+              )
+            })()}
           </div>
 
           <Separator />
@@ -2144,6 +2313,7 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
                 }}
                 onApplyPreset={(nextSection) => {
                   if (!selectedBlock) return
+                  setInitialLegalDefaultsActive(false)
                   const nextProps = {
                     ...(selectedBlock.props as Record<string, unknown>),
                     section: nextSection,
@@ -2162,6 +2332,7 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
                 }}
                 onApplyPresetBackgroundOnly={(nextSection) => {
                   if (!selectedBlock) return
+                  setInitialLegalDefaultsActive(false)
                   const nextProps = {
                     ...(selectedBlock.props as Record<string, unknown>),
                     section: nextSection,
@@ -3574,6 +3745,9 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
     if (selectedBlock.type === "imageSlider" && key.startsWith("slides.")) return true
     if (selectedBlock.type === "courseSchedule" && key.startsWith("slots.")) return true
     if (selectedBlock.type === "openingHours" && key.startsWith("hours.")) return true
+    if (selectedBlock.type === "legalTable" && (key.startsWith("columns.") || key.startsWith("rows."))) return true
+    if (selectedBlock.type === "legalContactCard" && key.startsWith("lines.")) return true
+    if (selectedBlock.type === "legalCookieCategories" && key.startsWith("categories.")) return true
     return false
   }
 
@@ -5218,6 +5392,224 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
               </div>
             </div>
           </div>
+        </>
+      )}
+
+      {selectedBlock.type === "legalTable" && (
+        <>
+          <Separator />
+          <div className="space-y-4 p-4">
+            <h4 className="text-sm font-medium text-foreground">Spalten</h4>
+            {(() => {
+              const props = selectedBlock.props as Record<string, unknown>
+              const columns = (getByPath(props, "columns") as Array<{ id: string; label: string; width?: string }>) || []
+              const repeaterKey = `${selectedBlock.id}:columns`
+              const expandedId = expandedRepeaterCards[repeaterKey] ?? null
+              const addColumn = () => handleAddArrayItem(selectedBlock.id, "columns", createLegalTableColumn)
+              const columnFields = [{ key: "label", label: "Bezeichnung", type: "text" as const }, { key: "width", label: "Breite (optional)", type: "text" as const, placeholder: "z.B. 25%" }]
+              return (
+                <InspectorCardList
+                  items={columns}
+                  getItemId={(c) => c.id}
+                  mode="single"
+                  expandedId={expandedId}
+                  onToggle={(id) => setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: expandedId === id ? null : id }))}
+                  onCollapseAll={() => setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: null }))}
+                  countLabel={`${columns.length} Spalten`}
+                  addAction={<Button type="button" variant="outline" size="sm" className="w-full h-8 text-sm" onClick={addColumn}><Plus className="h-4 w-4 mr-1.5" />Spalte hinzufügen</Button>}
+                  renderSummary={(c) => <span className="truncate">{(c as { label?: string }).label || "Spalte"}</span>}
+                  renderHeaderActions={(item) => {
+                    const i = columns.findIndex((x) => x.id === item.id)
+                    return (
+                      <div className="flex items-center gap-0.5">
+                        <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); if (i > 0) handleMoveArrayItem(selectedBlock.id, "columns", i, i - 1) }} disabled={i === 0} title="Nach oben"><ChevronUp className="h-3 w-3" /></Button>
+                        <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); if (i < columns.length - 1) handleMoveArrayItem(selectedBlock.id, "columns", i, i + 1) }} disabled={i === columns.length - 1} title="Nach unten"><ChevronDown className="h-3 w-3" /></Button>
+                        <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={(e) => { e.stopPropagation(); handleRemoveArrayItem(selectedBlock.id, "columns", i) }} title="Löschen"><Trash2 className="h-3.5 w-3.5" /></Button>
+                      </div>
+                    )
+                  }}
+                  renderContent={(item) => renderOneRepeaterItemFields(selectedBlock, "columns", columns.findIndex((c) => c.id === item.id), item as Record<string, unknown>, columnFields)}
+                />
+              )
+            })()}
+            <h4 className="text-sm font-medium text-foreground pt-2">Zeilen</h4>
+            {(() => {
+              const props = selectedBlock.props as Record<string, unknown>
+              const columns = (getByPath(props, "columns") as import("@/types/cms").LegalTableColumn[]) || []
+              const rows = (getByPath(props, "rows") as Array<{ id: string; cells: Record<string, string> }>) || []
+              const repeaterKey = `${selectedBlock.id}:rows`
+              const expandedId = expandedRepeaterCards[repeaterKey] ?? null
+              const addRow = () => handleAddArrayItem(selectedBlock.id, "rows", () => createLegalTableRow(columns))
+              const updateRowCells = (rowIndex: number, columnId: string, value: string) => {
+                const next = rows.map((r, i) => i === rowIndex ? { ...r, cells: { ...r.cells, [columnId]: value } } : r)
+                updateSelectedProps({ ...props, rows: next } as CMSBlock["props"])
+              }
+              return (
+                <InspectorCardList
+                  items={rows}
+                  getItemId={(r) => r.id}
+                  mode="single"
+                  expandedId={expandedId}
+                  onToggle={(id) => setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: expandedId === id ? null : id }))}
+                  onCollapseAll={() => setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: null }))}
+                  countLabel={`${rows.length} Zeilen`}
+                  addAction={<Button type="button" variant="outline" size="sm" className="w-full h-8 text-sm" onClick={addRow}><Plus className="h-4 w-4 mr-1.5" />Zeile hinzufügen</Button>}
+                  renderSummary={() => <span className="truncate">Zeile</span>}
+                  renderHeaderActions={(item) => {
+                    const i = rows.findIndex((x) => x.id === item.id)
+                    return (
+                      <div className="flex items-center gap-0.5">
+                        <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); if (i > 0) handleMoveArrayItem(selectedBlock.id, "rows", i, i - 1) }} disabled={i === 0} title="Nach oben"><ChevronUp className="h-3 w-3" /></Button>
+                        <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); if (i < rows.length - 1) handleMoveArrayItem(selectedBlock.id, "rows", i, i + 1) }} disabled={i === rows.length - 1} title="Nach unten"><ChevronDown className="h-3 w-3" /></Button>
+                        <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={(e) => { e.stopPropagation(); handleRemoveArrayItem(selectedBlock.id, "rows", i) }} title="Löschen"><Trash2 className="h-3.5 w-3.5" /></Button>
+                      </div>
+                    )
+                  }}
+                  renderContent={(row) => {
+                    const rowIndex = rows.findIndex((r) => r.id === row.id)
+                    const r = row as { id: string; cells: Record<string, string> }
+                    return (
+                      <div className="space-y-3 pt-2 border-t border-border">
+                        {columns.map((col, colIdx) => (
+                          <div key={col.id} className="space-y-1">
+                            <Label className="text-xs">{col.label?.trim() || `Spalte ${colIdx + 1}`}</Label>
+                            <Input
+                              value={r.cells?.[col.id] ?? ""}
+                              onChange={(e) => updateRowCells(rowIndex, col.id, e.target.value)}
+                              className="h-8 text-sm"
+                              placeholder="Wert"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    )
+                  }}
+                />
+              )
+            })()}
+          </div>
+        </>
+      )}
+
+      {selectedBlock.type === "legalContactCard" && (
+        <>
+          <Separator />
+          {(() => {
+            const props = selectedBlock.props as Record<string, unknown>
+            const lines = (getByPath(props, "lines") as Array<{ id: string; label: string; value: string; href?: string }>) || []
+            const repeaterKey = `${selectedBlock.id}:lines`
+            const expandedId = expandedRepeaterCards[repeaterKey] ?? null
+            const addLine = () => handleAddArrayItem(selectedBlock.id, "lines", createLegalContactLine)
+            const lineFields = [
+              { key: "label", label: "Label", type: "text" as const },
+              { key: "value", label: "Wert", type: "text" as const },
+              { key: "href", label: "Link (optional)", type: "url" as const, placeholder: "https://" },
+            ]
+            return (
+              <InspectorCardList
+                items={lines}
+                getItemId={(l) => l.id}
+                mode="single"
+                expandedId={expandedId}
+                onToggle={(id) => setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: expandedId === id ? null : id }))}
+                onCollapseAll={() => setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: null }))}
+                countLabel={`${lines.length} Zeilen`}
+                addAction={<Button type="button" variant="outline" size="sm" className="w-full h-8 text-sm" onClick={addLine}><Plus className="h-4 w-4 mr-1.5" />Zeile hinzufügen</Button>}
+                renderSummary={(item) => <span className="truncate">{(item as Record<string, unknown>).label as string || "Zeile"}</span>}
+                renderHeaderActions={(item) => {
+                  const i = lines.findIndex((x) => x.id === item.id)
+                  return (
+                    <div className="flex items-center gap-0.5">
+                      <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); if (i > 0) handleMoveArrayItem(selectedBlock.id, "lines", i, i - 1) }} disabled={i === 0} title="Nach oben"><ChevronUp className="h-3 w-3" /></Button>
+                      <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); if (i < lines.length - 1) handleMoveArrayItem(selectedBlock.id, "lines", i, i + 1) }} disabled={i === lines.length - 1} title="Nach unten"><ChevronDown className="h-3 w-3" /></Button>
+                      <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={(e) => { e.stopPropagation(); handleRemoveArrayItem(selectedBlock.id, "lines", i) }} title="Löschen"><Trash2 className="h-3.5 w-3.5" /></Button>
+                    </div>
+                  )
+                }}
+                renderContent={(item) => renderOneRepeaterItemFields(selectedBlock, "lines", lines.findIndex((l) => l.id === item.id), item as Record<string, unknown>, lineFields)}
+              />
+            )
+          })()}
+        </>
+      )}
+
+      {selectedBlock.type === "legalCookieCategories" && (
+        <>
+          <Separator />
+          {(() => {
+            const props = selectedBlock.props as Record<string, unknown>
+            const categories = (getByPath(props, "categories") as Array<{ id: string; name: string; description: string; required: boolean; cookies: Array<{ id: string; name: string; provider: string; purpose: string; duration: string; type: string }> }>) || []
+            const repeaterKey = `${selectedBlock.id}:categories`
+            const expandedId = expandedRepeaterCards[repeaterKey] ?? null
+            const addCategory = () => handleAddArrayItem(selectedBlock.id, "categories", createLegalCookieCategory)
+            const categoryFields = [
+              { key: "name", label: "Name", type: "text" as const },
+              { key: "description", label: "Beschreibung", type: "textarea" as const },
+              { key: "required", label: "Erforderlich", type: "boolean" as const },
+            ]
+            return (
+              <InspectorCardList
+                items={categories}
+                getItemId={(c) => c.id}
+                mode="single"
+                expandedId={expandedId}
+                onToggle={(id) => setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: expandedId === id ? null : id }))}
+                onCollapseAll={() => setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: null }))}
+                countLabel={`${categories.length} Kategorien`}
+                addAction={<Button type="button" variant="outline" size="sm" className="w-full h-8 text-sm" onClick={addCategory}><Plus className="h-4 w-4 mr-1.5" />Kategorie hinzufügen</Button>}
+                renderSummary={(item) => <span className="truncate">{(item as Record<string, unknown>).name as string || "Kategorie"}</span>}
+                renderHeaderActions={(item) => {
+                  const i = categories.findIndex((x) => x.id === item.id)
+                  return (
+                    <div className="flex items-center gap-0.5">
+                      <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); if (i > 0) handleMoveArrayItem(selectedBlock.id, "categories", i, i - 1) }} disabled={i === 0} title="Nach oben"><ChevronUp className="h-3 w-3" /></Button>
+                      <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); if (i < categories.length - 1) handleMoveArrayItem(selectedBlock.id, "categories", i, i + 1) }} disabled={i === categories.length - 1} title="Nach unten"><ChevronDown className="h-3 w-3" /></Button>
+                      <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={(e) => { e.stopPropagation(); handleRemoveArrayItem(selectedBlock.id, "categories", i) }} title="Löschen"><Trash2 className="h-3.5 w-3.5" /></Button>
+                    </div>
+                  )
+                }}
+                renderContent={(item) => {
+                  const catIndex = categories.findIndex((c) => c.id === item.id)
+                  const category = item as { id: string; name: string; description: string; required: boolean; cookies: Array<{ id: string; name: string; provider: string; purpose: string; duration: string; type: string }> }
+                  const cookies = category.cookies ?? []
+                  const updateCookieField = (cookieIndex: number, field: string, value: string) => {
+                    const nextCategories = categories.map((c, i) =>
+                      i === catIndex
+                        ? { ...c, cookies: (c.cookies ?? []).map((ck, j) => (j === cookieIndex ? { ...ck, [field]: value } : ck)) }
+                        : c
+                    )
+                    updateSelectedProps({ ...(selectedBlock.props as Record<string, unknown>), categories: nextCategories } as CMSBlock["props"])
+                  }
+                  const cookiesPath = `categories.${catIndex}.cookies`
+                  return (
+                    <>
+                      {renderOneRepeaterItemFields(selectedBlock, "categories", catIndex, item as Record<string, unknown>, categoryFields)}
+                      <div className="mt-4 pt-4 border-t border-border space-y-3">
+                        <Label className="text-xs font-medium text-foreground">Cookies in dieser Kategorie</Label>
+                        <p className="text-xs text-muted-foreground">Name, Anbieter, Zweck, Dauer und Typ pro Cookie.</p>
+                        {cookies.map((cookie, cookieIndex) => (
+                          <div key={cookie.id} className="rounded-lg border border-border bg-muted/30 p-3 space-y-2">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-xs font-medium text-foreground truncate">{cookie.name?.trim() || `Cookie ${cookieIndex + 1}`}</span>
+                              <Button type="button" variant="ghost" size="icon" className="h-6 w-6 shrink-0 text-destructive hover:text-destructive" onClick={() => handleRemoveArrayItem(selectedBlock.id, cookiesPath, cookieIndex)} title="Cookie entfernen"><Trash2 className="h-3 w-3" /></Button>
+                            </div>
+                            <div className="grid gap-2">
+                              <div><Label className="text-xs">Name</Label><Input value={cookie.name} onChange={(e) => updateCookieField(cookieIndex, "name", e.target.value)} className="h-8 text-sm" placeholder="Cookie-Name" /></div>
+                              <div><Label className="text-xs">Anbieter</Label><Input value={cookie.provider} onChange={(e) => updateCookieField(cookieIndex, "provider", e.target.value)} className="h-8 text-sm" placeholder="Anbieter" /></div>
+                              <div><Label className="text-xs">Zweck</Label><Input value={cookie.purpose} onChange={(e) => updateCookieField(cookieIndex, "purpose", e.target.value)} className="h-8 text-sm" placeholder="Zweck" /></div>
+                              <div><Label className="text-xs">Dauer</Label><Input value={cookie.duration} onChange={(e) => updateCookieField(cookieIndex, "duration", e.target.value)} className="h-8 text-sm" placeholder="z.B. 1 Jahr" /></div>
+                              <div><Label className="text-xs">Typ</Label><Input value={cookie.type} onChange={(e) => updateCookieField(cookieIndex, "type", e.target.value)} className="h-8 text-sm" placeholder="z.B. HTTP" /></div>
+                            </div>
+                          </div>
+                        ))}
+                        <Button type="button" variant="outline" size="sm" className="w-full h-8 text-sm" onClick={() => handleAddArrayItem(selectedBlock.id, cookiesPath, createLegalCookieItem)}><Plus className="h-4 w-4 mr-1.5" />Cookie hinzufügen</Button>
+                      </div>
+                    </>
+                  )
+                }}
+              />
+            )
+          })()}
         </>
       )}
 

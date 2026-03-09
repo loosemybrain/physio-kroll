@@ -20,6 +20,12 @@ import { OpeningHoursBlock } from "@/components/blocks/opening-hours-block"
 import { ImageSliderBlock } from "@/components/blocks/image-slider-block"
 import { TestimonialSliderBlock } from "@/components/blocks/testimonial-slider"
 import { CourseScheduleBlock } from "@/components/blocks/course-schedule-block"
+import { LegalHero } from "@/components/legal/LegalHero"
+import { LegalRichText } from "@/components/legal/LegalRichText"
+import { LegalTable } from "@/components/legal/LegalTable"
+import { LegalInfoBox } from "@/components/legal/LegalInfoBox"
+import { LegalCookieCategories } from "@/components/legal/LegalCookieCategories"
+import { LegalContactCard } from "@/components/legal/LegalContactCard"
 import type { BlockSectionProps, HeroBlock } from "@/types/cms"
 import { blockRegistry } from "@/cms/blocks/registry"
 import { getTypographyClassName, type TypographySettings } from "@/lib/typography"
@@ -403,6 +409,24 @@ export function BlockRenderer({
         )
       }
 
+      case "legalHero":
+        return <LegalHero {...(block.props as import("@/types/cms").LegalHeroBlock["props"])} />
+
+      case "legalRichText":
+        return <LegalRichText {...(block.props as import("@/types/cms").LegalRichTextBlock["props"])} />
+
+      case "legalTable":
+        return <LegalTable {...(block.props as import("@/types/cms").LegalTableBlock["props"])} />
+
+      case "legalInfoBox":
+        return <LegalInfoBox {...(block.props as import("@/types/cms").LegalInfoBoxBlock["props"])} />
+
+      case "legalCookieCategories":
+        return <LegalCookieCategories {...(block.props as import("@/types/cms").LegalCookieCategoriesBlock["props"])} />
+
+      case "legalContactCard":
+        return <LegalContactCard {...(block.props as import("@/types/cms").LegalContactCardBlock["props"])} />
+
       default: {
         // TypeScript exhaustive check
         const _exhaustive: never = block
@@ -416,6 +440,8 @@ export function BlockRenderer({
 
   const typographyClassName = getTypographyClassName(typography)
 
+  // Block types that manage their own width (e.g. legal hero as page header)
+  const skipGlobalWidthWrap = definition?.skipGlobalWidthWrap === true
   // Check if block should be full bleed (no width constraint)
   const isFullBleed = section?.fullBleed === true
 
@@ -433,20 +459,23 @@ export function BlockRenderer({
     )
   }
 
+  const wrappedContent = skipGlobalWidthWrap ? content : wrapWithGlobalWidth(content)
+  const fullBleedChildren = skipGlobalWidthWrap
+
   if (!editable) {
     // Apply typography classes to wrapper even in non-editable mode
     if (typographyClassName) {
       return (
         <div className={typographyClassName}>
-          <SectionWrapper section={section} isFirst={isFirst}>
-            {wrapWithGlobalWidth(content)}
+          <SectionWrapper section={section} isFirst={isFirst} fullBleedChildren={fullBleedChildren}>
+            {wrappedContent}
           </SectionWrapper>
         </div>
       )
     }
     return (
-      <SectionWrapper section={section} isFirst={isFirst}>
-        {wrapWithGlobalWidth(content)}
+      <SectionWrapper section={section} isFirst={isFirst} fullBleedChildren={fullBleedChildren}>
+        {wrappedContent}
       </SectionWrapper>
     )
   }
@@ -495,8 +524,8 @@ export function BlockRenderer({
         }
       }}
     >
-      <SectionWrapper section={section} editable isFirst={isFirst}>
-        {wrapWithGlobalWidth(content)}
+      <SectionWrapper section={section} editable isFirst={isFirst} fullBleedChildren={fullBleedChildren}>
+        {wrappedContent}
       </SectionWrapper>
     </div>
   )

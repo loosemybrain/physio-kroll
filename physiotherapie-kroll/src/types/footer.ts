@@ -150,6 +150,48 @@ export type FooterGlassmorphism = {
 }
 
 /**
+ * Placement of the Legal links block in the footer
+ */
+export type LegalLinksPlacement = "section" | "bottom-bar"
+
+/**
+ * Layout variant for Legal links
+ */
+export type LegalLinksLayout = "inline" | "stacked" | "separated" | "chips"
+
+/**
+ * Which legal items to show (by subtype). Only privacy, cookies, imprint – no AGB/Widerruf.
+ */
+export type LegalLinksItems = {
+  imprint?: boolean
+  privacy?: boolean
+  cookies?: boolean
+}
+
+/**
+ * Dedizierte Konfiguration für den Legal-Bereich im Footer.
+ * Steuert nur Sichtbarkeit, Auswahl und Darstellung; Inhalte kommen aus dem CMS.
+ */
+export type FooterLegalLinksConfig = {
+  enabled: boolean
+  title?: string
+  placement?: LegalLinksPlacement
+  layout?: LegalLinksLayout
+  align?: "left" | "center" | "right"
+  showTitle?: boolean
+  gap?: "sm" | "md" | "lg"
+  marginTop?: "none" | "sm" | "md" | "lg"
+  textColor?: string
+  hoverColor?: string
+  activeColor?: string
+  separatorColor?: string
+  fontSize?: "xs" | "sm" | "base"
+  fontWeight?: "normal" | "medium" | "semibold"
+  uppercase?: boolean
+  items: LegalLinksItems
+}
+
+/**
  * Footer configuration for a brand
  */
 export type FooterConfig = {
@@ -160,6 +202,8 @@ export type FooterConfig = {
   layoutWidth?: "full" | "contained" // controls footer content width
   background?: FooterBackground // outer section background
   glassmorphism?: FooterGlassmorphism // inner panel glass effect
+  /** Dedizierter Legal-Bereich (Datenschutz, Cookies, Impressum). Optional für Rückwärtskompatibilität. */
+  legalLinks?: FooterLegalLinksConfig
 }
 
 /**

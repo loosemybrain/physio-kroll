@@ -2,6 +2,7 @@
 
 import type { CMSBlock, CMSPage } from "@/types/cms";
 import type { BrandKey } from "@/components/brand/brandAssets";
+import { getDefaultBlocksForPageType } from "@/cms/blocks/defaultPageBlocks";
 
 export type PageStatus = "draft" | "published";
 
@@ -11,7 +12,7 @@ export type AdminPage = CMSPage & {
   updatedAt: string; // ISO string
 };
 
-export type AdminPageSummary = Pick<AdminPage, "id" | "title" | "slug" | "brand" | "status" | "updatedAt">;
+export type AdminPageSummary = Pick<AdminPage, "id" | "title" | "slug" | "brand" | "status" | "pageType" | "pageSubtype" | "updatedAt">;
 
 const STORAGE_KEY = "physio-cms:v1";
 
@@ -93,6 +94,8 @@ export function listPages(): AdminPageSummary[] {
       slug: p.slug,
       brand: p.brand,
       status: p.status,
+      pageType: p.pageType ?? "default",
+      pageSubtype: p.pageSubtype ?? null,
       updatedAt: p.updatedAt,
     }))
     .sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1));
@@ -100,7 +103,13 @@ export function listPages(): AdminPageSummary[] {
 
 export function getPage(id: string): AdminPage | null {
   const store = readStore();
-  return store.pages[id] ?? null;
+  const p = store.pages[id] ?? null;
+  if (!p) return null;
+  return {
+    ...p,
+    pageType: p.pageType ?? "default",
+    pageSubtype: p.pageSubtype ?? null,
+  };
 }
 
 /**
@@ -111,7 +120,12 @@ export function getPageBySlug(slug: string): AdminPage | null {
   const page = Object.values(store.pages).find(
     (p) => p.slug === slug && p.status === "published"
   );
-  return page ?? null;
+  if (!page) return null;
+  return {
+    ...page,
+    pageType: page.pageType ?? "default",
+    pageSubtype: page.pageSubtype ?? null,
+  };
 }
 
 export function upsertPage(page: AdminPage): AdminPage {
@@ -128,7 +142,7 @@ export function deletePage(id: string) {
   writeStore(store);
 }
 
-export function createEmptyPage(input?: Partial<Pick<AdminPage, "brand" | "title" | "slug" | "status">>): AdminPage {
+export function createEmptyPage(input?: Partial<Pick<AdminPage, "brand" | "title" | "slug" | "status" | "pageType" | "pageSubtype">>): AdminPage {
   const id =
     typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : String(Date.now());
 
@@ -136,33 +150,37 @@ export function createEmptyPage(input?: Partial<Pick<AdminPage, "brand" | "title
   const title = input?.title ?? "Neue Seite";
   const slug = input?.slug ?? "neu";
   const status: PageStatus = input?.status ?? "draft";
+  const pageType = input?.pageType ?? "default";
+  const pageSubtype = input?.pageSubtype ?? null;
 
-  const blocks: CMSBlock[] = [
-    {
-      id: id + "-hero",
-      type: "hero",
-      props: {
-        mood: brand,
-        headline: title,
-        subheadline: "Kurzbeschreibung hier…",
-        ctaText: "Termin vereinbaren",
-        ctaHref: "/kontakt",
-        showMedia: true,
-        mediaType: "image",
-        mediaUrl: "/placeholder.svg",
+  const legalBlocks = getDefaultBlocksForPageType(pageType, pageSubtype, brand);
+  const blocks: CMSBlock[] =
+    legalBlocks ?? [
+      {
+        id: id + "-hero",
+        type: "hero",
+        props: {
+          mood: brand,
+          headline: title,
+          subheadline: "Kurzbeschreibung hier…",
+          ctaText: "Termin vereinbaren",
+          ctaHref: "/kontakt",
+          showMedia: true,
+          mediaType: "image",
+          mediaUrl: "/placeholder.svg",
+        },
       },
-    },
-    {
-      id: id + "-text",
-      type: "text",
-      props: {
-        content: "Erster Textblock…",
-        alignment: "left",
-        maxWidth: "lg",
-        textSize: "base",
+      {
+        id: id + "-text",
+        type: "text",
+        props: {
+          content: "Erster Textblock…",
+          alignment: "left",
+          maxWidth: "lg",
+          textSize: "base",
+        },
       },
-    },
-  ];
+    ];
 
   return {
     id,
@@ -170,6 +188,8 @@ export function createEmptyPage(input?: Partial<Pick<AdminPage, "brand" | "title
     title,
     slug,
     status,
+    pageType,
+    pageSubtype,
     updatedAt: nowIso(),
     blocks,
   };

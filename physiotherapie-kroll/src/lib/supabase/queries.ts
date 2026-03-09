@@ -1,7 +1,7 @@
 import "server-only"
 
 import type { BrandKey } from "@/components/brand/brandAssets"
-import type { CMSBlock, CMSPage } from "@/types/cms"
+import type { CMSBlock, CMSPage, PageSubtype, PageType } from "@/types/cms"
 import { getSupabaseAdmin } from "./server"
 
 let adminPromise: ReturnType<typeof getSupabaseAdmin> | null = null
@@ -47,6 +47,10 @@ function transformPageToCMS(
     id: page.id,
     title: page.title,
     slug: page.slug,
+    pageType: (page.page_type ?? "default") as PageType,
+    pageSubtype: (page.page_subtype === "privacy" || page.page_subtype === "cookies" || page.page_subtype === "imprint"
+      ? page.page_subtype
+      : null) as PageSubtype,
     blocks: cmsBlocks,
     meta: undefined, // Migration doesn't include meta fields
   }

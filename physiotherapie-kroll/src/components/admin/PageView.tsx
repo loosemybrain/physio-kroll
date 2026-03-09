@@ -1,16 +1,18 @@
 "use client"
 
-import { Plus, MoreHorizontal, Pencil, Trash2, Eye } from "lucide-react"
+import { Plus, MoreHorizontal, Pencil, Trash2, Eye, ChevronDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import type { AdminPageSummary } from "@/lib/cms/supabaseStore"
+import type { PageSubtype } from "@/types/cms"
 
 interface PagesViewProps {
   pages: AdminPageSummary[]
   onEditPage: (pageId: string) => void
-  onNewPage: () => void
+  /** Called when creating a new page. Pass legal subtype to get type-specific start blocks. */
+  onNewPage: (params?: { pageType: "legal"; pageSubtype: NonNullable<PageSubtype> } | undefined) => void
   onPreviewPage?: (pageId: string) => void
   onDeletePage?: (pageId: string) => void
 }
@@ -30,11 +32,29 @@ export function PagesView({ pages, onEditPage, onNewPage, onPreviewPage, onDelet
         <div>
           <h2 className="text-2xl font-semibold tracking-tight text-foreground">Pages</h2>
           <p className="text-sm text-muted-foreground">Manage your website pages</p>
+          <p className="text-xs text-muted-foreground mt-0.5">Bei Rechtlich-Seiten werden passende Startblöcke automatisch gesetzt.</p>
         </div>
-        <Button onClick={onNewPage} className="gap-2">
-          <Plus className="h-4 w-4" />
-          New Page
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button className="gap-2">
+              <Plus className="h-4 w-4" />
+              Neue Seite
+              <ChevronDown className="h-4 w-4 opacity-70" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => onNewPage()}>Standard</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onNewPage({ pageType: "legal", pageSubtype: "privacy" })}>
+              Rechtlich: Datenschutz
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onNewPage({ pageType: "legal", pageSubtype: "cookies" })}>
+              Rechtlich: Cookie-Richtlinie
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onNewPage({ pageType: "legal", pageSubtype: "imprint" })}>
+              Rechtlich: Impressum
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       <div className="rounded-lg border border-border bg-card">

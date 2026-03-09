@@ -249,6 +249,8 @@ export function SectionWrapper(props: {
   className?: string
   /** When true, remove the top gap below navigation for bg.type='none' */
   isFirst?: boolean
+  /** When true, children are not wrapped in max-w container (e.g. for full-width hero) */
+  fullBleedChildren?: boolean
   children: React.ReactNode
 }) {
   const { layout, background } = withDefaults(props.section)
@@ -400,10 +402,14 @@ export function SectionWrapper(props: {
         <div className={cn(bgFrameClass, "z-1")} style={{ ...bgFrameStyle, ...overlayCss }} />
       )}
 
-      {/* Content - single source of truth for width & horizontal padding */}
-      <div className="relative z-10 mx-auto w-full max-w-7xl px-4">
-        {props.children}
-      </div>
+      {/* Content - single source of truth for width & horizontal padding (unless fullBleedChildren) */}
+      {props.fullBleedChildren ? (
+        <div className="relative z-10">{props.children}</div>
+      ) : (
+        <div className="relative z-10 mx-auto w-full max-w-7xl px-4">
+          {props.children}
+        </div>
+      )}
     </section>
   )
 }

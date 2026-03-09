@@ -59,7 +59,12 @@ export type BlockType =
   | "openingHours"
   | "imageSlider"
   | "courseSchedule"
-  | "testimonialSlider"
+  | "legalHero"
+  | "legalRichText"
+  | "legalTable"
+  | "legalInfoBox"
+  | "legalCookieCategories"
+  | "legalContactCard"
 
 /**
  * Common props shape for all blocks with element styling support
@@ -975,6 +980,123 @@ export interface CardBlock extends BaseBlock {
   }
 }
 
+/** Legal block spacing (reused across legal blocks). */
+export type LegalSpacing = "none" | "sm" | "md" | "lg"
+
+/** legalHero: Seitenkopf für Datenschutz / Cookies / Impressum */
+export interface LegalHeroBlock extends BaseBlock {
+  type: "legalHero"
+  props: {
+    eyebrow?: string
+    title: string
+    subtitle?: string
+    introText?: string
+    showUpdatedAt?: boolean
+    updatedAtLabel?: string
+    updatedAtValue?: string
+    alignment?: "left" | "center"
+    variant?: "default" | "minimal"
+  }
+}
+
+/** legalRichText: Überschrift + Rich-Text (ersetzt separaten legalSection). */
+export interface LegalRichTextBlock extends BaseBlock {
+  type: "legalRichText"
+  props: {
+    headline: string
+    content: string
+    alignment?: "left" | "center" | "justify"
+    headlineSize?: "h2" | "h3" | "h4"
+    variant?: "default" | "muted"
+    spacingTop?: LegalSpacing
+    spacingBottom?: LegalSpacing
+  }
+}
+
+/** legalTable: Spalten- und Zeilen-Definition. */
+export interface LegalTableColumn {
+  id: string
+  label: string
+  width?: string
+}
+
+export interface LegalTableRow {
+  id: string
+  cells: Record<string, string>
+}
+
+export interface LegalTableBlock extends BaseBlock {
+  type: "legalTable"
+  props: {
+    caption?: string
+    columns: LegalTableColumn[]
+    rows: LegalTableRow[]
+    variant?: "default" | "compact" | "spacious"
+    zebra?: boolean
+    spacingTop?: LegalSpacing
+    spacingBottom?: LegalSpacing
+  }
+}
+
+/** legalInfoBox: Hinweise, Rechtsgrundlagen, Widerruf. */
+export interface LegalInfoBoxBlock extends BaseBlock {
+  type: "legalInfoBox"
+  props: {
+    variant?: "info" | "warning" | "success" | "neutral"
+    headline?: string
+    content: string
+    spacingTop?: LegalSpacing
+    spacingBottom?: LegalSpacing
+  }
+}
+
+/** legalCookieCategories: Kategorien mit Cookies. */
+export interface LegalCookieItem {
+  id: string
+  name: string
+  provider: string
+  purpose: string
+  duration: string
+  type: string
+}
+
+export interface LegalCookieCategory {
+  id: string
+  name: string
+  description: string
+  required: boolean
+  cookies: LegalCookieItem[]
+}
+
+export interface LegalCookieCategoriesBlock extends BaseBlock {
+  type: "legalCookieCategories"
+  props: {
+    variant?: "cards" | "accordion"
+    categories: LegalCookieCategory[]
+    spacingTop?: LegalSpacing
+    spacingBottom?: LegalSpacing
+  }
+}
+
+/** legalContactCard: Anbieterkennzeichnung / Verantwortliche Stelle. */
+export interface LegalContactLine {
+  id: string
+  label: string
+  value: string
+  href?: string
+}
+
+export interface LegalContactCardBlock extends BaseBlock {
+  type: "legalContactCard"
+  props: {
+    headline: string
+    lines: LegalContactLine[]
+    variant?: "default" | "bordered"
+    spacingTop?: LegalSpacing
+    spacingBottom?: LegalSpacing
+  }
+}
+
 /**
  * Union type of all possible CMS blocks
  */
@@ -996,6 +1118,37 @@ export type CMSBlock =
   | OpeningHoursBlock
   | ImageSliderBlock
   | CourseScheduleBlock
+  | LegalHeroBlock
+  | LegalRichTextBlock
+  | LegalTableBlock
+  | LegalInfoBoxBlock
+  | LegalCookieCategoriesBlock
+  | LegalContactCardBlock
+
+/**
+ * Page type for context-dependent CMS (e.g. block palette filtering in Phase 2).
+ * DB: page_type (default 'default').
+ */
+export type PageType = "default" | "landing" | "legal"
+
+/**
+ * Legal page subtype. Only relevant when pageType === 'legal'.
+ * DB: page_subtype (nullable).
+ */
+export type PageSubtype = "privacy" | "cookies" | "imprint" | null
+
+/** Allowed page type values (for validation and UI). */
+export const PAGE_TYPE_VALUES: PageType[] = ["default", "landing", "legal"]
+
+/** Allowed legal subtype values (for validation and UI). */
+export const PAGE_SUBTYPE_VALUES: Array<NonNullable<PageSubtype>> = ["privacy", "cookies", "imprint"]
+
+/**
+ * Returns true if the page type is legal (subtype is then relevant).
+ */
+export function isLegalPageType(type: PageType): boolean {
+  return type === "legal"
+}
 
 /**
  * CMS page content structure
@@ -1004,6 +1157,10 @@ export interface CMSPage {
   id: string
   title: string
   slug: string
+  /** Seitentyp; default 'default' when loading legacy data. */
+  pageType: PageType
+  /** Untertyp nur bei pageType 'legal'; sonst null. */
+  pageSubtype: PageSubtype
   blocks: CMSBlock[]
   meta?: {
     description?: string

@@ -13,8 +13,13 @@ export function PagesViewClient() {
     router.push(`/admin/pages/${pageId}`)
   }
 
-  const handleNewPage = () => {
-    router.push("/admin/pages/new")
+  const handleNewPage = (params?: { pageType: "legal"; pageSubtype: "privacy" | "cookies" | "imprint" }) => {
+    if (params) {
+      const q = new URLSearchParams({ pageType: params.pageType, pageSubtype: params.pageSubtype })
+      router.push(`/admin/pages/new?${q.toString()}`)
+    } else {
+      router.push("/admin/pages/new")
+    }
   }
 
   const handleDelete = async (pageId: string) => {

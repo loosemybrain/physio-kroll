@@ -116,6 +116,49 @@ export function normalizeBlock(block: CMSBlock): CMSBlock {
         return slide
       })
     }
+
+    // Ensure unique IDs for legal blocks and sync rows to columns (defensive for historical/incomplete data)
+    if (block.type === "legalTable") {
+      const colsRaw = normalizedProps.columns
+      const cols = Array.isArray(colsRaw) ? (colsRaw as Array<{ id: string }>) : []
+      const seen = new Set<string>()
+      const normalizedCols = cols.map((c, i) =>
+        c && typeof c === "object" && c.id
+          ? (seen.has(c.id) ? { ...c, id: generateUniqueId("col", i) } : (seen.add(c.id), c))
+          : { id: generateUniqueId("col", i), label: "", width: "" }
+      )
+      normalizedProps.columns = normalizedCols
+      const columnIds = new Set(normalizedCols.map((c) => c.id))
+
+      const rowsRaw = normalizedProps.rows
+      const rowsArray = Array.isArray(rowsRaw) ? (rowsRaw as Array<{ id?: string; cells?: Record<string, string> }>) : []
+      const seenRow = new Set<string>()
+      normalizedProps.rows = rowsArray.map((r, ri) => {
+        const cells = r?.cells && typeof r.cells === "object" ? r.cells : {}
+        const synced: Record<string, string> = {}
+        for (const colId of columnIds) synced[colId] = cells[colId] ?? ""
+        const rowId =
+          r?.id && !seenRow.has(r.id) ? (seenRow.add(r.id), r.id) : (() => { const id = generateUniqueId("row", ri); seenRow.add(id); return id })()
+        return { ...r, id: rowId, cells: synced }
+      })
+    }
+    if (block.type === "legalContactCard" && "lines" in normalizedProps) {
+      const lines = normalizedProps.lines as Array<{ id: string }>
+      const seen = new Set<string>()
+      normalizedProps.lines = lines.map((l, i) => (seen.has(l.id) ? { ...l, id: generateUniqueId("line", i) } : (seen.add(l.id), l)))
+    }
+    if (block.type === "legalCookieCategories" && "categories" in normalizedProps) {
+      const categories = normalizedProps.categories as Array<{ id: string; cookies?: Array<{ id: string }> }>
+      const seenCat = new Set<string>()
+      const seenCookie = new Set<string>()
+      normalizedProps.categories = categories.map((cat, ci) => {
+        const newCat = seenCat.has(cat.id) ? { ...cat, id: generateUniqueId("cat", ci) } : (seenCat.add(cat.id), { ...cat })
+        const newCookies = (newCat.cookies ?? []).map((ck, ki) =>
+          seenCookie.has(ck.id) ? { ...ck, id: generateUniqueId("cookie", ki) } : (seenCookie.add(ck.id), { ...ck })
+        )
+        return { ...newCat, cookies: newCookies }
+      })
+    }
     
     return {
       ...block,
@@ -172,6 +215,26 @@ export function normalizeBlock(block: CMSBlock): CMSBlock {
       defaultProps.slides = slides.map((slide, index) => ({
         ...slide,
         id: generateUniqueId("slide", index),
+      }))
+    }
+
+    // Ensure unique IDs for legal blocks in defaults
+    if (block.type === "legalTable") {
+      const cols = defaultProps.columns as Array<Record<string, unknown> & { id: string }> | undefined
+      if (cols?.length) defaultProps.columns = cols.map((c, i) => ({ ...c, id: generateUniqueId("col", i) }))
+      const rows = defaultProps.rows as Array<Record<string, unknown> & { id: string }> | undefined
+      if (rows?.length) defaultProps.rows = rows.map((r, i) => ({ ...r, id: generateUniqueId("row", i) }))
+    }
+    if (block.type === "legalContactCard" && defaultProps.lines) {
+      const lines = defaultProps.lines as Array<Record<string, unknown> & { id: string }>
+      defaultProps.lines = lines.map((l, i) => ({ ...l, id: generateUniqueId("line", i) }))
+    }
+    if (block.type === "legalCookieCategories" && defaultProps.categories) {
+      const categories = defaultProps.categories as Array<Record<string, unknown> & { id: string; cookies?: Array<{ id: string }> }>
+      defaultProps.categories = categories.map((cat, ci) => ({
+        ...cat,
+        id: generateUniqueId("cat", ci),
+        cookies: (cat.cookies ?? []).map((ck, ki) => ({ ...ck, id: generateUniqueId("cookie", ki) })),
       }))
     }
     

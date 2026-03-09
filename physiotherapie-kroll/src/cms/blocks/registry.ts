@@ -1,5 +1,6 @@
 import { z } from "zod"
-import type { CMSBlock, BlockType, HeroBlock, TextBlock, ImageTextBlock, FeatureGridBlock, CtaBlock, SectionBlock, CardBlock, ServicesGridBlock, FaqBlock, TeamBlock, ContactFormBlock, TestimonialsBlock, GalleryBlock, OpeningHoursBlock, ImageSliderBlock, CourseScheduleBlock, HeroAction } from "@/types/cms"
+import type { CMSBlock, BlockType, HeroBlock, TextBlock, ImageTextBlock, FeatureGridBlock, CtaBlock, SectionBlock, CardBlock, ServicesGridBlock, FaqBlock, TeamBlock, ContactFormBlock, TestimonialsBlock, GalleryBlock, OpeningHoursBlock, ImageSliderBlock, CourseScheduleBlock, HeroAction, PageType, PageSubtype, LegalHeroBlock, LegalRichTextBlock, LegalTableBlock, LegalInfoBoxBlock, LegalCookieCategoriesBlock, LegalContactCardBlock, LegalTableColumn, LegalTableRow, LegalCookieCategory, LegalCookieItem, LegalContactLine } from "@/types/cms"
+import { PAGE_TYPE_VALUES } from "@/types/cms"
 import type { BrandKey } from "@/components/brand/brandAssets"
 import { uuid } from "@/lib/cms/arrayOps"
 import { typographySchema, elementTypographySchema } from "@/lib/typography"
@@ -43,6 +44,19 @@ export interface InspectorField {
 }
 
 
+/**
+ * When allowedPageTypes is omitted, block is allowed on default and landing only (not legal).
+ * Legal pages get only blocks that explicitly include "legal".
+ */
+export const DEFAULT_ALLOWED_PAGE_TYPES: PageType[] = ["default", "landing"]
+
+/** Optional: restrict block to specific legal subtypes (Phase 3). */
+export type AllowedPageSubtypes = Array<NonNullable<PageSubtype>>
+
+/**
+ * Phase 3: New legal blocks can be added here with type "legalHero" | "legalRichText" | "legalTable" | "legalInfoBox" | "legalCookieCategories" | "legalContactCard",
+ * allowedPageTypes: ["legal"], and optional allowedPageSubtypes.
+ */
 export interface BlockDefinition<T extends CMSBlock = CMSBlock> {
   type: T["type"]
   label: string
@@ -50,9 +64,15 @@ export interface BlockDefinition<T extends CMSBlock = CMSBlock> {
   zodSchema: z.ZodType<T["props"]>
   inspectorFields: InspectorField[]
   allowInlineEdit?: boolean
+  /** When true, block is not wrapped in global max-width (e.g. legal hero as page header). */
+  skipGlobalWidthWrap?: boolean
   elements?: EditableElementDef[]
   enableInnerPanel?: boolean
   inspectorGroupOrder?: (typeof INSPECTOR_GROUP_ORDER)[number][]
+  /** Page types this block can be added to. Omit => default + landing only. */
+  allowedPageTypes?: PageType[]
+  /** Optional: restrict to legal subtypes (Phase 3). */
+  allowedPageSubtypes?: AllowedPageSubtypes
 }
 
 /* ================================================================ */
@@ -1260,6 +1280,31 @@ export function createFeatureItem(): FeatureGridBlock["props"]["features"][0] {
   }
 }
 
+// ------------ Legal block factories ---------------
+export function createLegalTableColumn(): LegalTableColumn {
+  return { id: uuid(), label: "Neue Spalte", width: "" }
+}
+
+export function createLegalTableRow(columns: LegalTableColumn[]): LegalTableRow {
+  const cells: Record<string, string> = {}
+  for (const col of columns) {
+    cells[col.id] = ""
+  }
+  return { id: uuid(), cells }
+}
+
+export function createLegalContactLine(): LegalContactLine {
+  return { id: uuid(), label: "", value: "" }
+}
+
+export function createLegalCookieItem(): LegalCookieItem {
+  return { id: uuid(), name: "", provider: "", purpose: "", duration: "", type: "" }
+}
+
+export function createLegalCookieCategory(): LegalCookieCategory {
+  return { id: uuid(), name: "", description: "", required: false, cookies: [] }
+}
+
 // ------------ TestimonialSlider: Defaults + Factory ---------------
 const testimonialSliderDefaults: TestimonialSliderBlock["props"] = {
   headline: "Vertrauen, das man spürt",
@@ -1587,6 +1632,145 @@ const courseScheduleDefaults: CourseScheduleBlock["props"] = {
   elements: {},
 }
 
+/* ================================================================ */
+/*  Legal Block Schemas & Defaults                                  */
+/* ================================================================ */
+
+const legalSpacingSchema = z.enum(["none", "sm", "md", "lg"])
+
+const legalHeroPropsSchema = z.object({
+  eyebrow: z.string().optional(),
+  title: z.string(),
+  subtitle: z.string().optional(),
+  introText: z.string().optional(),
+  showUpdatedAt: z.boolean().optional(),
+  updatedAtLabel: z.string().optional(),
+  updatedAtValue: z.string().optional(),
+  alignment: z.enum(["left", "center"]).optional(),
+  variant: z.enum(["default", "minimal"]).optional(),
+})
+
+const legalRichTextPropsSchema = z.object({
+  headline: z.string(),
+  content: z.string(),
+  alignment: z.enum(["left", "center", "justify"]).optional(),
+  headlineSize: z.enum(["h2", "h3", "h4"]).optional(),
+  variant: z.enum(["default", "muted"]).optional(),
+  spacingTop: legalSpacingSchema.optional(),
+  spacingBottom: legalSpacingSchema.optional(),
+})
+
+const legalTableColumnSchema = z.object({ id: z.string(), label: z.string(), width: z.string().optional() })
+const legalTableRowSchema = z.object({ id: z.string(), cells: z.record(z.string(), z.string()) })
+const legalTablePropsSchema = z.object({
+  caption: z.string().optional(),
+  columns: z.array(legalTableColumnSchema),
+  rows: z.array(legalTableRowSchema),
+  variant: z.enum(["default", "compact", "spacious"]).optional(),
+  zebra: z.boolean().optional(),
+  spacingTop: legalSpacingSchema.optional(),
+  spacingBottom: legalSpacingSchema.optional(),
+})
+
+const legalInfoBoxPropsSchema = z.object({
+  variant: z.enum(["info", "warning", "success", "neutral"]).optional(),
+  headline: z.string().optional(),
+  content: z.string(),
+  spacingTop: legalSpacingSchema.optional(),
+  spacingBottom: legalSpacingSchema.optional(),
+})
+
+const legalCookieItemSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  provider: z.string(),
+  purpose: z.string(),
+  duration: z.string(),
+  type: z.string(),
+})
+const legalCookieCategorySchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string(),
+  required: z.boolean(),
+  cookies: z.array(legalCookieItemSchema),
+})
+const legalCookieCategoriesPropsSchema = z.object({
+  variant: z.enum(["cards", "accordion"]).optional(),
+  categories: z.array(legalCookieCategorySchema),
+  spacingTop: legalSpacingSchema.optional(),
+  spacingBottom: legalSpacingSchema.optional(),
+})
+
+const legalContactLineSchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  value: z.string(),
+  href: z.string().optional(),
+})
+const legalContactCardPropsSchema = z.object({
+  headline: z.string(),
+  lines: z.array(legalContactLineSchema),
+  variant: z.enum(["default", "bordered"]).optional(),
+  spacingTop: legalSpacingSchema.optional(),
+  spacingBottom: legalSpacingSchema.optional(),
+})
+
+const legalHeroDefaults: LegalHeroBlock["props"] = {
+  eyebrow: "",
+  title: "Datenschutzerklärung",
+  subtitle: "",
+  introText: "",
+  showUpdatedAt: false,
+  updatedAtLabel: "Zuletzt aktualisiert",
+  updatedAtValue: "",
+  alignment: "left",
+  variant: "default",
+}
+
+const legalRichTextDefaults: LegalRichTextBlock["props"] = {
+  headline: "Abschnitt",
+  content: "<p>Inhalt hier…</p>",
+  alignment: "left",
+  headlineSize: "h2",
+  variant: "default",
+  spacingTop: "md",
+  spacingBottom: "md",
+}
+
+const legalTableDefaults: LegalTableBlock["props"] = {
+  caption: "",
+  columns: [{ id: uuid(), label: "Spalte 1" }, { id: uuid(), label: "Spalte 2" }],
+  rows: [{ id: uuid(), cells: {} }],
+  variant: "default",
+  zebra: true,
+  spacingTop: "md",
+  spacingBottom: "md",
+}
+
+const legalInfoBoxDefaults: LegalInfoBoxBlock["props"] = {
+  variant: "info",
+  headline: "",
+  content: "<p>Hinweistext…</p>",
+  spacingTop: "sm",
+  spacingBottom: "sm",
+}
+
+const legalCookieCategoriesDefaults: LegalCookieCategoriesBlock["props"] = {
+  variant: "cards",
+  categories: [{ id: uuid(), name: "Notwendige Cookies", description: "Essenziell für die Funktion der Website.", required: true, cookies: [] }],
+  spacingTop: "md",
+  spacingBottom: "md",
+}
+
+const legalContactCardDefaults: LegalContactCardBlock["props"] = {
+  headline: "Verantwortliche Stelle",
+  lines: [{ id: uuid(), label: "Name", value: "" }, { id: uuid(), label: "Adresse", value: "" }],
+  variant: "default",
+  spacingTop: "md",
+  spacingBottom: "md",
+}
+
 /**
  * Block registry with all block definitions
  */
@@ -1597,6 +1781,7 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
   hero: {
     type: "hero",
     label: "Hero",
+    allowedPageTypes: ["default", "landing"],
     defaults: heroDefaults,
     zodSchema: heroPropsSchema,
     allowInlineEdit: true,
@@ -1943,6 +2128,7 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
   text: {
     type: "text",
     label: "Text",
+    allowedPageTypes: ["default", "landing", "legal"],
     defaults: textDefaults,
     zodSchema: textPropsSchema,
     allowInlineEdit: true,
@@ -1996,6 +2182,7 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
   imageText: {
     type: "imageText",
     label: "Bild + Text",
+    allowedPageTypes: ["default", "landing"],
     defaults: imageTextDefaults,
     zodSchema: imageTextPropsSchema,
     allowInlineEdit: true,
@@ -2156,6 +2343,7 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
   section: {
     type: "section",
     label: "Section",
+    allowedPageTypes: ["default", "landing", "legal"],
     defaults: sectionDefaults,
     zodSchema: sectionPropsSchema,
     allowInlineEdit: true,
@@ -2303,6 +2491,7 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
   card: {
     type: "card",
     label: "Card",
+    allowedPageTypes: ["default", "landing", "legal"],
     defaults: cardDefaults,
     zodSchema: cardPropsSchema,
     allowInlineEdit: true,
@@ -2450,6 +2639,7 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
   featureGrid: {
     type: "featureGrid",
     label: "Feature Grid",
+    allowedPageTypes: ["default", "landing"],
     defaults: featureGridDefaults,
     zodSchema: featureGridPropsSchema,
     inspectorFields: [
@@ -2563,6 +2753,7 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
   cta: {
     type: "cta",
     label: "Call to Action",
+    allowedPageTypes: ["default", "landing"],
     defaults: ctaDefaults,
     zodSchema: ctaPropsSchema,
     allowInlineEdit: true,
@@ -2604,6 +2795,7 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
   servicesGrid: {
     type: "servicesGrid",
     label: "Services Grid",
+    allowedPageTypes: ["default", "landing"],
     defaults: servicesGridDefaults,
     zodSchema: servicesGridPropsSchema,
     allowInlineEdit: true,
@@ -2642,6 +2834,7 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
   faq: {
     type: "faq",
     label: "FAQ",
+    allowedPageTypes: ["default", "landing"],
     defaults: faqDefaults,
     zodSchema: faqPropsSchema,
     enableInnerPanel: true,
@@ -2660,6 +2853,7 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
   team: {
     type: "team",
     label: "Team",
+    allowedPageTypes: ["default", "landing"],
     defaults: teamDefaults,
     zodSchema: teamPropsSchema,
     allowInlineEdit: true,
@@ -2698,6 +2892,7 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
   contactForm: {
     type: "contactForm",
     label: "Kontaktformular",
+    allowedPageTypes: ["default", "landing"],
     defaults: contactFormDefaults,
     zodSchema: contactFormPropsSchema,
     allowInlineEdit: true,
@@ -2755,6 +2950,7 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
   testimonials: {
     type: "testimonials",
     label: "Testimonials",
+    allowedPageTypes: ["default", "landing"],
     defaults: testimonialsDefaults,
     zodSchema: testimonialsPropsSchema,
     allowInlineEdit: true,
@@ -2808,6 +3004,7 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
   testimonialSlider: {
     type: "testimonialSlider",
     label: "Testimonial Slider",
+    allowedPageTypes: ["default", "landing"],
     defaults: testimonialSliderDefaults,
     zodSchema: testimonialSliderPropsSchema,
     allowInlineEdit: true,
@@ -2829,6 +3026,7 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
   gallery: {
     type: "gallery",
     label: "Galerie",
+    allowedPageTypes: ["default", "landing"],
     defaults: galleryDefaults,
     zodSchema: galleryPropsSchema,
     allowInlineEdit: false,
@@ -2898,6 +3096,7 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
   imageSlider: {
     type: "imageSlider",
     label: "Bild-Slider",
+    allowedPageTypes: ["default", "landing"],
     defaults: imageSliderDefaults,
     zodSchema: imageSliderPropsSchema,
     allowInlineEdit: true,
@@ -3012,6 +3211,7 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
   openingHours: {
     type: "openingHours",
     label: "Öffnungszeiten",
+    allowedPageTypes: ["default", "landing"],
     defaults: openingHoursDefaults,
     zodSchema: openingHoursPropsSchema,
     allowInlineEdit: true,
@@ -3057,6 +3257,7 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
   courseSchedule: {
     type: "courseSchedule",
     label: "Kursplan",
+    allowedPageTypes: ["default", "landing"],
     defaults: courseScheduleDefaults,
     zodSchema: courseSchedulePropsSchema,
     allowInlineEdit: true,
@@ -3070,6 +3271,96 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
       { key: "subheadline", label: "Untertitel", type: "textarea", placeholder: "Optionaler Hinweistext", group: "basics" },
       { key: "headlineColor", label: "Überschrift Farbe", type: "color", placeholder: "#111111", group: "design" },
       { key: "subheadlineColor", label: "Untertitel Farbe", type: "color", placeholder: "#666666", group: "design" },
+    ],
+  },
+  legalHero: {
+    type: "legalHero",
+    label: "Seitenkopf",
+    allowedPageTypes: ["legal"],
+    defaults: legalHeroDefaults,
+    zodSchema: legalHeroPropsSchema,
+    allowInlineEdit: true,
+    skipGlobalWidthWrap: true,
+    inspectorFields: [
+      { key: "eyebrow", label: "Überzeile", type: "text", placeholder: "Optional", group: "content" },
+      { key: "title", label: "Titel", type: "text", required: true, group: "content" },
+      { key: "subtitle", label: "Untertitel", type: "text", placeholder: "Optional", group: "content" },
+      { key: "introText", label: "Intro-Text", type: "textarea", placeholder: "Optional", group: "content" },
+      { key: "showUpdatedAt", label: "Stand anzeigen", type: "boolean", group: "content" },
+      { key: "updatedAtLabel", label: "Label Stand", type: "text", placeholder: "Zuletzt aktualisiert", group: "content" },
+      { key: "updatedAtValue", label: "Datum Stand", type: "text", placeholder: "YYYY-MM-DD", group: "content" },
+      { key: "alignment", label: "Ausrichtung", type: "select", options: [{ value: "left", label: "Links" }, { value: "center", label: "Zentriert" }], group: "design" },
+      { key: "variant", label: "Variante", type: "select", options: [{ value: "default", label: "Standard" }, { value: "minimal", label: "Minimal" }], group: "design" },
+    ],
+  },
+  legalRichText: {
+    type: "legalRichText",
+    label: "Fließtext",
+    allowedPageTypes: ["legal"],
+    defaults: legalRichTextDefaults,
+    zodSchema: legalRichTextPropsSchema,
+    allowInlineEdit: true,
+    inspectorFields: [
+      { key: "headline", label: "Überschrift", type: "text", required: true, group: "content" },
+      { key: "content", label: "Inhalt", type: "textarea", placeholder: "HTML möglich", required: true, group: "content" },
+      { key: "alignment", label: "Ausrichtung", type: "select", options: [{ value: "left", label: "Links" }, { value: "center", label: "Zentriert" }, { value: "justify", label: "Blocksatz" }], group: "design" },
+      { key: "headlineSize", label: "Überschrift-Größe", type: "select", options: [{ value: "h2", label: "H2" }, { value: "h3", label: "H3" }, { value: "h4", label: "H4" }], group: "design" },
+      { key: "variant", label: "Variante", type: "select", options: [{ value: "default", label: "Standard" }, { value: "muted", label: "Gedämpft" }], group: "design" },
+      { key: "spacingTop", label: "Abstand oben", type: "select", options: [{ value: "none", label: "Keiner" }, { value: "sm", label: "Klein" }, { value: "md", label: "Mittel" }, { value: "lg", label: "Groß" }], group: "layout" },
+      { key: "spacingBottom", label: "Abstand unten", type: "select", options: [{ value: "none", label: "Keiner" }, { value: "sm", label: "Klein" }, { value: "md", label: "Mittel" }, { value: "lg", label: "Groß" }], group: "layout" },
+    ],
+  },
+  legalTable: {
+    type: "legalTable",
+    label: "Tabelle",
+    allowedPageTypes: ["legal"],
+    defaults: legalTableDefaults,
+    zodSchema: legalTablePropsSchema,
+    inspectorFields: [
+      { key: "caption", label: "Tabellenüberschrift", type: "text", placeholder: "Optional", group: "content" },
+      { key: "variant", label: "Variante", type: "select", options: [{ value: "default", label: "Standard" }, { value: "compact", label: "Kompakt" }, { value: "spacious", label: "Großzügig" }], group: "design" },
+      { key: "zebra", label: "Zebrastreifen", type: "boolean", group: "design" },
+      { key: "spacingTop", label: "Abstand oben", type: "select", options: [{ value: "none", label: "Keiner" }, { value: "sm", label: "Klein" }, { value: "md", label: "Mittel" }, { value: "lg", label: "Groß" }], group: "layout" },
+      { key: "spacingBottom", label: "Abstand unten", type: "select", options: [{ value: "none", label: "Keiner" }, { value: "sm", label: "Klein" }, { value: "md", label: "Mittel" }, { value: "lg", label: "Groß" }], group: "layout" },
+    ],
+  },
+  legalInfoBox: {
+    type: "legalInfoBox",
+    label: "Info-Box",
+    allowedPageTypes: ["legal"],
+    defaults: legalInfoBoxDefaults,
+    zodSchema: legalInfoBoxPropsSchema,
+    inspectorFields: [
+      { key: "variant", label: "Variante", type: "select", options: [{ value: "info", label: "Info" }, { value: "warning", label: "Hinweis" }, { value: "success", label: "Erfolg" }, { value: "neutral", label: "Neutral" }], group: "design" },
+      { key: "headline", label: "Überschrift", type: "text", placeholder: "Optional", group: "content" },
+      { key: "content", label: "Inhalt", type: "textarea", required: true, group: "content" },
+      { key: "spacingTop", label: "Abstand oben", type: "select", options: [{ value: "none", label: "Keiner" }, { value: "sm", label: "Klein" }, { value: "md", label: "Mittel" }, { value: "lg", label: "Groß" }], group: "layout" },
+      { key: "spacingBottom", label: "Abstand unten", type: "select", options: [{ value: "none", label: "Keiner" }, { value: "sm", label: "Klein" }, { value: "md", label: "Mittel" }, { value: "lg", label: "Groß" }], group: "layout" },
+    ],
+  },
+  legalCookieCategories: {
+    type: "legalCookieCategories",
+    label: "Cookie-Kategorien",
+    allowedPageTypes: ["legal"],
+    defaults: legalCookieCategoriesDefaults,
+    zodSchema: legalCookieCategoriesPropsSchema,
+    inspectorFields: [
+      { key: "variant", label: "Darstellung", type: "select", options: [{ value: "cards", label: "Karten" }, { value: "accordion", label: "Akkordeon" }], group: "design" },
+      { key: "spacingTop", label: "Abstand oben", type: "select", options: [{ value: "none", label: "Keiner" }, { value: "sm", label: "Klein" }, { value: "md", label: "Mittel" }, { value: "lg", label: "Groß" }], group: "layout" },
+      { key: "spacingBottom", label: "Abstand unten", type: "select", options: [{ value: "none", label: "Keiner" }, { value: "sm", label: "Klein" }, { value: "md", label: "Mittel" }, { value: "lg", label: "Groß" }], group: "layout" },
+    ],
+  },
+  legalContactCard: {
+    type: "legalContactCard",
+    label: "Kontakt-Karte",
+    allowedPageTypes: ["legal"],
+    defaults: legalContactCardDefaults,
+    zodSchema: legalContactCardPropsSchema,
+    inspectorFields: [
+      { key: "headline", label: "Überschrift", type: "text", required: true, group: "content" },
+      { key: "variant", label: "Variante", type: "select", options: [{ value: "default", label: "Standard" }, { value: "bordered", label: "Mit Rahmen" }], group: "design" },
+      { key: "spacingTop", label: "Abstand oben", type: "select", options: [{ value: "none", label: "Keiner" }, { value: "sm", label: "Klein" }, { value: "md", label: "Mittel" }, { value: "lg", label: "Groß" }], group: "layout" },
+      { key: "spacingBottom", label: "Abstand unten", type: "select", options: [{ value: "none", label: "Keiner" }, { value: "sm", label: "Klein" }, { value: "md", label: "Mittel" }, { value: "lg", label: "Groß" }], group: "layout" },
     ],
   },
 }
@@ -3097,6 +3388,32 @@ export function getBlockDefinition<T extends BlockType>(type: T): BlockDefinitio
  */
 export function getAllBlockTypes(): BlockType[] {
   return Object.keys(blockRegistry) as BlockType[]
+}
+
+/** Normalize pageType for filtering (fallback to default). */
+export function normalizePageTypeForFilter(pageType: PageType | undefined | null): PageType {
+  if (pageType && PAGE_TYPE_VALUES.includes(pageType)) return pageType
+  return "default"
+}
+
+/**
+ * Whether a block type is allowed to be added on the given page type.
+ * Existing blocks on the page are not affected (render/edit unchanged).
+ */
+export function isBlockAllowedForPageType(blockType: BlockType, pageType: PageType | undefined | null): boolean {
+  const normalized = normalizePageTypeForFilter(pageType)
+  const def = blockRegistry[blockType]
+  if (!def) return false
+  const allowed = def.allowedPageTypes ?? DEFAULT_ALLOWED_PAGE_TYPES
+  return allowed.includes(normalized)
+}
+
+/**
+ * Block types that can be added for the given page type (for block picker).
+ */
+export function getBlockTypesForPageType(pageType: PageType | undefined | null): BlockType[] {
+  const normalized = normalizePageTypeForFilter(pageType)
+  return (getAllBlockTypes()).filter((type) => isBlockAllowedForPageType(type, normalized))
 }
 
 /**

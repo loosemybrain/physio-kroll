@@ -108,8 +108,33 @@ export function duplicateBlock(block: CMSBlock): CMSBlock {
       break
     }
 
+    case "legalTable": {
+      const props = cloned.props as { columns?: Array<{ id: string }>; rows?: Array<{ id: string }> }
+      if (props.columns?.length) props.columns = props.columns.map((c) => ({ ...c, id: uuid() }))
+      if (props.rows?.length) props.rows = props.rows.map((r) => ({ ...r, id: uuid() }))
+      break
+    }
+
+    case "legalContactCard": {
+      const props = cloned.props as { lines?: Array<{ id: string }> }
+      if (props.lines?.length) props.lines = props.lines.map((l) => ({ ...l, id: uuid() }))
+      break
+    }
+
+    case "legalCookieCategories": {
+      const props = cloned.props as { categories?: Array<{ id: string; cookies?: Array<{ id: string }> }> }
+      if (props.categories?.length) {
+        props.categories = props.categories.map((cat) => ({
+          ...cat,
+          id: uuid(),
+          cookies: cat.cookies?.map((c) => ({ ...c, id: uuid() })) ?? [],
+        }))
+      }
+      break
+    }
+
     // hero.trustItems is string[] - no IDs needed
-    // section, text, cta, imageText - only block.id needs renewal (already done)
+    // section, text, cta, imageText, legalHero, legalRichText, legalInfoBox - only block.id needs renewal (already done)
     default:
       break
   }

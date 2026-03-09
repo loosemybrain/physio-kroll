@@ -1,5 +1,14 @@
 import { z } from "zod"
-import type { FooterConfig, FooterSection, FooterBlock, FooterBottomBar, FooterDesign, FooterSpacing } from "@/types/footer"
+import type {
+  FooterConfig,
+  FooterSection,
+  FooterBlock,
+  FooterBottomBar,
+  FooterDesign,
+  FooterSpacing,
+  FooterLegalLinksConfig,
+  LegalLinksItems,
+} from "@/types/footer"
 import type { SectionAlign, TypographySize, TypographyWeight } from "@/types/footer"
 
 /**
@@ -272,6 +281,37 @@ const footerBottomBarSchema: z.ZodType<FooterBottomBar> = z.object({
 })
 
 /**
+ * Legal links items (only privacy, cookies, imprint)
+ */
+const legalLinksItemsSchema: z.ZodType<LegalLinksItems> = z.object({
+  imprint: z.boolean().optional(),
+  privacy: z.boolean().optional(),
+  cookies: z.boolean().optional(),
+})
+
+/**
+ * Legal links config schema
+ */
+const footerLegalLinksSchema: z.ZodType<FooterLegalLinksConfig> = z.object({
+  enabled: z.boolean(),
+  title: z.string().optional(),
+  placement: z.enum(["section", "bottom-bar"]).optional(),
+  layout: z.enum(["inline", "stacked", "separated", "chips"]).optional(),
+  align: z.enum(["left", "center", "right"]).optional(),
+  showTitle: z.boolean().optional(),
+  gap: z.enum(["sm", "md", "lg"]).optional(),
+  marginTop: z.enum(["none", "sm", "md", "lg"]).optional(),
+  textColor: z.string().optional(),
+  hoverColor: z.string().optional(),
+  activeColor: z.string().optional(),
+  separatorColor: z.string().optional(),
+  fontSize: z.enum(["xs", "sm", "base"]).optional(),
+  fontWeight: z.enum(["normal", "medium", "semibold"]).optional(),
+  uppercase: z.boolean().optional(),
+  items: legalLinksItemsSchema,
+})
+
+/**
  * Footer config schema with validation
  */
 export const footerConfigSchema = z
@@ -280,6 +320,7 @@ export const footerConfigSchema = z
     sections: z.array(footerSectionSchema).min(2).max(5),
     bottomBar: footerBottomBarSchema.optional(),
     design: footerDesignSchema.optional(),
+    legalLinks: footerLegalLinksSchema.optional(),
   })
   .refine(
     (data) => {
@@ -291,6 +332,25 @@ export const footerConfigSchema = z
       path: ["sections"],
     }
   )
+
+/**
+ * Default legal links configuration (dedizierter Legal-Bereich)
+ */
+export const DEFAULT_LEGAL_LINKS_CONFIG: FooterLegalLinksConfig = {
+  enabled: true,
+  title: "Rechtliches",
+  placement: "section",
+  layout: "inline",
+  align: "left",
+  showTitle: true,
+  gap: "md",
+  marginTop: "md",
+  items: {
+    imprint: true,
+    privacy: true,
+    cookies: true,
+  },
+}
 
 /**
  * Default footer configuration
@@ -358,6 +418,7 @@ export const DEFAULT_FOOTER_CONFIG: FooterConfig = {
       text: "© 2024 Physiotherapie Kroll. Alle Rechte vorbehalten.",
     },
   },
+  legalLinks: DEFAULT_LEGAL_LINKS_CONFIG,
 }
 
 /**
@@ -390,4 +451,38 @@ export function ensureSectionSpans(config: FooterConfig): FooterConfig {
     return section
   })
   return { ...config, sections }
+}
+
+/**
+ * Ensure legalLinks exists with safe defaults (backward compatibility).
+ * Alte Footer-Datensätze ohne legalLinks bleiben gültig; beim Laden wird ergänzt.
+ */
+export function ensureLegalLinks(config: FooterConfig): FooterConfig {
+  if (config.legalLinks === undefined || config.legalLinks === null) {
+    return { ...config, legalLinks: DEFAULT_LEGAL_LINKS_CONFIG }
+  }
+  const ll = config.legalLinks
+  const merged: FooterLegalLinksConfig = {
+    enabled: typeof ll.enabled === "boolean" ? ll.enabled : DEFAULT_LEGAL_LINKS_CONFIG.enabled,
+    title: ll.title ?? DEFAULT_LEGAL_LINKS_CONFIG.title,
+    placement: (ll.placement as FooterLegalLinksConfig["placement"]) ?? DEFAULT_LEGAL_LINKS_CONFIG.placement,
+    layout: (ll.layout as FooterLegalLinksConfig["layout"]) ?? DEFAULT_LEGAL_LINKS_CONFIG.layout,
+    align: (ll.align as FooterLegalLinksConfig["align"]) ?? DEFAULT_LEGAL_LINKS_CONFIG.align,
+    showTitle: ll.showTitle ?? DEFAULT_LEGAL_LINKS_CONFIG.showTitle,
+    gap: (ll.gap as FooterLegalLinksConfig["gap"]) ?? DEFAULT_LEGAL_LINKS_CONFIG.gap,
+    marginTop: (ll.marginTop as FooterLegalLinksConfig["marginTop"]) ?? DEFAULT_LEGAL_LINKS_CONFIG.marginTop,
+    textColor: ll.textColor,
+    hoverColor: ll.hoverColor,
+    activeColor: ll.activeColor,
+    separatorColor: ll.separatorColor,
+    fontSize: (ll.fontSize as FooterLegalLinksConfig["fontSize"]) ?? undefined,
+    fontWeight: (ll.fontWeight as FooterLegalLinksConfig["fontWeight"]) ?? undefined,
+    uppercase: ll.uppercase ?? false,
+    items: {
+      imprint: ll.items?.imprint ?? DEFAULT_LEGAL_LINKS_CONFIG.items.imprint,
+      privacy: ll.items?.privacy ?? DEFAULT_LEGAL_LINKS_CONFIG.items.privacy,
+      cookies: ll.items?.cookies ?? DEFAULT_LEGAL_LINKS_CONFIG.items.cookies,
+    },
+  }
+  return { ...config, legalLinks: merged }
 }

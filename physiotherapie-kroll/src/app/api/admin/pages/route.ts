@@ -23,7 +23,7 @@ export async function GET(request: Request) {
   // --- Load pages ---
   let query = supabase
     .from("pages")
-    .select("id, title, slug, brand, status, updated_at");
+    .select("id, title, slug, brand, status, page_type, page_subtype, updated_at");
 
   if (brandFilter) {
     query = query.eq("brand", brandFilter);
@@ -38,6 +38,17 @@ export async function GET(request: Request) {
     );
   }
 
-  // Important: return an array (client expects `any[]`)
-  return NextResponse.json(pages ?? [], { status: 200 });
+  // Map snake_case to camelCase for frontend; fallbacks for legacy rows
+  const mapped = (pages ?? []).map((p: { page_type?: string | null; page_subtype?: string | null; updated_at?: string; [k: string]: unknown }) => ({
+    id: p.id,
+    title: p.title,
+    slug: p.slug,
+    brand: p.brand,
+    status: p.status,
+    pageType: p.page_type ?? "default",
+    pageSubtype: p.page_subtype ?? null,
+    updatedAt: p.updated_at ?? new Date().toISOString(),
+  }));
+
+  return NextResponse.json(mapped, { status: 200 });
 }

@@ -1,8 +1,9 @@
 "use client";
 
-import type { CMSBlock, CMSPage } from "@/types/cms";
+import type { CMSBlock, CMSPage, PageSubtype, PageType } from "@/types/cms";
 import type { BrandKey } from "@/components/brand/brandAssets";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+import { getDefaultBlocksForPageType } from "@/cms/blocks/defaultPageBlocks";
 
 export type PageStatus = "draft" | "published";
 
@@ -12,7 +13,13 @@ export type AdminPage = CMSPage & {
   updatedAt: string; // ISO string
 };
 
-export type AdminPageSummary = Pick<AdminPage, "id" | "title" | "slug" | "brand" | "status" | "updatedAt">;
+export type AdminPageSummary = Pick<AdminPage, "id" | "title" | "slug" | "brand" | "status" | "pageType" | "pageSubtype" | "updatedAt">;
+
+function normalizePageSubtype(v: unknown): PageSubtype {
+  if (v === null || v === undefined || v === "") return null;
+  if (typeof v === "string" && (v === "privacy" || v === "cookies" || v === "imprint")) return v;
+  return null;
+}
 
 function nowIso() {
   return new Date().toISOString();
@@ -112,7 +119,9 @@ export async function listPages(brand?: string): Promise<AdminPageSummary[]> {
     slug: p.slug,
     brand: p.brand,
     status: p.status,
-    updatedAt: p.updated_at,
+    pageType: (p.pageType ?? p.page_type ?? "default") as PageType,
+    pageSubtype: normalizePageSubtype(p.pageSubtype ?? p.page_subtype),
+    updatedAt: p.updatedAt ?? p.updated_at ?? nowIso(),
   }));
 }
 
@@ -130,6 +139,8 @@ export async function getPage(id: string): Promise<AdminPage | null> {
     slug: p.slug,
     brand: p.brand,
     status: p.status,
+    pageType: (p.pageType ?? p.page_type ?? "default") as PageType,
+    pageSubtype: normalizePageSubtype(p.pageSubtype ?? p.page_subtype),
     updatedAt: p.updatedAt ?? nowIso(),
     blocks: (p.blocks ?? []) as CMSBlock[],
     meta: undefined,
@@ -169,6 +180,8 @@ export async function getPublishedPageBySlug(slug: string): Promise<AdminPage | 
     slug: page.slug,
     brand: page.brand,
     status: page.status,
+    pageType: (page.page_type ?? "default") as PageType,
+    pageSubtype: normalizePageSubtype(page.page_subtype),
     updatedAt: page.updated_at ?? nowIso(),
     blocks: cmsBlocks,
     meta: undefined,
@@ -187,6 +200,8 @@ export async function upsertPage(next: AdminPage): Promise<AdminPage> {
         slug: next.slug,
         brand: next.brand,
         status: next.status,
+        pageType: next.pageType ?? "default",
+        pageSubtype: normalizePageSubtype(next.pageSubtype),
         blocks: next.blocks,
       }),
     }
@@ -204,6 +219,8 @@ export async function upsertPage(next: AdminPage): Promise<AdminPage> {
     slug: saved.slug,
     brand: saved.brand,
     status: saved.status,
+    pageType: (saved.pageType ?? saved.page_type ?? "default") as PageType,
+    pageSubtype: normalizePageSubtype(saved.pageSubtype ?? saved.page_subtype),
     updatedAt: saved.updatedAt ?? nowIso(),
     blocks: (saved.blocks ?? []) as CMSBlock[],
     meta: undefined,
@@ -218,47 +235,51 @@ export async function deletePage(id: string) {
   }
 }
 
-export function createEmptyPage(input?: Partial<Pick<AdminPage, "brand" | "title" | "slug" | "status">>): AdminPage {
+export function createEmptyPage(input?: Partial<Pick<AdminPage, "brand" | "title" | "slug" | "status" | "pageType" | "pageSubtype">>): AdminPage {
   const id = uuid();
   const brand: BrandKey = input?.brand ?? "physiotherapy";
   const title = input?.title ?? "Neue Seite";
   const slug = input?.slug ?? "neu";
   const status: PageStatus = input?.status ?? "draft";
+  const pageType: PageType = input?.pageType ?? "default";
+  const pageSubtype: PageSubtype = input?.pageSubtype ?? null;
 
-  const blocks: CMSBlock[] = [
-    {
-      id: uuid(),
-      type: "hero",
-      props: {
-        mood: brand,
-        headline: title,
-        subheadline: "Kurzbeschreibung hier…",
-        ctaText: "Termin vereinbaren",
-        ctaHref: "/kontakt",
-        showMedia: true,
-        mediaType: "image",
-        mediaUrl: "/placeholder.svg",
-        section: {
-          layout: { width: "contained", paddingY: "lg" },
-          background: { type: "none", parallax: false },
+  const legalBlocks = getDefaultBlocksForPageType(pageType, pageSubtype, brand);
+  const blocks: CMSBlock[] =
+    legalBlocks ?? [
+      {
+        id: uuid(),
+        type: "hero",
+        props: {
+          mood: brand,
+          headline: title,
+          subheadline: "Kurzbeschreibung hier…",
+          ctaText: "Termin vereinbaren",
+          ctaHref: "/kontakt",
+          showMedia: true,
+          mediaType: "image",
+          mediaUrl: "/placeholder.svg",
+          section: {
+            layout: { width: "contained", paddingY: "lg" },
+            background: { type: "none", parallax: false },
+          },
         },
       },
-    },
-    {
-      id: uuid(),
-      type: "text",
-      props: {
-        content: "Erster Textblock…",
-        alignment: "left",
-        maxWidth: "lg",
-        textSize: "base",
-        section: {
-          layout: { width: "contained", paddingY: "lg" },
-          background: { type: "none", parallax: false },
+      {
+        id: uuid(),
+        type: "text",
+        props: {
+          content: "Erster Textblock…",
+          alignment: "left",
+          maxWidth: "lg",
+          textSize: "base",
+          section: {
+            layout: { width: "contained", paddingY: "lg" },
+            background: { type: "none", parallax: false },
+          },
         },
       },
-    },
-  ];
+    ];
 
   return {
     id,
@@ -266,6 +287,8 @@ export function createEmptyPage(input?: Partial<Pick<AdminPage, "brand" | "title
     title,
     slug,
     status,
+    pageType,
+    pageSubtype,
     updatedAt: nowIso(),
     blocks,
   };

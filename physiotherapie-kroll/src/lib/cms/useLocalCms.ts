@@ -2,7 +2,13 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { AdminPage, AdminPageSummary } from "@/lib/cms/supabaseStore";
+import type { PageSubtype, PageType } from "@/types/cms";
 import { createEmptyPage, deletePage, getPage, listPages, upsertPage } from "@/lib/cms/supabaseStore";
+
+export type UsePageOptions = {
+  /** When creating a new page (pageId is "new"), use these to get type-specific default blocks (e.g. legal + privacy). */
+  newPageParams?: { pageType?: PageType; pageSubtype?: PageSubtype };
+};
 
 export function usePages() {
   const [pages, setPages] = useState<AdminPageSummary[]>([]);
@@ -29,10 +35,11 @@ export function usePages() {
   return { pages, refresh, loading, error };
 }
 
-export function usePage(pageId: string | null) {
+export function usePage(pageId: string | null, options?: UsePageOptions) {
   const [page, setPage] = useState<AdminPage | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<unknown>(null);
+  const newPageParams = options?.newPageParams;
 
   useEffect(() => {
     let cancelled = false;
@@ -42,7 +49,7 @@ export function usePage(pageId: string | null) {
         setError(null);
 
         if (!pageId || pageId === "new") {
-          if (!cancelled) setPage(createEmptyPage());
+          if (!cancelled) setPage(createEmptyPage(newPageParams ?? undefined));
           return;
         }
 
@@ -58,7 +65,7 @@ export function usePage(pageId: string | null) {
     return () => {
       cancelled = true;
     };
-  }, [pageId]);
+  }, [pageId, newPageParams?.pageType, newPageParams?.pageSubtype]);
 
   const save = async (next: AdminPage) => {
     const saved = await upsertPage(next);

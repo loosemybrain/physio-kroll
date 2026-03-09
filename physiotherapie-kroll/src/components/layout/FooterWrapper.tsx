@@ -17,10 +17,15 @@ export function FooterWrapper() {
     physiotherapy: FooterConfig
     "physio-konzept": FooterConfig
   } | null>(null)
-  const [pagesMap, setPagesMap] = useState<Map<string, string>>(new Map())
+  const [pagesByBrand, setPagesByBrand] = useState<{
+    physiotherapy: { pages: Array<{ slug: string; title: string }>; legalPages: Array<{ slug: string; title: string; page_subtype: string }> }
+    "physio-konzept": { pages: Array<{ slug: string; title: string }>; legalPages: Array<{ slug: string; title: string; page_subtype: string }> }
+  }>({
+    physiotherapy: { pages: [], legalPages: [] },
+    "physio-konzept": { pages: [], legalPages: [] },
+  })
   const [loading, setLoading] = useState(true)
 
-  // Load both footer configs once
   useEffect(() => {
     const loadFooterConfigs = async () => {
       try {
@@ -31,25 +36,29 @@ export function FooterWrapper() {
 
         const physioData = physioResponse.ok
           ? await physioResponse.json()
-          : { config: DEFAULT_FOOTER_CONFIG, pages: [] }
+          : { config: DEFAULT_FOOTER_CONFIG, pages: [], legalPages: [] }
         const konzeptData = konzeptResponse.ok
           ? await konzeptResponse.json()
-          : { config: DEFAULT_FOOTER_CONFIG, pages: [] }
+          : { config: DEFAULT_FOOTER_CONFIG, pages: [], legalPages: [] }
 
         setFooterConfigs({
           physiotherapy: physioData.config,
           "physio-konzept": konzeptData.config,
         })
-        
-        // Store pages data (same for both brands)
-        setPagesMap(new Map([...physioData.pages, ...konzeptData.pages].map((p) => [p.slug, p.title])))
+        setPagesByBrand({
+          physiotherapy: { pages: physioData.pages ?? [], legalPages: physioData.legalPages ?? [] },
+          "physio-konzept": { pages: konzeptData.pages ?? [], legalPages: konzeptData.legalPages ?? [] },
+        })
       } catch (error) {
         console.error("Error loading footer configs:", error)
         setFooterConfigs({
           physiotherapy: DEFAULT_FOOTER_CONFIG,
           "physio-konzept": DEFAULT_FOOTER_CONFIG,
         })
-        setPagesMap(new Map())
+        setPagesByBrand({
+          physiotherapy: { pages: [], legalPages: [] },
+          "physio-konzept": { pages: [], legalPages: [] },
+        })
       } finally {
         setLoading(false)
       }
@@ -67,6 +76,15 @@ export function FooterWrapper() {
   }
 
   const footerConfig = footerConfigs[brand]
+  const { pages, legalPages } = pagesByBrand[brand]
+  const pagesMap = new Map(pages.map((p) => [p.slug, p.title]))
 
-  return <FooterClient brand={brand} footerConfig={footerConfig} pagesMap={pagesMap} />
+  return (
+    <FooterClient
+      brand={brand}
+      footerConfig={footerConfig}
+      pagesMap={pagesMap}
+      legalPages={legalPages}
+    />
+  )
 }

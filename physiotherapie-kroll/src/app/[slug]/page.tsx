@@ -1,5 +1,6 @@
 import { CMSRenderer } from "@/components/cms/BlockRenderer";
 import { StickyMiniToc } from "@/components/blog/StickyMiniToc";
+import { CookieScanTable } from "@/components/legal/CookieScanTable";
 import { getSupabasePublic } from "@/lib/supabase/serverPublic";
 import type { CMSBlock } from "@/types/cms";
 
@@ -26,7 +27,7 @@ export default async function CMSPageRoute({ params }: { params: Promise<{ slug:
   // Now get the published page (brand="physiotherapy")
   const { data: page, error: pageErr } = await supabasePublic
     .from("pages")
-    .select("id, title, slug, status")
+    .select("*")
     .eq("slug", slug)
     .eq("brand", "physiotherapy")
     .eq("status", "published")
@@ -120,11 +121,20 @@ export default async function CMSPageRoute({ params }: { params: Promise<{ slug:
     props: (b.props ?? {}) as any,
   }));
 
+  const isCookieLegalPage =
+    (page as { page_type?: string; page_subtype?: string }).page_type === "legal" &&
+    (page as { page_type?: string; page_subtype?: string }).page_subtype === "cookies";
+
   return (
     <article>
       <div className="mx-auto grid w-full max-w-7xl grid-cols-1 gap-8 px-4 lg:grid-cols-[minmax(0,1fr)_240px]">
         <div data-article>
           <CMSRenderer blocks={cmsBlocks} pageSlug={slug} />
+          {isCookieLegalPage && (
+            <div className="max-w-7xl">
+              <CookieScanTable />
+            </div>
+          )}
         </div>
         <aside className="hidden lg:block">
           <StickyMiniToc />

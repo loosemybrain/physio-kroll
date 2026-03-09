@@ -19,7 +19,7 @@ import { Plus, Trash2, ChevronUp, ChevronDown, Save, AlertCircle, RotateCcw } fr
 import { arrayMove, arrayRemove, uuid } from "@/lib/cms/arrayOps"
 import type { BrandKey } from "@/components/brand/brandAssets"
 import type { FooterConfig, FooterSection, FooterBlock } from "@/types/footer"
-import { DEFAULT_FOOTER_CONFIG, getDefaultSpansForSectionCount, DESIGN_PRESETS, SPACING_OPTIONS, DIVIDER_CLASS_OPTIONS, COLOR_PRESETS, FONT_FAMILIES } from "@/lib/supabase/footer.shared"
+import { DEFAULT_FOOTER_CONFIG, DEFAULT_LEGAL_LINKS_CONFIG, ensureLegalLinks, getDefaultSpansForSectionCount, DESIGN_PRESETS, SPACING_OPTIONS, DIVIDER_CLASS_OPTIONS, COLOR_PRESETS, FONT_FAMILIES } from "@/lib/supabase/footer.shared"
 import type { PageForNavigation } from "@/lib/supabase/pages.server"
 import { cn } from "@/lib/utils"
 import { FooterClient } from "@/components/layout/FooterClient"
@@ -37,8 +37,12 @@ export function FooterEditorClient({
 }: FooterEditorClientProps) {
   const { toast } = useToast()
   const [activeBrand, setActiveBrand] = useState<BrandKey>("physiotherapy")
-  const [physioConfig, setPhysioConfig] = useState<FooterConfig>(initialPhysio || DEFAULT_FOOTER_CONFIG)
-  const [konzeptConfig, setKonzeptConfig] = useState<FooterConfig>(initialKonzept || DEFAULT_FOOTER_CONFIG)
+  const [physioConfig, setPhysioConfig] = useState<FooterConfig>(() =>
+    ensureLegalLinks(initialPhysio || DEFAULT_FOOTER_CONFIG)
+  )
+  const [konzeptConfig, setKonzeptConfig] = useState<FooterConfig>(() =>
+    ensureLegalLinks(initialKonzept || DEFAULT_FOOTER_CONFIG)
+  )
   const [pages] = useState<PageForNavigation[]>(initialPages || [])
   const [saving, setSaving] = useState(false)
   const [validationError, setValidationError] = useState<string | null>(null)
@@ -50,6 +54,25 @@ export function FooterEditorClient({
 
   const pagesMap = useMemo(() => {
     return new Map(pages.map((p) => [p.slug, p.title]))
+  }, [pages])
+
+  const legalPagesByBrand = useMemo(() => {
+    const legalSubtypes = new Set(["privacy", "cookies", "imprint"])
+    const forBrand = (brand: BrandKey) =>
+      pages
+        .filter(
+          (p) =>
+            p.brand === brand &&
+            p.status === "published" &&
+            p.pageType === "legal" &&
+            p.pageSubtype &&
+            legalSubtypes.has(p.pageSubtype)
+        )
+        .map((p) => ({ slug: p.slug, title: p.title, page_subtype: p.pageSubtype! }))
+    return {
+      physiotherapy: forBrand("physiotherapy"),
+      "physio-konzept": forBrand("physio-konzept"),
+    }
   }, [pages])
 
   // Calculate total span
@@ -308,7 +331,12 @@ export function FooterEditorClient({
           <h2 className="text-sm font-semibold text-muted-foreground">Live Preview</h2>
         </div>
         <div className="bg-background rounded-lg border border-border overflow-hidden">
-          <FooterClient brand={activeBrand} footerConfig={footerConfig} pagesMap={pagesMap} />
+          <FooterClient
+            brand={activeBrand}
+            footerConfig={footerConfig}
+            pagesMap={pagesMap}
+            legalPages={legalPagesByBrand[activeBrand]}
+          />
         </div>
       </div>
 
@@ -379,6 +407,432 @@ export function FooterEditorClient({
                           : "Der Footer-Inhalt nutzt die gleiche max-width wie die Content-Blöcke."}
                       </p>
                     </div>
+                  </div>
+
+                  <Separator />
+
+                  {/* Legal-Seiten (dedizierter Legal-Bereich) */}
+                  <div className="space-y-4 rounded-lg border border-border p-4">
+                    <Label className="text-base font-semibold">Legal-Seiten</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Datenschutz, Cookies, Impressum – nur veröffentlichte CMS-Seiten werden verlinkt.
+                    </p>
+
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        id="legal-enabled"
+                        checked={footerConfig.legalLinks?.enabled ?? DEFAULT_LEGAL_LINKS_CONFIG.enabled}
+                        onCheckedChange={(enabled) => {
+                          updateConfig({
+                            legalLinks: {
+                              ...footerConfig.legalLinks,
+                              ...DEFAULT_LEGAL_LINKS_CONFIG,
+                              ...footerConfig.legalLinks,
+                              enabled,
+                            },
+                          })
+                        }}
+                      />
+                      <Label htmlFor="legal-enabled" className="text-sm font-medium">Legal-Navigation anzeigen</Label>
+                    </div>
+
+                    {footerConfig.legalLinks?.enabled !== false && (
+                      <>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label className="text-sm font-medium">Titel</Label>
+                            <Input
+                              value={footerConfig.legalLinks?.title ?? DEFAULT_LEGAL_LINKS_CONFIG.title}
+                              onChange={(e) =>
+                                updateConfig({
+                                  legalLinks: {
+                                    ...footerConfig.legalLinks,
+                                    ...DEFAULT_LEGAL_LINKS_CONFIG,
+                                    ...footerConfig.legalLinks,
+                                    title: e.target.value || undefined,
+                                  },
+                                })
+                              }
+                              placeholder="Rechtliches"
+                            />
+                          </div>
+                          <div className="flex items-center space-x-2 pt-8">
+                            <Switch
+                              id="legal-show-title"
+                              checked={footerConfig.legalLinks?.showTitle ?? DEFAULT_LEGAL_LINKS_CONFIG.showTitle}
+                              onCheckedChange={(showTitle) =>
+                                updateConfig({
+                                  legalLinks: {
+                                    ...footerConfig.legalLinks,
+                                    ...DEFAULT_LEGAL_LINKS_CONFIG,
+                                    ...footerConfig.legalLinks,
+                                    showTitle,
+                                  },
+                                })
+                              }
+                            />
+                            <Label htmlFor="legal-show-title" className="text-sm">Titel anzeigen</Label>
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label className="text-sm font-medium">Platzierung</Label>
+                          <Select
+                            value={footerConfig.legalLinks?.placement ?? DEFAULT_LEGAL_LINKS_CONFIG.placement}
+                            onValueChange={(placement) =>
+                              updateConfig({
+                                legalLinks: {
+                                  ...footerConfig.legalLinks,
+                                  ...DEFAULT_LEGAL_LINKS_CONFIG,
+                                  ...footerConfig.legalLinks,
+                                  placement: placement as "section" | "bottom-bar",
+                                },
+                              })
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="section">Eigene Sektion</SelectItem>
+                              <SelectItem value="bottom-bar">Bottom Bar</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label className="text-sm font-medium">Layout</Label>
+                          <Select
+                            value={footerConfig.legalLinks?.layout ?? DEFAULT_LEGAL_LINKS_CONFIG.layout}
+                            onValueChange={(layout) =>
+                              updateConfig({
+                                legalLinks: {
+                                  ...footerConfig.legalLinks,
+                                  ...DEFAULT_LEGAL_LINKS_CONFIG,
+                                  ...footerConfig.legalLinks,
+                                  layout: layout as "inline" | "stacked" | "separated" | "chips",
+                                },
+                              })
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="inline">Inline</SelectItem>
+                              <SelectItem value="stacked">Gestapelt</SelectItem>
+                              <SelectItem value="separated">Mit Trennzeichen</SelectItem>
+                              <SelectItem value="chips">Chips</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label className="text-sm font-medium">Ausrichtung</Label>
+                          <Select
+                            value={footerConfig.legalLinks?.align ?? DEFAULT_LEGAL_LINKS_CONFIG.align}
+                            onValueChange={(align) =>
+                              updateConfig({
+                                legalLinks: {
+                                  ...footerConfig.legalLinks,
+                                  ...DEFAULT_LEGAL_LINKS_CONFIG,
+                                  ...footerConfig.legalLinks,
+                                  align: align as "left" | "center" | "right",
+                                },
+                              })
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="left">Links</SelectItem>
+                              <SelectItem value="center">Mitte</SelectItem>
+                              <SelectItem value="right">Rechts</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label className="text-sm font-medium">Anzeigen</Label>
+                          <div className="flex flex-wrap gap-4">
+                            <div className="flex items-center space-x-2">
+                              <Switch
+                                id="legal-item-imprint"
+                                checked={footerConfig.legalLinks?.items?.imprint ?? DEFAULT_LEGAL_LINKS_CONFIG.items.imprint}
+                                onCheckedChange={(imprint) =>
+                                  updateConfig({
+                                    legalLinks: {
+                                      ...footerConfig.legalLinks,
+                                      ...DEFAULT_LEGAL_LINKS_CONFIG,
+                                      ...footerConfig.legalLinks,
+                                      items: {
+                                        ...footerConfig.legalLinks?.items,
+                                        ...DEFAULT_LEGAL_LINKS_CONFIG.items,
+                                        ...footerConfig.legalLinks?.items,
+                                        imprint,
+                                      },
+                                    },
+                                  })
+                                }
+                              />
+                              <Label htmlFor="legal-item-imprint">Impressum</Label>
+                              {((footerConfig.legalLinks?.items?.imprint ?? true) && !legalPagesByBrand[activeBrand].some((p) => p.page_subtype === "imprint")) && (
+                                <span className="text-xs text-amber-600">(keine veröff. Seite)</span>
+                              )}
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Switch
+                                id="legal-item-privacy"
+                                checked={footerConfig.legalLinks?.items?.privacy ?? DEFAULT_LEGAL_LINKS_CONFIG.items.privacy}
+                                onCheckedChange={(privacy) =>
+                                  updateConfig({
+                                    legalLinks: {
+                                      ...footerConfig.legalLinks,
+                                      ...DEFAULT_LEGAL_LINKS_CONFIG,
+                                      ...footerConfig.legalLinks,
+                                      items: {
+                                        ...footerConfig.legalLinks?.items,
+                                        ...DEFAULT_LEGAL_LINKS_CONFIG.items,
+                                        ...footerConfig.legalLinks?.items,
+                                        privacy,
+                                      },
+                                    },
+                                  })
+                                }
+                              />
+                              <Label htmlFor="legal-item-privacy">Datenschutz</Label>
+                              {((footerConfig.legalLinks?.items?.privacy ?? true) && !legalPagesByBrand[activeBrand].some((p) => p.page_subtype === "privacy")) && (
+                                <span className="text-xs text-amber-600">(keine veröff. Seite)</span>
+                              )}
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Switch
+                                id="legal-item-cookies"
+                                checked={footerConfig.legalLinks?.items?.cookies ?? DEFAULT_LEGAL_LINKS_CONFIG.items.cookies}
+                                onCheckedChange={(cookies) =>
+                                  updateConfig({
+                                    legalLinks: {
+                                      ...footerConfig.legalLinks,
+                                      ...DEFAULT_LEGAL_LINKS_CONFIG,
+                                      ...footerConfig.legalLinks,
+                                      items: {
+                                        ...footerConfig.legalLinks?.items,
+                                        ...DEFAULT_LEGAL_LINKS_CONFIG.items,
+                                        ...footerConfig.legalLinks?.items,
+                                        cookies,
+                                      },
+                                    },
+                                  })
+                                }
+                              />
+                              <Label htmlFor="legal-item-cookies">Cookies</Label>
+                              {((footerConfig.legalLinks?.items?.cookies ?? true) && !legalPagesByBrand[activeBrand].some((p) => p.page_subtype === "cookies")) && (
+                                <span className="text-xs text-amber-600">(keine veröff. Seite)</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        <Separator />
+
+                        <Label className="text-sm font-semibold">Styling (Legal-Links)</Label>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-1">
+                            <Label className="text-xs">Textfarbe</Label>
+                            <input
+                              type="color"
+                              value={footerConfig.legalLinks?.textColor ?? "#000000"}
+                              onChange={(e) =>
+                                updateConfig({
+                                  legalLinks: {
+                                    ...footerConfig.legalLinks,
+                                    ...DEFAULT_LEGAL_LINKS_CONFIG,
+                                    ...footerConfig.legalLinks,
+                                    textColor: e.target.value || undefined,
+                                  },
+                                })
+                              }
+                              className="h-8 w-full rounded border border-input cursor-pointer"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs">Hover-Farbe</Label>
+                            <input
+                              type="color"
+                              value={footerConfig.legalLinks?.hoverColor ?? "#374151"}
+                              onChange={(e) =>
+                                updateConfig({
+                                  legalLinks: {
+                                    ...footerConfig.legalLinks,
+                                    ...DEFAULT_LEGAL_LINKS_CONFIG,
+                                    ...footerConfig.legalLinks,
+                                    hoverColor: e.target.value || undefined,
+                                  },
+                                })
+                              }
+                              className="h-8 w-full rounded border border-input cursor-pointer"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs">Aktive Farbe</Label>
+                            <input
+                              type="color"
+                              value={footerConfig.legalLinks?.activeColor ?? "#111827"}
+                              onChange={(e) =>
+                                updateConfig({
+                                  legalLinks: {
+                                    ...footerConfig.legalLinks,
+                                    ...DEFAULT_LEGAL_LINKS_CONFIG,
+                                    ...footerConfig.legalLinks,
+                                    activeColor: e.target.value || undefined,
+                                  },
+                                })
+                              }
+                              className="h-8 w-full rounded border border-input cursor-pointer"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs">Separator-Farbe</Label>
+                            <input
+                              type="color"
+                              value={footerConfig.legalLinks?.separatorColor ?? "#e5e7eb"}
+                              onChange={(e) =>
+                                updateConfig({
+                                  legalLinks: {
+                                    ...footerConfig.legalLinks,
+                                    ...DEFAULT_LEGAL_LINKS_CONFIG,
+                                    ...footerConfig.legalLinks,
+                                    separatorColor: e.target.value || undefined,
+                                  },
+                                })
+                              }
+                              className="h-8 w-full rounded border border-input cursor-pointer"
+                            />
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4 mt-2">
+                          <div className="space-y-2">
+                            <Label className="text-xs">Abstand (Gap)</Label>
+                            <Select
+                              value={footerConfig.legalLinks?.gap ?? DEFAULT_LEGAL_LINKS_CONFIG.gap}
+                              onValueChange={(gap) =>
+                                updateConfig({
+                                  legalLinks: {
+                                    ...footerConfig.legalLinks,
+                                    ...DEFAULT_LEGAL_LINKS_CONFIG,
+                                    ...footerConfig.legalLinks,
+                                    gap: gap as "sm" | "md" | "lg",
+                                  },
+                                })
+                              }
+                            >
+                              <SelectTrigger className="h-8">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="sm">Klein</SelectItem>
+                                <SelectItem value="md">Mittel</SelectItem>
+                                <SelectItem value="lg">Groß</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-xs">Abstand nach oben</Label>
+                            <Select
+                              value={footerConfig.legalLinks?.marginTop ?? DEFAULT_LEGAL_LINKS_CONFIG.marginTop}
+                              onValueChange={(marginTop) =>
+                                updateConfig({
+                                  legalLinks: {
+                                    ...footerConfig.legalLinks,
+                                    ...DEFAULT_LEGAL_LINKS_CONFIG,
+                                    ...footerConfig.legalLinks,
+                                    marginTop: marginTop as "none" | "sm" | "md" | "lg",
+                                  },
+                                })
+                              }
+                            >
+                              <SelectTrigger className="h-8">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="none">Keiner</SelectItem>
+                                <SelectItem value="sm">Klein</SelectItem>
+                                <SelectItem value="md">Mittel</SelectItem>
+                                <SelectItem value="lg">Groß</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-xs">Schriftgröße</Label>
+                            <Select
+                              value={footerConfig.legalLinks?.fontSize ?? "sm"}
+                              onValueChange={(fontSize) =>
+                                updateConfig({
+                                  legalLinks: {
+                                    ...footerConfig.legalLinks,
+                                    ...DEFAULT_LEGAL_LINKS_CONFIG,
+                                    ...footerConfig.legalLinks,
+                                    fontSize: fontSize as "xs" | "sm" | "base",
+                                  },
+                                })
+                              }
+                            >
+                              <SelectTrigger className="h-8">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="xs">XS</SelectItem>
+                                <SelectItem value="sm">SM</SelectItem>
+                                <SelectItem value="base">Base</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-xs">Schriftstärke</Label>
+                            <Select
+                              value={footerConfig.legalLinks?.fontWeight ?? "normal"}
+                              onValueChange={(fontWeight) =>
+                                updateConfig({
+                                  legalLinks: {
+                                    ...footerConfig.legalLinks,
+                                    ...DEFAULT_LEGAL_LINKS_CONFIG,
+                                    ...footerConfig.legalLinks,
+                                    fontWeight: fontWeight as "normal" | "medium" | "semibold",
+                                  },
+                                })
+                              }
+                            >
+                              <SelectTrigger className="h-8">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="normal">Normal</SelectItem>
+                                <SelectItem value="medium">Medium</SelectItem>
+                                <SelectItem value="semibold">Halbfett</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="flex items-center space-x-2 col-span-2">
+                            <Switch
+                              id="legal-uppercase"
+                              checked={footerConfig.legalLinks?.uppercase ?? false}
+                              onCheckedChange={(uppercase) =>
+                                updateConfig({
+                                  legalLinks: {
+                                    ...footerConfig.legalLinks,
+                                    ...DEFAULT_LEGAL_LINKS_CONFIG,
+                                    ...footerConfig.legalLinks,
+                                    uppercase,
+                                  },
+                                })
+                              }
+                            />
+                            <Label htmlFor="legal-uppercase" className="text-sm">Großbuchstaben</Label>
+                          </div>
+                        </div>
+                      </>
+                    )}
                   </div>
 
                   <Separator />

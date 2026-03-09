@@ -10,6 +10,10 @@ export interface PageForNavigation {
   brand: BrandKey | null
   status: "draft" | "published"
   updated_at: string
+  /** Für Legal-Seiten: "legal" */
+  pageType?: string
+  /** Bei pageType "legal": "privacy" | "cookies" | "imprint" */
+  pageSubtype?: string | null
 }
 
 /**
@@ -47,10 +51,10 @@ export async function listPagesServer(brand?: BrandKey): Promise<PageForNavigati
       return []
     }
 
-    // Build query - no status filter, all pages
+    // Build query - no status filter, all pages (include page_type/page_subtype for legal resolution)
     let query = supabase
       .from("pages")
-      .select("id, slug, title, brand, status, updated_at")
+      .select("id, slug, title, brand, status, updated_at, page_type, page_subtype")
       .order("updated_at", { ascending: false })
 
     // Optional brand filter
@@ -72,12 +76,14 @@ export async function listPagesServer(brand?: BrandKey): Promise<PageForNavigati
 
     // Map and normalize brand values (handle legacy values)
     const normalizedPages: PageForNavigation[] = (data || []).map((page) => ({
-      id: page.id,
-      slug: page.slug || "",
-      title: page.title || "Untitled",
+      id: String(page.id),
+      slug: String(page.slug || ""),
+      title: String(page.title || "Untitled"),
       brand: normalizeBrand(page.brand),
       status: (page.status as "draft" | "published") || "draft",
-      updated_at: page.updated_at || new Date().toISOString(),
+      updated_at: String(page.updated_at || new Date().toISOString()),
+      pageType: page.page_type ?? undefined,
+      pageSubtype: page.page_subtype ?? undefined,
     }))
 
     return normalizedPages

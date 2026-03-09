@@ -32,12 +32,17 @@ export function arrayMove<T>(arr: T[], from: number, to: number): T[] {
 }
 
 /**
- * Generates a unique ID using crypto.randomUUID() or fallback
+ * Generates a UUID v4. Prefers crypto.randomUUID(); fallback is a pure-JS implementation
+ * so that block ids are always valid UUIDs (required by API and DB).
  */
 export function uuid(): string {
   if (typeof crypto !== "undefined" && crypto.randomUUID) {
     return crypto.randomUUID()
   }
-  // Fallback for environments without crypto.randomUUID
-  return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`
+  // Fallback: UUID v4 in pure JS (no timestamp-based ids that API would reject)
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0
+    const v = c === "x" ? r : (r & 0x3) | 0x8
+    return v.toString(16)
+  })
 }

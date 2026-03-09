@@ -1,31 +1,44 @@
 "use client"
 
+import { usePathname } from "next/navigation"
 import { getFooterTheme } from "@/lib/theme/footerTheme"
 import { getContainerClass } from "@/lib/layout/container"
 import { resolveContainerBg } from "@/lib/theme/resolveContainerBg"
 import { resolveFooterBg, getGlassmorphismPreset } from "@/lib/theme/resolveFooterBg"
 import type { BrandKey } from "@/components/brand/brandAssets"
 import type { FooterConfig, FooterBlock, FooterSection } from "@/types/footer"
+import { getPageHrefForBrand, resolveLegalLinksForFooter } from "@/lib/cms/legalLinks"
+import type { ResolvedLegalLink } from "@/lib/cms/legalLinks"
 import Image from "next/image"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
 import { resolveMediaClient } from "@/lib/cms/resolveMediaClient"
 
+export type LegalPageItem = { slug: string; title: string; page_subtype: string }
+
 interface FooterClientProps {
   brand: BrandKey
   footerConfig: FooterConfig
   pagesMap: Map<string, string>
+  /** Rechtliche Links (Datenschutz, Cookies, Impressum); nur angezeigte Links, wenn vom CMS vorhanden. */
+  legalPages?: LegalPageItem[]
 }
 
 /**
  * Client Component that renders footer with brand-aware theme
  */
-export function FooterClient({ brand, footerConfig, pagesMap }: FooterClientProps) {
+export function FooterClient({ brand, footerConfig, pagesMap, legalPages = [] }: FooterClientProps) {
   const theme = getFooterTheme(brand, footerConfig?.design)
 
   if (!footerConfig || footerConfig.sections.length === 0) {
     return null
   }
+
+  const resolvedLegalLinks = resolveLegalLinksForFooter(
+    footerConfig.legalLinks,
+    legalPages,
+    brand
+  )
 
   return (
     <footer
@@ -104,16 +117,20 @@ export function FooterClient({ brand, footerConfig, pagesMap }: FooterClientProp
           {footerConfig?.glassmorphism?.enabled !== false ? (
             <GlassPanelWrapper config={footerConfig}>
               <FooterContent
+                brand={brand}
                 footerConfig={footerConfig}
                 theme={theme}
                 pagesMap={pagesMap}
+                resolvedLegalLinks={resolvedLegalLinks}
               />
             </GlassPanelWrapper>
           ) : (
             <FooterContent
+              brand={brand}
               footerConfig={footerConfig}
               theme={theme}
               pagesMap={pagesMap}
+              resolvedLegalLinks={resolvedLegalLinks}
             />
           )}
         </div>
@@ -126,10 +143,12 @@ export function FooterClient({ brand, footerConfig, pagesMap }: FooterClientProp
  * Footer Section Component
  */
 function FooterSection({
+  brand,
   section,
   theme,
   pagesMap,
 }: {
+  brand: BrandKey
   section: FooterSection
   theme: ReturnType<typeof getFooterTheme>
   pagesMap: Map<string, string>
@@ -160,6 +179,7 @@ function FooterSection({
         {section.blocks.map((block) => (
           <FooterBlock
             key={block.id}
+            brand={brand}
             block={block}
             theme={theme}
             pagesMap={pagesMap}
@@ -174,10 +194,12 @@ function FooterSection({
  * Footer Block Component
  */
 function FooterBlock({
+  brand,
   block,
   theme,
   pagesMap,
 }: {
+  brand: BrandKey
   block: FooterBlock
   theme: ReturnType<typeof getFooterTheme>
   pagesMap: Map<string, string>
@@ -261,7 +283,7 @@ function FooterBlock({
             {block.pageSlugs.map((slug) => (
               <li key={slug}>
                 <Link
-                  href={`/${slug}`}
+                  href={getPageHrefForBrand(brand, slug)}
                   className={cn(
                     "transition-colors outline-none rounded",
                     theme.typography.body.size,
@@ -400,17 +422,152 @@ function GlassPanelWrapper({
 }
 
 /**
+ * Dedizierter Legal-Bereich: Rendert aus footerConfig.legalLinks + aufgelöste CMS-Seiten.
+ */
+function LegalLinksBlock({
+  resolvedLinks,
+  legalLinksConfig,
+  brand,
+}: {
+  resolvedLinks: ResolvedLegalLink[]
+  legalLinksConfig: NonNullable<FooterConfig["legalLinks"]>
+  brand: BrandKey
+}) {
+  const pathname = usePathname()
+  if (resolvedLinks.length === 0) return null
+
+  const alignClass = {
+    left: "justify-start text-left",
+    center: "justify-center text-center",
+    right: "justify-end text-right",
+  }[legalLinksConfig.align ?? "left"]
+
+  const gapClass = {
+    sm: "gap-2",
+    md: "gap-4",
+    lg: "gap-6",
+  }[legalLinksConfig.gap ?? "md"]
+
+  const marginTopClass = {
+    none: "",
+    sm: "mt-4",
+    md: "mt-8",
+    lg: "mt-10",
+  }[legalLinksConfig.marginTop ?? "md"]
+
+  const fontSizeClass = {
+    xs: "text-xs",
+    sm: "text-sm",
+    base: "text-base",
+  }[legalLinksConfig.fontSize ?? "sm"]
+
+  const fontWeightClass = {
+    normal: "font-normal",
+    medium: "font-medium",
+    semibold: "font-semibold",
+  }[legalLinksConfig.fontWeight ?? "normal"]
+
+  const textStyle = legalLinksConfig.textColor ? { color: legalLinksConfig.textColor } : undefined
+  const hoverStyle = legalLinksConfig.hoverColor ? { "--hover-color": legalLinksConfig.hoverColor } as React.CSSProperties : undefined
+  const activeStyle = legalLinksConfig.activeColor ? { "--active-color": legalLinksConfig.activeColor } as React.CSSProperties : undefined
+  const separatorStyle = legalLinksConfig.separatorColor ? { borderColor: legalLinksConfig.separatorColor } : undefined
+
+  const isActive = (href: string) => pathname === href || (href !== "/" && pathname?.startsWith(href))
+
+  const linkClassName = cn(
+    "transition-colors outline-none rounded",
+    fontSizeClass,
+    fontWeightClass,
+    legalLinksConfig.uppercase && "uppercase",
+    legalLinksConfig.textColor && "hover:opacity-90"
+  )
+
+  const layout = legalLinksConfig.layout ?? "inline"
+
+  const listContent = (
+    <ul
+      className={cn(
+        layout === "inline" && "flex flex-wrap items-center",
+        layout === "stacked" && "flex flex-col items-start",
+        layout === "separated" && "flex flex-wrap items-center",
+        layout === "chips" && "flex flex-wrap gap-2",
+        gapClass,
+        alignClass
+      )}
+    >
+      {resolvedLinks.map((link, i) => (
+        <li
+          key={link.slug}
+          className={cn(
+            layout === "separated" && i > 0 && "border-l border-solid pl-4 ml-0",
+            layout === "chips" && "rounded-md bg-muted/50 px-3 py-1"
+          )}
+          style={layout === "separated" && i > 0 ? separatorStyle : undefined}
+        >
+          <Link
+            href={link.href}
+            className={cn(
+              linkClassName,
+              isActive(link.href) && legalLinksConfig.activeColor && "opacity-100 font-medium"
+            )}
+            style={{
+              ...textStyle,
+              ...(isActive(link.href) && legalLinksConfig.activeColor ? { color: legalLinksConfig.activeColor } : {}),
+              ...(hoverStyle || activeStyle ? {} : {}),
+            }}
+          >
+            {link.label}
+          </Link>
+        </li>
+      ))}
+    </ul>
+  )
+
+  return (
+    <nav aria-label={legalLinksConfig.title ?? "Rechtliches"} className={marginTopClass}>
+      {legalLinksConfig.showTitle !== false && legalLinksConfig.title && (
+        <h3
+          className={cn(
+            "mb-2 font-semibold text-sm",
+            alignClass,
+            legalLinksConfig.textColor && "mb-2"
+          )}
+          style={textStyle}
+        >
+          {legalLinksConfig.title}
+        </h3>
+      )}
+      {listContent}
+    </nav>
+  )
+}
+
+/**
  * Footer Content - main grid and sections (Client)
  */
 function FooterContent({
+  brand,
   footerConfig,
   theme,
   pagesMap,
+  resolvedLegalLinks,
 }: {
+  brand: BrandKey
   footerConfig: FooterConfig
   theme: ReturnType<typeof getFooterTheme>
   pagesMap: Map<string, string>
+  resolvedLegalLinks: ResolvedLegalLink[]
 }) {
+  const legalLinksConfig = footerConfig.legalLinks
+  const showLegalAsSection =
+    legalLinksConfig?.enabled &&
+    legalLinksConfig.placement === "section" &&
+    resolvedLegalLinks.length > 0
+  const showLegalInBottomBar =
+    legalLinksConfig?.enabled &&
+    legalLinksConfig.placement === "bottom-bar" &&
+    resolvedLegalLinks.length > 0
+
   return (
     <>
       {/* Main Footer Sections */}
@@ -418,6 +575,7 @@ function FooterContent({
         {footerConfig.sections.map((section) => (
           <FooterSection
             key={section.id}
+            brand={brand}
             section={section}
             theme={theme}
             pagesMap={pagesMap}
@@ -425,22 +583,45 @@ function FooterContent({
         ))}
       </div>
 
+      {/* Legal-Bereich als eigene Sektion (placement === "section") */}
+      {showLegalAsSection && legalLinksConfig && (
+        <div
+          className="pt-8 border-t"
+          style={{ borderColor: "var(--border)" }}
+        >
+          <LegalLinksBlock
+            resolvedLinks={resolvedLegalLinks}
+            legalLinksConfig={legalLinksConfig}
+            brand={brand}
+          />
+        </div>
+      )}
+
       {/* Bottom Bar */}
       {footerConfig.bottomBar?.enabled && (
         <div className={cn("mt-12 pt-8 border-t", theme.bottomBar.class)}>
-          <div className={cn("flex flex-col sm:flex-row items-center gap-4", theme.bottomBar.align)}>
+          <div className={cn("flex flex-col sm:flex-row items-center gap-4 flex-wrap", theme.bottomBar.align)}>
             {footerConfig.bottomBar.left && (
               <div>
                 <FooterBlock
+                  brand={brand}
                   block={footerConfig.bottomBar.left}
                   theme={theme}
                   pagesMap={pagesMap}
                 />
               </div>
             )}
+            {showLegalInBottomBar && legalLinksConfig && (
+              <LegalLinksBlock
+                resolvedLinks={resolvedLegalLinks}
+                legalLinksConfig={legalLinksConfig}
+                brand={brand}
+              />
+            )}
             {footerConfig.bottomBar.right && (
               <div>
                 <FooterBlock
+                  brand={brand}
                   block={footerConfig.bottomBar.right}
                   theme={theme}
                   pagesMap={pagesMap}
