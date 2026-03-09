@@ -152,6 +152,8 @@ export type BlockSectionProps = {
   background: SectionBackground
   animation?: BlockAnimationConfig // Neu: Animation Config
   fullBleed?: boolean // Optional: render without max-width constraint
+  /** Wenn true, erscheint der Block in der Navigation als Anker-Ziel (Onepage). */
+  anchor?: boolean
 }
 
 /**

@@ -11,6 +11,7 @@ import { CookieProvider } from "@/components/consent/CookieProvider"
 import { CookieBanner } from "@/components/consent/CookieBanner"
 import { CookieFloatingButton } from "@/components/consent/CookieFloatingButton"
 import { ScrollToTopButton } from "@/components/layout/ScrollToTopButton"
+import { AnchorHashScroll } from "@/components/navigation/AnchorHashScroll"
 import { CookieSettingsDialog } from "@/components/consent/CookieSettingsDialog"
 import { getThemePresetInlineVars } from "@/lib/theme/themePresetCss.server"
 import type { BrandKey } from "@/components/brand/brandAssets"
@@ -89,6 +90,7 @@ export default async function RootLayout({
           <CookieProvider>
             <BrandShell>
               <ThemeSyncFromPath />
+              <AnchorHashScroll />
               <BrandProvider>
                 <HeaderWrapper>
                   {children}

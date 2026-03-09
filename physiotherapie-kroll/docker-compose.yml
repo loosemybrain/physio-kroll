@@ -1,0 +1,15 @@
+# Cookie-Scan-Worker für lokale/Staging-Nutzung.
+# CMS lokal starten: im Projektroot `npm run dev`.
+# Worker: siehe Service unten. Supabase-ENV in .env.local oder hier setzen.
+
+services:
+  cookie-scan-worker:
+    build:
+      context: ./cookie-scan-worker
+      dockerfile: Dockerfile
+    environment:
+      - SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL:-${SUPABASE_URL}}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - COOKIE_SCAN_POLL_INTERVAL=${COOKIE_SCAN_POLL_INTERVAL:-5000}
+      - COOKIE_SCAN_WORKER_ID=cookie-scan-worker-1
+    restart: unless-stopped

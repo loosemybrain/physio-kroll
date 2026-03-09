@@ -93,6 +93,15 @@ export const INSPECTOR_GROUP_LABELS: Record<string, string> = {
   elements: "Elemente",
 }
 
+/** Einzelnes Inspector-Feld für Anker-Ziel (Onepage-Navigation). In Blöcke mit section einfügen. */
+export const ANCHOR_INSPECTOR_FIELD: InspectorField = {
+  key: "section.anchor",
+  label: "Als Anker-Ziel in Navigation",
+  type: "boolean",
+  helpText: "Wenn aktiv, kann dieser Block in der Navigation als Scroll-Ziel verlinkt werden.",
+  group: "basics",
+}
+
 export function sortInspectorFields(fields: InspectorField[], groupOrder?: readonly string[] | string[]): InspectorField[] {
   const order = groupOrder || DEFAULT_GROUP_ORDER
   
@@ -1377,6 +1386,7 @@ const teamDefaults: TeamBlock["props"] = {
     background: {
       type: "none",
     },
+    anchor: false,
   },
   // Inner container background defaults (transparent by default)
   containerBackgroundMode: "transparent",
@@ -1845,6 +1855,7 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
       },
     ],
     inspectorFields: [
+      ANCHOR_INSPECTOR_FIELD,
       // Brand/Mood
       {
         key: "mood",
@@ -2348,6 +2359,7 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
     zodSchema: sectionPropsSchema,
     allowInlineEdit: true,
     inspectorFields: [
+      ANCHOR_INSPECTOR_FIELD,
       { key: "eyebrow", label: "Eyebrow", type: "text", placeholder: "Über uns" },
       { key: "headline", label: "Headline", type: "text", placeholder: "Willkommen bei Physiotherapie Kroll", required: true },
       { key: "subheadline", label: "Subheadline (optional)", type: "text", placeholder: "Kurze Beschreibung..." },
@@ -2762,6 +2774,7 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
       { id: "cta.subheadline", label: "Subheadline", path: "subheadline", supportsTypography: true },
     ],
     inspectorFields: [
+      ANCHOR_INSPECTOR_FIELD,
       { key: "headline", label: "Headline", type: "text", placeholder: "Überschrift", required: true },
       { key: "subheadline", label: "Subheadline", type: "text", placeholder: "Optionaler Untertext" },
       { key: "primaryCtaText", label: "Primärer CTA Text", type: "text", placeholder: "Button Text", required: true },

@@ -5,13 +5,18 @@ import type { NavHoverPresetId } from "@/lib/navigation/nav-hover-presets"
 
 /**
  * Navigation link configuration
+ * type "anchor" = Scroll-Ziel auf einer Seite (Onepage); Ziel = Block mit id anchorBlockId.
  */
 export type NavLink = {
   id: string
   label: string
-  type: "page" | "url"
+  type: "page" | "url" | "anchor"
   pageSlug?: string
   href?: string
+  /** Bei type "anchor": Block-ID des Zielblocks (stabil bei Umsortierung). */
+  anchorBlockId?: string
+  /** Bei type "anchor": Slug der Seite, auf der der Block liegt (leer = aktuelle Seite). */
+  anchorPageSlug?: string
   newTab?: boolean
   visibility: "physiotherapy" | "physio-konzept" | "both"
   sort: number

@@ -29,6 +29,7 @@ import { LegalContactCard } from "@/components/legal/LegalContactCard"
 import type { BlockSectionProps, HeroBlock } from "@/types/cms"
 import { blockRegistry } from "@/cms/blocks/registry"
 import { getTypographyClassName, type TypographySettings } from "@/lib/typography"
+import { getBlockAnchorId } from "@/lib/navigation/scrollToAnchor"
 
 const FaqAccordion = dynamic(() => import("@/components/blocks/faq-accordion").then(mod => ({ default: mod.FaqAccordion })), { ssr: false })
 
@@ -462,11 +463,13 @@ export function BlockRenderer({
   const wrappedContent = skipGlobalWidthWrap ? content : wrapWithGlobalWidth(content)
   const fullBleedChildren = skipGlobalWidthWrap
 
+  const blockAnchorId = block.id ? getBlockAnchorId(block.id) : undefined
+
   if (!editable) {
-    // Apply typography classes to wrapper even in non-editable mode
+    // Apply typography classes to wrapper even in non-editable mode; stable ID für Anchor-Navigation
     if (typographyClassName) {
       return (
-        <div className={typographyClassName}>
+        <div id={blockAnchorId} className={typographyClassName}>
           <SectionWrapper section={section} isFirst={isFirst} fullBleedChildren={fullBleedChildren}>
             {wrappedContent}
           </SectionWrapper>
@@ -474,15 +477,18 @@ export function BlockRenderer({
       )
     }
     return (
-      <SectionWrapper section={section} isFirst={isFirst} fullBleedChildren={fullBleedChildren}>
-        {wrappedContent}
-      </SectionWrapper>
+      <div id={blockAnchorId}>
+        <SectionWrapper section={section} isFirst={isFirst} fullBleedChildren={fullBleedChildren}>
+          {wrappedContent}
+        </SectionWrapper>
+      </div>
     )
   }
 
   // Wrap content with editable overlay that detects clicks on data-cms-field and data-element-id elements
   return (
     <div
+      id={blockAnchorId}
       className={cn(
         "relative group",
         "hover:outline-2 hover:outline-primary/30 hover:outline-offset-2",

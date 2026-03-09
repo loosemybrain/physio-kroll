@@ -2,6 +2,7 @@ import "server-only"
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
 import type { BrandKey } from "@/components/brand/brandAssets"
+import { getSupabaseAdmin } from "@/lib/supabase/server"
 
 export interface PageForNavigation {
   id: string
@@ -116,4 +117,65 @@ function normalizeBrand(brand: string | null | undefined): BrandKey | null {
   // Unknown brand value, return null
   console.warn(`Unknown brand value: ${brand}, returning null`)
   return null
+}
+
+/** Ein Anker-Ziel: Block mit section.anchor === true. */
+export interface AnchorTargetBlock {
+  id: string
+  type: string
+}
+
+/** Seite mit Liste von Anker-Zielblöcken (für Nav-Editor). */
+export interface AnchorTargetPage {
+  slug: string
+  title: string
+  blocks: AnchorTargetBlock[]
+}
+
+/**
+ * Liefert alle Seiten einer Marke mit ihren Anker-Zielblöcken (section.anchor === true).
+ * Nur für Admin (z. B. Navigation-Editor). Nutzt Service Role.
+ */
+export async function getAnchorTargets(brand: BrandKey): Promise<AnchorTargetPage[]> {
+  try {
+    const supabase = await getSupabaseAdmin()
+    const { data: pages, error: pagesErr } = await supabase
+      .from("pages")
+      .select("id, slug, title")
+      .eq("brand", brand)
+      .order("updated_at", { ascending: false })
+
+    if (pagesErr || !pages?.length) return []
+
+    const out: AnchorTargetPage[] = []
+    for (const page of pages) {
+      const { data: blocks, error: blocksErr } = await supabase
+        .from("blocks")
+        .select("id, type, props")
+        .eq("page_id", page.id)
+        .order("sort", { ascending: true })
+
+      if (blocksErr) continue
+
+      const anchorBlocks: AnchorTargetBlock[] = []
+      for (const b of blocks ?? []) {
+        const props = (b.props as Record<string, unknown>) ?? {}
+        const section = props.section as Record<string, unknown> | undefined
+        if (section && section.anchor === true) {
+          anchorBlocks.push({ id: b.id, type: b.type })
+        }
+      }
+
+      out.push({
+        slug: String(page.slug ?? ""),
+        title: String(page.title ?? "Untitled"),
+        blocks: anchorBlocks,
+      })
+    }
+
+    return out
+  } catch (e) {
+    console.error("getAnchorTargets:", e)
+    return []
+  }
 }

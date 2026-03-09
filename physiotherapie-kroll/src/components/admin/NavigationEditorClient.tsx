@@ -18,7 +18,7 @@ import { uuid } from "@/lib/cms/arrayOps"
 import type { BrandKey } from "@/components/brand/brandAssets"
 import type { NavConfig, NavLink, NavCta } from "@/types/navigation"
 import { DEFAULT_NAV_CONFIG } from "@/lib/consent/navigation-defaults"
-import type { PageForNavigation } from "@/lib/supabase/pages.server"
+import type { PageForNavigation, AnchorTargetPage } from "@/lib/supabase/pages.server"
 import { getLogoSizeClasses } from "@/lib/theme/logoSize"
 import type { BlockSectionProps, MediaValue, SectionBackgroundPreset } from "@/types/cms"
 import { useEffect } from "react"
@@ -28,6 +28,7 @@ import { HEADER_PRESETS } from "@/lib/admin/header-presets"
 import { NAV_STYLE_PRESETS, getPresetById } from "@/lib/navigation/nav-style-presets"
 import { NAV_HOVER_PRESETS, getNavHoverPreset } from "@/lib/navigation/nav-hover-presets"
 import { HeaderClient } from "@/components/navigation/HeaderClient"
+import { blockRegistry } from "@/cms/blocks/registry"
 import {
   Accordion,
   AccordionContent,
@@ -39,12 +40,16 @@ type NavigationEditorClientProps = {
   initialPhysio: NavConfig
   initialKonzept: NavConfig
   initialPages: PageForNavigation[]
+  initialAnchorTargetsPhysio?: AnchorTargetPage[]
+  initialAnchorTargetsKonzept?: AnchorTargetPage[]
 }
 
 export function NavigationEditorClient({
   initialPhysio,
   initialKonzept,
   initialPages,
+  initialAnchorTargetsPhysio = [],
+  initialAnchorTargetsKonzept = [],
 }: NavigationEditorClientProps) {
   const { toast } = useToast()
   const [activeBrand, setActiveBrand] = useState<BrandKey>("physiotherapy")
@@ -55,6 +60,8 @@ export function NavigationEditorClient({
     ensureDefaultPresets(initialKonzept || DEFAULT_NAV_CONFIG, "physio-konzept")
   )
   const [pages] = useState<PageForNavigation[]>(initialPages || [])
+  const [anchorTargetsPhysio] = useState<AnchorTargetPage[]>(initialAnchorTargetsPhysio || [])
+  const [anchorTargetsKonzept] = useState<AnchorTargetPage[]>(initialAnchorTargetsKonzept || [])
   const [saving, setSaving] = useState(false)
   const [presetJsonDraft, setPresetJsonDraft] = useState<Record<string, string>>({})
   
@@ -858,11 +865,13 @@ export function NavigationEditorClient({
                         <Label className="text-xs">Typ</Label>
                         <Select
                           value={link.type}
-                          onValueChange={(v: "page" | "url") => {
+                          onValueChange={(v: "page" | "url" | "anchor") => {
                             updateLink(index, {
                               type: v,
-                              pageSlug: v === "page" ? undefined : link.pageSlug,
-                              href: v === "url" ? undefined : link.href,
+                              pageSlug: v === "page" ? link.pageSlug : undefined,
+                              href: v === "url" ? link.href : undefined,
+                              anchorPageSlug: v === "anchor" ? link.anchorPageSlug : undefined,
+                              anchorBlockId: v === "anchor" ? link.anchorBlockId : undefined,
                             })
                           }}
                         >
@@ -872,12 +881,69 @@ export function NavigationEditorClient({
                           <SelectContent>
                             <SelectItem value="page">Interne Seite</SelectItem>
                             <SelectItem value="url">Externe URL</SelectItem>
+                            <SelectItem value="anchor">Anker (Onepage-Scroll)</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
                     </div>
 
-                    {link.type === "page" ? (
+                    {link.type === "anchor" ? (
+                      <>
+                        <div className="space-y-1.5">
+                          <Label className="text-xs">Seite (mit Anker-Zielen)</Label>
+                          <Select
+                            value={link.anchorPageSlug ?? ""}
+                            onValueChange={(slug) =>
+                              updateLink(index, {
+                                anchorPageSlug: slug || undefined,
+                                anchorBlockId: undefined,
+                              })
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Seite wählen" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {(activeBrand === "physiotherapy" ? anchorTargetsPhysio : anchorTargetsKonzept).map(
+                                (p) => (
+                                  <SelectItem key={p.slug} value={p.slug}>
+                                    {p.title} ({p.slug}) · {p.blocks.length} Anker
+                                  </SelectItem>
+                                )
+                              )}
+                              {((activeBrand === "physiotherapy" ? anchorTargetsPhysio : anchorTargetsKonzept).length === 0) && (
+                                <SelectItem value="" disabled>
+                                  Keine Seiten mit Anker-Zielen. In Blöcken „Als Anker-Ziel“ aktivieren.
+                                </SelectItem>
+                              )}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-xs">Zielblock</Label>
+                          <Select
+                            value={link.anchorBlockId ?? ""}
+                            onValueChange={(id) => updateLink(index, { anchorBlockId: id || undefined })}
+                            disabled={!link.anchorPageSlug}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Block wählen" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {(
+                                (activeBrand === "physiotherapy" ? anchorTargetsPhysio : anchorTargetsKonzept).find(
+                                  (p) => p.slug === link.anchorPageSlug
+                                )?.blocks ?? []
+                              ).map((b) => (
+                                <SelectItem key={b.id} value={b.id}>
+                                  {blockRegistry[b.type as keyof typeof blockRegistry]?.label ?? b.type} ({b.id.slice(0, 8)}…)
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </>
+                    ) : link.type === "page" ? (
                       <div className="space-y-1.5">
                         <Label className="text-xs">Seite</Label>
                         <Select

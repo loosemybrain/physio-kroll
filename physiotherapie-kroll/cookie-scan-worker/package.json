@@ -1,0 +1,23 @@
+{
+  "name": "cookie-scan-worker",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node --experimental-vm-modules dist/index.js",
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "poll": "node dist/index.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.90.1",
+    "playwright": "^1.58.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "typescript": "^5"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

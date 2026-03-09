@@ -32,6 +32,7 @@ import {
   getLogoSizeClasses,
   getLogoImageDimensions,
 } from "@/lib/theme/logoSize"
+import { scrollToBlockAnchor } from "@/lib/navigation/scrollToAnchor"
 
 /* ------------------------------------------------------------------ */
 /*  Font preset resolution                                            */
@@ -230,8 +231,26 @@ export function HeaderClient({ brand, navConfig }: HeaderClientProps) {
   const getLinkHref = useCallback((link: NavLink): string => {
     if (link.type === "page" && link.pageSlug != null) return `/${link.pageSlug}`
     if (link.type === "url" && link.href) return link.href
+    if (link.type === "anchor" && link.anchorBlockId) {
+      const hash = `#block-${link.anchorBlockId}`
+      if (!link.anchorPageSlug?.trim()) return hash
+      return `/${link.anchorPageSlug.replace(/^\//, "")}${hash}`
+    }
     return "#"
   }, [])
+
+  /** Bei Anchor-Links auf derselben Seite: Default verhindern und sauber mit Header-Offset scrollen. */
+  const handleNavLinkClick = useCallback(
+    (link: NavLink, e: React.MouseEvent<HTMLAnchorElement>) => {
+      if (link.type !== "anchor" || !link.anchorBlockId) return
+      const samePage = !link.anchorPageSlug?.trim() || pathname === `/${link.anchorPageSlug.replace(/^\//, "")}`
+      if (!samePage) return
+      e.preventDefault()
+      const headerOffset = headerRef.current ? Math.ceil(headerRef.current.getBoundingClientRect().height) : 80
+      scrollToBlockAnchor(link.anchorBlockId, headerOffset)
+    },
+    [pathname]
+  )
 
   const getCtaHref = useCallback((): string => {
     if (!navConfig.cta?.enabled) return "#"
@@ -352,6 +371,8 @@ export function HeaderClient({ brand, navConfig }: HeaderClientProps) {
       navConfig.navLinkActiveColor && active && "text-(--nav-link-active)"
     )
 
+    const onClick = (e: React.MouseEvent<HTMLAnchorElement>) => handleNavLinkClick(link, e)
+
     // Use motion wrapper if preset has motion and reduced motion is not set
     if (hasMotion) {
       return (
@@ -360,6 +381,7 @@ export function HeaderClient({ brand, navConfig }: HeaderClientProps) {
           target={link.newTab ? "_blank" : undefined}
           rel={link.newTab ? "noopener noreferrer" : undefined}
           className={linkClass}
+          onClick={onClick}
           whileHover={hoverPreset.motion?.whileHover as any}
           transition={hoverPreset.motion?.transition as any}
         >
@@ -374,6 +396,7 @@ export function HeaderClient({ brand, navConfig }: HeaderClientProps) {
         target={link.newTab ? "_blank" : undefined}
         rel={link.newTab ? "noopener noreferrer" : undefined}
         className={linkClass}
+        onClick={onClick}
       >
         {linkContent}
       </Link>
@@ -670,7 +693,10 @@ export function HeaderClient({ brand, navConfig }: HeaderClientProps) {
                                 ? "noopener noreferrer"
                                 : undefined
                             }
-                            onClick={() => setMobileMenuOpen(false)}
+                            onClick={(e) => {
+                              handleNavLinkClick(link, e)
+                              setMobileMenuOpen(false)
+                            }}
                             className={cn(
                               "block text-base font-medium transition-colors duration-200 rounded-lg px-4 py-3",
                               fontClass,
@@ -723,7 +749,10 @@ export function HeaderClient({ brand, navConfig }: HeaderClientProps) {
                                     ? "noopener noreferrer"
                                     : undefined
                                 }
-                                onClick={() => setMobileMenuOpen(false)}
+                                onClick={(e) => {
+                                  handleNavLinkClick(link, e)
+                                  setMobileMenuOpen(false)
+                                }}
                                 className={cn(
                                   "block text-sm font-medium transition-colors duration-200 rounded-lg px-4 py-2.5",
                                   fontClass,
