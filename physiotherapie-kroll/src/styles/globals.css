@@ -2,6 +2,15 @@
 
 /* @custom-variant dark (&:is(.dark *));  */
 
+/* Verhindert horizontales Überlaufen; min-height: 0 verhindert ungewollten Leerraum unter dem Body */
+html {
+  overflow-x: hidden;
+}
+body {
+  overflow-x: hidden;
+  min-height: 0;
+}
+
 /* Local Fonts - GDPR compliant (no external requests) */
 @font-face {
   font-family: "Inter";

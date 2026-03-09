@@ -33,6 +33,7 @@ import {
   getLogoImageDimensions,
 } from "@/lib/theme/logoSize"
 import { scrollToBlockAnchor } from "@/lib/navigation/scrollToAnchor"
+import { useScrollSpy } from "@/components/navigation/ScrollSpyProvider"
 
 /* ------------------------------------------------------------------ */
 /*  Font preset resolution                                            */
@@ -127,6 +128,7 @@ export function HeaderClient({ brand, navConfig }: HeaderClientProps) {
   const pathname = usePathname()
   const prefersReducedMotion = useReducedMotion()
   const headerRef = useRef<HTMLElement>(null)
+  const { activeAnchor } = useScrollSpy()
 
   /* ---- Resolve theme with style preset (brand-aware) ---- */
   const baseTheme = getNavTheme(brand)
@@ -239,7 +241,7 @@ export function HeaderClient({ brand, navConfig }: HeaderClientProps) {
     return "#"
   }, [])
 
-  /** Bei Anchor-Links auf derselben Seite: Default verhindern und sauber mit Header-Offset scrollen. */
+  /** Bei Anchor-Links auf derselben Seite: Default verhindern, mit Header-Offset scrollen, optional Hash setzen (kein Reload). */
   const handleNavLinkClick = useCallback(
     (link: NavLink, e: React.MouseEvent<HTMLAnchorElement>) => {
       if (link.type !== "anchor" || !link.anchorBlockId) return
@@ -248,6 +250,11 @@ export function HeaderClient({ brand, navConfig }: HeaderClientProps) {
       e.preventDefault()
       const headerOffset = headerRef.current ? Math.ceil(headerRef.current.getBoundingClientRect().height) : 80
       scrollToBlockAnchor(link.anchorBlockId, headerOffset)
+      if (typeof history !== "undefined" && history.replaceState) {
+        const hash = `#block-${link.anchorBlockId}`
+        const url = `${pathname || "/"}${hash}`
+        history.replaceState(undefined, "", url)
+      }
     },
     [pathname]
   )
@@ -309,11 +316,23 @@ export function HeaderClient({ brand, navConfig }: HeaderClientProps) {
     return () => clearTimeout(timeout)
   }, [searchQuery, searchOpen])
 
-  /* ---- active link check ---- */
+  /* ---- active link check (Seiten + Anchor-ScrollSpy) ---- */
   const isLinkActive = useCallback(
     (href: string) =>
       pathname === href || (href !== "/" && pathname?.startsWith(href)),
     [pathname]
+  )
+
+  /** Bei Anchor-Links: aktiv, wenn gleiche Seite und dieser Block aktuell sichtbar (ScrollSpy). */
+  const isAnchorLinkActive = useCallback(
+    (link: NavLink): boolean => {
+      if (link.type !== "anchor" || !link.anchorBlockId) return false
+      const samePage =
+        !link.anchorPageSlug?.trim() ||
+        pathname === `/${link.anchorPageSlug.replace(/^\//, "")}`
+      return samePage && activeAnchor === link.anchorBlockId
+    },
+    [pathname, activeAnchor]
   )
 
   /* ---- motion presets ---- */
@@ -333,7 +352,7 @@ export function HeaderClient({ brand, navConfig }: HeaderClientProps) {
     secondary?: boolean
   }) => {
     const href = getLinkHref(link)
-    const active = isLinkActive(href)
+    const active = isLinkActive(href) || isAnchorLinkActive(link)
     const hoverPreset = getNavHoverPreset(navConfig.navHoverPresetId)
     
     // Check if we should apply motion (respect reduced motion)
@@ -668,7 +687,7 @@ export function HeaderClient({ brand, navConfig }: HeaderClientProps) {
                   <AnimatePresence>
                     {visibleLinks.map((link, i) => {
                       const href = getLinkHref(link)
-                      const active = isLinkActive(href)
+                      const active = isLinkActive(href) || isAnchorLinkActive(link)
                       return (
                         <motion.div
                           key={link.id}
@@ -721,7 +740,7 @@ export function HeaderClient({ brand, navConfig }: HeaderClientProps) {
                         <div className="my-2 h-px bg-border" />
                         {visibleSecondary.map((link, i) => {
                           const href = getLinkHref(link)
-                          const active = isLinkActive(href)
+                          const active = isLinkActive(href) || isAnchorLinkActive(link)
                           return (
                             <motion.div
                               key={link.id}

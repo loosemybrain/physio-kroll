@@ -118,11 +118,11 @@ export default function CustomCursor() {
   }, [])
 
   // IMPORTANT: keep it in the tree; CSS hides it on touch devices
+  // fixed inset-0 pointer-events-none: aus dem Layout-Fluss, verhindert Leerraum unter body
   return (
     <div
       aria-hidden="true"
-      // color controls dot/ring due to currentColor
-      className="text-primary"
+      className="fixed inset-0 pointer-events-none text-primary"
     >
       <div ref={ringRef} className="cursor-ring" />
       <div ref={dotRef} className="cursor-dot" />

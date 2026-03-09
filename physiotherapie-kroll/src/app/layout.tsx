@@ -12,6 +12,7 @@ import { CookieBanner } from "@/components/consent/CookieBanner"
 import { CookieFloatingButton } from "@/components/consent/CookieFloatingButton"
 import { ScrollToTopButton } from "@/components/layout/ScrollToTopButton"
 import { AnchorHashScroll } from "@/components/navigation/AnchorHashScroll"
+import { ScrollSpyProvider } from "@/components/navigation/ScrollSpyProvider"
 import { CookieSettingsDialog } from "@/components/consent/CookieSettingsDialog"
 import { getThemePresetInlineVars } from "@/lib/theme/themePresetCss.server"
 import type { BrandKey } from "@/components/brand/brandAssets"
@@ -21,8 +22,6 @@ import { getSansFontPreset } from "@/lib/fonts/storage.server"
 import { GOOGLE_FONTS_VARIABLES_CLASSNAMES } from "@/lib/fonts/presets"
 
 import "../styles/globals.css";
-
-export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Physiotherapie & PhysioKonzept",
@@ -91,12 +90,14 @@ export default async function RootLayout({
             <BrandShell>
               <ThemeSyncFromPath />
               <AnchorHashScroll />
-              <BrandProvider>
-                <HeaderWrapper>
-                  {children}
-                </HeaderWrapper>
-                <FooterWrapper />
-              </BrandProvider>
+              <ScrollSpyProvider>
+                <BrandProvider>
+                  <HeaderWrapper>
+                    {children}
+                  </HeaderWrapper>
+                  <FooterWrapper />
+                </BrandProvider>
+              </ScrollSpyProvider>
             </BrandShell>
             <CookieBanner />
             <CookieFloatingButton />

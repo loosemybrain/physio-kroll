@@ -22,6 +22,14 @@ export function AdminLayout({ children, user }: AdminLayoutProps) {
     setIsMounted(true)
   }, [])
 
+  React.useEffect(() => {
+    const prev = document.body.style.overflow
+    document.body.style.overflow = "hidden"
+    return () => {
+      document.body.style.overflow = prev
+    }
+  }, [])
+
   // suppressHydrationWarning: Radix Components generieren dynamische IDs
   // die zwischen SSR und Client unterschiedlich sein können.
   // Wrapper mit suppressHydrationWarning stellt sicher, dass dieser Mismatch ignoriert wird.
