@@ -168,6 +168,7 @@ export async function POST(request: Request) {
     })
   } catch (e) {
     console.error("Cookie scan run error:", e)
+    // Garantiert: running-Scans werden auf failed gesetzt, hängen nicht dauerhaft.
     if (scanId && supabase) {
       await ensureScanNotStuckRunning(
         supabase,

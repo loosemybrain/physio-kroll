@@ -17,7 +17,8 @@ export interface CookieScan {
   approval_status: CookieScanApprovalStatus
   error_message: string | null
   created_at: string
-  updated_at: string
+  /** Nicht in DB vorhanden; API liefert created_at bzw. scanned_at als Fallback. */
+  updated_at?: string
 }
 
 export interface CookieScanItem {

@@ -31,11 +31,11 @@ export async function CookieScanTable() {
 
   const { data: scanRow } = await supabase
     .from("cookie_scans")
-    .select("id, target_url, scanned_at, updated_at")
+    .select("id, target_url, scanned_at, created_at")
     .eq("approval_status", "approved")
     .order("scanned_at", { ascending: false })
     .limit(1)
-    .single()
+    .maybeSingle()
 
   if (!scanRow) {
     return (
@@ -57,7 +57,7 @@ export async function CookieScanTable() {
     id: scanRow.id,
     targetUrl: scanRow.target_url,
     scannedAt: scanRow.scanned_at,
-    updatedAt: scanRow.updated_at,
+    updatedAt: scanRow.scanned_at ?? scanRow.created_at ?? "",
   }
 
   const scanItems: ScanItem[] = (items ?? []).map((it) => ({

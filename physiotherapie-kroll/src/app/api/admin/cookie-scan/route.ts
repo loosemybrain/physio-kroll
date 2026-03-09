@@ -14,7 +14,7 @@ function mapScanRow(s: Record<string, unknown> | null): Record<string, unknown> 
     approvalStatus: s.approval_status ?? "draft",
     errorMessage: s.error_message ?? null,
     createdAt: s.created_at ?? null,
-    updatedAt: s.updated_at ?? null,
+    updatedAt: s.created_at ?? null,
   }
 }
 
@@ -33,7 +33,7 @@ export async function GET() {
 
     const { data: scans, error } = await supabase
       .from("cookie_scans")
-      .select("id, target_url, environment, scanned_at, status, consent_mode, approval_status, error_message, created_at, updated_at")
+      .select("id, target_url, environment, scanned_at, status, consent_mode, approval_status, error_message, created_at")
       .order("created_at", { ascending: false })
 
     if (error) {

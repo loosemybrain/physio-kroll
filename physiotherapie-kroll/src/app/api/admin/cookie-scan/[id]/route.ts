@@ -19,7 +19,7 @@ export async function GET(
 
     const { data: scan, error: scanErr } = await supabase
       .from("cookie_scans")
-      .select("*")
+      .select("id, target_url, environment, scanned_at, status, consent_mode, approval_status, error_message, created_at")
       .eq("id", id)
       .single()
 
@@ -51,7 +51,7 @@ export async function GET(
         approvalStatus: scan.approval_status,
         errorMessage: scan.error_message,
         createdAt: scan.created_at,
-        updatedAt: scan.updated_at,
+        updatedAt: scan.created_at,
       },
       items: (items ?? []).map((it) => ({
         id: it.id,
