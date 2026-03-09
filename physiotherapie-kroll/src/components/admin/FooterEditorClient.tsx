@@ -15,6 +15,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { ImageField } from "./ImageField"
 import { MediaPickerDialog } from "./MediaPickerDialog"
+import { ShadowInspector } from "./ShadowInspector"
 import { Plus, Trash2, ChevronUp, ChevronDown, Save, AlertCircle, RotateCcw } from "lucide-react"
 import { arrayMove, arrayRemove, uuid } from "@/lib/cms/arrayOps"
 import type { BrandKey } from "@/components/brand/brandAssets"
@@ -636,7 +637,42 @@ export function FooterEditorClient({
 
                         <Separator />
 
-                        <Label className="text-sm font-semibold">Styling (Legal-Links)</Label>
+                        <Label className="text-sm font-semibold">Farben & Styling (Legal-Links)</Label>
+                        <p className="text-xs text-muted-foreground mb-2">
+                          Wie in anderen Blöcken: Farben für Text, Hover und Trennlinie.
+                        </p>
+                        <div className="flex flex-wrap gap-2 mb-3">
+                          <span className="text-xs text-muted-foreground self-center">Schnellpresets:</span>
+                          {[
+                            { label: "Standard", text: "#000000", hover: "#374151", active: "#111827", sep: "#e5e7eb" },
+                            { label: "Hell (Zinc)", text: "#3f3f46", hover: "#18181b", active: "#09090b", sep: "#d4d4d8" },
+                            { label: "Dunkel", text: "#f4f4f5", hover: "#ffffff", active: "#ffffff", sep: "#52525b" },
+                            { label: "Dezent", text: "#71717a", hover: "#18181b", active: "#18181b", sep: "#e4e4e7" },
+                          ].map((preset) => (
+                            <Button
+                              key={preset.label}
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="h-7 text-xs"
+                              onClick={() =>
+                                updateConfig({
+                                  legalLinks: {
+                                    ...footerConfig.legalLinks,
+                                    ...DEFAULT_LEGAL_LINKS_CONFIG,
+                                    ...footerConfig.legalLinks,
+                                    textColor: preset.text,
+                                    hoverColor: preset.hover,
+                                    activeColor: preset.active,
+                                    separatorColor: preset.sep,
+                                  },
+                                })
+                              }
+                            >
+                              {preset.label}
+                            </Button>
+                          ))}
+                        </div>
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-1">
                             <Label className="text-xs">Textfarbe</Label>
@@ -1124,6 +1160,39 @@ export function FooterEditorClient({
                             className="h-8 w-full rounded border border-input cursor-pointer"
                           />
                           <p className="text-xs text-muted-foreground">Border-Opazität wird über die Intensität gesteuert</p>
+                        </div>
+
+                        <div className="space-y-2 border-t pt-3">
+                          <Label className="text-sm font-medium">Panel-Schatten</Label>
+                          <ShadowInspector
+                            config={footerConfig.glassmorphism?.panelShadow}
+                            onChange={(panelShadow) => {
+                              updateConfig({
+                                glassmorphism: {
+                                  ...footerConfig.glassmorphism,
+                                  panelShadow,
+                                },
+                              })
+                            }}
+                          />
+                        </div>
+
+                        <div className="space-y-2 border-t pt-3">
+                          <Label className="text-xs">Panel-Tönung (optional)</Label>
+                          <input
+                            type="color"
+                            value={footerConfig.glassmorphism?.tintColor || "#ffffff"}
+                            onChange={(e) => {
+                              const v = e.target.value
+                              updateConfig({
+                                glassmorphism: {
+                                  ...footerConfig.glassmorphism,
+                                  tintColor: v === "#ffffff" ? undefined : v,
+                                },
+                              })
+                            }}
+                            className="h-8 w-full rounded border border-input cursor-pointer"
+                          />
                         </div>
                       </div>
                     )}

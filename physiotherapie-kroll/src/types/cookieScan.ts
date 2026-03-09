@@ -3,8 +3,10 @@
  * Technische Erkennung (Scan) und fachliche Nachpflege (Kategorie, Zweck, Anbieter) getrennt.
  */
 
-export type CookieScanStatus = "idle" | "running" | "success" | "failed"
-export type CookieScanApprovalStatus = "draft" | "reviewed" | "approved"
+/** Laufzustand des Scans (Queue/Worker). "idle" ist veraltet, DB nutzt nur queued|running|success|failed. */
+export type CookieScanStatus = "queued" | "running" | "success" | "failed"
+/** Freigabe-Status für die Cookie-Seite. */
+export type CookieScanApprovalStatus = "draft" | "reviewed" | "approved" | "rejected"
 
 export interface CookieScan {
   id: string

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
-import { createSupabaseServerClient } from "@/lib/supabase/server"
+import { requireAdminGuard } from "@/lib/auth/adminGuard"
+import { createSupabaseServerClient, getSupabaseAdmin } from "@/lib/supabase/server"
 
 /** Stabile Defaults für einen Scan-Eintrag in der Liste (running/failed/null-safe). */
 function mapScanRow(s: Record<string, unknown> | null): Record<string, unknown> | null {
@@ -14,7 +15,7 @@ function mapScanRow(s: Record<string, unknown> | null): Record<string, unknown> 
     approvalStatus: s.approval_status ?? "draft",
     errorMessage: s.error_message ?? null,
     createdAt: s.created_at ?? null,
-    updatedAt: s.created_at ?? null,
+    updatedAt: s.updated_at ?? s.created_at ?? null,
   }
 }
 
@@ -26,20 +27,20 @@ function mapScanRow(s: Record<string, unknown> | null): Record<string, unknown> 
 export async function GET() {
   try {
     const supabase = await createSupabaseServerClient()
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    const guard = await requireAdminGuard(supabase)
+    if (!guard.ok) {
+      return NextResponse.json({ error: guard.message }, { status: guard.status })
     }
-
-    const { data: scans, error } = await supabase
+    const admin = await getSupabaseAdmin()
+    const { data: scans, error } = await admin
       .from("cookie_scans")
-      .select("id, target_url, environment, scanned_at, status, consent_mode, approval_status, error_message, created_at")
+      .select("id, target_url, environment, scanned_at, status, consent_mode, approval_status, error_message, created_at, updated_at")
       .order("created_at", { ascending: false })
 
     if (error) {
       console.error("Cookie scan GET error:", error)
       return NextResponse.json(
-        { scans: [], error: error.message },
+        { scans: [], error: "Scans konnten nicht geladen werden." },
         { status: 500 }
       )
     }
@@ -53,7 +54,7 @@ export async function GET() {
   } catch (e) {
     console.error("Cookie scan list error:", e)
     return NextResponse.json(
-      { scans: [], error: e instanceof Error ? e.message : "Unbekannter Fehler" },
+      { scans: [], error: "Anfrage fehlgeschlagen." },
       { status: 500 }
     )
   }

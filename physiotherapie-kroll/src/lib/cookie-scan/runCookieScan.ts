@@ -1,3 +1,7 @@
+/**
+ * @deprecated Scan wird vom Cookie-Scan-Worker (cookie-scan-worker/) ausgeführt.
+ * Diese Datei wird von der App nicht mehr verwendet; Logik ist im Worker dupliziert.
+ */
 import "server-only"
 import type { CookieScanItemInsert, RawScannedCookie } from "@/types/cookieScan"
 

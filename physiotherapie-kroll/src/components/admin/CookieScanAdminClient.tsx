@@ -15,8 +15,8 @@ import { useToast } from "@/hooks/use-toast"
 import { Loader2, Play, Cookie, ArrowLeft } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 
-type ScanStatus = "idle" | "running" | "success" | "failed"
-type ApprovalStatus = "draft" | "reviewed" | "approved"
+type ScanStatus = "queued" | "running" | "success" | "failed"
+type ApprovalStatus = "draft" | "reviewed" | "approved" | "rejected"
 
 type ScanListItem = {
   id: string
@@ -93,6 +93,14 @@ export function CookieScanAdminClient() {
     loadScans()
   }, [loadScans])
 
+  // Polling, solange mindestens ein Scan queued oder running ist
+  const hasPending = scans.some((s) => s.status === "queued" || s.status === "running")
+  useEffect(() => {
+    if (!hasPending) return
+    const t = setInterval(loadScans, 5000)
+    return () => clearInterval(t)
+  }, [hasPending, loadScans])
+
   const loadDetail = useCallback(
     async (id: string) => {
       setDetailLoading(true)
@@ -131,15 +139,12 @@ export function CookieScanAdminClient() {
       })
       const data = await res.json()
       if (!res.ok) {
-        throw new Error(data.error || "Scan fehlgeschlagen")
+        throw new Error(data.error || "Job konnte nicht angelegt werden")
       }
       toast({
-        title: data.status === "success" ? "Scan abgeschlossen" : "Scan fehlgeschlagen",
-        description:
-          data.status === "success"
-            ? `${data.itemsCount ?? 0} Cookies erfasst.`
-            : data.error ?? data.errorMessage,
-        variant: data.status === "success" ? "default" : "destructive",
+        title: "Scan in Warteschlange",
+        description: data.message ?? "Ein Worker verarbeitet den Job. Liste wird aktualisiert.",
+        variant: "default",
       })
       await loadScans()
       if (data.id) loadDetail(data.id)
@@ -164,7 +169,7 @@ export function CookieScanAdminClient() {
       if (!res.ok) throw new Error("Freigabe konnte nicht gespeichert werden")
       toast({
         title: "Gespeichert",
-        description: `Status: ${approvalStatus === "approved" ? "Freigegeben" : approvalStatus === "reviewed" ? "Geprüft" : "Entwurf"}`,
+        description: `Status: ${approvalStatus === "approved" ? "Freigegeben" : approvalStatus === "reviewed" ? "Geprüft" : approvalStatus === "rejected" ? "Abgelehnt" : "Entwurf"}`,
       })
       await loadScans()
       if (detail?.scan.id === scanId) {
@@ -214,7 +219,8 @@ export function CookieScanAdminClient() {
           <div className="flex flex-wrap items-center gap-4 mb-4">
             <span className="font-medium">Scan: {detail.scan.targetUrl}</span>
             <Badge variant={detail.scan.status === "success" ? "default" : detail.scan.status === "failed" ? "destructive" : "secondary"}>
-              {detail.scan.status}
+              {detail.scan.status === "running" && <Loader2 className="h-3 w-3 animate-spin mr-1 inline" />}
+              {detail.scan.status === "queued" ? "Warteschlange" : detail.scan.status}
             </Badge>
             <Badge variant="outline">{detail.scan.approvalStatus}</Badge>
             <span className="text-sm text-muted-foreground">
@@ -234,6 +240,7 @@ export function CookieScanAdminClient() {
                 <SelectItem value="draft">Entwurf</SelectItem>
                 <SelectItem value="reviewed">Geprüft</SelectItem>
                 <SelectItem value="approved">Freigegeben</SelectItem>
+                <SelectItem value="rejected">Abgelehnt</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -342,7 +349,7 @@ export function CookieScanAdminClient() {
       <div className="rounded-lg border border-border p-4 max-w-xl">
         <h2 className="font-medium mb-3">Scan starten</h2>
         <p className="text-sm text-muted-foreground mb-3">
-          Headless-Browser scannt die angegebene URL und erfasst Cookies (inkl. HttpOnly). Nur aus Admin-Kontext startbar.
+          Scan-Job wird in die Warteschlange gelegt; ein separater Worker (Docker) führt den Browser-Scan aus und schreibt die Ergebnisse in die Datenbank.
         </p>
         <div className="flex flex-wrap gap-2 items-end">
           <div className="flex-1 min-w-[200px]">
@@ -392,8 +399,8 @@ export function CookieScanAdminClient() {
                 <Cookie className="h-4 w-4 text-muted-foreground shrink-0" />
                 <span className="font-mono text-sm truncate flex-1 min-w-0">{s.targetUrl}</span>
                 <Badge variant={s.status === "success" ? "default" : s.status === "failed" ? "destructive" : "secondary"}>
-                  {s.status === "running" && <Loader2 className="h-3 w-3 animate-spin mr-1 inline" />}
-                  {s.status}
+                  {(s.status === "running" || s.status === "queued") && <Loader2 className="h-3 w-3 animate-spin mr-1 inline" />}
+                  {s.status === "queued" ? "Warteschlange" : s.status}
                 </Badge>
                 <Badge variant="outline">{s.approvalStatus}</Badge>
                 <span className="text-xs text-muted-foreground">

@@ -5,6 +5,7 @@ import { getFooterTheme } from "@/lib/theme/footerTheme"
 import { getContainerClass } from "@/lib/layout/container"
 import { resolveContainerBg } from "@/lib/theme/resolveContainerBg"
 import { resolveFooterBg, getGlassmorphismPreset } from "@/lib/theme/resolveFooterBg"
+import { resolveBoxShadow } from "@/lib/shadow/resolveBoxShadow"
 import type { BrandKey } from "@/components/brand/brandAssets"
 import type { FooterConfig, FooterBlock, FooterSection } from "@/types/footer"
 import { getPageHrefForBrand, resolveLegalLinksForFooter } from "@/lib/cms/legalLinks"
@@ -378,12 +379,15 @@ function GlassPanelWrapper({
 }) {
   const intensity = config?.glassmorphism?.intensity || "medium"
   const preset = getGlassmorphismPreset(intensity)
+  const panelShadowCss = resolveBoxShadow(config?.glassmorphism?.panelShadow)
 
   // Helper: convert hex to rgb
   const hexToRgb = (hex: string): string => {
     const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
     return result ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}` : "0, 0, 0"
   }
+
+  const baseBg = `rgba(255, 255, 255, ${config?.glassmorphism?.panelOpacity ?? preset.panelOpacity})`
 
   return (
     <div
@@ -400,11 +404,11 @@ function GlassPanelWrapper({
           mode: "gradient",
           gradientPreset: "soft",
         }).style,
-        backgroundColor: `rgba(255, 255, 255, ${config?.glassmorphism?.panelOpacity ?? preset.panelOpacity})`,
+        backgroundColor: baseBg,
         backdropFilter: config?.glassmorphism?.blurPx 
           ? `blur(${config.glassmorphism.blurPx}px)`
           : `blur(${preset.blur === "backdrop-blur-sm" ? "4" : preset.blur === "backdrop-blur-md" ? "12" : "40"}px)`,
-        boxShadow: "0 4px 24px -2px rgba(0, 0, 0, 0.08), 0 8px 16px -4px rgba(0, 0, 0, 0.04)",
+        boxShadow: panelShadowCss ?? "0 4px 24px -2px rgba(0, 0, 0, 0.08), 0 8px 16px -4px rgba(0, 0, 0, 0.04)",
       }}
     >
       {/* Highlight line */}
@@ -414,6 +418,14 @@ function GlassPanelWrapper({
           style={{
             backgroundImage: `linear-gradient(to right, transparent, ${config?.glassmorphism?.highlightColor || "#e5e7eb"}, transparent)`,
           }}
+        />
+      )}
+      {/* Optionale Panel-Tönung (Color Management) */}
+      {config?.glassmorphism?.tintColor && (
+        <div
+          className="absolute inset-0 rounded-3xl pointer-events-none"
+          style={{ backgroundColor: config.glassmorphism.tintColor, opacity: 0.06 }}
+          aria-hidden
         />
       )}
       {children}

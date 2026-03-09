@@ -1,4 +1,5 @@
 import type { MediaValue } from "./cms"
+import type { ElementShadow } from "./cms"
 import type { BrandKey } from "@/components/brand/brandAssets"
 import type { GradientPresetValue } from "@/lib/theme/gradientPresets"
 
@@ -146,6 +147,8 @@ export type FooterGlassmorphism = {
   highlightLine?: boolean
   highlightColor?: string
   shadowPreset?: string
+  /** Panel-Box-Shadow (wie in Blocks: Shadow Inspector) */
+  panelShadow?: ElementShadow
   tintColor?: string
 }
 

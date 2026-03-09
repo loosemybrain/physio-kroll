@@ -19,11 +19,10 @@ export async function GET() {
       .maybeSingle()
 
     if (scanErr) {
-      return NextResponse.json({
-        scan: null,
-        items: [],
-        message: "Fehler beim Laden des Cookie-Scans.",
-      })
+      return NextResponse.json(
+        { scan: null, items: [], message: "Daten vorübergehend nicht verfügbar." },
+        { status: 500 }
+      )
     }
     if (!scan) {
       return NextResponse.json({
@@ -77,7 +76,7 @@ export async function GET() {
   } catch (e) {
     console.error("Cookie scan approved error:", e)
     return NextResponse.json(
-      { error: e instanceof Error ? e.message : "Unbekannter Fehler" },
+      { error: "Daten vorübergehend nicht verfügbar." },
       { status: 500 }
     )
   }

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
-import { createSupabaseServerClient } from "@/lib/supabase/server"
+import { requireAdminGuard } from "@/lib/auth/adminGuard"
+import { createSupabaseServerClient, getSupabaseAdmin } from "@/lib/supabase/server"
 
 /**
  * PATCH /api/admin/cookie-scan/:id/items/:itemId
@@ -12,10 +13,11 @@ export async function PATCH(
   try {
     const { id, itemId } = await ctx.params
     const supabase = await createSupabaseServerClient()
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    const guard = await requireAdminGuard(supabase)
+    if (!guard.ok) {
+      return NextResponse.json({ error: guard.message }, { status: guard.status })
     }
+    const admin = await getSupabaseAdmin()
 
     const body = await request.json().catch(() => ({}))
     const updates: Record<string, unknown> = {}
@@ -28,7 +30,7 @@ export async function PATCH(
       return NextResponse.json({ error: "Keine gültigen Felder (category, purpose, provider, notes)" }, { status: 400 })
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await admin
       .from("cookie_scan_items")
       .update(updates)
       .eq("id", itemId)
@@ -37,7 +39,7 @@ export async function PATCH(
       .single()
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return NextResponse.json({ error: "Item konnte nicht gespeichert werden." }, { status: 500 })
     }
 
     return NextResponse.json({
@@ -50,7 +52,7 @@ export async function PATCH(
   } catch (e) {
     console.error("Cookie scan item patch error:", e)
     return NextResponse.json(
-      { error: e instanceof Error ? e.message : "Unbekannter Fehler" },
+      { error: "Anfrage fehlgeschlagen." },
       { status: 500 }
     )
   }
