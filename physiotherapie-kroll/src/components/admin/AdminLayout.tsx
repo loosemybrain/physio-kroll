@@ -34,11 +34,11 @@ export function AdminLayout({ children, user }: AdminLayoutProps) {
   // die zwischen SSR und Client unterschiedlich sein können.
   // Wrapper mit suppressHydrationWarning stellt sicher, dass dieser Mismatch ignoriert wird.
   return (
-    <div className="flex h-screen overflow-hidden" suppressHydrationWarning>
+    <div className="flex h-dvh min-h-0 overflow-hidden" suppressHydrationWarning>
       <AdminSidebar />
       <div className="flex flex-1 flex-col min-h-0 overflow-hidden">
         <AdminTopbar user={user} />
-        <main className="flex-1 overflow-y-auto overflow-x-hidden min-h-0">{isMounted && children}</main>
+        <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">{isMounted && children}</main>
       </div>
     </div>
   )

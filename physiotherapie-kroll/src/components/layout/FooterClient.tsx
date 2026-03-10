@@ -162,7 +162,7 @@ function FooterSection({
   } as const
 
   return (
-    <div className={cn(spanClassMap[section.span], "h-full")}>
+    <div className={cn(spanClassMap[section.span])}>
       {section.title && (
         <h2 
           className={cn(
@@ -176,7 +176,7 @@ function FooterSection({
           {section.title}
         </h2>
       )}
-      <div className={cn("space-y-4 h-full", theme.section.align)}>
+      <div className={cn("space-y-4", theme.section.align)}>
         {section.blocks.map((block) => (
           <FooterBlock
             key={block.id}
@@ -480,8 +480,6 @@ function LegalLinksBlock({
   }[legalLinksConfig.fontWeight ?? "normal"]
 
   const textStyle = legalLinksConfig.textColor ? { color: legalLinksConfig.textColor } : undefined
-  const hoverStyle = legalLinksConfig.hoverColor ? { "--hover-color": legalLinksConfig.hoverColor } as React.CSSProperties : undefined
-  const activeStyle = legalLinksConfig.activeColor ? { "--active-color": legalLinksConfig.activeColor } as React.CSSProperties : undefined
   const separatorStyle = legalLinksConfig.separatorColor ? { borderColor: legalLinksConfig.separatorColor } : undefined
 
   const isActive = (href: string) => pathname === href || (href !== "/" && pathname?.startsWith(href))
@@ -490,8 +488,7 @@ function LegalLinksBlock({
     "transition-colors outline-none rounded",
     fontSizeClass,
     fontWeightClass,
-    legalLinksConfig.uppercase && "uppercase",
-    legalLinksConfig.textColor && "hover:opacity-90"
+    legalLinksConfig.uppercase && "uppercase"
   )
 
   const layout = legalLinksConfig.layout ?? "inline"
@@ -518,14 +515,22 @@ function LegalLinksBlock({
         >
           <Link
             href={link.href}
-            className={cn(
-              linkClassName,
-              isActive(link.href) && legalLinksConfig.activeColor && "opacity-100 font-medium"
-            )}
+            className={linkClassName}
             style={{
               ...textStyle,
-              ...(isActive(link.href) && legalLinksConfig.activeColor ? { color: legalLinksConfig.activeColor } : {}),
-              ...(hoverStyle || activeStyle ? {} : {}),
+              ...(isActive(link.href) && legalLinksConfig.activeColor ? { color: legalLinksConfig.activeColor, fontWeight: "500" } : {}),
+            }}
+            onMouseEnter={(e) => {
+              if (legalLinksConfig.hoverColor) {
+                (e.target as HTMLElement).style.color = legalLinksConfig.hoverColor
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (textStyle?.color) {
+                (e.target as HTMLElement).style.color = textStyle.color as string
+              } else {
+                (e.target as HTMLElement).style.color = ""
+              }
             }}
           >
             {link.label}

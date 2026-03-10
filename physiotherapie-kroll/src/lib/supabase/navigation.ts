@@ -1,9 +1,8 @@
 import type { BrandKey } from "@/components/brand/brandAssets"
 import type { NavConfig } from "@/types/navigation"
-import { createServerClient } from "@supabase/ssr"
-import { cookies } from "next/headers"
 import { DEFAULT_NAV_CONFIG } from "@/lib/consent/navigation-defaults"
 import { ensureDefaultPresets } from "@/lib/cms/sectionPresets"
+import { createSupabaseServerClient } from "@/lib/supabase/server"
 
 /**
  * Normalizes brand key to ensure consistency with database values
@@ -27,27 +26,11 @@ function normalizeBrandKey(brand: string | BrandKey): BrandKey {
 
 /**
  * Get navigation configuration for a specific brand
- * Public access - used for rendering the header
+ * Uses service role to bypass RLS policies
  */
 export async function getNavigation(brand: BrandKey): Promise<NavConfig> {
   try {
-    const cookieStore = await cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return cookieStore.getAll()
-          },
-          setAll() {
-            // Ignore in server component
-          },
-        },
-      }
-    )
-
-    // Normalize brand key to ensure consistency
+    const supabase = await createSupabaseServerClient()
     const normalizedBrand = normalizeBrandKey(brand)
     
     if (process.env.NODE_ENV === "development") {
@@ -94,28 +77,14 @@ export async function saveNavigation(
   config: NavConfig
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const cookieStore = await cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return cookieStore.getAll()
-          },
-          setAll() {
-            // Ignore in server component
-          },
-        },
-      }
-    )
+    const supabase = await createSupabaseServerClient()
 
     // Check authentication
     const {
-      data: { session },
-    } = await supabase.auth.getSession()
+      data: { user },
+    } = await supabase.auth.getUser()
 
-    if (!session) {
+    if (!user) {
       return { success: false, error: "Unauthorized" }
     }
 
@@ -157,21 +126,7 @@ export async function getPagesForNavigation(): Promise<
   Array<{ id: string; title: string; slug: string }>
 > {
   try {
-    const cookieStore = await cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return cookieStore.getAll()
-          },
-          setAll() {
-            // Ignore in server component
-          },
-        },
-      }
-    )
+    const supabase = await createSupabaseServerClient()
 
     const { data, error } = await supabase
       .from("pages")

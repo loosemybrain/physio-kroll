@@ -331,27 +331,35 @@ export function FooterEditorClient({
   }
 
   return (
-    <div className="grid lg:grid-cols-[1fr_420px] gap-8 min-h-0">
+    <div className="grid h-full min-h-0 overflow-hidden gap-8 lg:grid-cols-[minmax(0,1fr)_420px]">
       {/* Live Preview (Left) */}
-      <div className="hidden bg-muted/30 p-6 lg:block sticky top-6 self-start">
-        <div className="mb-4">
+      <div className="hidden min-h-0 overflow-hidden bg-muted/30 p-6 lg:flex lg:flex-col">
+
+      <div className="mb-4 shrink-0">
           <h2 className="text-sm font-semibold text-muted-foreground">Live Preview</h2>
-        </div>
-        <div className="group relative border border-border bg-background rounded-lg overflow-hidden hover:border-primary transition-colors">
-          <div className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 border border-primary/50 rounded-lg"/>
-          <FooterClient
-            brand={activeBrand}
-            footerConfig={footerConfig}
-            pagesMap={pagesMap}
-            legalPages={legalPagesByBrand[activeBrand]}
-          />
+      </div>
+
+        <div className="overflow-hidden">
+
+          <div className="group relative h-fit max-h-[calc(100dvh-160px)] overflow-hidden rounded-lg border border-border bg-background transition-colors hover:border-primary">
+
+            <div className="pointer-events-none absolute inset-0 rounded-lg border border-primary/50 opacity-0 group-hover:opacity-100"/>
+
+            <div className="overflow-auto">
+              <FooterClient
+                brand={activeBrand}
+                footerConfig={footerConfig}
+                pagesMap={pagesMap}
+                legalPages={legalPagesByBrand[activeBrand]}
+              />
+            </div>
+          </div>
         </div>
       </div>
 
       {/* Inspector (Right) */}
-      <div className="min-w-0">
-        <div className="border-b border-border bg-background sticky top-0 z-40 px-6 py-4">
-          <div className="flex items-center justify-between">
+      <div className="min-w-0 min-h-0 overflow-hidden flex flex-col">
+        <div className="shrink-0 border-b border-border bg-background px-6 py-4">          <div className="flex items-center justify-between">
             <h1 className="text-2xl font-semibold">Footer</h1>
             <Button onClick={handleSave} disabled={saving}>
               <Save className="mr-2 h-4 w-4" />
@@ -360,8 +368,7 @@ export function FooterEditorClient({
           </div>
         </div>
 
-        <div className="p-6 space-y-6 overflow-y-auto pr-3 max-h-[calc(100dvh-140px)]">
-          {validationError && (
+        <div className="min-h-0 flex-1 overflow-y-auto p-6 pr-3 space-y-6">          {validationError && (
             <Alert variant="destructive" className="mb-4">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>{validationError}</AlertDescription>

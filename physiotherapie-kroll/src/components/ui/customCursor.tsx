@@ -119,10 +119,11 @@ export default function CustomCursor() {
 
   // IMPORTANT: keep it in the tree; CSS hides it on touch devices
   // fixed inset-0 pointer-events-none: aus dem Layout-Fluss, verhindert Leerraum unter body
+  // z-[999999]: über Footer und allen anderen Panels sichtbar
   return (
     <div
       aria-hidden="true"
-      className="fixed inset-0 pointer-events-none text-primary"
+      className="fixed inset-0 z-999999 pointer-events-none text-primary"
     >
       <div ref={ringRef} className="cursor-ring" />
       <div ref={dotRef} className="cursor-dot" />

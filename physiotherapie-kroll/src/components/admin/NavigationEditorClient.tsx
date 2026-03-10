@@ -326,12 +326,12 @@ export function NavigationEditorClient({
   )
 
   if (!navConfig) {
-    return <div className="flex h-full items-center justify-center">Laden...</div>
+    return <div className="flex items-center justify-center">Laden...</div>
   }
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="border-b border-border bg-background px-6 py-4">
+    <div className="flex w-full min-h-0 flex-col">
+      <div className="border-b border-border bg-background sticky top-0 z-40 px-6 py-4">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-semibold">Navigation</h1>
           <Button onClick={() => handleSave(navConfig)} disabled={saving} size="lg">
@@ -341,14 +341,29 @@ export function NavigationEditorClient({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-6">
-        <Tabs value={activeBrand} onValueChange={(v) => setActiveBrand(v as BrandKey)}>
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="physiotherapy">Physiotherapie</TabsTrigger>
-            <TabsTrigger value="physio-konzept">Physio-Konzept</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value={activeBrand} className="mt-6 space-y-6">
+      <div className="space-y-6 overflow-x-hidden p-6">
+        <div className="grid w-full grid-cols-2 gap-2">
+          <button
+            onClick={() => setActiveBrand("physiotherapy")}
+            className={`px-4 py-2 text-sm font-medium rounded transition-colors ${
+              activeBrand === "physiotherapy"
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted text-foreground hover:bg-muted/80"
+            }`}
+          >
+            Physiotherapie
+          </button>
+          <button
+            onClick={() => setActiveBrand("physio-konzept")}
+            className={`px-4 py-2 text-sm font-medium rounded transition-colors ${
+              activeBrand === "physio-konzept"
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted text-foreground hover:bg-muted/80"
+            }`}
+          >
+            Physio-Konzept
+          </button>
+        </div>
             {/* Logo */}
             <div className="space-y-4">
               <div className="space-y-2">
@@ -781,21 +796,19 @@ export function NavigationEditorClient({
                   </div>
                 </div>
                 
-                <div className={cn(
-                  "border border-border rounded-lg overflow-hidden bg-white dark:bg-slate-950 shadow-sm",
-                  previewViewport === "mobile" ? "mx-auto" : ""
-                )} style={{
-                  width: previewViewport === "mobile" ? "390px" : "100%",
-                  maxHeight: "500px",
-                }}>
-                  <div className="flex flex-col h-full">
+                <div
+                  className={cn(
+                    "border border-border rounded-lg bg-white shadow-sm overflow-hidden dark:bg-slate-950",
+                    previewViewport === "mobile" ? "mx-auto" : ""
+                  )}
+                  style={{ width: previewViewport === "mobile" ? "390px" : "100%" }}
+                >
+                  <div className="relative h-[500px] overflow-auto">
                     <HeaderClient brand={previewBrand} navConfig={headerDraft} />
-                    <div className="flex-1 overflow-hidden bg-muted/50">
-                      <div className="h-full w-full flex items-center justify-center">
-                        <span className="text-xs text-muted-foreground">
-                          {previewViewport === "mobile" ? "Mobile (390px)" : "Desktop"} • Scroll zum Testen
-                        </span>
-                      </div>
+                    <div className="bg-muted/50 flex items-center justify-center py-6">
+                      <span className="text-xs text-muted-foreground">
+                        {previewViewport === "mobile" ? "Mobile (390px)" : "Desktop"} • Scroll zum Testen
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -1281,8 +1294,6 @@ export function NavigationEditorClient({
                 Suche anzeigen
               </Label>
             </div>
-          </TabsContent>
-        </Tabs>
       </div>
     </div>
   )

@@ -1,7 +1,5 @@
 import type { BrandKey } from "@/components/brand/brandAssets"
 import type { FooterConfig } from "@/types/footer"
-import { createServerClient } from "@supabase/ssr"
-import { cookies } from "next/headers"
 import { DEFAULT_FOOTER_CONFIG, ensureSectionSpans, ensureLegalLinks, footerConfigSchema } from "./footer.shared"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
 
@@ -24,26 +22,11 @@ function normalizeBrandKey(brand: string | BrandKey): BrandKey {
 
 /**
  * Get footer configuration for a specific brand
- * Public access - used for rendering the footer
+ * Uses service role to bypass RLS policies
  */
 export async function getFooterServer(brand: BrandKey): Promise<FooterConfig> {
   try {
-    const cookieStore = await cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return cookieStore.getAll()
-          },
-          setAll() {
-            // Ignore in server component
-          },
-        },
-      }
-    )
-
+    const supabase = await createSupabaseServerClient()
     const normalizedBrand = normalizeBrandKey(brand)
 
     const { data, error } = await supabase

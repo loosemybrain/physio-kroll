@@ -1,8 +1,6 @@
 import "server-only"
-import { createServerClient } from "@supabase/ssr"
-import { cookies } from "next/headers"
 import type { BrandKey } from "@/components/brand/brandAssets"
-import { getSupabaseAdmin } from "@/lib/supabase/server"
+import { createSupabaseServerClient } from "@/lib/supabase/server"
 
 export interface PageForNavigation {
   id: string
@@ -20,37 +18,14 @@ export interface PageForNavigation {
 /**
  * Lists all pages for admin navigation dropdown
  * Server-only function - no status filter, includes all pages (draft + published)
+ * Uses service role to bypass RLS policies
  * 
  * @param brand - Optional brand filter. If provided, only pages for this brand are returned
  * @returns Array of pages with id, slug, title, brand, status
  */
 export async function listPagesServer(brand?: BrandKey): Promise<PageForNavigation[]> {
   try {
-    const cookieStore = await cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return cookieStore.getAll()
-          },
-          setAll() {
-            // Ignore in server component
-          },
-        },
-      }
-    )
-
-    // Check authentication (admin function)
-    const {
-      data: { session },
-    } = await supabase.auth.getSession()
-
-    if (!session) {
-      console.warn("listPagesServer: No session found, returning empty array")
-      return []
-    }
+    const supabase = await createSupabaseServerClient()
 
     // Build query - no status filter, all pages (include page_type/page_subtype for legal resolution)
     let query = supabase
@@ -138,7 +113,7 @@ export interface AnchorTargetPage {
  */
 export async function getAnchorTargets(brand: BrandKey): Promise<AnchorTargetPage[]> {
   try {
-    const supabase = await getSupabaseAdmin()
+    const supabase = await createSupabaseServerClient()
     const { data: pages, error: pagesErr } = await supabase
       .from("pages")
       .select("id, slug, title")
