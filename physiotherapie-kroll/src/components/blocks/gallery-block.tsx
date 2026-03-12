@@ -189,7 +189,7 @@ function Lightbox({
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         transition={{ duration: 0.25 }}
-        className="fixed inset-0 z-[100] flex items-center justify-center bg-foreground/90 backdrop-blur-md outline-none"
+        className="fixed inset-0 z-100 flex items-center justify-center bg-foreground/90 backdrop-blur-md outline-none"
         onClick={onClose}
       >
         <button
@@ -323,7 +323,7 @@ function GalleryTile({
         hover === "lift" && "hover:shadow-[0_12px_40px_-12px_rgba(0,0,0,0.15)]"
       )}
     >
-      <div className={cn("relative w-full overflow-hidden", aspect || "aspect-[4/3]")}>
+      <div className={cn("relative w-full overflow-hidden", aspect || "aspect-4/3")}>
         <Image
           src={src}
           alt={alt}
@@ -351,7 +351,7 @@ function GalleryTile({
             data-cms-field={blockId ? `images.${img.id}.caption` : undefined}
             onClick={(e) => handleEdit(e, `images.${index}.caption`)}
             className={cn(
-              "absolute bottom-0 left-0 right-0 bg-gradient-to-t from-foreground/70 via-foreground/30 to-transparent px-4 pb-3 pt-8 text-sm text-card translate-y-1 opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100",
+              "absolute bottom-0 left-0 right-0 bg-linear-to-t from-foreground/70 via-foreground/30 to-transparent px-4 pb-3 pt-8 text-sm text-card translate-y-1 opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100",
               editable && blockId && onEditField && "cursor-pointer"
             )}
             style={captColor ? { color: captColor } : undefined}
@@ -511,7 +511,7 @@ function CarouselLayout({
         tabIndex={0}
       >
         {images.map((img, i) => (
-          <div key={img.id} className="w-[80%] flex-shrink-0 snap-center sm:w-[60%] lg:w-[45%]">
+          <div key={img.id} className="w-[80%] shrink-0 snap-center sm:w-[60%] lg:w-[45%]">
             <GalleryTile img={img} index={i} {...tp} />
           </div>
         ))}
@@ -717,7 +717,7 @@ export function GalleryBlock({
             >
               {subheadline && (
                 <div className="mb-5 flex items-center justify-center gap-4">
-                  <div className="h-px w-12 bg-gradient-to-r from-transparent to-primary/40" aria-hidden="true" />
+                  <div className="h-px w-12 bg-linear-to-r from-transparent to-primary/40" aria-hidden="true" />
                   <span
                     data-cms-field={blockId ? "subheadline" : undefined}
                     onClick={(e) => handleEdit(e, "subheadline")}
@@ -732,7 +732,7 @@ export function GalleryBlock({
                   >
                     {subheadline}
                   </span>
-                  <div className="h-px w-12 bg-gradient-to-l from-transparent to-primary/40" aria-hidden="true" />
+                  <div className="h-px w-12 bg-linear-to-l from-transparent to-primary/40" aria-hidden="true" />
                 </div>
               )}
               {headline && (
@@ -752,7 +752,7 @@ export function GalleryBlock({
                 </h2>
               )}
               <div className="mx-auto mt-6 flex justify-center" aria-hidden="true">
-                <div className="h-px w-24 bg-gradient-to-r from-primary/10 via-primary/40 to-primary/10" />
+                <div className="h-px w-24 bg-linear-to-r from-primary/10 via-primary/40 to-primary/10" />
               </div>
             </motion.header>
           )}

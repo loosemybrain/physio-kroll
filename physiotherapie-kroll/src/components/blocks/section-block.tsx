@@ -415,7 +415,7 @@ export function SectionBlock({
               return cn(
                 // Soft outer shadow with blue tint for brand
                 background === "gradient-brand"
-                  ? "shadow-[0_4px_24px_-4px_oklch(0.45_0.12_160_/_0.06),0_12px_48px_-12px_oklch(0.45_0.12_160_/_0.08)]"
+                  ? "shadow-0_4px_24px_-4px_oklch(0.45_0.12_160_/_0.06),0_12px_48px_-12px_oklch(0.45_0.12_160_/_0.08)"
                   : "shadow-[0_4px_24px_-4px_rgba(0,0,0,0.04),0_12px_48px_-12px_rgba(0,0,0,0.06)]",
                 // Background & border
                 background === "muted"
