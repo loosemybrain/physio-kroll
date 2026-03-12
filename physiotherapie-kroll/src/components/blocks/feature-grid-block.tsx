@@ -362,7 +362,7 @@ export function FeatureGridBlock({
   const prefersNoMotion = prefersReducedMotion()
 
   return (
-    <section className="py-16">
+    <section>
       <div className={cn("grid gap-6", columnsMap[columns])}>
         {features.map((feature, index) => (
           <FeatureCardWithShadow

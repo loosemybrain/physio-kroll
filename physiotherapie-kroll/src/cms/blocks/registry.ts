@@ -1355,6 +1355,10 @@ export function createTestimonialSliderItem(): TestimonialSliderBlock["props"]["
 }
 
 const servicesGridDefaults: ServicesGridBlock["props"] = {
+  section: {
+    layout: { width: "contained", paddingY: "lg", paddingX: "md" },
+    background: { type: "none" },
+  },
   headline: "Angebote & Kurse",
   subheadline: "Therapie, Training und Kurse – alles an einem Ort.",
   columns: 3,
@@ -1540,6 +1544,10 @@ const testimonialsDefaults: TestimonialsBlock["props"] = {
 
 const galleryDefaults: GalleryBlock["props"] = {
   ...panelDefaults,
+  section: {
+    layout: { width: "contained", paddingY: "lg", paddingX: "md" },
+    background: { type: "none" },
+  },
   containerBackgroundGradientPreset: "soft",
   headline: "Galerie",
   subheadline: "Einblicke in unsere Räume und unseren Alltag.",

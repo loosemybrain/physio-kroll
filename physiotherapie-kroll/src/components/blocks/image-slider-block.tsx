@@ -919,7 +919,7 @@ export function ImageSliderBlock({
 
   return (
     <section
-      className={cn("py-16 md:py-20", backgroundMap[background])}
+      className={cn(backgroundMap[background])}
       aria-label={headline || "Slider"}
     >
       <div className="mx-auto max-w-6xl px-4 sm:px-6">

@@ -180,7 +180,7 @@ export function TestimonialSliderBlock({
   const current = items[index]
 
   return (
-    <section className={cn("w-full py-16", bgClass || "bg-muted/30")}>
+    <section className={cn("w-full", bgClass || "bg-muted/30")}>
       <div className="mx-auto max-w-5xl">
         {/* Top label + headline */}
         <div className="mb-12 text-center">

@@ -105,7 +105,7 @@ export function ServicesGridBlock({
   return (
     <section
       className={cn(
-        "relative py-20 md:py-28",
+        "relative",
         backgroundMap[background]
       )}
     >

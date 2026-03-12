@@ -444,7 +444,6 @@ export function CourseScheduleBlock({
   return (
     <section
       className={cn(
-        "py-16 md:py-20",
         sectionBg.className
       )}
       style={sectionBg.style}
@@ -498,7 +497,7 @@ export function CourseScheduleBlock({
               : undefined
           }
           className={cn(
-            "overflow-hidden rounded-2xl border border-border/60 bg-card/80 p-4 backdrop-blur-sm sm:p-6 md:p-8",
+            "rounded-2xl border border-border/60 bg-card/80 p-4 backdrop-blur-sm sm:p-6 md:p-8",
             "shadow-[0_1px_2px_rgba(0,0,0,0.03),0_8px_32px_-12px_rgba(0,0,0,0.08)]",
             editable && onElementClick && "cursor-pointer transition-[box-shadow,outline] hover:outline-2 hover:outline-primary/30 hover:outline-offset-2",
             selectedElementId === CONTAINER_ELEMENT_ID && "outline-2 outline-primary outline-offset-2"

@@ -99,7 +99,7 @@ export function OpeningHoursBlock({
 
   return (
     <section
-      className={cn("py-16", backgroundMap[background])}
+      className={cn(backgroundMap[background])}
       aria-label={headline || "Öffnungszeiten"}
     >
       <div className="mx-auto max-w-3xl px-4">

@@ -697,7 +697,7 @@ export function GalleryBlock({
     <>
       <section
         className={cn(
-          "relative overflow-hidden py-20 md:py-28",
+          "relative",
           sectionBg.className,
           !usesContainerPanel && (sectionBgFallback[background] ?? "")
         )}
@@ -759,7 +759,7 @@ export function GalleryBlock({
 
           <div
             className={cn(
-              usesContainerPanel && "rounded-3xl p-6 md:p-10",
+              usesContainerPanel && "rounded-3xl p-6 md:p-10 m-4 md:m-6",
               usesContainerPanel && containerBackgroundMode === "gradient" && "backdrop-blur-sm",
               usesContainerPanel && containerBorder && "border border-border/40"
             )}

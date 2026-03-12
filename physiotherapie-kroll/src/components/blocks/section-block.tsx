@@ -318,7 +318,7 @@ export function SectionBlock({
   return (
     <section
       className={cn(
-        "relative rounded-3xl py-10 md:py-14 lg:py-16",
+        "relative rounded-3xl",
         bgClasses,
       )}
       style={

@@ -57,7 +57,7 @@ export function TextBlock({
   return (
     <AnimatedBlock config={section?.animation}>
       <RevealOnScroll>
-        <section className="py-12">
+        <section>
           <div className={cn("mx-auto px-4", maxWidthMap[maxWidth])}>
             <div
               className={cn(

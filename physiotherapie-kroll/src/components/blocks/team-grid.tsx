@@ -606,7 +606,7 @@ export function TeamGridBlock({
   return (
     <section
       className={cn(
-        "relative overflow-x-hidden py-10 md:py-14 lg:py-16",
+        "relative overflow-x-hidden",
         sectionBg.className
       )}
       style={sectionBg.style}
@@ -615,7 +615,7 @@ export function TeamGridBlock({
       {/* Inner Container Panel (Header + Grid) */}
       <div
         className={cn(
-          "relative mx-auto max-w-6xl rounded-3xl px-8 py-8 md:px-14 md:py-10",
+          "relative mx-auto max-w-6xl rounded-3xl px-8 py-8 md:px-14 md:py-10 m-4 md:m-6",
           containerBackgroundMode && containerBackgroundMode !== "transparent" && "border border-border/80",
           containerBackgroundMode === "gradient" && "backdrop-blur-sm"
         )}

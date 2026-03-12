@@ -334,7 +334,7 @@ export function SectionWrapper(props: {
     <section
       ref={containerRef}
       className={cn(
-        "relative overflow-hidden",
+        "relative overflow-x-hidden",
         "bg-background",
         removeTopGap ? "pt-0" : pad.pt,
         pad.pb,

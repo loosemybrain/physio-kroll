@@ -552,14 +552,14 @@ export function ContactFormBlock({
   // Premium Success State
     if (formState === "success") {
     return (
-      <section className="relative w-full overflow-hidden py-12">
+      <section className="relative w-full my-4 md:my-6">
         {/* Decorative background blur */}
         <div className="pointer-events-none absolute inset-0 -z-10" aria-hidden="true">
           <div className="absolute left-1/4 top-1/4 size-64 rounded-full bg-green-500/10 blur-3xl" />
         </div>
 
-        <div className="mx-auto max-w-xl">
-          <div className="relative flex flex-col items-center justify-center overflow-hidden rounded-3xl border border-border/30 bg-card/60 px-8 py-20 text-center shadow-xl backdrop-blur-md">
+        <div className="mx-auto max-w-xl px-4 sm:px-6">
+          <div className="relative flex flex-col items-center justify-center rounded-3xl border border-border/30 bg-card/60 px-8 py-20 text-center shadow-xl backdrop-blur-md">
             {/* Animated checkmark container */}
             <div className="relative mb-8">
               <div className="absolute inset-0 animate-ping rounded-full bg-green-500/20" />
@@ -598,14 +598,14 @@ export function ContactFormBlock({
 
   if (normalizedLayout === "split") {
     return (
-      <section className="relative w-full overflow-hidden py-12">
+      <section className="relative w-full my-4 md:my-6">
         {/* Decorative background elements - subtle ambient glow only */}
         <div className="pointer-events-none absolute inset-0 -z-20" aria-hidden="true">
         <div className="absolute left-1/2 top-1/4 size-96 -translate-x-[65%] rounded-full bg-primary/2 blur-3xl" />
         <div className="absolute right-1/2 bottom-1/4 size-80 translate-x-[65%] rounded-full bg-primary/2 blur-3xl" />
         </div>
 
-        <div className="mx-auto max-w-7xl">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="grid gap-12 lg:grid-cols-5 lg:gap-16">
             {/* Left Side - Content (2 columns) */}
             <div className="flex flex-col justify-center lg:col-span-2">
@@ -859,7 +859,7 @@ export function ContactFormBlock({
 
   // Stacked Layout (Default)
   return (
-    <section className="w-full py-12">
+    <section className="w-full my-4 md:my-6">
       <div className="mx-auto max-w-xl">
         {/* Header */}
         <div className="mb-10 text-center">
