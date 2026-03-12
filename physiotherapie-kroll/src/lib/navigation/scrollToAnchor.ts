@@ -2,6 +2,9 @@
  * Zentrale Anchor-Scroll-Logik für Onepage-Navigation.
  * Verwendet von Header/Nav (Klick) und bei Seitenload mit Hash.
  * ScrollSpy nutzt dieselbe ID-Konvention (block-<id>).
+ * 
+ * Homepage-Canonicalisierung: "/" ist die kanonische Homepage-Route.
+ * anchorPageSlug="home" wird immer zu "/" kanonisiert.
  */
 
 /** Präfix für Block-DOM-IDs; vermeidet Kollisionen mit anderen IDs. */
@@ -60,6 +63,40 @@ export function scrollToBlockAnchor(
   headerOffsetPx: number = 80
 ): void {
   smoothScrollToAnchor(blockId, headerOffsetPx)
+}
+
+/**
+ * Kanonisiert einen CMS-Slug zur Route-URL.
+ * Regel: Der Slug "home" wird zu "/" kanonisiert.
+ * Alle anderen Slugs werden zu "/<slug>".
+ */
+export function canonicalizeSlugToPath(slug?: string | null): string {
+  if (!slug || slug === "home") return "/"
+  return `/${slug.replace(/^\//, "")}`
+}
+
+/**
+ * Vergleicht, ob zwei Pfade/Slugs dieselbe Seite bezeichnen.
+ * Berücksichtigt die Homepage-Canonicalisierung ("/home" = "/").
+ */
+export function isSamePage(currentPath: string, targetSlug?: string | null): boolean {
+  if (!currentPath) currentPath = "/"
+  const targetPath = canonicalizeSlugToPath(targetSlug)
+  return currentPath === targetPath
+}
+
+/**
+ * Erzeugt einen Href für einen Anchor-Link.
+ * Format: "/<slug>#block-<id>" oder "/#block-<id>" (bei home).
+ * Respektiert die Homepage-Canonicalisierung.
+ */
+export function buildAnchorHref(
+  blockId: string,
+  pageSlug?: string | null
+): string {
+  const hash = `#${BLOCK_ANCHOR_PREFIX}${blockId}`
+  if (!pageSlug || pageSlug === "home") return hash // Same page or home ("/")
+  return `/${pageSlug.replace(/^\//, "")}${hash}`
 }
 
 /**

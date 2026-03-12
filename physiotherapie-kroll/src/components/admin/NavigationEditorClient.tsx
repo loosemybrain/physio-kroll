@@ -903,7 +903,7 @@ export function NavigationEditorClient({
                     {link.type === "anchor" ? (
                       <>
                         <div className="space-y-1.5">
-                          <Label className="text-xs">Seite (mit Anker-Zielen)</Label>
+                          <Label className="text-xs">Seite</Label>
                           <Select
                             value={link.anchorPageSlug ?? ""}
                             onValueChange={(slug) =>
@@ -920,20 +920,25 @@ export function NavigationEditorClient({
                               {(activeBrand === "physiotherapy" ? anchorTargetsPhysio : anchorTargetsKonzept).map(
                                 (p) => (
                                   <SelectItem key={p.slug} value={p.slug}>
-                                    {p.title} ({p.slug}) · {p.blocks.length} Anker
+                                    {p.title}
+                                    {p.blocks.length > 0 && (
+                                      <span className="text-muted-foreground text-xs ml-1">
+                                        ({p.blocks.length})
+                                      </span>
+                                    )}
                                   </SelectItem>
                                 )
                               )}
                               {((activeBrand === "physiotherapy" ? anchorTargetsPhysio : anchorTargetsKonzept).length === 0) && (
                                 <SelectItem value="" disabled>
-                                  Keine Seiten mit Anker-Zielen. In Blöcken „Als Anker-Ziel“ aktivieren.
+                                  Keine Seiten
                                 </SelectItem>
                               )}
                             </SelectContent>
                           </Select>
                         </div>
                         <div className="space-y-1.5">
-                          <Label className="text-xs">Zielblock</Label>
+                          <Label className="text-xs">Block</Label>
                           <Select
                             value={link.anchorBlockId ?? ""}
                             onValueChange={(id) => updateLink(index, { anchorBlockId: id || undefined })}
@@ -949,7 +954,7 @@ export function NavigationEditorClient({
                                 )?.blocks ?? []
                               ).map((b) => (
                                 <SelectItem key={b.id} value={b.id}>
-                                  {blockRegistry[b.type as keyof typeof blockRegistry]?.label ?? b.type} ({b.id.slice(0, 8)}…)
+                                  {blockRegistry[b.type as keyof typeof blockRegistry]?.label ?? b.type}
                                 </SelectItem>
                               ))}
                             </SelectContent>

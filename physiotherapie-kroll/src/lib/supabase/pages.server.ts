@@ -108,7 +108,8 @@ export interface AnchorTargetPage {
 }
 
 /**
- * Liefert alle Seiten einer Marke mit ihren Anker-Zielblöcken (section.anchor === true).
+ * Liefert alle Seiten einer Marke mit allen ihren Blöcken als Anker-Ziele.
+ * Alle Blöcke können als Anker-Ziel verwendet werden (nicht nur markierte).
  * Nur für Admin (z. B. Navigation-Editor). Nutzt Service Role.
  */
 export async function getAnchorTargets(brand: BrandKey): Promise<AnchorTargetPage[]> {
@@ -126,26 +127,25 @@ export async function getAnchorTargets(brand: BrandKey): Promise<AnchorTargetPag
     for (const page of pages) {
       const { data: blocks, error: blocksErr } = await supabase
         .from("blocks")
-        .select("id, type, props")
+        .select("id, type")
         .eq("page_id", page.id)
         .order("sort", { ascending: true })
 
       if (blocksErr) continue
 
-      const anchorBlocks: AnchorTargetBlock[] = []
-      for (const b of blocks ?? []) {
-        const props = (b.props as Record<string, unknown>) ?? {}
-        const section = props.section as Record<string, unknown> | undefined
-        if (section && section.anchor === true) {
-          anchorBlocks.push({ id: b.id, type: b.type })
-        }
-      }
+      const anchorBlocks: AnchorTargetBlock[] = (blocks ?? []).map((b) => ({
+        id: b.id,
+        type: b.type,
+      }))
 
-      out.push({
-        slug: String(page.slug ?? ""),
-        title: String(page.title ?? "Untitled"),
-        blocks: anchorBlocks,
-      })
+      // Nur Seiten mit Blöcken hinzufügen
+      if (anchorBlocks.length > 0) {
+        out.push({
+          slug: String(page.slug ?? ""),
+          title: String(page.title ?? "Untitled"),
+          blocks: anchorBlocks,
+        })
+      }
     }
 
     return out

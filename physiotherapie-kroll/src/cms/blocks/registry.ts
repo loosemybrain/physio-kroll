@@ -96,9 +96,9 @@ export const INSPECTOR_GROUP_LABELS: Record<string, string> = {
 /** Einzelnes Inspector-Feld für Anker-Ziel (Onepage-Navigation). In Blöcke mit section einfügen. */
 export const ANCHOR_INSPECTOR_FIELD: InspectorField = {
   key: "section.anchor",
-  label: "Als Anker-Ziel in Navigation",
+  label: "Für Anchor-Navigation verfügbar",
   type: "boolean",
-  helpText: "Wenn aktiv, kann dieser Block in der Navigation als Scroll-Ziel verlinkt werden.",
+  helpText: "Dieser Block ist immer als Anchor-Ziel für die Navigation verfügbar.",
   group: "basics",
 }
 
@@ -560,14 +560,35 @@ const faqPropsSchema = z.object({
 function withInnerPanel<T extends BlockDefinition>(def: T): T {
   if (!def.enableInnerPanel) return def
 
+  const existingFields = def.inspectorFields ?? []
+  
+  // Keep panel inspector fields, but don't add ANCHOR_INSPECTOR_FIELD here
+  // ANCHOR_INSPECTOR_FIELD is already added by ensureAnchorField
+  const inspectorFields = [...panelInspectorFields, ...existingFields]
+
   return {
     ...def,
     zodSchema: def.zodSchema ? (def.zodSchema as any).merge(panelPropsSchema) : panelPropsSchema,
     defaults: { ...panelDefaults, ...(def.defaults ?? {}) } as T["defaults"],
-    inspectorFields: [
-      ...panelInspectorFields,
-      ...(def.inspectorFields ?? []),
-    ] as InspectorField[],
+    inspectorFields,
+  } as T
+}
+
+/**
+ * Ensures every block definition has ANCHOR_INSPECTOR_FIELD at the start of its inspectorFields.
+ * This is applied to ALL blocks, regardless of enableInnerPanel.
+ */
+function ensureAnchorField<T extends BlockDefinition>(def: T): T {
+  const existingFields = def.inspectorFields ?? []
+  const hasAnchorField = existingFields.some((f: InspectorField) => f.key === "section.anchor")
+  
+  if (hasAnchorField) {
+    return def
+  }
+  
+  return {
+    ...def,
+    inspectorFields: [ANCHOR_INSPECTOR_FIELD, ...existingFields] as InspectorField[],
   } as T
 }
 
@@ -1855,7 +1876,6 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
       },
     ],
     inspectorFields: [
-      ANCHOR_INSPECTOR_FIELD,
       // Brand/Mood
       {
         key: "mood",
@@ -2359,7 +2379,6 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
     zodSchema: sectionPropsSchema,
     allowInlineEdit: true,
     inspectorFields: [
-      ANCHOR_INSPECTOR_FIELD,
       { key: "eyebrow", label: "Eyebrow", type: "text", placeholder: "Über uns" },
       { key: "headline", label: "Headline", type: "text", placeholder: "Willkommen bei Physiotherapie Kroll", required: true },
       { key: "subheadline", label: "Subheadline (optional)", type: "text", placeholder: "Kurze Beschreibung..." },
@@ -2774,7 +2793,6 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
       { id: "cta.subheadline", label: "Subheadline", path: "subheadline", supportsTypography: true },
     ],
     inspectorFields: [
-      ANCHOR_INSPECTOR_FIELD,
       { key: "headline", label: "Headline", type: "text", placeholder: "Überschrift", required: true },
       { key: "subheadline", label: "Subheadline", type: "text", placeholder: "Optionaler Untertext" },
       { key: "primaryCtaText", label: "Primärer CTA Text", type: "text", placeholder: "Button Text", required: true },
@@ -3379,10 +3397,13 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
 }
 
 /**
- * Transform blockRegistry to apply withInnerPanel to all blocks
+ * Transform blockRegistry to apply withInnerPanel and ensureAnchorField to all blocks
  */
 const transformedRegistry = Object.fromEntries(
-  Object.entries(blockRegistry).map(([type, def]) => [type, withInnerPanel(def)])
+  Object.entries(blockRegistry).map(([type, def]) => [
+    type,
+    ensureAnchorField(withInnerPanel(def)),
+  ])
 ) as Record<BlockType, BlockDefinition>
 
 // Re-export the transformed registry

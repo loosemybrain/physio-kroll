@@ -32,7 +32,11 @@ import {
   getLogoSizeClasses,
   getLogoImageDimensions,
 } from "@/lib/theme/logoSize"
-import { scrollToBlockAnchor } from "@/lib/navigation/scrollToAnchor"
+import {
+  scrollToBlockAnchor,
+  isSamePage,
+  buildAnchorHref,
+} from "@/lib/navigation/scrollToAnchor"
 import { useScrollSpy } from "@/components/navigation/ScrollSpyProvider"
 
 /* ------------------------------------------------------------------ */
@@ -213,13 +217,14 @@ export function HeaderClient({ brand, navConfig }: HeaderClientProps) {
     resolveLogo()
   }, [navConfig.logo])
 
-  /* ---- scroll detection (sticky state) ---- */
+  /* ---- scroll detection (sticky state with offset) ---- */
   useEffect(() => {
     let ticking = false
+    const SCROLL_OFFSET = 16 // Trigger animation nach 16px scroll
     const onScroll = () => {
       if (!ticking) {
         window.requestAnimationFrame(() => {
-          setIsScrolled(window.scrollY > 8)
+          setIsScrolled(window.scrollY > SCROLL_OFFSET)
           ticking = false
         })
         ticking = true
@@ -231,21 +236,22 @@ export function HeaderClient({ brand, navConfig }: HeaderClientProps) {
 
   /* ---- href helpers ---- */
   const getLinkHref = useCallback((link: NavLink): string => {
-    if (link.type === "page" && link.pageSlug != null) return `/${link.pageSlug}`
+    if (link.type === "page" && link.pageSlug != null) {
+      if (link.pageSlug === "home") return "/" // Homepage canonicalization
+      return `/${link.pageSlug}`
+    }
     if (link.type === "url" && link.href) return link.href
     if (link.type === "anchor" && link.anchorBlockId) {
-      const hash = `#block-${link.anchorBlockId}`
-      if (!link.anchorPageSlug?.trim()) return hash
-      return `/${link.anchorPageSlug.replace(/^\//, "")}${hash}`
+      return buildAnchorHref(link.anchorBlockId, link.anchorPageSlug)
     }
     return "#"
   }, [])
 
-  /** Bei Anchor-Links auf derselben Seite: Default verhindern, mit Header-Offset scrollen, optional Hash setzen (kein Reload). */
+  /** Anchor-Links auf derselben Seite: Default verhindern, mit Header-Offset scrollen, Hash aktualisieren. */
   const handleNavLinkClick = useCallback(
     (link: NavLink, e: React.MouseEvent<HTMLAnchorElement>) => {
       if (link.type !== "anchor" || !link.anchorBlockId) return
-      const samePage = !link.anchorPageSlug?.trim() || pathname === `/${link.anchorPageSlug.replace(/^\//, "")}`
+      const samePage = isSamePage(pathname || "/", link.anchorPageSlug)
       if (!samePage) return
       e.preventDefault()
       const headerOffset = headerRef.current ? Math.ceil(headerRef.current.getBoundingClientRect().height) : 80
@@ -323,13 +329,11 @@ export function HeaderClient({ brand, navConfig }: HeaderClientProps) {
     [pathname]
   )
 
-  /** Bei Anchor-Links: aktiv, wenn gleiche Seite und dieser Block aktuell sichtbar (ScrollSpy). */
+  /** Anchor-Links: aktiv, wenn gleiche Seite und dieser Block aktuell sichtbar (ScrollSpy). */
   const isAnchorLinkActive = useCallback(
     (link: NavLink): boolean => {
       if (link.type !== "anchor" || !link.anchorBlockId) return false
-      const samePage =
-        !link.anchorPageSlug?.trim() ||
-        pathname === `/${link.anchorPageSlug.replace(/^\//, "")}`
+      const samePage = isSamePage(pathname || "/", link.anchorPageSlug)
       return samePage && activeAnchor === link.anchorBlockId
     },
     [pathname, activeAnchor]
@@ -428,15 +432,21 @@ export function HeaderClient({ brand, navConfig }: HeaderClientProps) {
 
   return (
     <>
-      <motion.header
-        ref={headerRef}
-        initial={false}
-        animate={isScrolled ? "scrolled" : "top"}
+      <div 
         className={cn(
-          "sticky top-0 z-50 w-full transition-colors duration-300",
-          wrapperClass
+          "sticky top-0 z-50 w-full transition-shadow duration-300",
+          isScrolled ? "shadow-md" : "shadow-none"
         )}
       >
+        <motion.header
+          ref={headerRef}
+          initial={false}
+          animate={isScrolled ? "scrolled" : "top"}
+          className={cn(
+            "w-full transition-colors duration-300",
+            wrapperClass
+          )}
+        >
         <motion.div
           variants={
             motionPreset === "none"
@@ -838,7 +848,8 @@ export function HeaderClient({ brand, navConfig }: HeaderClientProps) {
             </Sheet>
           </div>
         </motion.div>
-      </motion.header>
+        </motion.header>
+      </div>
 
       {/* ---- Search CommandDialog ---- */}
       {navConfig.searchEnabled && (

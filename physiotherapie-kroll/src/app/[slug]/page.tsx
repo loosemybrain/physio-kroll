@@ -125,6 +125,9 @@ export default async function CMSPageRoute({ params }: { params: Promise<{ slug:
     (page as { page_type?: string; page_subtype?: string }).page_type === "legal" &&
     (page as { page_type?: string; page_subtype?: string }).page_subtype === "cookies";
 
+  // TOC nur auf Legal-Seiten oder Blog-Posts anzeigen, nicht auf Homepage oder normale Content-Seiten
+  const isLegalPage = (page as { page_type?: string }).page_type === "legal";
+
   return (
     <article>
       <div className="mx-auto grid w-full max-w-7xl grid-cols-1 gap-8 px-4 lg:grid-cols-[minmax(0,1fr)_240px]">
@@ -137,7 +140,7 @@ export default async function CMSPageRoute({ params }: { params: Promise<{ slug:
           )}
         </div>
         <aside className="hidden lg:block">
-          <StickyMiniToc />
+          <StickyMiniToc disabled={!isLegalPage} />
         </aside>
       </div>
     </article>

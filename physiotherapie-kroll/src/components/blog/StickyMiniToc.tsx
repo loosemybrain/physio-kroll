@@ -19,11 +19,23 @@ function slugify(input: string) {
     .replace(/^-|-$/g, "")
 }
 
-export function StickyMiniToc({ className }: { className?: string }) {
+export function StickyMiniToc({ 
+  className,
+  disabled = false 
+}: { 
+  className?: string
+  disabled?: boolean 
+}) {
   const [items, setItems] = React.useState<TocItem[]>([])
   const [activeId, setActiveId] = React.useState<string | null>(null)
 
   React.useEffect(() => {
+    // Early return if TOC is disabled
+    if (disabled) {
+      setItems([])
+      return
+    }
+    
     const container = document.querySelector("[data-article]")
     if (!container) return
 
@@ -55,7 +67,7 @@ export function StickyMiniToc({ className }: { className?: string }) {
     })
 
     setItems(nextItems)
-  }, [])
+  }, [disabled])
 
   React.useEffect(() => {
     if (items.length < 2) return
