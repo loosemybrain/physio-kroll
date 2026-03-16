@@ -1420,7 +1420,11 @@ function LogoPreview({
             />
           </div>
         ) : (
-          <span className="text-xs text-muted-foreground">Logo nicht gefunden</span>
+          <span className="text-xs text-muted-foreground">
+            Logo konnte nicht geladen werden
+            <br />
+            <span className="text-xs text-muted-foreground/70">(Überprüfen Sie die Supabase Storage)</span>
+          </span>
         )}
       </div>
     </div>
