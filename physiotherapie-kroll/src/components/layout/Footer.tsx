@@ -563,14 +563,15 @@ function LegalLinksRenderer({
   } as const
 
   const containerClass = cn(
-    "flex flex-col",
+    legalLinks.placement === "bottom-bar" ? "w-full flex" : "flex flex-col",
     marginTopMap[legalLinks.marginTop || "md"],
     legalLinks.placement === "bottom-bar" ? "pt-6 border-t" : ""
   )
 
   const linksContainerClass = cn(
     layoutMap[legalLinks.layout || "inline"],
-    alignMap[legalLinks.align || "left"]
+    alignMap[legalLinks.align || "left"],
+    legalLinks.placement === "bottom-bar" ? "w-full" : ""
   )
 
   const linkClass = cn(
