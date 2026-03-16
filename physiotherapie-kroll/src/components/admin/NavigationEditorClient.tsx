@@ -1330,19 +1330,10 @@ function LogoPreview({
         return
       }
 
-      // Helper function to fix malformed URLs
-      const fixMediaUrl = (url: string): string => {
-        // Fix double "media/media/" in storage URLs
-        if (url.includes("media/media/")) {
-          return url.replace("media/media/", "media/")
-        }
-        return url
-      }
-
       // If logo has url, use it directly
       if ("url" in logo && logo.url) {
-        const fixedUrl = fixMediaUrl(logo.url)
-        setLogoUrl(fixedUrl)
+        const { normalizeMediaUrl } = await import("@/lib/cms/normalizeMediaUrl")
+        setLogoUrl(normalizeMediaUrl(logo.url))
         setLoading(false)
         return
       }
@@ -1351,29 +1342,31 @@ function LogoPreview({
       if ("mediaId" in logo && logo.mediaId) {
         try {
           const { createSupabaseBrowserClient } = await import("@/lib/supabase/client")
+          const { getMediaPublicUrl } = await import("@/lib/cms/mediaStore")
+          const { normalizeMediaUrl } = await import("@/lib/cms/normalizeMediaUrl")
+          
           const supabase = createSupabaseBrowserClient()
           const { data, error } = await supabase
             .from("media")
-            .select("url")
+            .select("url, path")
             .eq("id", logo.mediaId)
             .single()
 
-          if (error) {
+          if (error || !data) {
             console.error("Error fetching logo from database:", error)
-            // Try to construct URL directly as fallback
-            const fallbackUrl = `https://ibbiohwcnjttauikgbbr.supabase.co/storage/v1/object/public/media/${logo.mediaId}`
-            setLogoUrl(fallbackUrl)
-          } else if (data?.url) {
-            const fixedUrl = fixMediaUrl(data.url)
-            setLogoUrl(fixedUrl)
+            setLogoUrl(null)
+          } else if (data.path) {
+            // Prefer path: build the public URL
+            setLogoUrl(getMediaPublicUrl(data.path))
+          } else if (data.url) {
+            // Fallback to url if path is not available
+            setLogoUrl(normalizeMediaUrl(data.url))
           } else {
             setLogoUrl(null)
           }
         } catch (error) {
           console.error("Error resolving logo:", error)
-          // Try to construct URL directly as fallback
-          const fallbackUrl = `https://ibbiohwcnjttauikgbbr.supabase.co/storage/v1/object/public/media/${logo.mediaId}`
-          setLogoUrl(fallbackUrl)
+          setLogoUrl(null)
         } finally {
           setLoading(false)
         }
