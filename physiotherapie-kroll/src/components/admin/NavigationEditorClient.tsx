@@ -12,7 +12,7 @@ import { Separator } from "@/components/ui/separator"
 import { Textarea } from "@/components/ui/textarea"
 import { ImageField } from "./ImageField"
 import { MediaPickerDialog } from "./MediaPickerDialog"
-import { Plus, Trash2, ChevronUp, ChevronDown, Save, Zap } from "lucide-react"
+import { Plus, Trash2, ChevronUp, ChevronDown, ChevronRight, Save, Zap } from "lucide-react"
 import { arrayMove, arrayRemove } from "@/lib/cms/arrayOps"
 import { uuid } from "@/lib/cms/arrayOps"
 import type { BrandKey } from "@/components/brand/brandAssets"
@@ -64,6 +64,16 @@ export function NavigationEditorClient({
   const [anchorTargetsKonzept] = useState<AnchorTargetPage[]>(initialAnchorTargetsKonzept || [])
   const [saving, setSaving] = useState(false)
   const [presetJsonDraft, setPresetJsonDraft] = useState<Record<string, string>>({})
+  
+  // Collapse state for navigation links (UI-only, not persisted)
+  const [collapsedLinkItems, setCollapsedLinkItems] = useState<Record<string, boolean>>(() => {
+    const collapsed: Record<string, boolean> = {}
+    const initialLinks = initialPhysio?.links || []
+    initialLinks.forEach((link) => {
+      collapsed[link.id] = true
+    })
+    return collapsed
+  })
   
   // Header draft/saved state
   const [physioHeaderDraft, setPhysioHeaderDraft] = useState<NavConfig>(physioConfig)
@@ -323,6 +333,57 @@ export function NavigationEditorClient({
       updateConfig({ links: updated })
     },
     [navConfig, updateConfig]
+  )
+
+  // Collapse/expand helpers
+  const toggleLinkCollapse = useCallback((linkId: string) => {
+    setCollapsedLinkItems((prev) => ({
+      ...prev,
+      [linkId]: !prev[linkId],
+    }))
+  }, [])
+
+  const expandAllLinks = useCallback(() => {
+    setCollapsedLinkItems({})
+  }, [])
+
+  const collapseAllLinks = useCallback(() => {
+    if (!navConfig) return
+    const allCollapsed: Record<string, boolean> = {}
+    navConfig.links.forEach((link) => {
+      allCollapsed[link.id] = true
+    })
+    setCollapsedLinkItems(allCollapsed)
+  }, [navConfig])
+
+  const addLinkWithExpand = useCallback(() => {
+    if (!navConfig) return
+    const newLink: NavLink = {
+      id: uuid(),
+      label: "Neuer Link",
+      type: "page",
+      visibility: "both",
+      sort: navConfig.links.length,
+    }
+    updateConfig({ links: [...navConfig.links, newLink] })
+    setCollapsedLinkItems((prev) => ({
+      ...prev,
+      [newLink.id]: false,
+    }))
+  }, [navConfig, updateConfig])
+
+  const removeLinkWithCleanup = useCallback(
+    (index: number) => {
+      if (!navConfig) return
+      const linkToRemove = navConfig.links[index]
+      setCollapsedLinkItems((prev) => {
+        const updated = { ...prev }
+        delete updated[linkToRemove.id]
+        return updated
+      })
+      removeLink(index)
+    },
+    [navConfig, removeLink]
   )
 
   if (!navConfig) {
@@ -821,217 +882,271 @@ export function NavigationEditorClient({
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <Label className="text-base font-semibold">Links</Label>
-                <Button variant="outline" size="sm" onClick={addLink}>
+                <Button variant="outline" size="sm" onClick={addLinkWithExpand}>
                   <Plus className="mr-2 h-4 w-4" />
                   Link hinzufügen
                 </Button>
               </div>
 
               <div className="space-y-3">
-                {navConfig.links.map((link, index) => (
-                  <div
-                    key={link.id}
-                    className="rounded-lg border border-border bg-card p-4 space-y-3"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">Link {index + 1}</span>
-                      <div className="flex items-center gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7"
-                          onClick={() => moveLink(index, -1)}
-                          disabled={index === 0}
-                        >
-                          <ChevronUp className="h-3 w-3" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7"
-                          onClick={() => moveLink(index, 1)}
-                          disabled={index === navConfig.links.length - 1}
-                        >
-                          <ChevronDown className="h-3 w-3" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 text-destructive"
-                          onClick={() => removeLink(index)}
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </div>
+                <div className="flex gap-2 mb-2">
+                  <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={expandAllLinks}>
+                    Alle aufklappen
+                  </Button>
+                  <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={collapseAllLinks}>
+                    Alle zuklappen
+                  </Button>
+                </div>
 
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1.5">
-                        <Label className="text-xs">Label</Label>
-                        <Input
-                          value={link.label}
-                          onChange={(e) => updateLink(index, { label: e.target.value })}
-                          placeholder="Link-Text"
-                        />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label className="text-xs">Typ</Label>
-                        <Select
-                          value={link.type}
-                          onValueChange={(v: "page" | "url" | "anchor") => {
-                            updateLink(index, {
-                              type: v,
-                              pageSlug: v === "page" ? link.pageSlug : undefined,
-                              href: v === "url" ? link.href : undefined,
-                              anchorPageSlug: v === "anchor" ? link.anchorPageSlug : undefined,
-                              anchorBlockId: v === "anchor" ? link.anchorBlockId : undefined,
-                            })
-                          }}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="page">Interne Seite</SelectItem>
-                            <SelectItem value="url">Externe URL</SelectItem>
-                            <SelectItem value="anchor">Anker (Onepage-Scroll)</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
+                {navConfig.links.map((link, index) => {
+                  const isCollapsed = collapsedLinkItems[link.id] ?? true
+                  const displayLabel = link.label || "Neuer Link"
+                  const displayType = link.type === "page" ? "Seite" : link.type === "url" ? "URL" : "Anker"
+                  const displayTarget =
+                    link.type === "page"
+                      ? link.pageSlug
+                      : link.type === "url"
+                        ? link.href?.substring(0, 30)
+                        : link.anchorPageSlug
 
-                    {link.type === "anchor" ? (
-                      <>
-                        <div className="space-y-1.5">
-                          <Label className="text-xs">Seite</Label>
-                          <Select
-                            value={link.anchorPageSlug ?? ""}
-                            onValueChange={(slug) =>
-                              updateLink(index, {
-                                anchorPageSlug: slug || undefined,
-                                anchorBlockId: undefined,
-                              })
-                            }
+                  return (
+                    <div key={link.id} className="rounded-lg border border-border bg-card overflow-hidden">
+                      {/* Collapsible Header */}
+                      <button
+                        onClick={() => toggleLinkCollapse(link.id)}
+                        className="w-full px-4 py-3 flex items-center justify-between hover:bg-muted/50 transition-colors text-left"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <ChevronRight
+                              className={cn(
+                                "h-4 w-4 flex-shrink-0 transition-transform",
+                                !isCollapsed && "rotate-90"
+                              )}
+                            />
+                            <span className="text-sm font-medium truncate">{displayLabel}</span>
+                          </div>
+                          {isCollapsed && displayTarget && (
+                            <div className="text-xs text-muted-foreground mt-1 ml-6 truncate">
+                              {displayType}: {displayTarget}
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              moveLink(index, -1)
+                            }}
+                            disabled={index === 0}
+                            title="Nach oben"
                           >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Seite wählen" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {(activeBrand === "physiotherapy" ? anchorTargetsPhysio : anchorTargetsKonzept).map(
-                                (p) => (
-                                  <SelectItem key={p.slug} value={p.slug}>
-                                    {p.title}
-                                    {p.blocks.length > 0 && (
-                                      <span className="text-muted-foreground text-xs ml-1">
-                                        ({p.blocks.length})
-                                      </span>
+                            <ChevronUp className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              moveLink(index, 1)
+                            }}
+                            disabled={index === navConfig.links.length - 1}
+                            title="Nach unten"
+                          >
+                            <ChevronDown className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-destructive"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              removeLinkWithCleanup(index)
+                            }}
+                            title="Löschen"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </button>
+
+                      {/* Expandable Content */}
+                      {!isCollapsed && (
+                        <div className="px-4 py-3 border-t border-border space-y-3 bg-muted/20">
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-1.5">
+                              <Label className="text-xs">Label</Label>
+                              <Input
+                                value={link.label}
+                                onChange={(e) => updateLink(index, { label: e.target.value })}
+                                placeholder="Link-Text"
+                              />
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label className="text-xs">Typ</Label>
+                              <Select
+                                value={link.type}
+                                onValueChange={(v: "page" | "url" | "anchor") => {
+                                  updateLink(index, {
+                                    type: v,
+                                    pageSlug: v === "page" ? link.pageSlug : undefined,
+                                    href: v === "url" ? link.href : undefined,
+                                    anchorPageSlug: v === "anchor" ? link.anchorPageSlug : undefined,
+                                    anchorBlockId: v === "anchor" ? link.anchorBlockId : undefined,
+                                  })
+                                }}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="page">Interne Seite</SelectItem>
+                                  <SelectItem value="url">Externe URL</SelectItem>
+                                  <SelectItem value="anchor">Anker (Onepage-Scroll)</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+
+                          {link.type === "anchor" ? (
+                            <>
+                              <div className="space-y-1.5">
+                                <Label className="text-xs">Seite</Label>
+                                <Select
+                                  value={link.anchorPageSlug ?? ""}
+                                  onValueChange={(slug) =>
+                                    updateLink(index, {
+                                      anchorPageSlug: slug || undefined,
+                                      anchorBlockId: undefined,
+                                    })
+                                  }
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Seite wählen" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {(activeBrand === "physiotherapy" ? anchorTargetsPhysio : anchorTargetsKonzept).map(
+                                      (p) => (
+                                        <SelectItem key={p.slug} value={p.slug}>
+                                          {p.title}
+                                          {p.blocks.length > 0 && (
+                                            <span className="text-muted-foreground text-xs ml-1">
+                                              ({p.blocks.length})
+                                            </span>
+                                          )}
+                                        </SelectItem>
+                                      )
                                     )}
-                                  </SelectItem>
-                                )
-                              )}
-                              {((activeBrand === "physiotherapy" ? anchorTargetsPhysio : anchorTargetsKonzept).length === 0) && (
-                                <SelectItem value="" disabled>
-                                  Keine Seiten
-                                </SelectItem>
-                              )}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label className="text-xs">Block</Label>
-                          <Select
-                            value={link.anchorBlockId ?? ""}
-                            onValueChange={(id) => updateLink(index, { anchorBlockId: id || undefined })}
-                            disabled={!link.anchorPageSlug}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Block wählen" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {(
-                                (activeBrand === "physiotherapy" ? anchorTargetsPhysio : anchorTargetsKonzept).find(
-                                  (p) => p.slug === link.anchorPageSlug
-                                )?.blocks ?? []
-                              ).map((b) => (
-                                <SelectItem key={b.id} value={b.id}>
-                                  {blockRegistry[b.type as keyof typeof blockRegistry]?.label ?? b.type}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </>
-                    ) : link.type === "page" ? (
-                      <div className="space-y-1.5">
-                        <Label className="text-xs">Seite</Label>
-                        <Select
-                          value={link.pageSlug || ""}
-                          onValueChange={(slug) => updateLink(index, { pageSlug: slug })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Seite auswählen" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {pages.length === 0 ? (
-                              <SelectItem value="" disabled>
-                                Keine Seiten gefunden
-                              </SelectItem>
-                            ) : (
-                              pages.map((page) => (
-                                <SelectItem key={page.id} value={page.slug || ""}>
-                                  {page.title || "Untitled"} ({page.slug || "no-slug"})
-                                  {page.status === "draft" && " [Draft]"}
-                                </SelectItem>
-                              ))
-                            )}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    ) : (
-                      <div className="space-y-1.5">
-                        <Label className="text-xs">URL</Label>
-                        <Input
-                          value={link.href || ""}
-                          onChange={(e) => updateLink(index, { href: e.target.value })}
-                          placeholder="https://..."
-                        />
-                      </div>
-                    )}
+                                    {((activeBrand === "physiotherapy" ? anchorTargetsPhysio : anchorTargetsKonzept).length === 0) && (
+                                      <SelectItem value="" disabled>
+                                        Keine Seiten
+                                      </SelectItem>
+                                    )}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div className="space-y-1.5">
+                                <Label className="text-xs">Block</Label>
+                                <Select
+                                  value={link.anchorBlockId ?? ""}
+                                  onValueChange={(id) => updateLink(index, { anchorBlockId: id || undefined })}
+                                  disabled={!link.anchorPageSlug}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Block wählen" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {(
+                                      (activeBrand === "physiotherapy" ? anchorTargetsPhysio : anchorTargetsKonzept).find(
+                                        (p) => p.slug === link.anchorPageSlug
+                                      )?.blocks ?? []
+                                    ).map((b) => (
+                                      <SelectItem key={b.id} value={b.id}>
+                                        {blockRegistry[b.type as keyof typeof blockRegistry]?.label ?? b.type}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </>
+                          ) : link.type === "page" ? (
+                            <div className="space-y-1.5">
+                              <Label className="text-xs">Seite</Label>
+                              <Select
+                                value={link.pageSlug || ""}
+                                onValueChange={(slug) => updateLink(index, { pageSlug: slug })}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Seite auswählen" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {pages.length === 0 ? (
+                                    <SelectItem value="" disabled>
+                                      Keine Seiten gefunden
+                                    </SelectItem>
+                                  ) : (
+                                    pages.map((page) => (
+                                      <SelectItem key={page.id} value={page.slug || ""}>
+                                        {page.title || "Untitled"} ({page.slug || "no-slug"})
+                                        {page.status === "draft" && " [Draft]"}
+                                      </SelectItem>
+                                    ))
+                                  )}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          ) : (
+                            <div className="space-y-1.5">
+                              <Label className="text-xs">URL</Label>
+                              <Input
+                                value={link.href || ""}
+                                onChange={(e) => updateLink(index, { href: e.target.value })}
+                                placeholder="https://..."
+                              />
+                            </div>
+                          )}
 
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1.5">
-                        <Label className="text-xs">Sichtbarkeit</Label>
-                        <Select
-                          value={link.visibility}
-                          onValueChange={(v: "physiotherapy" | "physio-konzept" | "both") =>
-                            updateLink(index, { visibility: v })
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="both">Beide</SelectItem>
-                            <SelectItem value="physiotherapy">Nur Physiotherapie</SelectItem>
-                            <SelectItem value="physio-konzept">Nur Physio-Konzept</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      {link.type === "url" && (
-                        <div className="flex items-center space-x-2 pt-6">
-                          <Switch
-                            id={`link-${link.id}-newtab`}
-                            checked={link.newTab || false}
-                            onCheckedChange={(checked) => updateLink(index, { newTab: checked })}
-                          />
-                          <Label htmlFor={`link-${link.id}-newtab`} className="text-xs">
-                            In neuem Tab öffnen
-                          </Label>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-1.5">
+                              <Label className="text-xs">Sichtbarkeit</Label>
+                              <Select
+                                value={link.visibility}
+                                onValueChange={(v: "physiotherapy" | "physio-konzept" | "both") =>
+                                  updateLink(index, { visibility: v })
+                                }
+                              >
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="both">Beide</SelectItem>
+                                  <SelectItem value="physiotherapy">Nur Physiotherapie</SelectItem>
+                                  <SelectItem value="physio-konzept">Nur Physio-Konzept</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            {link.type === "url" && (
+                              <div className="flex items-center space-x-2 pt-6">
+                                <Switch
+                                  id={`link-${link.id}-newtab`}
+                                  checked={link.newTab || false}
+                                  onCheckedChange={(checked) => updateLink(index, { newTab: checked })}
+                                />
+                                <Label htmlFor={`link-${link.id}-newtab`} className="text-xs">
+                                  In neuem Tab öffnen
+                                </Label>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       )}
                     </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             </div>
 
