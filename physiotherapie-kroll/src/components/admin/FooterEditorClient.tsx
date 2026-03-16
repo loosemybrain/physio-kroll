@@ -1534,6 +1534,44 @@ export function FooterEditorClient({
                                       </Select>
                                     </div>
                                   </div>
+                                  <div className="grid grid-cols-2 gap-2">
+                                    <div className="space-y-1.5">
+                                      <Label className="text-xs">Ausrichtung X</Label>
+                                      <Select
+                                        value={block.alignX || "center"}
+                                        onValueChange={(value) =>
+                                          updateBlock(sectionIndex, blockIndex, { alignX: value as "left" | "center" | "right" })
+                                        }
+                                      >
+                                        <SelectTrigger className="h-8 text-sm">
+                                          <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="left">Links</SelectItem>
+                                          <SelectItem value="center">Zentriert</SelectItem>
+                                          <SelectItem value="right">Rechts</SelectItem>
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+                                    <div className="space-y-1.5">
+                                      <Label className="text-xs">Ausrichtung Y</Label>
+                                      <Select
+                                        value={block.alignY || "center"}
+                                        onValueChange={(value) =>
+                                          updateBlock(sectionIndex, blockIndex, { alignY: value as "top" | "center" | "bottom" })
+                                        }
+                                      >
+                                        <SelectTrigger className="h-8 text-sm">
+                                          <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="top">Oben</SelectItem>
+                                          <SelectItem value="center">Zentriert</SelectItem>
+                                          <SelectItem value="bottom">Unten</SelectItem>
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+                                  </div>
                                   <Input
                                     value={block.href || ""}
                                     onChange={(e) => updateBlock(sectionIndex, blockIndex, { href: e.target.value || undefined })}

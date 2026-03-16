@@ -191,6 +191,8 @@ const footerBlockLogoSchema = z.object({
   size: z.enum(["sm", "md", "lg"]).optional(),
   fit: z.enum(["contain", "cover"]).optional(),
   href: z.string().optional(),
+  alignX: z.enum(["left", "center", "right"]).optional(),
+  alignY: z.enum(["top", "center", "bottom"]).optional(),
 })
 
 const footerBlockCopyrightSchema = z.object({

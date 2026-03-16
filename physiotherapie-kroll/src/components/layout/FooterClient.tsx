@@ -326,6 +326,18 @@ function FooterBlock({
         lg: "h-14",
       } as const
 
+      const alignXMap = {
+        left: "justify-start",
+        center: "justify-center",
+        right: "justify-end",
+      } as const
+
+      const alignYMap = {
+        top: "items-start",
+        center: "items-center",
+        bottom: "items-end",
+      } as const
+
       const fitClass = block.fit === "cover" ? "object-cover" : "object-contain"
 
       const logoContent = (
@@ -342,14 +354,29 @@ function FooterBlock({
         return (
           <Link
             href={block.href}
-            className={cn("inline-block outline-none rounded", theme.focus)}
+            className={cn(
+              "inline-flex outline-none rounded",
+              alignXMap[block.alignX || "center"],
+              alignYMap[block.alignY || "center"],
+              theme.focus
+            )}
           >
             {logoContent}
           </Link>
         )
       }
 
-      return <div>{logoContent}</div>
+      return (
+        <div
+          className={cn(
+            "flex",
+            alignXMap[block.alignX || "center"],
+            alignYMap[block.alignY || "center"]
+          )}
+        >
+          {logoContent}
+        </div>
+      )
     }
 
     case "copyright":

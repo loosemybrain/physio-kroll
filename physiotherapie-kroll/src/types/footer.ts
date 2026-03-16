@@ -86,6 +86,8 @@ export type FooterBlock =
       size?: "sm" | "md" | "lg"
       fit?: "contain" | "cover"
       href?: string
+      alignX?: "left" | "center" | "right"
+      alignY?: "top" | "center" | "bottom"
     }
   | { type: "copyright"; id: string; text: string }
 
