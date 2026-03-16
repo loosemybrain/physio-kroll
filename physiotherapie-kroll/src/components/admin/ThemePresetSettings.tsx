@@ -670,7 +670,7 @@ export function ThemePresetSettings({ initial }: ThemePresetSettingsProps) {
                 <div className="max-h-72 overflow-y-auto pr-1">
                   <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
                     {[1, 2, 3].map((i) => (
-                      <div key={i} className="h-32 animate-pulse rounded-lg border border-border bg-card" />
+                      <div key={`skeleton-${i}`} className="h-32 animate-pulse rounded-lg border border-border bg-card" />
                     ))}
                   </div>
                 </div>

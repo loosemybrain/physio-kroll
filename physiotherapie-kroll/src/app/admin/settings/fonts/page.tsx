@@ -257,7 +257,7 @@ export default function FontSettingsPage() {
                     <p className="font-semibold mb-2">{auditResults.length} Fundstelle(n):</p>
                     <ul className="list-disc pl-4 space-y-1">
                       {auditResults.map((finding, i) => (
-                        <li key={i} className="text-sm">
+                        <li key={`finding-${i}-${finding.file}`} className="text-sm">
                           <code className="text-xs bg-destructive/10 px-1 py-0.5 rounded">
                             {finding.file}
                           </code>

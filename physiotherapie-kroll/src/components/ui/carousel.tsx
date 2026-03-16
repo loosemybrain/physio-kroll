@@ -470,7 +470,7 @@ export function CarouselDots({ className, ...props }: CarouselDotsProps) {
         const isActive = i === index
         return (
           <button
-            key={i}
+            key={`dot-${i}`}
             type="button"
             onClick={() => goTo(i)}
             aria-label={`Gehe zu Slide ${i + 1}`}

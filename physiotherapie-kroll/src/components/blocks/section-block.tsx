@@ -132,9 +132,9 @@ function splitParagraphs(text: string): string[] {
 function renderParagraph(text: string, index: number) {
   const parts = text.split(/\n/)
   return (
-    <p key={index}>
+    <p key={`p-${index}`}>
       {parts.map((part, i) => (
-        <React.Fragment key={i}>
+        <React.Fragment key={`part-${i}-${part.substring(0, 20)}`}>
           {part}
           {i < parts.length - 1 && <br />}
         </React.Fragment>

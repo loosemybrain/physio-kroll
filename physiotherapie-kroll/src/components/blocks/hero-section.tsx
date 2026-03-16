@@ -475,9 +475,10 @@ export function HeroSection({
           {/* CTA Actions */}
           <div className={cn("hero-cta mt-4 flex flex-wrap items-center gap-4", shouldAnimateIn && "animate-fade-in-up animate-delay-400")}>
             {resolvedActions.map((action, index) => {
+              const actionId = action.id ?? `action-${index}`
               const isVideo = action.action === "video"
-              const elementId = `action-${action.id}`
-              const actionHovered = actionHoveredStates[action.id] ?? false
+              const elementId = `action-${actionId}`
+              const actionHovered = actionHoveredStates[actionId] ?? false
               
               // Resolve colors based on variant
               const isSecondary = action.variant === "secondary"
@@ -489,7 +490,7 @@ export function HeroSection({
 
               return (
                 <Editable
-                  key={action.id}
+                  key={actionId}
                   blockId={blockId || ""}
                   elementId={elementId}
                   typography={isSecondary ? playTypography : ctaTypography}
@@ -533,8 +534,8 @@ export function HeroSection({
                           }
                         : {}),
                     }}
-                    onMouseEnter={() => setActionHoveredStates(prev => ({ ...prev, [action.id]: true }))}
-                    onMouseLeave={() => setActionHoveredStates(prev => ({ ...prev, [action.id]: false }))}
+                    onMouseEnter={() => setActionHoveredStates(prev => ({ ...prev, [actionId]: true }))}
+                    onMouseLeave={() => setActionHoveredStates(prev => ({ ...prev, [actionId]: false }))}
                     onClick={editable && blockId && onEditField ? (e) => handleInlineEdit(e, `actions.${index}.label`, elementId) : (isVideo ? onCtaClick : undefined)}
                     asChild={!editable && !isVideo && !!action.href}
                   >
