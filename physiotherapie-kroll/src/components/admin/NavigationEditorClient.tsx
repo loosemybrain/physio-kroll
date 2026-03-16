@@ -1330,9 +1330,19 @@ function LogoPreview({
         return
       }
 
+      // Helper function to fix malformed URLs
+      const fixMediaUrl = (url: string): string => {
+        // Fix double "media/media/" in storage URLs
+        if (url.includes("media/media/")) {
+          return url.replace("media/media/", "media/")
+        }
+        return url
+      }
+
       // If logo has url, use it directly
       if ("url" in logo && logo.url) {
-        setLogoUrl(logo.url)
+        const fixedUrl = fixMediaUrl(logo.url)
+        setLogoUrl(fixedUrl)
         setLoading(false)
         return
       }
@@ -1352,7 +1362,8 @@ function LogoPreview({
             console.error("Error fetching logo from database:", error)
             setLogoUrl(null)
           } else if (data?.url) {
-            setLogoUrl(data.url)
+            const fixedUrl = fixMediaUrl(data.url)
+            setLogoUrl(fixedUrl)
           } else {
             setLogoUrl(null)
           }
