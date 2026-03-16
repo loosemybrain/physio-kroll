@@ -336,9 +336,14 @@ function FooterBlock({
         return null
       }
 
-      const resolvedLogoUrl = block.mediaId
-        ? resolvedLogos.get(block.mediaId) || null
-        : block.url
+      // Try to resolve media ID first, then fall back to direct URL
+      let resolvedLogoUrl: string | null = null
+      if (block.mediaId) {
+        resolvedLogoUrl = resolvedLogos.get(block.mediaId) || null
+      }
+      if (!resolvedLogoUrl && block.url) {
+        resolvedLogoUrl = block.url
+      }
 
       if (!resolvedLogoUrl) {
         return null
