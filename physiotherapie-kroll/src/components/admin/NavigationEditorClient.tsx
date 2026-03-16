@@ -66,14 +66,7 @@ export function NavigationEditorClient({
   const [presetJsonDraft, setPresetJsonDraft] = useState<Record<string, string>>({})
   
   // Collapse state for navigation links (UI-only, not persisted)
-  const [collapsedLinkItems, setCollapsedLinkItems] = useState<Record<string, boolean>>(() => {
-    const collapsed: Record<string, boolean> = {}
-    const initialLinks = initialPhysio?.links || []
-    initialLinks.forEach((link) => {
-      collapsed[link.id] = true
-    })
-    return collapsed
-  })
+  const [collapsedLinkItems, setCollapsedLinkItems] = useState<Record<string, boolean>>({})
   
   // Header draft/saved state
   const [physioHeaderDraft, setPhysioHeaderDraft] = useState<NavConfig>(physioConfig)
@@ -94,6 +87,17 @@ export function NavigationEditorClient({
   const headerDraft = useMemo(() => {
     return activeBrand === "physiotherapy" ? physioHeaderDraft : konzeptHeaderDraft
   }, [activeBrand, physioHeaderDraft, konzeptHeaderDraft])
+
+  // Initialize collapse state after mount to avoid hydration mismatch
+  useEffect(() => {
+    if (Object.keys(collapsedLinkItems).length === 0 && navConfig?.links) {
+      const collapsed: Record<string, boolean> = {}
+      navConfig.links.forEach((link) => {
+        collapsed[link.id] = true
+      })
+      setCollapsedLinkItems(collapsed)
+    }
+  }, [activeBrand])
 
   // Save navigation
   const handleSave = useCallback(async (configToSave?: NavConfig) => {
