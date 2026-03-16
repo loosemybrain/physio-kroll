@@ -351,13 +351,17 @@ function FooterBlock({
         />
       )
 
+      // Use h-full for container if Y alignment is specified and not default center
+      const useFullHeight = block.alignY && block.alignY !== "center"
+      const containerHeightClass = useFullHeight ? "h-full" : sizeClass
+
       if (block.href) {
         return (
           <Link
             href={block.href}
             className={cn(
               "inline-flex outline-none rounded",
-              sizeClass,
+              containerHeightClass,
               alignXMap[block.alignX || "center"],
               alignYMap[block.alignY || "center"],
               theme.focus
@@ -372,7 +376,7 @@ function FooterBlock({
         <div
           className={cn(
             "flex",
-            sizeClass,
+            containerHeightClass,
             alignXMap[block.alignX || "center"],
             alignYMap[block.alignY || "center"]
           )}
