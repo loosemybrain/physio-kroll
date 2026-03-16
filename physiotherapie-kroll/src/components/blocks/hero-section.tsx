@@ -251,39 +251,15 @@ export function HeroSection({
   const resolvedFloatingValue = activeBrandContent.floatingValue ?? props.floatingValue ?? floatingValue ?? ""
   const resolvedFloatingLabel = activeBrandContent.floatingLabel ?? props.floatingLabel ?? floatingLabel ?? ""
   const resolvedImageUrl = resolveMediaUrl(activeBrandContent.image) ?? props.mediaUrl ?? mediaUrl ?? "/placeholder.svg"
-  const resolvedImageAlt = activeBrandContent.imageAlt ?? (isCalm
-    ? "Professional physiotherapy treatment in a calm, welcoming environment"
-    : "Athlete training with focused determination and energy")
+  const resolvedImageAlt = activeBrandContent.imageAlt ?? props.imageAlt ?? ""
   const resolvedImageVariant = activeBrandContent.imageVariant ?? "landscape"
   const resolvedImageFit: "cover" | "contain" =
     activeBrandContent.imageFit ?? (props as any)?.imageFit ?? "cover"
   const resolvedImageFocus = activeBrandContent.imageFocus ?? "center"
   const resolvedContainBackground = activeBrandContent.containBackground ?? "blur"
 
-  // Resolve actions: prefer brandContent.actions, fallback to props.actions, fallback to legacy props
-  const resolvedActions = activeBrandContent.actions ?? props.actions ?? (
-    // Backward compatibility: create actions from old ctaText/ctaHref + playText (for physio-konzept)
-    (() => {
-      const actions: any[] = []
-      if (resolvedCtaText && resolvedCtaHref) {
-        actions.push({
-          id: "primary",
-          variant: "primary",
-          label: resolvedCtaText,
-          href: resolvedCtaHref,
-        })
-      }
-      if (!isCalm && resolvedPlayText) {
-        actions.push({
-          id: "video",
-          variant: "secondary",
-          label: resolvedPlayText,
-          action: "video",
-        })
-      }
-      return actions
-    })()
-  )
+  // Resolve actions: prefer brandContent.actions, fallback to props.actions
+  const resolvedActions = activeBrandContent.actions ?? props.actions ?? []
 
   // Farben (nur gesetzt falls in brandContent belegt, sonst undefined)
   const resolvedHeadlineColor = opt(activeBrandContent.headlineColor)

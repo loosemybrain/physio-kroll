@@ -242,6 +242,7 @@ export interface HeroBlock extends BaseBlock {
     showMedia?: boolean
     mediaType?: "image" | "video"
     mediaUrl?: string
+    imageAlt?: string
     badgeText?: string
     playText?: string
     trustItems?: string[]

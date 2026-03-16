@@ -248,10 +248,11 @@ export function SectionBlock({
   const resolvedSecondaryText = (secondaryCtaText)?.trim() || ""
   const resolvedSecondaryHref = secondaryCtaHref
 
-  const hasCta =
-    showCta &&
-    ((resolvedPrimaryText.length > 0 && resolvedPrimaryHref) ||
-      (resolvedSecondaryText.length > 0 && resolvedSecondaryHref))
+  // Check if each CTA has both text and href
+  const hasPrimaryCta = resolvedPrimaryText.length > 0 && resolvedPrimaryHref
+  const hasSecondaryCta = resolvedSecondaryText.length > 0 && resolvedSecondaryHref
+  
+  const hasCta = showCta && (hasPrimaryCta || hasSecondaryCta)
 
   // Element shadows
   const surfaceShadow = useElementShadowStyle({
@@ -616,7 +617,7 @@ export function SectionBlock({
                 )}
               >
                 {/* Primary CTA */}
-                {resolvedPrimaryText && resolvedPrimaryHref && (
+                {hasPrimaryCta && (
                   <div
                     data-element-id="section.ctaPrimary"
                     style={primaryCtaShadow}
@@ -685,7 +686,7 @@ export function SectionBlock({
                 )}
 
                 {/* Secondary CTA */}
-                {secondaryCtaText && secondaryCtaHref && (
+                {hasSecondaryCta && (
                   <div
                     data-element-id="section.ctaSecondary"
                     style={secondaryCtaShadow}

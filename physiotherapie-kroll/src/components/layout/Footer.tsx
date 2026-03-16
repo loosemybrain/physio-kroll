@@ -474,7 +474,7 @@ function GlassPanelWrapper({
       {/* Highlight line */}
       {(config?.glassmorphism?.highlightLine ?? preset.highlightLine) && (
         <div 
-          className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent to-transparent"
+          className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent to-transparent"
           style={{
             backgroundImage: `linear-gradient(to right, transparent, ${config?.glassmorphism?.highlightColor || "#e5e7eb"}, transparent)`,
           }}

@@ -924,7 +924,7 @@ export function NavigationEditorClient({
                           <div className="flex items-center gap-2">
                             <ChevronRight
                               className={cn(
-                                "h-4 w-4 flex-shrink-0 transition-transform",
+                                "h-4 w-4 shrink-0 transition-transform",
                                 !isCollapsed && "rotate-90"
                               )}
                             />
@@ -936,7 +936,7 @@ export function NavigationEditorClient({
                             </div>
                           )}
                         </div>
-                        <div className="flex items-center gap-1 flex-shrink-0">
+                        <div className="flex items-center gap-1 shrink-0">
                           <Button
                             variant="ghost"
                             size="icon"

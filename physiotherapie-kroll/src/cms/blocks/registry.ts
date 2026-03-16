@@ -165,6 +165,13 @@ const heroBrandContentSchema = z.object({
   imageFit: z.enum(["cover", "contain"]).optional(),
   imageFocus: z.enum(["center", "top", "bottom"]).optional(),
   containBackground: z.enum(["none", "blur"]).optional(),
+  actions: z.array(z.object({
+    id: z.string(),
+    variant: z.enum(["primary", "secondary"]),
+    label: z.string(),
+    href: z.string().optional(),
+    action: z.enum(["video", "scroll"]).optional(),
+  })).optional(),
 })
 
 const heroPropsSchema = z.object({
@@ -177,6 +184,7 @@ const heroPropsSchema = z.object({
   showMedia: z.boolean().optional(),
   mediaType: z.enum(["image", "video"]).optional(),
   mediaUrl: z.string().optional(),
+  imageAlt: z.string().optional(),
   badgeText: z.string().optional(),
   playText: z.string().optional(),
   trustItems: z.array(z.string()).optional(),
