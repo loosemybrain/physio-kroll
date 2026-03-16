@@ -446,7 +446,6 @@ export function FooterEditorClient({
                         onCheckedChange={(enabled) => {
                           updateConfig({
                             legalLinks: {
-                              ...footerConfig.legalLinks,
                               ...DEFAULT_LEGAL_LINKS_CONFIG,
                               ...footerConfig.legalLinks,
                               enabled,
@@ -467,7 +466,6 @@ export function FooterEditorClient({
                               onChange={(e) =>
                                 updateConfig({
                                   legalLinks: {
-                                    ...footerConfig.legalLinks,
                                     ...DEFAULT_LEGAL_LINKS_CONFIG,
                                     ...footerConfig.legalLinks,
                                     title: e.target.value || undefined,
@@ -484,7 +482,6 @@ export function FooterEditorClient({
                               onCheckedChange={(showTitle) =>
                                 updateConfig({
                                   legalLinks: {
-                                    ...footerConfig.legalLinks,
                                     ...DEFAULT_LEGAL_LINKS_CONFIG,
                                     ...footerConfig.legalLinks,
                                     showTitle,
@@ -503,7 +500,6 @@ export function FooterEditorClient({
                             onValueChange={(placement) =>
                               updateConfig({
                                 legalLinks: {
-                                  ...footerConfig.legalLinks,
                                   ...DEFAULT_LEGAL_LINKS_CONFIG,
                                   ...footerConfig.legalLinks,
                                   placement: placement as "section" | "bottom-bar",
@@ -528,7 +524,6 @@ export function FooterEditorClient({
                             onValueChange={(layout) =>
                               updateConfig({
                                 legalLinks: {
-                                  ...footerConfig.legalLinks,
                                   ...DEFAULT_LEGAL_LINKS_CONFIG,
                                   ...footerConfig.legalLinks,
                                   layout: layout as "inline" | "stacked" | "separated" | "chips",
@@ -555,7 +550,6 @@ export function FooterEditorClient({
                             onValueChange={(align) =>
                               updateConfig({
                                 legalLinks: {
-                                  ...footerConfig.legalLinks,
                                   ...DEFAULT_LEGAL_LINKS_CONFIG,
                                   ...footerConfig.legalLinks,
                                   align: align as "left" | "center" | "right",
@@ -584,11 +578,9 @@ export function FooterEditorClient({
                                 onCheckedChange={(imprint) =>
                                   updateConfig({
                                     legalLinks: {
-                                      ...footerConfig.legalLinks,
                                       ...DEFAULT_LEGAL_LINKS_CONFIG,
                                       ...footerConfig.legalLinks,
                                       items: {
-                                        ...footerConfig.legalLinks?.items,
                                         ...DEFAULT_LEGAL_LINKS_CONFIG.items,
                                         ...footerConfig.legalLinks?.items,
                                         imprint,
@@ -609,11 +601,9 @@ export function FooterEditorClient({
                                 onCheckedChange={(privacy) =>
                                   updateConfig({
                                     legalLinks: {
-                                      ...footerConfig.legalLinks,
                                       ...DEFAULT_LEGAL_LINKS_CONFIG,
                                       ...footerConfig.legalLinks,
                                       items: {
-                                        ...footerConfig.legalLinks?.items,
                                         ...DEFAULT_LEGAL_LINKS_CONFIG.items,
                                         ...footerConfig.legalLinks?.items,
                                         privacy,
@@ -634,11 +624,9 @@ export function FooterEditorClient({
                                 onCheckedChange={(cookies) =>
                                   updateConfig({
                                     legalLinks: {
-                                      ...footerConfig.legalLinks,
                                       ...DEFAULT_LEGAL_LINKS_CONFIG,
                                       ...footerConfig.legalLinks,
                                       items: {
-                                        ...footerConfig.legalLinks?.items,
                                         ...DEFAULT_LEGAL_LINKS_CONFIG.items,
                                         ...footerConfig.legalLinks?.items,
                                         cookies,
@@ -678,7 +666,6 @@ export function FooterEditorClient({
                               onClick={() =>
                                 updateConfig({
                                   legalLinks: {
-                                    ...footerConfig.legalLinks,
                                     ...DEFAULT_LEGAL_LINKS_CONFIG,
                                     ...footerConfig.legalLinks,
                                     textColor: preset.text,
@@ -702,7 +689,6 @@ export function FooterEditorClient({
                               onChange={(e) =>
                                 updateConfig({
                                   legalLinks: {
-                                    ...footerConfig.legalLinks,
                                     ...DEFAULT_LEGAL_LINKS_CONFIG,
                                     ...footerConfig.legalLinks,
                                     textColor: e.target.value || undefined,
@@ -720,7 +706,6 @@ export function FooterEditorClient({
                               onChange={(e) =>
                                 updateConfig({
                                   legalLinks: {
-                                    ...footerConfig.legalLinks,
                                     ...DEFAULT_LEGAL_LINKS_CONFIG,
                                     ...footerConfig.legalLinks,
                                     hoverColor: e.target.value || undefined,
@@ -738,7 +723,6 @@ export function FooterEditorClient({
                               onChange={(e) =>
                                 updateConfig({
                                   legalLinks: {
-                                    ...footerConfig.legalLinks,
                                     ...DEFAULT_LEGAL_LINKS_CONFIG,
                                     ...footerConfig.legalLinks,
                                     activeColor: e.target.value || undefined,
@@ -756,7 +740,6 @@ export function FooterEditorClient({
                               onChange={(e) =>
                                 updateConfig({
                                   legalLinks: {
-                                    ...footerConfig.legalLinks,
                                     ...DEFAULT_LEGAL_LINKS_CONFIG,
                                     ...footerConfig.legalLinks,
                                     separatorColor: e.target.value || undefined,
@@ -775,7 +758,6 @@ export function FooterEditorClient({
                               onValueChange={(gap) =>
                                 updateConfig({
                                   legalLinks: {
-                                    ...footerConfig.legalLinks,
                                     ...DEFAULT_LEGAL_LINKS_CONFIG,
                                     ...footerConfig.legalLinks,
                                     gap: gap as "sm" | "md" | "lg",
@@ -800,7 +782,6 @@ export function FooterEditorClient({
                               onValueChange={(marginTop) =>
                                 updateConfig({
                                   legalLinks: {
-                                    ...footerConfig.legalLinks,
                                     ...DEFAULT_LEGAL_LINKS_CONFIG,
                                     ...footerConfig.legalLinks,
                                     marginTop: marginTop as "none" | "sm" | "md" | "lg",
