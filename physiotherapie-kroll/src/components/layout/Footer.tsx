@@ -563,15 +563,16 @@ function LegalLinksRenderer({
   } as const
 
   const containerClass = cn(
-    legalLinks.placement === "bottom-bar" ? "w-full flex" : "flex flex-col",
+    "flex flex-col",
     marginTopMap[legalLinks.marginTop || "md"],
     legalLinks.placement === "bottom-bar" ? "pt-6 border-t" : ""
   )
 
   const linksContainerClass = cn(
-    layoutMap[legalLinks.layout || "inline"],
-    alignMap[legalLinks.align || "left"],
-    legalLinks.placement === "bottom-bar" ? "w-full" : ""
+    legalLinks.placement === "bottom-bar" 
+      ? "flex flex-wrap gap-2" 
+      : layoutMap[legalLinks.layout || "inline"],
+    alignMap[legalLinks.align || "left"]
   )
 
   const linkClass = cn(
@@ -583,7 +584,7 @@ function LegalLinksRenderer({
 
   return (
     <div className={containerClass}>
-      {legalLinks.showTitle !== false && legalLinks.title && (
+      {legalLinks.placement !== "bottom-bar" && legalLinks.showTitle !== false && legalLinks.title && (
         <h3
           className={cn(
             "mb-3",
