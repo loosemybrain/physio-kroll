@@ -384,17 +384,19 @@ function FooterBlock({
       const useFullHeight = block.alignY && block.alignY !== "center"
       const containerHeightClass = useFullHeight ? "h-full" : sizeClass
 
+      // For Links with full height, we need display: flex (not inline-flex)
+      const containerClasses = cn(
+        "flex outline-none rounded",
+        containerHeightClass,
+        alignXMap[block.alignX || "center"],
+        alignYMap[block.alignY || "center"]
+      )
+
       if (block.href) {
         return (
           <Link
             href={block.href}
-            className={cn(
-              "inline-flex outline-none rounded",
-              containerHeightClass,
-              alignXMap[block.alignX || "center"],
-              alignYMap[block.alignY || "center"],
-              theme.focus
-            )}
+            className={cn(containerClasses, theme.focus)}
           >
             {logoContent}
           </Link>
@@ -402,14 +404,7 @@ function FooterBlock({
       }
 
       return (
-        <div
-          className={cn(
-            "flex",
-            containerHeightClass,
-            alignXMap[block.alignX || "center"],
-            alignYMap[block.alignY || "center"]
-          )}
-        >
+        <div className={containerClasses}>
           {logoContent}
         </div>
       )
