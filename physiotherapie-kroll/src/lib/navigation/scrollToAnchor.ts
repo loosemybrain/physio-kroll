@@ -3,12 +3,70 @@
  * Verwendet von Header/Nav (Klick) und bei Seitenload mit Hash.
  * ScrollSpy nutzt dieselbe ID-Konvention (block-<id>).
  * 
- * Homepage-Canonicalisierung: "/" ist die kanonische Homepage-Route.
- * anchorPageSlug="home" wird immer zu "/" kanonisiert.
+ * Brand-aware Pfad-Kanonisierung:
+ * - Physiotherapy: home -> "/" (Root)
+ * - Physio-Konzept: home -> "/konzept" (Brand prefix)
+ * - Andere Slugs werden mit Brand-Präfix versehen
  */
+
+import type { BrandKey } from "@/components/brand/brandAssets"
 
 /** Präfix für Block-DOM-IDs; vermeidet Kollisionen mit anderen IDs. */
 export const BLOCK_ANCHOR_PREFIX = "block-"
+
+/**
+ * Normalisiert einen internen Pfad zu kanonischer Form.
+ * Entfernt trailing slashes (außer bei Root "/"), normalisiert doppelte Slashes.
+ */
+function normalizeInternalPath(path: string): string {
+  if (!path) return "/"
+  let normalized = path.replace(/\/+/g, "/") // Doppelte Slashes weg
+  if (normalized !== "/" && normalized.endsWith("/")) {
+    normalized = normalized.slice(0, -1) // Trailing slash weg (außer Root)
+  }
+  return normalized || "/"
+}
+
+/**
+ * Zentrale Brand-aware Pfadauflösung.
+ * Bestimmt den kanonischen internen Pfad für einen CMS-Slug und eine Marke.
+ * 
+ * Regeln:
+ * - Physiotherapy: home -> "/", andere -> "/<slug>"
+ * - Physio-Konzept: home -> "/konzept", andere -> "/konzept/<slug>"
+ * - Defensive Behandlung: Leere/null Slugs, führende Slashes normalisieren
+ */
+export function resolvePagePathForBrand(
+  slug: string | null | undefined,
+  brand: BrandKey | undefined
+): string {
+  const isConcept = brand === "physio-konzept"
+  const basePrefix = isConcept ? "/konzept" : ""
+
+  // Leerer oder "home" Slug -> Homepage
+  if (!slug || slug === "home") {
+    return basePrefix || "/"
+  }
+
+  // Slug normalisieren: führende Slashes entfernen
+  const cleanSlug = String(slug).replace(/^\/+/, "")
+  if (!cleanSlug) return basePrefix || "/"
+
+  // Pfad zusammensetzen
+  const path = basePrefix ? `${basePrefix}/${cleanSlug}` : `/${cleanSlug}`
+  return normalizeInternalPath(path)
+}
+
+/**
+ * Normalisiert zwei Pfade für Vergleich (kanonische Form).
+ * Entfernt Query-Strings und Hashes.
+ */
+function normalizePathForComparison(path: string): string {
+  if (!path) return "/"
+  // Query und Hash entfernen
+  const cleaned = path.split(/[?#]/)[0] || "/"
+  return normalizeInternalPath(cleaned)
+}
 
 /**
  * Erzeugt die stabile DOM-ID für einen Block (Kollisionsschutz durch Präfix).
@@ -66,37 +124,67 @@ export function scrollToBlockAnchor(
 }
 
 /**
- * Kanonisiert einen CMS-Slug zur Route-URL.
- * Regel: Der Slug "home" wird zu "/" kanonisiert.
- * Alle anderen Slugs werden zu "/<slug>".
+ * Kanonisiert einen CMS-Slug zur Route-URL (DEPRECATED, nur rückwärts-kompatibel).
+ * Nutze stattdessen resolvePagePathForBrand() mit Brand-Info.
+ * 
+ * Diese Funktion annahm implizit Brand="physiotherapy".
+ * Für korrekte Brand-aware Auflösung: resolvePagePathForBrand(slug, brand)
  */
 export function canonicalizeSlugToPath(slug?: string | null): string {
-  if (!slug || slug === "home") return "/"
-  return `/${slug.replace(/^\//, "")}`
+  // Rückwärts-kompatibel: annahm implizit Brand="physiotherapy"
+  return resolvePagePathForBrand(slug, "physiotherapy")
 }
 
 /**
- * Vergleicht, ob zwei Pfade/Slugs dieselbe Seite bezeichnen.
- * Berücksichtigt die Homepage-Canonicalisierung ("/home" = "/").
+ * Vergleicht, ob zwei Pfade dieselbe Seite bezeichnen.
+ * Brand-aware: berücksichtigt unterschiedliche Homepage-Pfade pro Marke.
+ * 
+ * @param currentPath - Der aktuelle Seiten-Pfad (z. B. aus usePathname())
+ * @param targetSlug - Der Ziel-Slug aus der Navigation
+ * @param targetBrand - Die Marke des Ziel-Links (optional, standardmäßig wie currentPath)
+ * @returns true wenn beide auf dieselbe Seite zeigen
  */
-export function isSamePage(currentPath: string, targetSlug?: string | null): boolean {
-  if (!currentPath) currentPath = "/"
-  const targetPath = canonicalizeSlugToPath(targetSlug)
-  return currentPath === targetPath
+export function isSamePage(
+  currentPath: string,
+  targetSlug?: string | null,
+  targetBrand?: BrandKey
+): boolean {
+  const normalizedCurrent = normalizePathForComparison(currentPath || "/")
+  
+  // Wenn Brand nicht angegeben: aus currentPath ableiten
+  const isCurrentConcept = normalizedCurrent.startsWith("/konzept")
+  const brand: BrandKey = targetBrand ?? (isCurrentConcept ? "physio-konzept" : "physiotherapy")
+  
+  const targetPath = resolvePagePathForBrand(targetSlug, brand)
+  const normalizedTarget = normalizePathForComparison(targetPath)
+  
+  return normalizedCurrent === normalizedTarget
 }
 
 /**
- * Erzeugt einen Href für einen Anchor-Link.
- * Format: "/<slug>#block-<id>" oder "/#block-<id>" (bei home).
- * Respektiert die Homepage-Canonicalisierung.
+ * Erzeugt einen Brand-aware Href für einen Anchor-Link.
+ * Format: "/<slug>#block-<id>" oder mit Brand-Präfix bei Konzept.
+ * 
+ * @param blockId - Die Block-ID (z. B. "abc123")
+ * @param pageSlug - Der Ziel-Seiten-Slug (z. B. "home", "about")
+ * @param brand - Die Marke (optional, standardmäßig "physiotherapy")
+ * @returns Vollqualifizierter Anchor-Href
  */
 export function buildAnchorHref(
   blockId: string,
-  pageSlug?: string | null
+  pageSlug?: string | null,
+  brand?: BrandKey
 ): string {
   const hash = `#${BLOCK_ANCHOR_PREFIX}${blockId}`
-  if (!pageSlug || pageSlug === "home") return hash // Same page or home ("/")
-  return `/${pageSlug.replace(/^\//, "")}${hash}`
+  const targetPath = resolvePagePathForBrand(pageSlug, brand || "physiotherapy")
+  
+  // Wenn Ziel Root "/" ist, kann man Optional nur den Hash zurückgeben
+  // aber für Konsistenz immer vollqualifiziert (mit Root Präfix wenn nötig)
+  if (targetPath === "/") {
+    return hash // Root: kann "/#block-..." sein
+  }
+  
+  return `${targetPath}${hash}`
 }
 
 /**

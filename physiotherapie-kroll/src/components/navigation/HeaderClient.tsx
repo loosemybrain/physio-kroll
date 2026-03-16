@@ -36,6 +36,7 @@ import {
   scrollToBlockAnchor,
   isSamePage,
   buildAnchorHref,
+  resolvePagePathForBrand,
 } from "@/lib/navigation/scrollToAnchor"
 import { useScrollSpy } from "@/components/navigation/ScrollSpyProvider"
 
@@ -237,21 +238,23 @@ export function HeaderClient({ brand, navConfig }: HeaderClientProps) {
   /* ---- href helpers ---- */
   const getLinkHref = useCallback((link: NavLink): string => {
     if (link.type === "page" && link.pageSlug != null) {
-      if (link.pageSlug === "home") return "/" // Homepage canonicalization
-      return `/${link.pageSlug}`
+      // Brand-aware Pfadauflösung
+      return resolvePagePathForBrand(link.pageSlug, brand)
     }
     if (link.type === "url" && link.href) return link.href
     if (link.type === "anchor" && link.anchorBlockId) {
-      return buildAnchorHref(link.anchorBlockId, link.anchorPageSlug)
+      // Brand-aware Anchor-Href
+      return buildAnchorHref(link.anchorBlockId, link.anchorPageSlug, brand)
     }
     return "#"
-  }, [])
+  }, [brand])
 
   /** Anchor-Links auf derselben Seite: Default verhindern, mit Header-Offset scrollen, Hash aktualisieren. */
   const handleNavLinkClick = useCallback(
     (link: NavLink, e: React.MouseEvent<HTMLAnchorElement>) => {
       if (link.type !== "anchor" || !link.anchorBlockId) return
-      const samePage = isSamePage(pathname || "/", link.anchorPageSlug)
+      // Brand-aware Same-page Erkennung
+      const samePage = isSamePage(pathname || "/", link.anchorPageSlug, brand)
       if (!samePage) return
       e.preventDefault()
       const headerOffset = headerRef.current ? Math.ceil(headerRef.current.getBoundingClientRect().height) : 80
@@ -262,7 +265,7 @@ export function HeaderClient({ brand, navConfig }: HeaderClientProps) {
         history.replaceState(undefined, "", url)
       }
     },
-    [pathname]
+    [pathname, brand]
   )
 
   const getCtaHref = useCallback((): string => {
