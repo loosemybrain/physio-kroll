@@ -1348,11 +1348,13 @@ function LogoPreview({
             .eq("id", logo.mediaId)
             .single()
 
-          if (error || !data) {
+          if (error) {
             console.error("Error fetching logo from database:", error)
             setLogoUrl(null)
-          } else {
+          } else if (data?.url) {
             setLogoUrl(data.url)
+          } else {
+            setLogoUrl(null)
           }
         } catch (error) {
           console.error("Error resolving logo:", error)
@@ -1393,16 +1395,16 @@ function LogoPreview({
               src={logoUrl}
               alt="Logo Vorschau"
               className={cn(
-                "h-full w-auto",
-                logoFit === "contain" ? "object-contain" : "object-cover"
+                "h-full w-auto object-contain"
               )}
               onError={(e) => {
-                (e.target as HTMLImageElement).style.display = "none"
+                console.error("Logo failed to load:", logoUrl)
+                ;(e.target as HTMLImageElement).style.display = "none"
               }}
             />
           </div>
         ) : (
-          <span className="text-xs text-muted-foreground">Logo konnte nicht geladen werden</span>
+          <span className="text-xs text-muted-foreground">Logo nicht gefunden</span>
         )}
       </div>
     </div>
