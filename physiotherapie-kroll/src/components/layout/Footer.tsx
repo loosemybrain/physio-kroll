@@ -688,14 +688,16 @@ function FooterContent({
         </div>
       )}
 
-      {/* Legal Links (if placement is "bottom-bar") */}
+      {/* Legal Links (if placement is "bottom-bar") - Separate container with independent alignment */}
       {footerConfig.legalLinks?.enabled &&
         footerConfig.legalLinks?.placement === "bottom-bar" && (
-          <LegalLinksRenderer
-            legalLinks={footerConfig.legalLinks}
-            theme={theme}
-            pagesMap={pagesMap}
-          />
+          <div className="mt-6 pt-6 border-t">
+            <LegalLinksRenderer
+              legalLinks={footerConfig.legalLinks}
+              theme={theme}
+              pagesMap={pagesMap}
+            />
+          </div>
         )}
     </>
   )
