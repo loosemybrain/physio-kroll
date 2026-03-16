@@ -368,6 +368,7 @@ function FooterBlock({
       } as const
 
       const fitClass = block.fit === "cover" ? "object-cover" : "object-contain"
+      const sizeClass = sizeClassMap[block.size || "md"]
 
       const logoContent = (
         <Image
@@ -385,6 +386,7 @@ function FooterBlock({
             href={block.href}
             className={cn(
               "inline-flex outline-none rounded",
+              sizeClass,
               alignXMap[block.alignX || "center"],
               alignYMap[block.alignY || "center"],
               theme.focus
@@ -399,6 +401,7 @@ function FooterBlock({
         <div
           className={cn(
             "flex",
+            sizeClass,
             alignXMap[block.alignX || "center"],
             alignYMap[block.alignY || "center"]
           )}
