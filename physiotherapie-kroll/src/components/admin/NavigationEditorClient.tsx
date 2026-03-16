@@ -1360,7 +1360,9 @@ function LogoPreview({
 
           if (error) {
             console.error("Error fetching logo from database:", error)
-            setLogoUrl(null)
+            // Try to construct URL directly as fallback
+            const fallbackUrl = `https://ibbiohwcnjttauikgbbr.supabase.co/storage/v1/object/public/media/${logo.mediaId}`
+            setLogoUrl(fallbackUrl)
           } else if (data?.url) {
             const fixedUrl = fixMediaUrl(data.url)
             setLogoUrl(fixedUrl)
@@ -1369,7 +1371,9 @@ function LogoPreview({
           }
         } catch (error) {
           console.error("Error resolving logo:", error)
-          setLogoUrl(null)
+          // Try to construct URL directly as fallback
+          const fallbackUrl = `https://ibbiohwcnjttauikgbbr.supabase.co/storage/v1/object/public/media/${logo.mediaId}`
+          setLogoUrl(fallbackUrl)
         } finally {
           setLoading(false)
         }
@@ -1410,6 +1414,7 @@ function LogoPreview({
               )}
               onError={(e) => {
                 console.error("Logo failed to load:", logoUrl)
+                console.error("Check if Supabase storage path exists and CORS is configured")
                 ;(e.target as HTMLImageElement).style.display = "none"
               }}
             />
