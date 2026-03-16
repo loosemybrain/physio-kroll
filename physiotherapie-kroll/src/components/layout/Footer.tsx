@@ -452,6 +452,138 @@ function GlassPanelWrapper({
 }
 
 /**
+ * Render legal links based on configuration and available pages
+ */
+function LegalLinksRenderer({
+  legalLinks,
+  theme,
+  pagesMap,
+}: {
+  legalLinks: FooterConfig["legalLinks"]
+  theme: ReturnType<typeof getFooterTheme>
+  pagesMap: Map<string, string>
+}) {
+  if (!legalLinks?.enabled) {
+    return null
+  }
+
+  // Build list of legal links to show
+  const legalSlugs: Array<{ slug: string; label: string; subtype: string }> = []
+  if (legalLinks.items?.imprint) {
+    legalSlugs.push({ slug: "impressum", label: "Impressum", subtype: "imprint" })
+  }
+  if (legalLinks.items?.privacy) {
+    legalSlugs.push({ slug: "datenschutz", label: "Datenschutz", subtype: "privacy" })
+  }
+  if (legalLinks.items?.cookies) {
+    legalSlugs.push({ slug: "cookies", label: "Cookies", subtype: "cookies" })
+  }
+
+  // Filter to only published pages
+  const publishedLegalLinks = legalSlugs.filter((item) => pagesMap.has(item.slug))
+
+  if (publishedLegalLinks.length === 0) {
+    return null
+  }
+
+  // Determine gap spacing
+  const gapMap = {
+    sm: "gap-2",
+    md: "gap-4",
+    lg: "gap-6",
+  } as const
+
+  // Determine margin-top spacing
+  const marginTopMap = {
+    none: "mt-0",
+    sm: "mt-4",
+    md: "mt-6",
+    lg: "mt-10",
+  } as const
+
+  // Determine alignment classes
+  const alignMap = {
+    left: "justify-start",
+    center: "justify-center",
+    right: "justify-end",
+  } as const
+
+  // Determine layout classes
+  const layoutMap = {
+    inline: "flex flex-wrap gap-2",
+    stacked: "flex flex-col gap-2",
+    separated: "flex gap-4 divide-x",
+    chips: "flex flex-wrap gap-3",
+  } as const
+
+  const fontSizeMap = {
+    xs: "text-xs",
+    sm: "text-sm",
+    base: "text-base",
+  } as const
+
+  const fontWeightMap = {
+    normal: "font-normal",
+    medium: "font-medium",
+    semibold: "font-semibold",
+  } as const
+
+  const containerClass = cn(
+    "flex flex-col",
+    marginTopMap[legalLinks.marginTop || "md"],
+    legalLinks.placement === "bottom-bar" ? "pt-6 border-t" : ""
+  )
+
+  const linksContainerClass = cn(
+    layoutMap[legalLinks.layout || "inline"],
+    alignMap[legalLinks.align || "left"]
+  )
+
+  const linkClass = cn(
+    "transition-colors outline-none rounded",
+    fontSizeMap[legalLinks.fontSize || "sm"],
+    fontWeightMap[legalLinks.fontWeight || "normal"],
+    legalLinks.uppercase ? "uppercase" : ""
+  )
+
+  return (
+    <div className={containerClass}>
+      {legalLinks.showTitle !== false && legalLinks.title && (
+        <h3
+          className={cn(
+            "mb-3",
+            theme.typography.heading.size,
+            theme.typography.heading.weight,
+            theme.typography.heading.font
+          )}
+          style={{ color: theme.colors.heading }}
+        >
+          {legalLinks.title}
+        </h3>
+      )}
+      <ul className={linksContainerClass}>
+        {publishedLegalLinks.map((item) => (
+          <li
+            key={item.slug}
+            className={legalLinks.layout === "separated" ? "px-2 first:pl-0 last:pr-0" : ""}
+          >
+            <Link
+              href={`/${item.slug}`}
+              className={linkClass}
+              style={{
+                color: legalLinks.textColor || theme.colors.text,
+              }}
+            >
+              {item.label}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+/**
  * Footer Content - main grid and sections
  */
 function FooterContent({
@@ -480,20 +612,32 @@ function FooterContent({
         ))}
       </div>
 
+      {/* Legal Links (if placement is "section") */}
+      {footerConfig.legalLinks?.enabled &&
+        footerConfig.legalLinks?.placement !== "bottom-bar" && (
+          <LegalLinksRenderer
+            legalLinks={footerConfig.legalLinks}
+            theme={theme}
+            pagesMap={pagesMap}
+          />
+        )}
+
       {/* Bottom Bar */}
       {footerConfig.bottomBar?.enabled && (
         <div className={cn("mt-12 pt-8 border-t", theme.bottomBar.class)}>
-          <div className={cn("flex flex-col sm:flex-row items-center gap-4", theme.bottomBar.align)}>
-            {footerConfig.bottomBar.left && (
-              <div>
-                <FooterBlock
-                  block={footerConfig.bottomBar.left}
-                  theme={theme}
-                  pagesMap={pagesMap}
-                  resolvedLogos={resolvedLogos}
-                />
-              </div>
-            )}
+          <div className={cn("flex flex-col sm:flex-row items-center gap-4 justify-between", theme.bottomBar.align)}>
+            <div className="flex flex-col sm:flex-row items-center gap-4">
+              {footerConfig.bottomBar.left && (
+                <div>
+                  <FooterBlock
+                    block={footerConfig.bottomBar.left}
+                    theme={theme}
+                    pagesMap={pagesMap}
+                    resolvedLogos={resolvedLogos}
+                  />
+                </div>
+              )}
+            </div>
             {footerConfig.bottomBar.right && (
               <div>
                 <FooterBlock
@@ -507,6 +651,16 @@ function FooterContent({
           </div>
         </div>
       )}
+
+      {/* Legal Links (if placement is "bottom-bar") */}
+      {footerConfig.legalLinks?.enabled &&
+        footerConfig.legalLinks?.placement === "bottom-bar" && (
+          <LegalLinksRenderer
+            legalLinks={footerConfig.legalLinks}
+            theme={theme}
+            pagesMap={pagesMap}
+          />
+        )}
     </>
   )
 }
