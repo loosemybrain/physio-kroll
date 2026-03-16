@@ -916,9 +916,9 @@ export function NavigationEditorClient({
                   return (
                     <div key={link.id} className="rounded-lg border border-border bg-card overflow-hidden">
                       {/* Collapsible Header */}
-                      <button
+                      <div
                         onClick={() => toggleLinkCollapse(link.id)}
-                        className="w-full px-4 py-3 flex items-center justify-between hover:bg-muted/50 transition-colors text-left"
+                        className="w-full px-4 py-3 flex items-center justify-between hover:bg-muted/50 transition-colors cursor-pointer"
                       >
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
@@ -976,7 +976,7 @@ export function NavigationEditorClient({
                             <Trash2 className="h-3 w-3" />
                           </Button>
                         </div>
-                      </button>
+                      </div>
 
                       {/* Expandable Content */}
                       {!isCollapsed && (
