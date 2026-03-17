@@ -618,7 +618,8 @@ export function TeamGridBlock({
         className={cn(
           // Mobile: use more width, less side padding/margins so cards don't feel cramped.
           // Desktop: keep existing spacious container.
-          "relative w-full max-w-6xl rounded-3xl px-4 py-6 sm:px-6 sm:py-8 md:px-14 md:py-10 mx-2 sm:mx-4 md:mx-auto md:my-6",
+          // NOTE: Avoid `w-full` + horizontal margins (can exceed viewport and get clipped by overflow-x-hidden).
+          "relative w-[calc(100%-1rem)] max-w-6xl mx-auto rounded-3xl px-4 py-6 sm:w-[calc(100%-2rem)] sm:px-6 sm:py-8 md:w-full md:px-14 md:py-10 md:my-6",
           containerBackgroundMode && containerBackgroundMode !== "transparent" && "border border-border/80",
           containerBackgroundMode === "gradient" && "backdrop-blur-sm"
         )}
@@ -628,7 +629,7 @@ export function TeamGridBlock({
         }}
       >
         {/* Content Wrapper */}
-        <div className="relative w-full px-0">
+        <div className="relative w-full px-0 sm:px-0">
         {/* ---- Header ---- */}
         {(eyebrow || headline || subheadline) && (
           <header className="mb-10 md:mb-12 text-center">
