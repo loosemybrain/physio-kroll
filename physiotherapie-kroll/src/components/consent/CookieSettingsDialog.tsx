@@ -91,118 +91,130 @@ export function CookieSettingsDialog() {
     { key: "functional", show: false }, // Hidden: replaced by externalMedia
   ]
 
+  const actionBtnBase =
+    "h-11 w-full rounded-xl px-4 text-sm font-semibold sm:w-auto sm:h-10 sm:rounded-full sm:px-6"
+
   return (
     <Dialog open={isSettingsOpen} onOpenChange={handleOpenChange}>
       <DialogContent
         className={cn(
-          "min-w-3xl max-h-[90vh] overflow-y-auto rounded-2xl",
+          // Mobile-first: near full width, no horizontal overflow, stable height.
+          // Desktop: keep the familiar dialog width.
+          "w-[calc(100vw-1rem)] max-w-none sm:w-[calc(100vw-2rem)] sm:max-w-2xl md:max-w-3xl",
+          "max-h-[85svh] sm:max-h-[90vh]",
+          "overflow-hidden rounded-2xl p-0",
           prefersReducedMotion ? "" : "animate-in fade-in zoom-in-[0.98] duration-300"
         )}
         suppressHydrationWarning
       >
-        <DialogHeader className="space-y-0 pb-4">
-          <div className="flex items-center gap-3 pb-4">
-            <button
-              type="button"
-              onClick={closeSettings}
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              aria-label="Zurück zur Übersicht"
-            >
-              <ChevronLeft className="h-5 w-5" />
-            </button>
-            <div className="flex-1">
-              <DialogTitle className="text-xl font-semibold text-foreground">Einstellungen anpassen</DialogTitle>
+        <div className="flex max-h-[85svh] flex-col sm:max-h-[90vh]">
+          <DialogHeader className="space-y-0 border-b border-border/50 px-4 py-4 sm:px-6">
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={closeSettings}
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                aria-label="Zurück zur Übersicht"
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </button>
+              <div className="min-w-0 flex-1">
+                <DialogTitle className="truncate text-base font-semibold text-foreground sm:text-xl">
+                  Einstellungen anpassen
+                </DialogTitle>
+              </div>
+            </div>
+            <DialogDescription className="mt-2 text-sm leading-relaxed text-muted-foreground">
+              Wählen Sie aus, welche Cookies Sie zulassen möchten. Sie können Ihre Auswahl jederzeit ändern.
+            </DialogDescription>
+          </DialogHeader>
+
+          {/* Scrollable content */}
+          <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-4 py-2 sm:px-6">
+            <div className="space-y-0">
+              {categories
+                .filter((cat) => cat.show)
+                .map(({ key }, index) => {
+                  const isNecessary = key === "necessary"
+                  const label = consentCategoryLabels[key]
+                  const isEnabled = draftConsent[key]
+
+                  return (
+                    <div key={key}>
+                      <div
+                        className={cn(
+                          "flex items-start justify-between gap-4 py-4",
+                          prefersReducedMotion ? "" : "animate-in fade-in slide-in-from-bottom-2 duration-300"
+                        )}
+                        style={prefersReducedMotion ? {} : { animationDelay: `${index * 50}ms` }}
+                      >
+                        <div className="min-w-0 flex-1 space-y-1.5">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Label
+                              htmlFor={`cookie-${key}`}
+                              className={cn(
+                                "text-sm font-medium leading-none",
+                                isNecessary ? "text-muted-foreground" : "text-foreground cursor-pointer"
+                              )}
+                            >
+                              {label.label}
+                            </Label>
+                            {isNecessary && (
+                              <span className="text-xs font-medium text-muted-foreground">(Immer aktiv)</span>
+                            )}
+                          </div>
+                          <p className="text-sm leading-relaxed text-muted-foreground wrap-break-word">
+                            {label.description}
+                          </p>
+                        </div>
+                        <Switch
+                          id={`cookie-${key}`}
+                          checked={isEnabled}
+                          onCheckedChange={(checked) => handleCategoryChange(key, checked)}
+                          disabled={isNecessary}
+                          aria-label={`${label.label} ${isEnabled ? "aktivieren" : "deaktivieren"}`}
+                          className="shrink-0"
+                        />
+                      </div>
+                      {categories.filter((c) => c.show).length > index + 1 && (
+                        <Separator className="bg-border/30" />
+                      )}
+                    </div>
+                  )
+                })}
             </div>
           </div>
-          <DialogDescription className="text-sm leading-relaxed text-muted-foreground">
-            Wählen Sie aus, welche Cookies Sie zulassen möchten. Sie können Ihre Auswahl jederzeit ändern.
-          </DialogDescription>
-        </DialogHeader>
 
-        <div className="space-y-0 border-t border-border/50">
-          {categories
-            .filter((cat) => cat.show)
-            .map(({ key }, index) => {
-              const isNecessary = key === "necessary"
-              const label = consentCategoryLabels[key]
-              const isEnabled = draftConsent[key]
+          {/* Sticky actions */}
+          <div className="border-t border-border/50 bg-background/80 px-4 py-4 backdrop-blur sm:px-6">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 sm:gap-2">
+              <Button
+                variant="outline"
+                onClick={rejectAll}
+                className={cn(actionBtnBase, "text-foreground")}
+                type="button"
+              >
+                Alle ablehnen
+              </Button>
 
-              return (
-                <div key={key}>
-                  <div
-                    className={cn(
-                      "flex items-start justify-between gap-4 px-0 py-4",
-                      prefersReducedMotion ? "" : "animate-in fade-in slide-in-from-bottom-2 duration-300",
-                    )}
-                    style={prefersReducedMotion ? {} : { animationDelay: `${index * 50}ms` }}
-                  >
-                    <div className="flex-1 space-y-1.5">
-                      <div className="flex items-center gap-2">
-                        <label
-                          htmlFor={`cookie-${key}`}
-                          className={cn(
-                            "text-sm font-medium leading-none",
-                            isNecessary ? "text-muted-foreground" : "text-foreground cursor-pointer"
-                          )}
-                        >
-                          {label.label}
-                        </label>
-                        {isNecessary && (
-                          <span className="text-xs font-medium text-muted-foreground">(Immer aktiv)</span>
-                        )}
-                      </div>
-                      <p className="text-sm leading-relaxed text-muted-foreground">{label.description}</p>
-                    </div>
-                    <Switch
-                      id={`cookie-${key}`}
-                      checked={isEnabled}
-                      onCheckedChange={(checked) => handleCategoryChange(key, checked)}
-                      disabled={isNecessary}
-                      aria-label={`${label.label} ${isEnabled ? "aktivieren" : "deaktivieren"}`}
-                      className="shrink-0"
-                    />
-                  </div>
-                  {categories.filter((c) => c.show).length > index + 1 && (
-                    <Separator className="bg-border/30" />
-                  )}
-                </div>
-              )
-            })}
-        </div>
+              <Button
+                variant="default"
+                onClick={handleSave}
+                className={cn(actionBtnBase)}
+                type="button"
+              >
+                Auswahl speichern
+              </Button>
 
-        <div className="flex flex-col gap-2.5 pt-6 border-t border-border/50">
-          {/* Three button row */}
-          <div className="flex flex-col gap-2 sm:flex-row sm:gap-2">
-            {/* Reject all button */}
-            <Button
-              variant="outline"
-              onClick={rejectAll}
-              className="rounded-full px-6 font-medium text-foreground"
-              size="sm"
-              type="button"
-            >
-              Alle ablehnen
-            </Button>
-            {/* Save selection button */}
-            <Button
-              variant="default"
-              onClick={handleSave}
-              className="flex-1 rounded-full px-6 font-medium"
-              size="sm"
-              type="button"
-            >
-              Auswahl speichern
-            </Button>
-            {/* Accept all button */}
-            <Button
-              variant="default"
-              onClick={acceptAll}
-              className="rounded-full px-6 font-medium"
-              size="sm"
-              type="button"
-            >
-              Alle akzeptieren
-            </Button>
+              <Button
+                variant="default"
+                onClick={acceptAll}
+                className={cn(actionBtnBase)}
+                type="button"
+              >
+                Alle akzeptieren
+              </Button>
+            </div>
           </div>
         </div>
       </DialogContent>

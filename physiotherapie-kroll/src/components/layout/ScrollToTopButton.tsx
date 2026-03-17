@@ -3,12 +3,14 @@
 import { useState, useEffect } from "react"
 import { cn } from "@/lib/utils"
 import { ChevronUp } from "lucide-react"
+import { useFooterInView } from "@/hooks/useFooterInView"
 
 const SCROLL_THRESHOLD = 400
 
 export function ScrollToTopButton() {
   const [visible, setVisible] = useState(false)
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false)
+  const footerInView = useFooterInView({ rootMargin: "0px 0px -10% 0px", threshold: 0 })
 
   useEffect(() => {
     setPrefersReducedMotion(
@@ -31,7 +33,12 @@ export function ScrollToTopButton() {
   if (!visible) return null
 
   return (
-    <div className="fixed bottom-6 right-6 z-1000 pointer-events-auto">
+    <div
+      className={cn(
+        "fixed bottom-6 right-6 z-1000 transition-all duration-300",
+        footerInView ? "opacity-0 translate-y-6 pointer-events-none" : "opacity-100 translate-y-0 pointer-events-auto"
+      )}
+    >
       <button
         type="button"
         onClick={scrollToTop}

@@ -4,6 +4,7 @@ import { useCookieConsent } from "./CookieProvider"
 import { cn } from "@/lib/utils"
 import { useState, useEffect } from "react"
 import { Cookie } from "lucide-react"
+import { useFooterInView } from "@/hooks/useFooterInView"
 
 /**
  * Floating cookie settings button (V0 design)
@@ -14,6 +15,7 @@ export function CookieFloatingButton() {
   const { hasUserConsented, openSettings, isLoading } = useCookieConsent()
   const [isHovered, setIsHovered] = useState(false)
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false)
+  const footerInView = useFooterInView({ rootMargin: "0px 0px -10% 0px", threshold: 0 })
 
   useEffect(() => {
     setPrefersReducedMotion(
@@ -25,7 +27,12 @@ export function CookieFloatingButton() {
   if (isLoading || !hasUserConsented) return null
 
   return (
-    <div className="fixed bottom-6 left-6 z-40">
+    <div
+      className={cn(
+        "fixed bottom-6 left-6 z-40 transition-all duration-300",
+        footerInView ? "opacity-0 translate-y-6 pointer-events-none" : "opacity-100 translate-y-0 pointer-events-auto"
+      )}
+    >
       <button
         type="button"
         onClick={openSettings}
