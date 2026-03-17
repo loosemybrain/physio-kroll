@@ -15,12 +15,6 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet"
 import {
-  CommandDialog,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
 } from "@/components/ui/command"
 import { cn } from "@/lib/utils"
 import type { NavConfig, NavLink } from "@/types/navigation"
@@ -39,6 +33,8 @@ import {
   resolvePagePathForBrand,
 } from "@/lib/navigation/scrollToAnchor"
 import { useScrollSpy } from "@/components/navigation/ScrollSpyProvider"
+import { SearchWindow } from "@/components/search"
+import { buildSearchItemsFromNav } from "@/lib/search/buildSearchItems"
 
 /* ------------------------------------------------------------------ */
 /*  Font preset resolution                                            */
@@ -278,10 +274,7 @@ export function HeaderClient({ brand, navConfig }: HeaderClientProps) {
   }, [navConfig.cta])
 
   /* ---- search ---- */
-  const [searchQuery, setSearchQuery] = useState("")
-  const [searchResults, setSearchResults] = useState<
-    Array<{ id: string; title: string; slug: string }>
-  >([])
+  const searchItems = useMemo(() => buildSearchItemsFromNav(navConfig, brand), [navConfig, brand])
 
   useEffect(() => {
     if (!navConfig.searchEnabled) return
@@ -302,28 +295,7 @@ export function HeaderClient({ brand, navConfig }: HeaderClientProps) {
     return () => window.removeEventListener("keydown", handleKeyDown)
   }, [navConfig.searchEnabled, searchOpen])
 
-  useEffect(() => {
-    if (!searchOpen) {
-      setSearchQuery("")
-      setSearchResults([])
-      return
-    }
-    const timeout = setTimeout(async () => {
-      if (searchQuery.length < 2) {
-        setSearchResults([])
-        return
-      }
-      try {
-        const res = await fetch(
-          `/api/search?q=${encodeURIComponent(searchQuery)}`
-        )
-        if (res.ok) setSearchResults(await res.json())
-      } catch {
-        setSearchResults([])
-      }
-    }, 300)
-    return () => clearTimeout(timeout)
-  }, [searchQuery, searchOpen])
+  // Querying + ranking is handled inside SearchWindow.
 
   /* ---- active link check (Seiten + Anchor-ScrollSpy) ---- */
   const isLinkActive = useCallback(
@@ -854,38 +826,9 @@ export function HeaderClient({ brand, navConfig }: HeaderClientProps) {
         </motion.header>
       </div>
 
-      {/* ---- Search CommandDialog ---- */}
+      {/* ---- Search Window (v0 design) ---- */}
       {navConfig.searchEnabled && (
-        <CommandDialog open={searchOpen} onOpenChange={setSearchOpen}>
-          <CommandInput
-            placeholder="Seiten durchsuchen..."
-            value={searchQuery}
-            onValueChange={setSearchQuery}
-          />
-          <CommandList>
-            {searchResults.length === 0 && searchQuery.length >= 2 && (
-              <CommandEmpty>Keine Ergebnisse gefunden.</CommandEmpty>
-            )}
-            {searchQuery.length < 2 && (
-              <CommandEmpty>Mindestens 2 Zeichen eingeben...</CommandEmpty>
-            )}
-            {searchResults.length > 0 && (
-              <CommandGroup heading="Seiten">
-                {searchResults.map((page) => (
-                  <CommandItem
-                    key={page.id}
-                    onSelect={() => {
-                      window.location.href = `/${page.slug}`
-                      setSearchOpen(false)
-                    }}
-                  >
-                    {page.title}
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            )}
-          </CommandList>
-        </CommandDialog>
+        <SearchWindow brand={brand} navItems={searchItems} isOpen={searchOpen} onOpenChange={setSearchOpen} />
       )}
     </>
   )

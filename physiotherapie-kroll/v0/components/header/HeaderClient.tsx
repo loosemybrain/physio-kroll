@@ -30,6 +30,7 @@ import {
   getLogoSizeClasses,
   getLogoImageDimensions,
 } from "@/lib/theme/logoSize"
+import { SearchWindow } from "@/components/search"
 
 /* ------------------------------------------------------------------ */
 /*  Font preset resolution                                            */
@@ -479,6 +480,9 @@ export function HeaderClient({ brand, navConfig }: HeaderClientProps) {
             </div>
           </div>
 
+          {/* ---- Search Window ---- */}
+          <SearchWindow isOpen={searchOpen} onOpenChange={setSearchOpen} />
+
           {/* ---- Mobile: Flex ---- */}
           <div className="flex md:hidden items-center justify-between h-14">
             {/* Logo */}
@@ -684,40 +688,6 @@ export function HeaderClient({ brand, navConfig }: HeaderClientProps) {
           </div>
         </motion.div>
       </motion.header>
-
-      {/* ---- Search CommandDialog ---- */}
-      {navConfig.searchEnabled && (
-        <CommandDialog open={searchOpen} onOpenChange={setSearchOpen}>
-          <CommandInput
-            placeholder="Seiten durchsuchen..."
-            value={searchQuery}
-            onValueChange={setSearchQuery}
-          />
-          <CommandList>
-            {searchResults.length === 0 && searchQuery.length >= 2 && (
-              <CommandEmpty>Keine Ergebnisse gefunden.</CommandEmpty>
-            )}
-            {searchQuery.length < 2 && (
-              <CommandEmpty>Mindestens 2 Zeichen eingeben...</CommandEmpty>
-            )}
-            {searchResults.length > 0 && (
-              <CommandGroup heading="Seiten">
-                {searchResults.map((page) => (
-                  <CommandItem
-                    key={page.id}
-                    onSelect={() => {
-                      window.location.href = `/${page.slug}`
-                      setSearchOpen(false)
-                    }}
-                  >
-                    {page.title}
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            )}
-          </CommandList>
-        </CommandDialog>
-      )}
     </>
   )
 }
