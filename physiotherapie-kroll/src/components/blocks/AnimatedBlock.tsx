@@ -31,13 +31,11 @@ export function AnimatedBlock({
 }: AnimatedBlockProps) {
   const containerRef = useRef<HTMLDivElement>(null)
 
-  // Merge mit defaults
   const config: BlockAnimationConfig = {
     ...DEFAULT_ANIMATION_CONFIG,
     ...configProp,
   }
 
-  // Animation Hook
   useBlockAnimation({
     config,
     containerRef,
@@ -54,18 +52,12 @@ export function AnimatedBlock({
 
   return (
     <>
-      {/* Inject Animation Keyframes in <head> - nur einmal */}
       <style>{ANIMATION_KEYFRAMES}</style>
 
       <div
         ref={containerRef}
         className={className}
         id={id}
-        style={{
-          willChange: "transform, opacity, filter",
-          backfaceVisibility: "hidden",
-          perspective: 1000,
-        }}
       >
         {children}
       </div>

@@ -311,6 +311,9 @@ export function HeroSection({
         style={{
           minHeight: `${resolvedMinHeightVh}vh`,
           touchAction: "pan-y",
+          // Ensure scroll chaining works even if an inner element becomes scrollable on iOS.
+          overscrollBehaviorY: "auto",
+          WebkitOverflowScrolling: "auto",
         }}
         aria-labelledby="hero-headline"
       >
@@ -329,7 +332,13 @@ export function HeroSection({
           </div>
         )}
 
-      <div className="flex min-h-full flex-col items-center justify-center gap-8 py-16 lg:flex-row lg:gap-12 lg:py-24">
+      <div
+        className="flex min-h-full flex-col items-center justify-center gap-8 py-16 lg:flex-row lg:gap-12 lg:py-24"
+        style={{
+          overscrollBehaviorY: "auto",
+          WebkitOverflowScrolling: "auto",
+        }}
+      >
         {/* Content */}
         <header
           className={cn(
@@ -692,7 +701,9 @@ export function HeroSection({
             ) : (
               <div
                 className={cn(
-                  "relative shadow-nonel overflow-x-clip overflow-y-clip", // outer wrapper: shadow + overflow handling
+                  // Avoid creating a vertical scroll container on mobile:
+                  // keep only horizontal clipping; vertical overflow should bubble to page scroll.
+                  "relative shadow-nonel overflow-x-hidden", // outer wrapper: shadow + overflow handling
                   getHeroImageAspectClasses(resolvedImageVariant)
                 )}
                 style={heroMediaShadow}
