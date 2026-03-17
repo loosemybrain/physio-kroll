@@ -14,7 +14,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { cn } from "@/lib/utils"
 import type { BlockSectionProps, CMSBlock, HeroBlock, CourseScheduleBlock, CourseSlot, CourseScheduleWeekday, PageSubtype, PageType } from "@/types/cms"
 import { isLegalPageType, PAGE_TYPE_VALUES, PAGE_SUBTYPE_VALUES } from "@/types/cms"
-import { useSearchParams } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { BlockRenderer } from "@/components/cms/BlockRenderer"
 import { usePage } from "@/lib/cms/useLocalCms"
 import { createEmptyPage, generateUniqueSlug, type AdminPage } from "@/lib/cms/supabaseStore"
@@ -43,6 +43,7 @@ import { PageEditorPreview } from "./editor/PageEditorPreview"
 import { PageEditorInspector } from "./editor/PageEditorInspector"
 import { usePageEditorActions } from "@/hooks/usePageEditorActions"
 import { useEditorSelection } from "@/hooks/useEditorSelection"
+import { useSetLeaveGuard } from "./AdminLeaveGuardContext"
 
 
 interface PageEditorProps {
@@ -309,10 +310,17 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
     if (!pageType && !pageSubtype) return undefined
     return { pageType, pageSubtype }
   }, [pageId, searchParams])
-  const { page, setPage, save } = usePage(pageId, { newPageParams })
+  const { page, setPage, save, loading } = usePage(pageId, { newPageParams })
   const { toast } = useToast()
   const isNewPage = !pageId || pageId === "new"
-  
+
+  // Ungespeicherte Änderungen: Vergleich mit letztem gespeicherten Stand (für Verlassen-Hinweis)
+  const lastSavedRef = useRef<string | null>(null)
+  const prevLoadingRef = useRef(loading)
+  const isDirtyRef = useRef(false)
+  const [leaveConfirmOpen, setLeaveConfirmOpen] = useState(false)
+  const [pendingLeaveHref, setPendingLeaveHref] = useState<string | null>(null)
+
   // Central selection model
   const editorSelection = useEditorSelection()
   const { selectedBlockId, selectedElementId, activeFieldPath, selectBlock, selectField, selectElement, deselectElement, clearSelection, blockIdChanged } = editorSelection
@@ -446,6 +454,61 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
   // which makes "new page" interactions (e.g. brand toggle) flaky before `usePage()`
   // finishes initializing state.
   const current = page
+
+  // Ungespeicherte Änderungen: Effects und Handler (nach current)
+  useEffect(() => {
+    if (prevLoadingRef.current && !loading && current) {
+      lastSavedRef.current = JSON.stringify(current)
+    }
+    prevLoadingRef.current = loading
+  }, [loading, current])
+
+  useEffect(() => {
+    if (!current) return
+    isDirtyRef.current =
+      lastSavedRef.current !== null && JSON.stringify(current) !== lastSavedRef.current
+  }, [current])
+
+  useEffect(() => {
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isDirtyRef.current) e.preventDefault()
+    }
+    window.addEventListener("beforeunload", onBeforeUnload)
+    return () => window.removeEventListener("beforeunload", onBeforeUnload)
+  }, [])
+
+  const handleBack = useCallback(() => {
+    if (isDirtyRef.current) {
+      setLeaveConfirmOpen(true)
+    } else {
+      onBack()
+    }
+  }, [onBack])
+
+  const router = useRouter()
+  const setLeaveGuard = useSetLeaveGuard()
+
+  const handleConfirmLeave = useCallback(() => {
+    setLeaveConfirmOpen(false)
+    if (pendingLeaveHref) {
+      router.push(pendingLeaveHref)
+      setPendingLeaveHref(null)
+    } else {
+      onBack()
+    }
+  }, [onBack, pendingLeaveHref, router])
+
+  useEffect(() => {
+    const guard = {
+      isDirty: () => isDirtyRef.current,
+      requestLeave: (href: string) => {
+        setPendingLeaveHref(href)
+        setLeaveConfirmOpen(true)
+      },
+    }
+    setLeaveGuard(guard)
+    return () => setLeaveGuard(null)
+  }, [setLeaveGuard])
 
   // Track block structure to only normalize when blocks are added/removed
   const prevBlockIdsRef = useRef<string>('')
@@ -847,6 +910,7 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
   const handleSaveDraft = async () => {
     try {
       const saved = await save({ ...current, status: "draft" })
+      lastSavedRef.current = JSON.stringify(saved)
       toast({
         title: "Gespeichert",
         description: `Seite "${saved.title}" wurde als Entwurf gespeichert.`,
@@ -909,6 +973,7 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
       // Slug uniqueness in DB space, filtered by brand
       const slug = await generateUniqueSlug(current.title, current.id, current.brand)
       const saved = await save({ ...current, status: "published", slug })
+      lastSavedRef.current = JSON.stringify(saved)
       toast({
         title: "Veröffentlicht",
         description: `Seite "${saved.title}" wurde erfolgreich veröffentlicht. URL: /${saved.slug}`,
@@ -991,7 +1056,7 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
 
       <PageEditorHeader
         current={current}
-        onBack={onBack}
+        onBack={handleBack}
         onUpdatePage={editorActions.updatePage}
         onBrandChange={editorActions.handlePageBrandChange}
         onSaveDraft={handleSaveDraft}
@@ -1090,6 +1155,30 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
               className="bg-destructive text-white hover:bg-destructive/90"
             >
               Löschen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Verlassen ohne Speichern (Zurück-Button oder Sidebar-Link) */}
+      <AlertDialog
+        open={leaveConfirmOpen}
+        onOpenChange={(open) => {
+          setLeaveConfirmOpen(open)
+          if (!open) setPendingLeaveHref(null)
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Ungespeicherte Änderungen</AlertDialogTitle>
+            <AlertDialogDescription>
+              Sie haben ungespeicherte Änderungen. Wenn Sie die Live-Preview jetzt verlassen, gehen diese verloren. Möchten Sie wirklich verlassen?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Weiter bearbeiten</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmLeave} className="bg-destructive text-white hover:bg-destructive/90">
+              Verlassen ohne zu speichern
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

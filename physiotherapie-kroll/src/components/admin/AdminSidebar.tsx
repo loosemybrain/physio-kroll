@@ -6,6 +6,7 @@ import { FileText, ImageIcon, Settings, ChevronLeft, ChevronRight, Layers, Navig
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { useLeaveGuard } from "./AdminLeaveGuardContext"
 
 const navItems = [
   { icon: FileText, label: "Pages", href: "/admin/pages" },
@@ -20,6 +21,7 @@ export function AdminSidebar() {
   const [collapsed, setCollapsed] = useState(false)
   const pathname = usePathname()
   const router = useRouter()
+  const leaveGuard = useLeaveGuard()
 
   return (
     <TooltipProvider delayDuration={0}>
@@ -43,6 +45,14 @@ export function AdminSidebar() {
             const Icon = item.icon
             const isActive = pathname?.startsWith(item.href) || false
 
+            const handleNavClick = () => {
+              if (leaveGuard?.isDirty()) {
+                leaveGuard.requestLeave(item.href)
+              } else {
+                router.push(item.href)
+              }
+            }
+
             const button = (
               <Button
                 key={item.label}
@@ -51,7 +61,7 @@ export function AdminSidebar() {
                   "w-full justify-start gap-3 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                   collapsed && "justify-center px-2",
                 )}
-                onClick={() => router.push(item.href)}
+                onClick={handleNavClick}
               >
                 <Icon className="h-4 w-4 shrink-0" />
                 {!collapsed && <span>{item.label}</span>}

@@ -2,6 +2,7 @@
 
 import * as React from "react"
 
+import { AdminLeaveGuardProvider } from "./AdminLeaveGuardContext"
 import { AdminSidebar } from "./AdminSidebar"
 import { AdminTopbar } from "./AdminTopbar"
 import type { User } from "@supabase/supabase-js"
@@ -34,13 +35,15 @@ export function AdminLayout({ children, user }: AdminLayoutProps) {
   // die zwischen SSR und Client unterschiedlich sein können.
   // Wrapper mit suppressHydrationWarning stellt sicher, dass dieser Mismatch ignoriert wird.
   return (
-    <div className="flex h-dvh min-h-0 overflow-hidden" suppressHydrationWarning>
-      <AdminSidebar />
-      <div className="flex flex-1 flex-col min-h-0 overflow-hidden">
-        <AdminTopbar user={user} />
-        <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">{isMounted && children}</main>
+    <AdminLeaveGuardProvider>
+      <div className="flex h-dvh min-h-0 overflow-hidden" suppressHydrationWarning>
+        <AdminSidebar />
+        <div className="flex flex-1 flex-col min-h-0 overflow-hidden">
+          <AdminTopbar user={user} />
+          <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">{isMounted && children}</main>
+        </div>
       </div>
-    </div>
+    </AdminLeaveGuardProvider>
   )
 }
 
