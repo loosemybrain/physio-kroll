@@ -305,17 +305,18 @@ export function HeroSection({
     <AnimatedBlock config={props.section?.animation}>
       <section
         className={cn(
-          "relative w-full",
+          "relative w-full touch-pan-y",
           !isCalm && "physio-konzept"
         )}
         style={{
-          minHeight: `${resolvedMinHeightVh}vh`
+          minHeight: `${resolvedMinHeightVh}vh`,
+          touchAction: "pan-y",
         }}
         aria-labelledby="hero-headline"
       >
         {/* Background Layer */}
         <div 
-          className="absolute inset-0 -z-10 overflow-visible" 
+          className="absolute inset-0 -z-10 overflow-visible pointer-events-none" 
           aria-hidden="true"
         >
           <HeroDecoration brand={isCalm ? "physiotherapy" : "physio-konzept"} />
@@ -605,16 +606,22 @@ export function HeroSection({
                   {resolvedImageFit === "cover" && (
                     <>
                       {isCalm ? (
-                        <div className="absolute inset-0 bg-linear-to-t from-primary/10 to-transparent" />
+                        <div className="absolute inset-0 bg-linear-to-t from-primary/10 to-transparent pointer-events-none" />
                       ) : (
-                        <div className="absolute inset-0 bg-linear-to-t from-background/60 via-transparent to-transparent" />
+                        <div className="absolute inset-0 bg-linear-to-t from-background/60 via-transparent to-transparent pointer-events-none" />
                       )}
                     </>
                   )}
 
                   {/* Floating card for PhysioKonzept */}
                   {!isCalm && (resolvedFloatingTitle?.trim() || resolvedFloatingValue?.trim()) && (
-                    <div className={cn("absolute bottom-6 left-6 right-6 rounded-xl bg-card/90 p-4 backdrop-blur-sm animate-slide-in-left", shouldAnimateIn && "animate-delay-500")}>
+                    <div
+                      className={cn(
+                        "absolute bottom-6 left-6 right-6 rounded-xl bg-card/90 p-4 backdrop-blur-sm animate-slide-in-left",
+                        shouldAnimateIn && "animate-delay-500",
+                        !editable && "pointer-events-none"
+                      )}
+                    >
                       {resolvedFloatingTitle?.trim() && (
                         <span
                           data-element-id="floatingTitle"
@@ -697,8 +704,8 @@ export function HeroSection({
                   <div
                     className={
                       isCalm
-                        ? "absolute inset-0 -z-10"
-                        : "absolute inset-y-0 -inset-x-16 -z-10"
+                        ? "absolute inset-0 -z-10 pointer-events-none"
+                        : "absolute inset-y-0 -inset-x-16 -z-10 pointer-events-none"
                     }
                   >
                     <Image
@@ -767,16 +774,22 @@ export function HeroSection({
                   {resolvedImageFit === "cover" && (
                     <>
                       {isCalm ? (
-                        <div className="absolute inset-0 bg-linear-to-t from-primary/10 to-transparent" />
+                        <div className="absolute inset-0 bg-linear-to-t from-primary/10 to-transparent pointer-events-none" />
                       ) : (
-                        <div className="absolute inset-y-0 -inset-x-12 bg-linear-to-t from-background/60 via-transparent to-transparent" />
+                        <div className="absolute inset-y-0 -inset-x-12 bg-linear-to-t from-background/60 via-transparent to-transparent pointer-events-none" />
                       )}
                     </>
                   )}
 
                   {/* Floating card for PhysioKonzept */}
                   {!isCalm && (resolvedFloatingTitle?.trim() || resolvedFloatingValue?.trim()) && (
-                    <div className={cn("absolute bottom-6 left-6 right-6 rounded-xl bg-card/90 p-4 backdrop-blur-sm animate-slide-in-left", shouldAnimateIn && "animate-delay-500")}>
+                    <div
+                      className={cn(
+                        "absolute bottom-6 left-6 right-6 rounded-xl bg-card/90 p-4 backdrop-blur-sm animate-slide-in-left",
+                        shouldAnimateIn && "animate-delay-500",
+                        !editable && "pointer-events-none"
+                      )}
+                    >
                       {resolvedFloatingTitle?.trim() && (
                         <p
                           className={cn(
@@ -821,7 +834,13 @@ export function HeroSection({
 
             {/* Decorative floating element for calm mood */}
             {isCalm && (resolvedFloatingTitle?.trim() || resolvedFloatingValue?.trim()) && (
-              <div className={cn("absolute -bottom-4 -right-4 rounded-2xl bg-card p-6 shadow-lg md:-bottom-6 md:-right-6 animate-float", shouldAnimateIn && "animate-delay-500")}>
+              <div
+                className={cn(
+                  "absolute -bottom-4 -right-4 rounded-2xl bg-card p-6 shadow-lg md:-bottom-6 md:-right-6 animate-float",
+                  shouldAnimateIn && "animate-delay-500",
+                  !editable && "pointer-events-none"
+                )}
+              >
                 {resolvedFloatingValue?.trim() && (
                   <p
                   
@@ -866,7 +885,7 @@ export function HeroSection({
       </div>
 
       {/* Bottom scroll indicator */}
-      <div className="hero-scroll-indicator absolute bottom-8 left-1/2 -translate-x-1/2" aria-hidden="true">
+      <div className="hero-scroll-indicator absolute bottom-8 left-1/2 -translate-x-1/2 pointer-events-none" aria-hidden="true">
         <div className={cn("h-12 w-6 rounded-full border-2", isCalm ? "border-primary/30" : "border-primary/50")}>
           <div
             className={cn("mx-auto mt-2 h-2 w-1 animate-bounce rounded-full", isCalm ? "bg-primary/50" : "bg-primary")}
