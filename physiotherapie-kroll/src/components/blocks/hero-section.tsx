@@ -583,7 +583,7 @@ export function HeroSection({
         {showMedia && (
           <figure
             className={cn(
-              "hero-media relative flex-1",
+              "hero-media relative w-full min-w-0 flex-1 flex flex-col",
               isCalm ? "max-w-lg" : "max-w-xl",
               shouldAnimateIn && "animate-scale-in animate-delay-400"
             )}
@@ -591,7 +591,7 @@ export function HeroSection({
             {mediaType === "video" && mediaUrl ? (
               <div
                 className={cn(
-                  "relative shadow-2xl",
+                  "relative w-full shadow-2xl",
                   getHeroImageAspectClasses(resolvedImageVariant),
                   isCalm ? "rounded-3xl" : "rounded-2xl"
                 )}
@@ -701,7 +701,7 @@ export function HeroSection({
             ) : (
               <div
                 className={cn(
-                  "relative shadow-nonel overflow-x-hidden",
+                  "relative w-full shadow-nonel overflow-x-hidden",
                   getHeroImageAspectClasses(resolvedImageVariant)
                 )}
                 style={heroMediaShadow}
@@ -817,7 +817,7 @@ export function HeroSection({
             {isCalm && (resolvedFloatingTitle?.trim() || resolvedFloatingValue?.trim()) && (
               <div
                 className={cn(
-                  "absolute -bottom-4 -right-4 rounded-2xl bg-card p-6 shadow-lg md:-bottom-6 md:-right-6 animate-float",
+                  "-mt-6 ml-auto w-fit rounded-2xl bg-card p-6 shadow-lg animate-float lg:absolute lg:-bottom-6 lg:-right-6 lg:mt-0",
                   shouldAnimateIn && "animate-delay-500"
                 )}
               >
