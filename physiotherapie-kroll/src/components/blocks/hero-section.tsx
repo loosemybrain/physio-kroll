@@ -864,7 +864,7 @@ export function HeroSection({
       </div>
 
       {/* Bottom scroll indicator */}
-      <div className="hero-scroll-indicator absolute bottom-8 left-1/2 -translate-x-1/2 pointer-events-none" aria-hidden="true">
+      <div className="hero-scroll-indicator absolute left-1/2 -translate-x-1/2 pointer-events-none bottom-2 sm:bottom-6 lg:bottom-8" aria-hidden="true">
         <div className={cn("h-12 w-6 rounded-full border-2", isCalm ? "border-primary/30" : "border-primary/50")}>
           <div
             className={cn("mx-auto mt-2 h-2 w-1 animate-bounce rounded-full", isCalm ? "bg-primary/50" : "bg-primary")}
