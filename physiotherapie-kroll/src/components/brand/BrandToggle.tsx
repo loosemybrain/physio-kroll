@@ -89,7 +89,7 @@ export function BrandToggle({
         )}
         onClick={() => handleNavigate("physio-konzept")}
       >
-        <span className="sm:hidden">Konzept</span>
+        <span className="sm:hidden">PhysioKonzept</span>
         <span className="hidden sm:inline">PhysioKonzept</span>
       </button>
     </nav>
