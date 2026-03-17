@@ -29,7 +29,7 @@ export const brandAssets: Record<BrandKey, BrandAssets> = {
   },
   "physio-konzept": {
     heroDecoration: {
-      wrapperClassName: "hero-decoration-energetic absolute inset-0",
+      wrapperClassName: "hero-decoration-energetic absolute inset-0 overflow-hidden",
       glows: [
         {
           className:
