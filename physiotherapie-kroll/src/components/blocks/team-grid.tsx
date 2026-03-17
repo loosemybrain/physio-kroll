@@ -424,7 +424,8 @@ function MemberCard({
           onClick={(e) => handleEdit(e, `members.${index}.name`)}
           className={cn(
             mergeTypographyClasses(
-              "truncate text-lg font-semibold tracking-tight text-card-foreground",
+              // Allow long names to wrap (no truncation/cropping)
+              "w-full text-balance text-lg font-semibold leading-tight tracking-tight text-card-foreground wrap-break-word",
               (typography ?? {})["team.member.name"]
             ),
             editable && blockId && onEditField && "cursor-pointer rounded px-1 hover:bg-primary/10",
@@ -440,7 +441,7 @@ function MemberCard({
             onClick={(e) => handleEdit(e, `members.${index}.role`)}
             className={cn(
               mergeTypographyClasses(
-                "mt-1 truncate text-sm text-muted-foreground",
+                "mt-1 w-full text-pretty text-sm leading-snug text-muted-foreground wrap-break-word",
                 (typography ?? {})["team.member.role"]
               ),
               editable && blockId && onEditField && "cursor-pointer rounded px-1 hover:bg-primary/10",
@@ -615,7 +616,9 @@ export function TeamGridBlock({
       {/* Inner Container Panel (Header + Grid) */}
       <div
         className={cn(
-          "relative mx-auto max-w-6xl rounded-3xl px-8 py-8 md:px-14 md:py-10 m-4 md:m-6",
+          // Mobile: use more width, less side padding/margins so cards don't feel cramped.
+          // Desktop: keep existing spacious container.
+          "relative w-full max-w-6xl rounded-3xl px-4 py-6 sm:px-6 sm:py-8 md:px-14 md:py-10 mx-2 sm:mx-4 md:mx-auto md:my-6",
           containerBackgroundMode && containerBackgroundMode !== "transparent" && "border border-border/80",
           containerBackgroundMode === "gradient" && "backdrop-blur-sm"
         )}
@@ -625,7 +628,7 @@ export function TeamGridBlock({
         }}
       >
         {/* Content Wrapper */}
-        <div className="relative mx-auto max-w-6xl px-4 sm:px-6">
+        <div className="relative w-full px-0">
         {/* ---- Header ---- */}
         {(eyebrow || headline || subheadline) && (
           <header className="mb-10 md:mb-12 text-center">
