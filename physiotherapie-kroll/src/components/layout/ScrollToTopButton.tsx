@@ -1,43 +1,14 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { createPortal } from "react-dom"
-import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { ChevronUp } from "lucide-react"
 
 const SCROLL_THRESHOLD = 400
 
-/** Path is under /konzept → theme vars live on .physio-konzept, not on html. */
-function useKonzeptThemeHost(): HTMLElement | null {
-  const pathname = usePathname()
-  const [host, setHost] = useState<HTMLElement | null>(null)
-  const isKonzept = pathname === "/konzept" || pathname?.startsWith("/konzept/")
-
-  useEffect(() => {
-    if (!isKonzept) {
-      setHost(null)
-      return
-    }
-    const el = document.querySelector(".physio-konzept") as HTMLElement | null
-    setHost(el ?? null)
-  }, [isKonzept, pathname])
-
-  return host
-}
-
-/**
- * Floating scroll-to-top button.
- *
- * Styling comes from the active brand theme (design tokens / CSS variables).
- * On /konzept the theme is applied by the segment layout on .physio-konzept,
- * so we portal the button into that element so it inherits physio-konzept colors.
- * Otherwise the button inherits from <html> (physiotherapy theme).
- */
 export function ScrollToTopButton() {
   const [visible, setVisible] = useState(false)
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false)
-  const konzeptHost = useKonzeptThemeHost()
 
   useEffect(() => {
     setPrefersReducedMotion(
@@ -59,8 +30,8 @@ export function ScrollToTopButton() {
 
   if (!visible) return null
 
-  const buttonContent = (
-    <div className="fixed bottom-6 right-6 z-40">
+  return (
+    <div className="fixed bottom-6 right-6 z-1000 pointer-events-auto">
       <button
         type="button"
         onClick={scrollToTop}
@@ -81,10 +52,4 @@ export function ScrollToTopButton() {
       </button>
     </div>
   )
-
-  if (typeof document !== "undefined" && konzeptHost) {
-    return createPortal(buttonContent, konzeptHost)
-  }
-
-  return buttonContent
 }
