@@ -44,6 +44,7 @@ export function useBlockAnimation({
 
   const observerRef = useRef<IntersectionObserver | null>(null)
   const hasAnimatedOnce = useRef(false) // Guard against double-animation after hydration
+  const cleanupRef = useRef<(() => void) | null>(null)
 
   // Enter Animation anwenden
   const applyAnimation = useCallback(
@@ -54,16 +55,38 @@ export function useBlockAnimation({
       const duration = getEffectiveDuration(animation, prefersReduced)
       const cssAnimation = getCSSAnimationString(animation)
 
-      // Apply inline styles
+      // Cleanup any previous scheduled restores for this element
+      cleanupRef.current?.()
+      cleanupRef.current = null
+
+      // Snapshot only the properties we touch here, so we can restore safely.
+      // IMPORTANT: Do not set scroll-/touch-relevant styles (overflow/position/touchAction/contain/etc.).
+      const prevAnimation = el.style.animation
+      const prevOpacity = el.style.opacity
+
+      // Apply inline styles (visual-only)
+      // NOTE: we intentionally do NOT set opacity directly here; opacity/transform should be handled by keyframes,
+      // to avoid leaving the element in a "forced layer" state on mobile browsers.
       el.style.animation = cssAnimation
-      el.style.opacity = String(animation.opacity?.to ?? 1)
 
       // Callback nach Animation
       const timeout = setTimeout(() => {
         onAnimationComplete?.(stage)
       }, duration + animation.delay)
 
-      return () => clearTimeout(timeout)
+      // Restore after the animation should have finished, so we don't leave persistent inline styles.
+      const restore = window.setTimeout(() => {
+        // Restore only what we changed
+        el.style.animation = prevAnimation
+        el.style.opacity = prevOpacity
+      }, duration + animation.delay + 50)
+
+      const cleanup = () => {
+        clearTimeout(timeout)
+        clearTimeout(restore)
+      }
+      cleanupRef.current = cleanup
+      return cleanup
     },
     [containerRef, prefersReduced, onAnimationComplete]
   )
@@ -80,7 +103,7 @@ export function useBlockAnimation({
       // Sofort
       hasAnimatedOnce.current = true
       setState((s) => ({ ...s, enterTriggered: true }))
-      applyAnimation(config.enter, "enter")
+      return applyAnimation(config.enter, "enter")
     } else if (trigger === "onScroll") {
       // Mit IntersectionObserver
       if (!containerRef.current) return
@@ -105,15 +128,19 @@ export function useBlockAnimation({
 
       return () => {
         observerRef.current?.disconnect()
+        cleanupRef.current?.()
+        cleanupRef.current = null
       }
     }
-  }, [state.enterTriggered, containerRef, applyAnimation]) // Only re-run if animation was already triggered or container changed
+    return undefined
+  }, [config.enabled, config.enter, state.enterTriggered, containerRef, applyAnimation]) // Only re-run if animation was already triggered or container changed
 
   // Setup Hover Animation
   useEffect(() => {
     if (!config.enabled || !config.hover || !containerRef.current) return
 
     const el = containerRef.current
+    const prevAnimation = el.style.animation
 
     const handleMouseEnter = () => {
       setState((s) => ({ ...s, isHovering: true }))
@@ -122,8 +149,8 @@ export function useBlockAnimation({
 
     const handleMouseLeave = () => {
       setState((s) => ({ ...s, isHovering: false }))
-      // Remove animation
-      el.style.animation = "none"
+      // Restore animation style (do not force "none")
+      el.style.animation = prevAnimation
     }
 
     if (config.hover.trigger === "onHover") {
@@ -133,6 +160,8 @@ export function useBlockAnimation({
       return () => {
         el.removeEventListener("mouseenter", handleMouseEnter)
         el.removeEventListener("mouseleave", handleMouseLeave)
+        cleanupRef.current?.()
+        cleanupRef.current = null
       }
     }
   }, [config.enabled, config.hover, containerRef, applyAnimation])
@@ -140,10 +169,10 @@ export function useBlockAnimation({
   // Setup Exit Animation (bei Unmount)
   useEffect(() => {
     return () => {
-      if (config.enabled && config.exit && !state.exitTriggered && containerRef.current) {
-        setState((s) => ({ ...s, exitTriggered: true }))
-        applyAnimation(config.exit, "exit")
-      }
+      // On unmount, only cleanup observers/timeouts. Avoid state updates during unmount.
+      observerRef.current?.disconnect()
+      cleanupRef.current?.()
+      cleanupRef.current = null
     }
   }, [config.enabled, config.exit, state.exitTriggered, containerRef, applyAnimation])
 

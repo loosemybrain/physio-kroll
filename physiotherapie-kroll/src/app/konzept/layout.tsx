@@ -38,19 +38,21 @@ export default async function KonzeptLayout({
   }
 
   const hasTokens = Object.keys(preset.vars).length > 0
-  const htmlStyle = hasTokens ? (preset.vars as unknown as React.CSSProperties) : undefined
+  // IMPORTANT:
+  // This segment previously wrapped all /konzept content in an extra container.
+  // On mobile Safari, an extra wrapper can accidentally become a scroll container
+  // (esp. combined with transforms/overlays in the hero). To avoid any scroll-capture,
+  // we apply the preset tokens via a scoped <style> tag instead of an extra wrapper element.
+  const cssVarsText = hasTokens
+    ? `:root{${Object.entries(preset.vars)
+        .map(([k, v]) => `${k}:${String(v).replace(/;/g, "")}`)
+        .join(";")};}`
+    : ""
 
-  // Wrapper mit brand-spezifischen Attributen
-  // Warum: Segment layout kann HTML direkt nicht verändern (das bleibt Root),
-  // also wrappen wir mit Top-Level Div der die brand/style Attribute trägt.
-  // CSS in globals.css nutzt diese Klasse/Attribute um Tokens zu scopieren.
   return (
-    <div
-      className="physio-konzept"
-      data-brand={brand}
-      style={htmlStyle}
-    >
+    <>
+      {hasTokens ? <style dangerouslySetInnerHTML={{ __html: cssVarsText }} /> : null}
       {children}
-    </div>
+    </>
   )
 }
