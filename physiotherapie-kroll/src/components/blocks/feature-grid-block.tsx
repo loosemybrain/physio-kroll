@@ -5,6 +5,7 @@ import { motion, type Variants } from "framer-motion"
 import { cn } from "@/lib/utils"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardSurface } from "@/components/ui/card"
 import { useElementShadowStyle } from "@/lib/shadow"
+import { useMotionPreference, getAnimationInitial, getViewportTrigger } from "@/lib/motion/useMotionPreference"
 import type { FeatureGridStyle, FeatureGridAnimation } from "@/types/cms"
 
 interface Feature {
@@ -209,6 +210,7 @@ function FeatureCardWithShadow({
   effectiveBlockStyle,
   effectiveBlockAnimation,
   prefersNoMotion,
+  shouldDisableViewAnimations,
   cardBgColor,
   cardBorderColor,
   iconColor,
@@ -226,6 +228,7 @@ function FeatureCardWithShadow({
   effectiveBlockStyle: FeatureGridStyle
   effectiveBlockAnimation: FeatureGridAnimation
   prefersNoMotion: boolean
+  shouldDisableViewAnimations: boolean
   cardBgColor?: string
   cardBorderColor?: string
   iconColor?: string
@@ -262,12 +265,16 @@ function FeatureCardWithShadow({
   const entrance = featureAnimation.entrance || "fade"
   const shouldAnimate = !prefersNoMotion && entrance !== "none"
 
+  const effectiveShouldDisable = shouldDisableViewAnimations || prefersNoMotion
+
   return (
     <motion.div
-      variants={shouldAnimate ? entranceVariants[entrance] : entranceVariants.none}
-      initial="hidden"
-      whileInView="visible"
-      viewport={{ once: true, margin: "0px 0px -50px 0px" }}
+      variants={shouldAnimate && !effectiveShouldDisable ? entranceVariants[entrance] : entranceVariants.none}
+      initial={getAnimationInitial(effectiveShouldDisable)}
+      {...(effectiveShouldDisable ? {} : {
+        whileInView: "visible",
+        viewport: { once: true, margin: "0px 0px -50px 0px" },
+      })}
       transition={{
         duration: (featureAnimation.durationMs || 400) / 1000,
         delay: (featureAnimation.delayMs || 0) / 1000,
@@ -360,6 +367,7 @@ export function FeatureGridBlock({
   const effectiveBlockAnimation: FeatureGridAnimation = blockAnimation || effectivePreset.animation
 
   const prefersNoMotion = prefersReducedMotion()
+  const { shouldDisableViewAnimations } = useMotionPreference()
 
   return (
     <section>
@@ -372,6 +380,7 @@ export function FeatureGridBlock({
             elements={elements}
             effectiveBlockStyle={effectiveBlockStyle}
             effectiveBlockAnimation={effectiveBlockAnimation}
+            shouldDisableViewAnimations={shouldDisableViewAnimations}
             prefersNoMotion={prefersNoMotion}
             cardBgColor={cardBgColor}
             cardBorderColor={cardBorderColor}

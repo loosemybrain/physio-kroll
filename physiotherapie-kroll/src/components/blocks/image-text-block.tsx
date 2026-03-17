@@ -10,6 +10,7 @@ import { CardSurface } from "@/components/ui/card"
 import { useElementShadowStyle } from "@/lib/shadow"
 import { resolveButtonPresetStyles } from "@/lib/buttonPresets"
 import { Editable } from "@/components/editor/Editable"
+import { useMotionPreference, getAnimationInitial, getViewportTrigger } from "@/lib/motion/useMotionPreference"
 import type { ImageTextStyle } from "@/types/cms"
 
 interface ImageTextBlockProps {
@@ -247,16 +248,13 @@ export function ImageTextBlock(props: ImageTextBlockProps) {
   const canInlineEdit = Boolean(editable && blockId && onEditField)
   const isImageLeft = effectiveImagePosition === "left"
   const [ctaHovered, setCtaHovered] = React.useState(false)
-  const prefersNoMotion = prefersReducedMotion()
+  const { shouldDisableViewAnimations } = useMotionPreference()
 
-  const motionProps = prefersNoMotion
-    ? {}
-    : {
-        initial: "hidden",
-        whileInView: "visible",
-        viewport: { once: true, margin: "-60px" },
-        variants: containerVariants,
-      }
+  const motionProps = {
+    initial: getAnimationInitial(shouldDisableViewAnimations),
+    ...getViewportTrigger(shouldDisableViewAnimations),
+    variants: containerVariants,
+  }
 
   const isSoft = effectiveStyle.variant === "soft"
   const bgClass =
@@ -340,7 +338,7 @@ export function ImageTextBlock(props: ImageTextBlockProps) {
             >
             {/* Image Column */}
             <motion.figure
-              variants={prefersNoMotion ? undefined : imageVariants}
+              variants={shouldDisableViewAnimations ? undefined : imageVariants}
               className={cn(
                 "relative overflow-hidden",
                 // note: removed rounded-2xl, since .rounded-3xl and overflow-hidden are now on the panel
@@ -386,7 +384,7 @@ export function ImageTextBlock(props: ImageTextBlockProps) {
             >
               {/* Eyebrow */}
               {eyebrow && (
-                <motion.div variants={prefersNoMotion ? undefined : itemVariants}>
+                <motion.div variants={shouldDisableViewAnimations ? undefined : itemVariants}>
                   <Editable
                     blockId={blockId || ""}
                     elementId="imageText.eyebrow"
@@ -406,7 +404,7 @@ export function ImageTextBlock(props: ImageTextBlockProps) {
 
               {/* Headline */}
               {headline && (
-                <motion.div variants={prefersNoMotion ? undefined : itemVariants}>
+                <motion.div variants={shouldDisableViewAnimations ? undefined : itemVariants}>
                   <Editable
                     blockId={blockId || ""}
                     elementId="imageText.headline"
@@ -428,7 +426,7 @@ export function ImageTextBlock(props: ImageTextBlockProps) {
               )}
 
               {/* Content */}
-              <motion.div variants={prefersNoMotion ? undefined : itemVariants}>
+              <motion.div variants={shouldDisableViewAnimations ? undefined : itemVariants}>
                 <Editable
                   blockId={blockId || ""}
                   elementId="imageText.content"
@@ -451,7 +449,7 @@ export function ImageTextBlock(props: ImageTextBlockProps) {
               {/* CTA */}
               {(ctaText || canInlineEdit) && (
                 <motion.div
-                  variants={prefersNoMotion ? undefined : itemVariants}
+                  variants={shouldDisableViewAnimations ? undefined : itemVariants}
                   className={cn(
                     "pt-2",
                     effectiveStyle.textAlign === "center" && "flex justify-center"

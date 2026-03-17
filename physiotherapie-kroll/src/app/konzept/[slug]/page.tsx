@@ -16,7 +16,7 @@ export default async function KonzeptCMSPageRoute({ params }: { params: Promise<
   // First, try to find the page without status filter to see if it exists (brand="physio-konzept")
   const { data: allPages, error: checkErr } = await supabasePublic
     .from("pages")
-    .select("id, title, slug, status")
+    .select("id, title, slug, status, brand")
     .eq("slug", slug)
     .eq("brand", "physio-konzept");
 
@@ -32,6 +32,18 @@ export default async function KonzeptCMSPageRoute({ params }: { params: Promise<
     .eq("brand", "physio-konzept")
     .eq("status", "published")
     .single();
+
+  // If not found, try to find same slug without brand filter (fallback)
+  let fallbackPage: any = null;
+  if (!page && !pageErr) {
+    const { data: anyPage } = await supabasePublic
+      .from("pages")
+      .select("*")
+      .eq("slug", slug)
+      .eq("status", "published")
+      .single();
+    fallbackPage = anyPage;
+  }
 
   if (pageErr) {
     console.error("Error fetching page:", {
@@ -71,9 +83,23 @@ export default async function KonzeptCMSPageRoute({ params }: { params: Promise<
           <p className="mt-2 text-sm text-muted-foreground">
             Bitte setzen Sie den Status auf &quot;published&quot; im Admin-Bereich.
           </p>
+          <p className="mt-4 text-xs text-muted-foreground bg-muted p-3 rounded">
+            Debug Info: Seite existiert mit ID {existingPage.id}, Status: {existingPage.status}
+          </p>
         </div>
       );
     }
+
+    // Try to find ANY pages with brand="physio-konzept" to debug
+    const { data: allBrandPages } = await supabasePublic
+      .from("pages")
+      .select("id, title, slug, status, brand")
+      .eq("brand", "physio-konzept")
+      .limit(5);
+
+    const debugPages = allBrandPages && allBrandPages.length > 0
+      ? `Verfügbare Seiten (${allBrandPages.length}): ${allBrandPages.map(p => `${p.slug || '(empty)'} (${p.status})`).join(', ')}`
+      : 'Keine Seiten mit Brand "physio-konzept" gefunden';
 
     return (
       <div className="container mx-auto py-12 px-4">
@@ -84,16 +110,49 @@ export default async function KonzeptCMSPageRoute({ params }: { params: Promise<
         <p className="mt-2 text-sm text-muted-foreground">
           Status: Die Seite muss den Status &quot;published&quot; haben, um angezeigt zu werden.
         </p>
+        <p className="mt-4 text-xs text-muted-foreground bg-muted p-3 rounded">
+          Debug: {debugPages}
+        </p>
       </div>
     );
   }
 
+  // Use fallback page if main page wasn't found with correct brand
+  const effectivePage = page || fallbackPage;
+
+  if (!effectivePage) {
+    // Page still not found, show debug info
+    const { data: allBrandPages } = await supabasePublic
+      .from("pages")
+      .select("id, title, slug, status, brand")
+      .eq("brand", "physio-konzept")
+      .limit(5);
+
+    const debugPages = allBrandPages && allBrandPages.length > 0
+      ? `Verfügbare Seiten (${allBrandPages.length}): ${allBrandPages.map(p => `${p.slug || '(empty)'} (${p.status})`).join(', ')}`
+      : 'Keine Seiten mit Brand "physio-konzept" gefunden';
+
+    return (
+      <div className="container mx-auto py-12 px-4">
+        <h1 className="text-2xl font-bold">Seite nicht gefunden</h1>
+        <p className="mt-4 text-muted-foreground">
+          Die Seite mit dem Slug &quot;{slug}&quot; wurde nicht gefunden.
+        </p>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Status: Die Seite muss den Status &quot;published&quot; haben, um angezeigt zu werden.
+        </p>
+        <p className="mt-4 text-xs text-muted-foreground bg-muted p-3 rounded">
+          Debug: {debugPages}
+        </p>
+      </div>
+    );
+  }
+
+  // Fetch blocks for the effective page
   const { data: blocks, error: blocksErr } = await supabasePublic
     .from("blocks")
-    // Use "*" to stay compatible if DB migrations aren't applied yet
-    // (explicitly selecting a missing column would error).
     .select("*")
-    .eq("page_id", page.id)
+    .eq("page_id", effectivePage.id)
     .order("sort", { ascending: true });
 
   if (blocksErr) {
@@ -102,7 +161,7 @@ export default async function KonzeptCMSPageRoute({ params }: { params: Promise<
       details: blocksErr.details,
       hint: blocksErr.hint,
       code: blocksErr.code,
-      pageId: page.id,
+      pageId: effectivePage.id,
     });
   }
 
@@ -122,17 +181,24 @@ export default async function KonzeptCMSPageRoute({ params }: { params: Promise<
   }));
 
   const isCookieLegalPage =
-    (page as { page_type?: string; page_subtype?: string }).page_type === "legal" &&
-    (page as { page_type?: string; page_subtype?: string }).page_subtype === "cookies";
+    (effectivePage as { page_type?: string; page_subtype?: string }).page_type === "legal" &&
+    (effectivePage as { page_type?: string; page_subtype?: string }).page_subtype === "cookies";
 
   // TOC nur auf Legal-Seiten oder Blog-Posts anzeigen, nicht auf Homepage oder normale Content-Seiten
-  const isLegalPage = (page as { page_type?: string }).page_type === "legal";
+  const isLegalPage = (effectivePage as { page_type?: string }).page_type === "legal";
 
   return (
     <article>
       <div className="mx-auto grid w-full max-w-7xl grid-cols-1 gap-8 px-4 lg:grid-cols-[minmax(0,1fr)_240px]">
-        <div data-article>
-          <CMSRenderer blocks={cmsBlocks} pageSlug={slug} />
+        <div data-article className="min-w-0">
+          {cmsBlocks.length === 0 ? (
+            <div className="py-12">
+              <p className="text-muted-foreground">Keine Inhalte verfügbar.</p>
+              <p className="text-sm text-muted-foreground mt-2">Debug: {cmsBlocks.length} Blöcke, Seite: {effectivePage.title}</p>
+            </div>
+          ) : (
+            <CMSRenderer blocks={cmsBlocks} pageSlug={slug} />
+          )}
           {isCookieLegalPage && (
             <div className="max-w-7xl">
               <CookieScanTable />

@@ -10,6 +10,7 @@ import { resolveSectionBg } from "@/lib/theme/resolveSectionBg"
 import { resolveContainerBg } from "@/lib/theme/resolveContainerBg"
 import { resolveBoxShadow } from "@/lib/shadow/resolveBoxShadow"
 import { mergeTypographyClasses } from "@/lib/typography"
+import { useMotionPreference, getAnimationInitial, getViewportTrigger } from "@/lib/motion/useMotionPreference"
 import type { BlockSectionProps, ElementShadow } from "@/types/cms"
 import type { GradientPresetValue } from "@/lib/theme/gradientPresets"
 
@@ -642,7 +643,8 @@ export function GalleryBlock({
   const [lbOpen, setLbOpen] = useState(false)
   const [lbIdx, setLbIdx] = useState(0)
   const reduced = useReducedMotion()
-  const noMotion = reduced || !enableMotion
+  const { shouldDisableViewAnimations } = useMotionPreference()
+  const noMotion = reduced || !enableMotion || shouldDisableViewAnimations
 
   const effectiveLayout = layoutProp ?? (variant === "slider" ? "carousel" : "grid")
   const openLb = useCallback((i: number) => {
@@ -709,9 +711,8 @@ export function GalleryBlock({
         <div className={cn("relative mx-auto px-4 sm:px-6", maxWidthCls)}>
           {(headline || subheadline) && (
             <motion.header
-              initial={noMotion ? false : { opacity: 0, y: 16 }}
-              whileInView={noMotion ? undefined : { opacity: 1, y: 0 }}
-              viewport={{ once: true, amount: 0.3 }}
+              initial={noMotion ? "visible" : { opacity: 0, y: 16 }}
+              {...(noMotion ? {} : { whileInView: { opacity: 1, y: 0 }, viewport: { once: true, amount: 0.3 } })}
               transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
               className="mb-14 text-center"
             >

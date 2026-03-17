@@ -8,6 +8,7 @@ import { motion, useReducedMotion, cubicBezier } from "framer-motion"
 import { useElementShadowStyle } from "@/lib/shadow"
 import { resolveButtonPresetStyles } from "@/lib/buttonPresets"
 import { mergeTypographyClasses } from "@/lib/typography"
+import { useMotionPreference, getAnimationInitial, getViewportTrigger } from "@/lib/motion/useMotionPreference"
 
 /* ================================================================ */
 /*  Types                                                            */
@@ -208,6 +209,11 @@ export function SectionBlock({
   ...restProps
 }: SectionBlockProps & Record<string, any>) {
   const prefersReducedMotion = useReducedMotion()
+  const { shouldDisableViewAnimations } = useMotionPreference()
+  
+  // Central disable flag: true on mobile, reduced motion, or if view animations disabled
+  const disableViewMotion = shouldDisableViewAnimations || !!prefersReducedMotion
+  
   const isCentered = align === "center"
   const isJustified = align === "justify"
 
@@ -315,6 +321,22 @@ export function SectionBlock({
     background === "gradient-soft" && "bg-background",
     background === "gradient-brand" && "bg-background",
   )
+
+  /* ---- Motion Props for Container ---- */
+  const containerMotionProps = disableViewMotion
+    ? {
+        // Mobile / reduced motion: always visible immediately
+        variants: containerVariants,
+        initial: "visible",
+        animate: "visible",
+      }
+    : {
+        // Desktop: trigger animation on view
+        variants: containerVariants,
+        initial: "hidden",
+        whileInView: "visible",
+        viewport: { once: true, amount: 0.2 },
+      }
 
   return (
     <section
@@ -450,10 +472,7 @@ export function SectionBlock({
           onClick={() => onElementClick?.(blockId || "", "section.surface")}
         >
           <motion.div
-            variants={prefersReducedMotion ? undefined : containerVariants}
-            initial={prefersReducedMotion ? "visible" : "hidden"}
-            whileInView="visible"
-            viewport={{ once: true, amount: 0.2 }}
+            {...containerMotionProps}
             className={cn(
               maxWidthMap[maxWidth],
               alignContainerMap[align],
@@ -462,7 +481,9 @@ export function SectionBlock({
             {/* ---- Eyebrow ---- */}
             {eyebrow && (
               <motion.div
-                variants={prefersReducedMotion ? undefined : itemVariants}
+                variants={itemVariants}
+                initial={disableViewMotion ? "visible" : undefined}
+                animate={disableViewMotion ? "visible" : undefined}
                 className={cn(
                   "mb-6 flex items-center gap-3",
                   isCentered && "justify-center",
@@ -504,7 +525,9 @@ export function SectionBlock({
 
             {/* ---- Headline ---- */}
             <motion.h2
-              variants={prefersReducedMotion ? undefined : itemVariants}
+              variants={itemVariants}
+              initial={disableViewMotion ? "visible" : undefined}
+              animate={disableViewMotion ? "visible" : undefined}
               onClick={(e) => handleInlineEdit(e, "headline", "section.headline")}
               data-element-id="section.headline"
               className={cn(
@@ -529,7 +552,9 @@ export function SectionBlock({
             {/* ---- Subheadline ---- */}
             {subheadline && (
               <motion.p
-                variants={prefersReducedMotion ? undefined : itemVariants}
+                variants={itemVariants}
+                initial={disableViewMotion ? "visible" : undefined}
+                animate={disableViewMotion ? "visible" : undefined}
                 onClick={(e) => handleInlineEdit(e, "subheadline", "section.subheadline")}
                 data-element-id="section.subheadline"
                 className={cn(
@@ -555,7 +580,9 @@ export function SectionBlock({
             {/* ---- Divider ---- */}
             {resolvedShowDivider && (
               <motion.div
-                variants={prefersReducedMotion ? undefined : itemVariants}
+                variants={itemVariants}
+                initial={disableViewMotion ? "visible" : undefined}
+                animate={disableViewMotion ? "visible" : undefined}
                 className={cn("my-8 w-full flex cursor-pointer", isCentered && "justify-center")}
                 data-element-id="section.divider"
                 onClick={(e) => {
@@ -581,7 +608,9 @@ export function SectionBlock({
 
             {/* ---- Content paragraphs ---- */}
             <motion.div
-              variants={prefersReducedMotion ? undefined : itemVariants}
+              variants={itemVariants}
+              initial={disableViewMotion ? "visible" : undefined}
+              animate={disableViewMotion ? "visible" : undefined}
               onClick={(e) => handleInlineEdit(e, "content", "section.content")}
               data-element-id="section.content"
               className={cn(
@@ -610,7 +639,9 @@ export function SectionBlock({
             {/* ---- CTAs ---- */}
             {hasCta && (
               <motion.div
-                variants={prefersReducedMotion ? undefined : itemVariants}
+                variants={itemVariants}
+                initial={disableViewMotion ? "visible" : undefined}
+                animate={disableViewMotion ? "visible" : undefined}
                 className={cn(
                   "mt-12 flex flex-wrap gap-4",
                   isCentered && "justify-center",
