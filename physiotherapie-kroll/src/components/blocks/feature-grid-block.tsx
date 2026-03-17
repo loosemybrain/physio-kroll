@@ -282,6 +282,8 @@ function FeatureCardWithShadow({
     >
       <CardSurface
         className={cardClassName}
+        data-repeater-field="features"
+        data-repeater-item-id={feature.id}
         data-element-id={`card-${feature.id}`}
         style={{
           ...(cardShadow as React.CSSProperties),

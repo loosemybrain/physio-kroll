@@ -1,16 +1,17 @@
 "use client"
 
-import { useRef } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { ChevronUp, ChevronDown, Copy, Trash2 } from "lucide-react"
-import { BlockRenderer } from "@/components/cms/BlockRenderer"
-import { LivePreviewTheme } from "@/components/admin/LivePreviewTheme"
-import { InlineFieldEditor } from "@/components/admin/InlineFieldEditor"
-import { getBlockDefinition } from "@/cms/blocks/registry"
-import type { CMSPage, CMSBlock, HeroBlock } from "@/types/cms"
-import type { BrandKey } from "@/components/brand/brandAssets"
+import { Monitor, Tablet, Smartphone } from "lucide-react"
 import type { AdminPage } from "@/lib/cms/supabaseStore"
+import { InlineFieldEditor } from "@/components/admin/InlineFieldEditor"
+import {
+  EDITOR_MESSAGE_TYPES,
+  PREVIEW_MESSAGE_TYPES,
+  createBridgeEnvelope,
+  isBridgeMessage,
+} from "@/shared/previewBridge/contract"
 
 interface PageEditorPreviewProps {
   current: AdminPage
@@ -54,6 +55,150 @@ export function PageEditorPreview({
   onSelectRepeaterItem,
 }: PageEditorPreviewProps) {
   const liveScrollRef = useRef<HTMLDivElement>(null)
+  const iframeRef = useRef<HTMLIFrameElement>(null)
+  const sessionIdRef = useRef<string | null>(null)
+
+  const [viewport, setViewport] = useState<"desktop" | "tablet" | "mobile">(() => {
+    if (typeof window === "undefined") return "desktop"
+    const v = window.localStorage.getItem("admin.preview.viewport")
+    if (v === "tablet" || v === "mobile" || v === "desktop") return v
+    return "desktop"
+  })
+
+  useEffect(() => {
+    window.localStorage.setItem("admin.preview.viewport", viewport)
+  }, [viewport])
+
+  const deviceWidth = useMemo(() => {
+    if (viewport === "mobile") return 390
+    if (viewport === "tablet") return 820
+    return null
+  }, [viewport])
+
+  // Handshake: PREVIEW_READY -> EDITOR_ACK
+  useEffect(() => {
+    const handler = (event: MessageEvent) => {
+      if (!isBridgeMessage(event.data)) return
+      const msg = event.data
+      if (msg.type !== PREVIEW_MESSAGE_TYPES.PREVIEW_READY) return
+      if (msg.pageId !== String(current.id)) return
+
+      const sessionId = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+      sessionIdRef.current = sessionId
+
+      iframeRef.current?.contentWindow?.postMessage(
+        createBridgeEnvelope(
+          EDITOR_MESSAGE_TYPES.EDITOR_ACK,
+          String(current.id),
+          { sessionId },
+          { source: "editor", sessionId }
+        ),
+        "*"
+      )
+    }
+    window.addEventListener("message", handler)
+    return () => window.removeEventListener("message", handler)
+  }, [current.id])
+
+  // Preview -> Editor: selection
+  useEffect(() => {
+    const handler = (event: MessageEvent) => {
+      if (!isBridgeMessage(event.data)) return
+      const msg = event.data
+      if (msg.pageId !== String(current.id)) return
+      if (msg.type !== PREVIEW_MESSAGE_TYPES.PREVIEW_SELECT) return
+
+      const payload = msg.payload as { blockId?: string; elementId?: string | null }
+      const blockId = payload?.blockId
+      if (!blockId) return
+
+      const repeater = (payload as any)?.repeater as { fieldPath: string; itemId: string } | null | undefined
+      if (repeater?.fieldPath && repeater?.itemId) {
+        onSelectRepeaterItem(blockId, repeater.fieldPath, repeater.itemId)
+        return
+      }
+
+      onBlockSelect(blockId)
+      const elementId = payload?.elementId ?? null
+      if (elementId) onElementClick(blockId, elementId)
+    }
+    window.addEventListener("message", handler)
+    return () => window.removeEventListener("message", handler)
+  }, [current.id, onBlockSelect, onElementClick, onSelectRepeaterItem])
+
+  // Preview -> Editor: start inline edit (data-cms-field click)
+  useEffect(() => {
+    const handler = (event: MessageEvent) => {
+      if (!isBridgeMessage(event.data)) return
+      const msg = event.data
+      if (msg.pageId !== String(current.id)) return
+      if (msg.type !== PREVIEW_MESSAGE_TYPES.PREVIEW_START_EDIT) return
+
+      const payload = msg.payload as {
+        blockId?: string
+        fieldPath?: string | null
+        rect?: { left: number; top: number; width: number; height: number } | null
+      }
+      const blockId = payload?.blockId
+      const fieldPath = payload?.fieldPath ?? null
+      if (!blockId || !fieldPath) return
+
+      onBlockSelect(blockId)
+
+      let anchorRect: DOMRect | undefined
+      if (payload.rect && iframeRef.current) {
+        const iframeRect = iframeRef.current.getBoundingClientRect()
+        anchorRect = new DOMRect(
+          iframeRect.left + payload.rect.left,
+          iframeRect.top + payload.rect.top,
+          payload.rect.width,
+          payload.rect.height
+        )
+      }
+
+      onEditField(blockId, fieldPath, anchorRect)
+    }
+    window.addEventListener("message", handler)
+    return () => window.removeEventListener("message", handler)
+  }, [current.id, onBlockSelect, onEditField])
+
+  // Push draft updates into iframe
+  useEffect(() => {
+    const w = iframeRef.current?.contentWindow
+    if (!w) return
+    w.postMessage(
+      createBridgeEnvelope(
+        EDITOR_MESSAGE_TYPES.EDITOR_SET_DRAFT,
+        String(current.id),
+        {
+          brand: String(current.brand || "physiotherapy"),
+          pageSlug: String(current.slug || ""),
+          blocks: current.blocks,
+        },
+        { source: "editor", sessionId: sessionIdRef.current ?? undefined }
+      ),
+      "*"
+    )
+  }, [current.brand, current.slug, current.blocks, current.id])
+
+  // Highlight selection inside iframe
+  useEffect(() => {
+    const w = iframeRef.current?.contentWindow
+    if (!w) return
+    w.postMessage(
+      createBridgeEnvelope(
+        EDITOR_MESSAGE_TYPES.EDITOR_HIGHLIGHT,
+        String(current.id),
+        {
+          state: selectedBlockId || selectedElementId ? "on" : "off",
+          blockId: selectedBlockId,
+          elementId: selectedElementId,
+        },
+        { source: "editor", sessionId: sessionIdRef.current ?? undefined }
+      ),
+      "*"
+    )
+  }, [current.id, selectedBlockId, selectedElementId])
 
   return (
     <div
@@ -71,183 +216,80 @@ export function PageEditorPreview({
         }
       }}
     >
-      <LivePreviewTheme brand={current.brand || "physiotherapy"} className="mx-auto max-w-5xl rounded-lg border border-border bg-background shadow-sm overflow-hidden">
-        {current.blocks.map((block, index) => {
-          const blockDefinition = getBlockDefinition(block.type)
-          const blockLabel = blockDefinition.label || block.type
-          const isFirst = index === 0
-          const isLast = index === current.blocks.length - 1
-
-          const blockToRender = block.type === "hero"
-            ? (() => {
-                const heroProps = block.props as HeroBlock["props"]
-                const renderBrand: BrandKey = (current.brand || "physiotherapy") as BrandKey
-                const brandContent = heroProps.brandContent || {
-                  physiotherapy: {},
-                  "physio-konzept": {},
-                }
-                if (!brandContent.physiotherapy?.headline && heroProps.headline) {
-                  brandContent.physiotherapy = {
-                    ...brandContent.physiotherapy,
-                    headline: heroProps.headline,
-                    subheadline: heroProps.subheadline,
-                    ctaText: heroProps.ctaText,
-                    ctaHref: heroProps.ctaHref,
-                    badgeText: heroProps.badgeText,
-                    playText: heroProps.playText,
-                    trustItems: heroProps.trustItems,
-                    floatingTitle: heroProps.floatingTitle,
-                    floatingValue: heroProps.floatingValue,
-                    floatingLabel: heroProps.floatingLabel,
-                  }
-                }
-                return {
-                  ...block,
-                  props: {
-                    ...heroProps,
-                    mood: renderBrand,
-                    brandContent,
-                  } as HeroBlock["props"],
-                }
-              })()
-            : block
-
-          return (
-            <div
-              key={block.id}
-              data-block-id={block.id}
-              className={cn(
-                "relative cursor-pointer transition-colors",
-                selectedBlockId === block.id
-                  ? "ring-2 ring-primary ring-offset-2 ring-offset-background"
-                  : "hover:bg-muted/30"
-              )}
-              onClick={() => {
-                onBlockSelect(block.id)
-              }}
+      <div className="mx-auto max-w-6xl">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <div className="text-sm font-semibold text-muted-foreground">Live Preview</div>
+          <div className="flex items-center gap-1 rounded-lg border border-border bg-background p-1 shadow-sm">
+            <Button
+              type="button"
+              variant={viewport === "desktop" ? "default" : "ghost"}
+              size="sm"
+              className="h-8 gap-2"
+              onClick={() => setViewport("desktop")}
+              title="Desktop"
             >
-              {/* Block Controls Overlay */}
-              <div
-                className="absolute top-2 right-2 z-50 flex items-center gap-1 rounded-md bg-[#0f0f10]/90 text-white border border-white/10 shadow-xl backdrop-blur-sm p-1"
-                onClick={(e) => {
-                  e.preventDefault()
-                  e.stopPropagation()
-                }}
-              >
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7"
-                  onClick={(e) => {
-                    e.preventDefault()
-                    e.stopPropagation()
-                    onMoveBlock(index, -1)
-                  }}
-                  disabled={isFirst}
-                  title="Nach oben"
-                >
-                  <ChevronUp className="h-3 w-3" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7"
-                  onClick={(e) => {
-                    e.preventDefault()
-                    e.stopPropagation()
-                    onMoveBlock(index, 1)
-                  }}
-                  disabled={isLast}
-                  title="Nach unten"
-                >
-                  <ChevronDown className="h-3 w-3" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7"
-                  onClick={(e) => {
-                    e.preventDefault()
-                    e.stopPropagation()
-                    onDuplicateBlock(index)
-                  }}
-                  title="Block duplizieren"
-                >
-                  <Copy className="h-3 w-3" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 text-destructive hover:text-destructive"
-                  onClick={(e) => {
-                    e.preventDefault()
-                    e.stopPropagation()
-                    onRemoveBlock(block.id)
-                  }}
-                  title="Block löschen"
-                >
-                  <Trash2 className="h-3 w-3" />
-                </Button>
-              </div>
+              <Monitor className="h-4 w-4" />
+              Desktop
+            </Button>
+            <Button
+              type="button"
+              variant={viewport === "tablet" ? "default" : "ghost"}
+              size="sm"
+              className="h-8 gap-2"
+              onClick={() => setViewport("tablet")}
+              title="Tablet (~820px)"
+            >
+              <Tablet className="h-4 w-4" />
+              Tablet
+            </Button>
+            <Button
+              type="button"
+              variant={viewport === "mobile" ? "default" : "ghost"}
+              size="sm"
+              className="h-8 gap-2"
+              onClick={() => setViewport("mobile")}
+              title="Mobile (~390px)"
+            >
+              <Smartphone className="h-4 w-4" />
+              Mobile
+            </Button>
+          </div>
+        </div>
 
-              <BlockRenderer
-                block={blockToRender}
-                editable
-                onEditField={onEditField}
-                onElementClick={(blockId, elementId) => {
-                  onBlockSelect(blockId)
-                  onElementClick(blockId, elementId)
-                }}
-                selectedElementId={selectedBlockId === block.id ? selectedElementId : null}
-                courseSchedulePreview={
-                  block.type === "courseSchedule" && selectedBlockId === block.id
-                    ? {
-                        interactivePreview: true,
-                        activeSlotId: expandedRepeaterCards[`${block.id}:slots`] ?? null,
-                        onSlotSelect: (slotId: string) => onSelectRepeaterItem(block.id, "slots", slotId),
-                      }
-                    : undefined
-                }
-                repeaterPreview={
-                  selectedBlockId === block.id &&
-                  (block.type === "team" ||
-                    block.type === "servicesGrid" ||
-                    block.type === "testimonials" ||
-                    block.type === "faq" ||
-                    block.type === "imageSlider")
-                    ? (() => {
-                        const fieldPath =
-                          block.type === "team"
-                            ? "members"
-                            : block.type === "servicesGrid"
-                              ? "cards"
-                              : block.type === "imageSlider"
-                                ? "slides"
-                                : "items"
-                        const key = `${block.id}:${fieldPath}`
-                        return {
-                          activeItemId: expandedRepeaterCards[key] ?? null,
-                          onItemSelect: (itemId: string) => onSelectRepeaterItem(block.id, fieldPath, itemId),
-                        }
-                      })()
-                    : undefined
-                }
-              />
-            </div>
-          )
-        })}
+        <div className="flex justify-center">
+          <div
+            className={cn(
+              "relative overflow-hidden rounded-xl border border-border bg-background shadow-sm",
+              "max-h-[calc(100dvh-220px)]"
+            )}
+            style={{
+              width: deviceWidth ? `${deviceWidth}px` : "100%",
+              maxWidth: "100%",
+            }}
+          >
+            <div className="pointer-events-none absolute inset-0 rounded-xl ring-1 ring-black/5" />
+            <iframe
+              ref={iframeRef}
+              title="Admin Live Preview"
+              className="block h-[calc(100dvh-220px)] w-full bg-background"
+              src={`/preview/${current.id}?brand=${encodeURIComponent(String(current.brand || "physiotherapy"))}`}
+            />
+          </div>
+        </div>
 
-        {/* Inline Field Editor */}
-        <InlineFieldEditor
-          open={inlineOpen}
-          anchorRect={inlineAnchorRect}
-          label={inlineLabel}
-          value={inlineValue}
-          multiline={inlineMultiline}
-          onChange={onInlineChange}
-          onClose={onInlineClose}
-        />
-      </LivePreviewTheme>
+        <div className="mt-3 text-xs text-muted-foreground">Breite: {deviceWidth ? `${deviceWidth}px` : "fluid"}</div>
+      </div>
+
+      {/* Inline Editor Popup (must be in parent, above iframe) */}
+      <InlineFieldEditor
+        open={inlineOpen}
+        anchorRect={inlineAnchorRect}
+        label={inlineLabel}
+        value={inlineValue}
+        multiline={inlineMultiline}
+        onChange={onInlineChange}
+        onClose={onInlineClose}
+      />
     </div>
   )
 }

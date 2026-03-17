@@ -355,6 +355,8 @@ function MemberCard({
   const isActive = interactivePreview && activeItemId === member.id
   return (
     <article
+      data-repeater-field="members"
+      data-repeater-item-id={member.id}
       role={interactivePreview && onItemSelect ? "button" : undefined}
       tabIndex={interactivePreview && onItemSelect ? 0 : undefined}
       onClick={

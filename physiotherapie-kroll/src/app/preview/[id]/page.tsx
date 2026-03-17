@@ -4,12 +4,21 @@ import { createSupabaseServerClient } from "@/lib/supabase/server"
 import type { CMSBlock } from "@/types/cms"
 import type { BrandKey } from "@/components/brand/brandAssets"
 import { redirect } from "next/navigation"
+import { PreviewLiveRenderer } from "./preview-live-renderer"
+import { getThemePresetInlineVars } from "@/lib/theme/themePresetCss.server"
 
 export const dynamic = "force-dynamic"
 export const revalidate = 0
 
-export default async function PreviewPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function PreviewPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>
+  searchParams?: Promise<{ brand?: string }>
+}) {
   const { id } = await params
+  const sp = (await searchParams) ?? {}
   const supabase = await createSupabaseServerClient()
 
   // Should be enforced by middleware, but keep a server-side guard too.
@@ -69,13 +78,38 @@ export default async function PreviewPage({ params }: { params: Promise<{ id: st
     return candidate as unknown as CMSBlock
   })
 
-  const brand: BrandKey = (page.brand as BrandKey) || "physiotherapy"
+  const brandFromQuery = sp.brand === "physio-konzept" ? ("physio-konzept" as const) : sp.brand === "physiotherapy" ? ("physiotherapy" as const) : null
+  const brand: BrandKey = (brandFromQuery ?? (page.brand as BrandKey)) || "physiotherapy"
   const pageSlug = (page.slug ?? "") as string
 
+  // IMPORTANT: Preview runs under /preview/* (not /konzept/*), so RootLayout's html[data-brand]
+  // may still be "physiotherapy" if it can't derive brand for preview requests.
+  // To prevent preset flicker/wrong background, we apply the correct preset vars for the preview root here.
+  const preset = await getThemePresetInlineVars(brand).catch(() => ({
+    brand,
+    presetId: null,
+    presetName: null,
+    vars: {} as Record<string, string>,
+  }))
+  const hasTokens = Object.keys(preset.vars).length > 0
+
+  // Make brand authoritative for all blocks during preview to prevent client fallbacks after hydration.
+  const previewBlocks: CMSBlock[] = cmsBlocks.map((b) => ({
+    ...b,
+    props: {
+      ...(typeof b.props === "object" && b.props ? (b.props as Record<string, unknown>) : {}),
+      __previewBrand: brand,
+    } as any,
+  }))
+
   return (
-    <article>
+    <article
+      className={brand === "physio-konzept" ? "physio-konzept" : ""}
+      data-preview-brand={brand}
+      style={hasTokens ? (preset.vars as unknown as React.CSSProperties) : undefined}
+    >
       <PreviewBrandSetter brand={brand} />
-      <CMSRenderer blocks={cmsBlocks} pageSlug={pageSlug} />
+      <PreviewLiveRenderer pageId={String(page.id)} initialBrand={brand} initialPageSlug={pageSlug} initialBlocks={previewBlocks} />
     </article>
   )
 }

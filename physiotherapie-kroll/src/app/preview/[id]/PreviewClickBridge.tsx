@@ -15,6 +15,7 @@ export function PreviewClickBridge({ pageId }: { pageId?: string }) {
   const lastSelectionRef = useRef<{
     blockId?: string
     elementId?: string
+    repeaterItemId?: string
   }>({})
   const sessionIdRef = useRef<string | null>(null)
 
@@ -66,7 +67,8 @@ export function PreviewClickBridge({ pageId }: { pageId?: string }) {
       if (!target) return
 
       // Ignoriere Klicks auf SVG / Icons → wir wollen das semantische Element
-      const effectiveTarget = target.closest<HTMLElement>("[data-element-id],[data-block-id]") ?? null
+      const effectiveTarget =
+        target.closest<HTMLElement>("[data-repeater-item-id],[data-element-id],[data-block-id]") ?? null
       if (!effectiveTarget) return
 
       const blockEl = effectiveTarget.closest<HTMLElement>("[data-block-id]") ?? null
@@ -78,13 +80,21 @@ export function PreviewClickBridge({ pageId }: { pageId?: string }) {
       const elementEl = effectiveTarget.closest<HTMLElement>("[data-element-id]")
       const elementId = elementEl?.getAttribute("data-element-id") ?? undefined
 
-      // Deduplication: kein Spam an Admin
+      const repeaterEl = effectiveTarget.closest<HTMLElement>("[data-repeater-item-id]")
+      const repeaterItemId = repeaterEl?.getAttribute("data-repeater-item-id") ?? undefined
+      const repeaterFieldPath = repeaterEl?.getAttribute("data-repeater-field") ?? undefined
+
+      // Deduplication: nur gleicher Block+Element+Repeater-Item als Duplikat ignorieren
       const last = lastSelectionRef.current
-      if (last.blockId === blockId && last.elementId === elementId) {
+      if (
+        last.blockId === blockId &&
+        last.elementId === elementId &&
+        last.repeaterItemId === repeaterItemId
+      ) {
         return
       }
 
-      lastSelectionRef.current = { blockId, elementId }
+      lastSelectionRef.current = { blockId, elementId, repeaterItemId }
 
       // Navigation im Preview verhindern (Links, Buttons)
       const link = effectiveTarget.closest("a")
@@ -98,6 +108,10 @@ export function PreviewClickBridge({ pageId }: { pageId?: string }) {
         blockId,
         elementId: elementId ?? null,
         mode: elementId ? "element" : "block",
+        repeater:
+          repeaterItemId && repeaterFieldPath
+            ? { fieldPath: repeaterFieldPath, itemId: repeaterItemId }
+            : null,
       }
       const selectMsg = createBridgeEnvelope(
         PREVIEW_MESSAGE_TYPES.PREVIEW_SELECT,

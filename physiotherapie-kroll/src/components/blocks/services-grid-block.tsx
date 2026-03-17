@@ -161,6 +161,8 @@ export function ServicesGridBlock({
             return (
               <CardSurface
                 key={card.id}
+                data-repeater-field="cards"
+                data-repeater-item-id={card.id}
                 role={interactivePreview && onItemSelect ? "button" : undefined}
                 tabIndex={interactivePreview && onItemSelect ? 0 : undefined}
                 onClick={(e) => {

@@ -151,6 +151,8 @@ function FaqItemComponent({
     <AccordionItem
       key={item.id}
       value={item.id}
+      data-repeater-field="items"
+      data-repeater-item-id={item.id}
       data-element-id={itemSurfaceId}
       style={itemSurfaceShadow}
       onClick={handleItemClick}

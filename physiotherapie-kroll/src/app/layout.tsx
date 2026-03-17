@@ -37,6 +37,7 @@ export default async function RootLayout({
   const hdrs = await headers()
   const brandHeader = hdrs.get("x-brand")
   const themeScope = hdrs.get("x-theme-scope") ?? "public"
+  const isPreview = hdrs.get("x-preview") === "1"
   const brand: BrandKey = brandHeader === "physio-konzept" ? "physio-konzept" : "physiotherapy"
 
   if (process.env.NODE_ENV === "development") {
@@ -92,21 +93,30 @@ export default async function RootLayout({
               <AnchorHashScroll />
               <ScrollSpyProvider>
                 <BrandProvider>
-                  <HeaderWrapper>
-                    {children}
-                  </HeaderWrapper>
-                  <FooterWrapper />
+                  {isPreview ? (
+                    // Preview (iframe): keine Navigation/Footer/Overlays, nur Seiteninhalt.
+                    <>{children}</>
+                  ) : (
+                    <>
+                      <HeaderWrapper>{children}</HeaderWrapper>
+                      <FooterWrapper />
+                    </>
+                  )}
                 </BrandProvider>
               </ScrollSpyProvider>
             </BrandShell>
-            <CookieBanner />
-            <CookieFloatingButton />
-            <ScrollToTopButton />
-            <CookieSettingsDialog />
+            {isPreview ? null : (
+              <>
+                <CookieBanner />
+                <CookieFloatingButton />
+                <ScrollToTopButton />
+                <CookieSettingsDialog />
+              </>
+            )}
             <Toaster />
           </CookieProvider>
         </ThemeProvider>
-        {themeScope === "public" ? <CustomCursor /> : null}
+        {!isPreview && themeScope === "public" ? <CustomCursor /> : null}
 
       </body>
     </html>

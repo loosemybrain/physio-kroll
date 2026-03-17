@@ -381,24 +381,56 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
   const [expandedRepeaterCards, setExpandedRepeaterCards] = useState<Record<string, string | null>>({})
   /** Nach "Item hinzufügen": Fokus auf erste Eingabe der neuen Card (key + itemId). */
   const lastAddedRepeaterRef = useRef<{ key: string; itemId: string } | null>(null)
+  /** Preview-Klick auf Repeater-Card: Fokus nach Expand setzen. */
+  const pendingPreviewRepeaterFocusRef = useRef<{ key: string; itemId: string } | null>(null)
+  /** Löst Effect aus bei jedem Repeater-Klick (auch wenn derselbe Block schon gewählt war). */
+  const [repeaterFocusRequestId, setRepeaterFocusRequestId] = useState(0)
 
-  // Nach "Item hinzufügen": Card in den sichtbaren Bereich scrollen und Fokus auf erste Eingabe
+  // Hilfsfunktion: Card suchen, scrollen, Fokus setzen (mit Retry falls Card noch nicht im DOM)
+  const runScrollAndFocusForItem = useCallback((itemId: string, retryCount = 0) => {
+    const container = inspectorScrollRef.current
+    if (!container) return
+    const escapedId = CSS.escape(itemId)
+    const card = container.querySelector<HTMLElement>(`[${INSPECTOR_CARD_ID_ATTR}="${escapedId}"]`)
+    if (!card) {
+      if (retryCount < 5) {
+        const delay = [80, 150, 250, 400, 600][retryCount]
+        setTimeout(() => runScrollAndFocusForItem(itemId, retryCount + 1), delay)
+      }
+      return
+    }
+    card.scrollIntoView({ behavior: "smooth", block: "nearest" })
+    const focusDelay = 200
+    const scheduleFocus = () => {
+      const firstInput = card.querySelector<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>("input, select, textarea")
+      if (firstInput) firstInput.focus({ preventScroll: true })
+    }
+    setTimeout(() => {
+      if (typeof container.focus === "function") container.focus({ preventScroll: true })
+      scheduleFocus()
+      setTimeout(scheduleFocus, 60)
+    }, focusDelay)
+  }, [])
+
+  // Preview-Klick auf Repeater: aufklappen + Fokus (repeaterFocusRequestId löst bei jedem Klick aus, auch bei gleichem Block)
+  useEffect(() => {
+    const pending = pendingPreviewRepeaterFocusRef.current
+    if (!pending) return
+    pendingPreviewRepeaterFocusRef.current = null
+    setExpandedRepeaterCards((prev) => ({ ...prev, [pending.key]: pending.itemId }))
+    const t = setTimeout(() => runScrollAndFocusForItem(pending.itemId), 220)
+    return () => clearTimeout(t)
+  }, [repeaterFocusRequestId, runScrollAndFocusForItem])
+
+  // Nach "Item hinzufügen": scroll + Fokus (expandedRepeaterCards ist schon gesetzt)
   useEffect(() => {
     const added = lastAddedRepeaterRef.current
     if (!added) return
-    const currentExpanded = expandedRepeaterCards[added.key]
-    if (currentExpanded !== added.itemId) return
+    if (expandedRepeaterCards[added.key] !== added.itemId) return
     lastAddedRepeaterRef.current = null
-    const container = inspectorScrollRef.current
-    const card = container?.querySelector(`[${INSPECTOR_CARD_ID_ATTR}="${added.itemId}"]`) as HTMLElement | null
-    if (card) {
-      card.scrollIntoView({ behavior: "smooth", block: "nearest" })
-      setTimeout(() => {
-        const firstInput = card.querySelector<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>("input, select, textarea")
-        firstInput?.focus({ preventScroll: true })
-      }, 200)
-    }
-  }, [expandedRepeaterCards])
+    const t = setTimeout(() => runScrollAndFocusForItem(added.itemId), 220)
+    return () => clearTimeout(t)
+  }, [expandedRepeaterCards, runScrollAndFocusForItem])
 
   // Track which Hero blocks have been migrated to avoid re-migration loops
   const migratedHeroBlocksRef = useRef<Set<string>>(new Set())
@@ -639,22 +671,13 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
     return field?.label || "Feld bearbeiten"
   }, [inlineBlockId, inlineFieldPath, current?.blocks])
 
-  /** Preview → Inspector: Repeater-Item angeklickt → Block auswählen, passende Card öffnen, scroll/focus. (Must be before any early return.) */
+  /** Preview → Inspector: Repeater-Item angeklickt → Block auswählen, passende Card öffnen; scroll/focus im Effect nach Commit. */
   const handleSelectRepeaterItem = useCallback(
     (blockId: string, fieldPath: string, itemId: string) => {
-      selectBlock(blockId)
       const key = `${blockId}:${fieldPath}`
-      setExpandedRepeaterCards((prev) => ({ ...prev, [key]: itemId }))
-      requestAnimationFrame(() => {
-        const container = inspectorScrollRef.current
-        if (!container) return
-        const card = container.querySelector(`[${INSPECTOR_CARD_ID_ATTR}="${itemId}"]`) as HTMLElement | null
-        if (card) {
-          card.scrollIntoView({ behavior: "smooth", block: "nearest" })
-          const firstInput = card.querySelector<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>("input, select, textarea")
-          setTimeout(() => firstInput?.focus({ preventScroll: true }), 150)
-        }
-      })
+      pendingPreviewRepeaterFocusRef.current = { key, itemId }
+      setRepeaterFocusRequestId((n) => n + 1)
+      selectBlock(blockId)
     },
     [selectBlock]
   )
@@ -1008,6 +1031,7 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
         {/* Block Editor Panel */}
         <div
           ref={inspectorScrollRef}
+          tabIndex={-1}
           className="relative w-96 border-l border-border bg-background overflow-y-auto overflow-x-hidden z-50 min-h-0"
           style={{ height: "100%" }}
         >

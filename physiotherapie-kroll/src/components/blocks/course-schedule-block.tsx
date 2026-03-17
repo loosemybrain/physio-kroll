@@ -159,6 +159,8 @@ function SlotCard({
   if (interactive && onSlotSelect) {
     return (
       <article
+        data-repeater-field="slots"
+        data-repeater-item-id={slot.id}
         role="button"
         tabIndex={0}
         onClick={(e) => {
@@ -174,7 +176,11 @@ function SlotCard({
     )
   }
 
-  return <article className={className}>{content}</article>
+  return (
+    <article data-repeater-field="slots" data-repeater-item-id={slot.id} className={className}>
+      {content}
+    </article>
+  )
 }
 
 /* ------------------------------------------------------------------ */

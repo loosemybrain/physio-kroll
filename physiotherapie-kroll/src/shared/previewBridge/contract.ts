@@ -22,6 +22,7 @@ export const EDITOR_MESSAGE_TYPES = {
   EDITOR_HIGHLIGHT: "EDITOR_HIGHLIGHT",
   EDITOR_SCROLL_TO: "EDITOR_SCROLL_TO",
   EDITOR_SET_MODE: "EDITOR_SET_MODE",
+  EDITOR_SET_DRAFT: "EDITOR_SET_DRAFT",
 } as const
 
 export type PreviewMessageType = typeof PREVIEW_MESSAGE_TYPES[keyof typeof PREVIEW_MESSAGE_TYPES]
@@ -51,12 +52,18 @@ export interface PreviewSelectPayload {
   blockId: string
   elementId?: string | null
   mode: "block" | "element"
+  repeater?: { fieldPath: string; itemId: string } | null
 }
 
 export interface PreviewStartEditPayload {
   blockId: string
   elementId?: string | null
   fieldPath?: string | null
+  /**
+   * Bounding rect of the clicked field element in PREVIEW viewport coordinates.
+   * Parent must translate using iframe.getBoundingClientRect().
+   */
+  rect?: { left: number; top: number; right: number; bottom: number; width: number; height: number } | null
 }
 
 export interface PreviewHoverPayload {
@@ -93,6 +100,12 @@ export interface EditorSetModePayload {
   mode: "view" | "edit"
 }
 
+export interface EditorSetDraftPayload {
+  brand: string
+  pageSlug: string
+  blocks: unknown[]
+}
+
 /**
  * Unified payload type
  */
@@ -106,6 +119,7 @@ export type MessagePayload =
   | EditorHighlightPayload
   | EditorScrollToPayload
   | EditorSetModePayload
+  | EditorSetDraftPayload
 
 /**
  * Bridge envelope (outer message structure)

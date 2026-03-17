@@ -397,7 +397,13 @@ export function ImageTextBlock(props: ImageTextBlockProps) {
                     as="span"
                     style={eyebrowShadow}
                   >
-                    {eyebrow}
+                    <span
+                      data-cms-field="eyebrow"
+                      onClick={(e) => handleInlineEdit(e, "eyebrow", "imageText.eyebrow")}
+                      className={cn(canInlineEdit && "cursor-pointer")}
+                    >
+                      {eyebrow}
+                    </span>
                   </Editable>
                 </motion.div>
               )}
@@ -420,7 +426,13 @@ export function ImageTextBlock(props: ImageTextBlockProps) {
                       ...(headlineColor ? { color: headlineColor } : {}),
                     }}
                   >
-                    {headline}
+                    <span
+                      data-cms-field="headline"
+                      onClick={(e) => handleInlineEdit(e, "headline", "imageText.headline")}
+                      className={cn(canInlineEdit && "cursor-pointer")}
+                    >
+                      {headline}
+                    </span>
                   </Editable>
                 </motion.div>
               )}
@@ -442,7 +454,13 @@ export function ImageTextBlock(props: ImageTextBlockProps) {
                     ...(contentColor ? { color: contentColor } : {}),
                   }}
                 >
-                  {content}
+                  <span
+                    data-cms-field="content"
+                    onClick={(e) => handleInlineEdit(e, "content", "imageText.content")}
+                    className={cn(canInlineEdit && "cursor-pointer")}
+                  >
+                    {content}
+                  </span>
                 </Editable>
               </motion.div>
 

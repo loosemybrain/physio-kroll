@@ -489,6 +489,7 @@ export function BlockRenderer({
   return (
     <div
       id={blockAnchorId}
+      data-block-id={block.id}
       className={cn(
         "relative group",
         "hover:outline-2 hover:outline-primary/30 hover:outline-offset-2",

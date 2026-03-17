@@ -259,6 +259,8 @@ function ClassicVariant({
             <CarouselSlide key={slide.id} index={index}>
               {clickable ? (
                 <div
+                  data-repeater-field="slides"
+                  data-repeater-item-id={slide.id}
                   role="button"
                   tabIndex={0}
                   onClick={(e) => { e.stopPropagation(); onItemSelect?.(slide.id) }}
@@ -373,6 +375,8 @@ function ProgressVariant({
             <CarouselSlide key={slide.id} index={index}>
               {clickable ? (
                 <div
+                  data-repeater-field="slides"
+                  data-repeater-item-id={slide.id}
                   role="button"
                   tabIndex={0}
                   onClick={(e) => { e.stopPropagation(); onItemSelect?.(slide.id) }}
@@ -509,6 +513,8 @@ function ThumbnailsVariant({
             <CarouselSlide key={slide.id} index={index}>
               {clickable ? (
                 <div
+                  data-repeater-field="slides"
+                  data-repeater-item-id={slide.id}
                   role="button"
                   tabIndex={0}
                   onClick={(e) => { e.stopPropagation(); onItemSelect?.(slide.id) }}
@@ -693,6 +699,8 @@ function HeroVariant({
             <CarouselSlide key={slide.id} index={index}>
               {clickable ? (
                 <div
+                  data-repeater-field="slides"
+                  data-repeater-item-id={slide.id}
                   role="button"
                   tabIndex={0}
                   onClick={(e) => { e.stopPropagation(); onItemSelect?.(slide.id) }}
@@ -811,6 +819,8 @@ function CardsVariant({
           <div key={slide.id}>
             {clickable ? (
               <div
+                data-repeater-field="slides"
+                data-repeater-item-id={slide.id}
                 role="button"
                 tabIndex={0}
                 onClick={(e) => { e.stopPropagation(); onItemSelect?.(slide.id) }}

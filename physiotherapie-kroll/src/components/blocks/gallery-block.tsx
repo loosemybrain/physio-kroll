@@ -384,7 +384,7 @@ function GalleryTile({
 
   if (img.link && !lightboxEnabled) {
     return (
-      <motion.div {...motionProps}>
+      <motion.div {...motionProps} data-repeater-field="images" data-repeater-item-id={img.id}>
         <Link
           href={img.link}
           className="block rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
@@ -398,6 +398,8 @@ function GalleryTile({
   return (
     <motion.div
       {...motionProps}
+      data-repeater-field="images"
+      data-repeater-item-id={img.id}
       onClick={handleClick}
       role={lightboxEnabled ? "button" : undefined}
       tabIndex={lightboxEnabled ? 0 : undefined}

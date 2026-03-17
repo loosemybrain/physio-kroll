@@ -1,5 +1,5 @@
 import type { NextConfig } from "next"
-import { securityHeaders } from "./src/lib/security/headers"
+import { defaultSecurityHeaders, previewSecurityHeaders } from "./src/lib/security/headers"
 
 const nextConfig: NextConfig = {
   reactCompiler: true,
@@ -14,9 +14,18 @@ const nextConfig: NextConfig = {
   },
   async headers() {
     return [
+      // Preview: muss im Admin-iframe erlaubt sein (same-origin).
       {
-        source: "/(.*)",
-        headers: Object.entries(securityHeaders).map(([key, value]) => ({
+        source: "/preview/:path*",
+        headers: Object.entries(previewSecurityHeaders).map(([key, value]) => ({
+          key,
+          value,
+        })),
+      },
+      {
+        // Default: gilt für alles außer /preview/*
+        source: "/((?!preview/).*)",
+        headers: Object.entries(defaultSecurityHeaders).map(([key, value]) => ({
           key,
           value,
         })),

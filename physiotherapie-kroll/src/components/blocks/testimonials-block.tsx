@@ -209,6 +209,8 @@ function TestimonialCard({
 
   return (
     <Card
+      data-repeater-field="items"
+      data-repeater-item-id={item.id}
       role={clickable ? "button" : undefined}
       tabIndex={clickable ? 0 : undefined}
       onClick={clickable ? (e) => { if ((e.target as HTMLElement).closest("button, a, [data-inline-edit]")) return; e.stopPropagation(); onItemSelect?.(item.id) } : undefined}

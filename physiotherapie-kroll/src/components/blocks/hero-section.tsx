@@ -199,12 +199,19 @@ export function HeroSection({
 
   const showBrandToggleNav = false // Toggle moved to HomePageClient/BrandToggle component
   
-  // Determine activeBrand: prefer from props (mood), fallback to pathname
-  // In Admin, heroProps.mood is set by PageEditor to current.brand
-  // On Public, use pathname to detect brand
+  // Determine activeBrand with strict priority:
+  // 1) __previewBrand (iframe preview must be authoritative)
+  // 2) heroProps.mood
+  // 3) pathname fallback (public routes)
+  const previewBrandRaw = (heroProps as any)?.__previewBrand
+  const previewBrand: BrandKey | null =
+    previewBrandRaw === "physio-konzept" || previewBrandRaw === "physiotherapy" ? previewBrandRaw : null
+
   let activeBrand: BrandKey = "physiotherapy"
-  
-  if (heroProps?.mood && (heroProps.mood === "physiotherapy" || heroProps.mood === "physio-konzept")) {
+
+  if (previewBrand) {
+    activeBrand = previewBrand
+  } else if (heroProps?.mood && (heroProps.mood === "physiotherapy" || heroProps.mood === "physio-konzept")) {
     activeBrand = heroProps.mood
   } else {
     activeBrand = pathname.startsWith("/konzept") ? "physio-konzept" : "physiotherapy"
@@ -465,9 +472,34 @@ export function HeroSection({
               const isVideo = action.action === "video"
               const elementId = `action-${actionId}`
               const actionHovered = actionHoveredStates[actionId] ?? false
+              const isSecondary = action.variant === "secondary"
+
+              // Inline-edit mapping:
+              // Legacy Hero props expose ctaText/secondaryCtaText, but UI uses actions[].label.
+              // Prefer editing those legacy fields for the primary/secondary CTA so changes persist predictably.
+              const fieldPathForLabel =
+                !isSecondary && index === 0
+                  ? "ctaText"
+                  : isSecondary && index === 0
+                    ? "secondaryCtaText"
+                    : `actions.${index}.label`
+
+              // IMPORTANT:
+              // For the primary/secondary CTA we intentionally do NOT fall back to action.label.
+              // If ctaText/secondaryCtaText is empty, the button must be hidden.
+              const displayLabel =
+                !isSecondary && index === 0
+                  ? resolvedCtaText
+                  : isSecondary && index === 0
+                    ? resolvedPlayText
+                    : action.label
+
+              const displayLabelTrimmed = typeof displayLabel === "string" ? displayLabel.trim() : ""
+              if (!displayLabelTrimmed) {
+                return null
+              }
               
               // Resolve colors based on variant
-              const isSecondary = action.variant === "secondary"
               const shadowStyle = isSecondary ? heroSecondaryCtaShadow : heroPrimaryCtaShadow
               const textColorProp = isSecondary ? resolvedPlayTextColor : resolvedCtaColor
               const bgColorProp = isSecondary ? resolvedPlayBgColor : resolvedCtaBgColor
@@ -522,13 +554,13 @@ export function HeroSection({
                     }}
                     onMouseEnter={() => setActionHoveredStates(prev => ({ ...prev, [actionId]: true }))}
                     onMouseLeave={() => setActionHoveredStates(prev => ({ ...prev, [actionId]: false }))}
-                    onClick={editable && blockId && onEditField ? (e) => handleInlineEdit(e, `actions.${index}.label`, elementId) : (isVideo ? onCtaClick : undefined)}
+                    onClick={editable && blockId && onEditField ? (e) => handleInlineEdit(e, fieldPathForLabel, elementId) : (isVideo ? onCtaClick : undefined)}
                     asChild={!editable && !isVideo && !!action.href}
                   >
                     {!editable && !isVideo && action.href ? (
                       <a href={action.href}>
                         {isVideo && <Play className="h-4 w-4" aria-hidden="true" />}
-                        {action.label}
+                        {displayLabelTrimmed}
                         {!isVideo && <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" aria-hidden="true" />}
                       </a>
                     ) : (
@@ -538,14 +570,14 @@ export function HeroSection({
                           onClick={(e) => {
                             if (editable && blockId && onEditField) {
                               e.stopPropagation()
-                              handleInlineEdit(e, `actions.${index}.label`, elementId)
+                              handleInlineEdit(e, fieldPathForLabel, elementId)
                             }
                           }}
                           className={cn(
                             editable && blockId && onEditField && "cursor-pointer"
                           )}
                         >
-                          {action.label}
+                          {displayLabelTrimmed}
                         </span>
                         {!isVideo && <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" aria-hidden="true" />}
                       </>
@@ -864,7 +896,7 @@ export function HeroSection({
       </div>
 
       {/* Bottom scroll indicator */}
-      <div className="hero-scroll-indicator absolute left-1/2 -translate-x-1/2 pointer-events-none bottom-2 sm:bottom-6 lg:bottom-8" aria-hidden="true">
+      <div className="hero-scroll-indicator absolute left-1/2 -translate-x-1/2 pointer-events-none bottom-2 sm:bottom-2 lg:bottom-8" aria-hidden="true">
         <div className={cn("h-12 w-6 rounded-full border-2", isCalm ? "border-primary/30" : "border-primary/50")}>
           <div
             className={cn("mx-auto mt-2 h-2 w-1 animate-bounce rounded-full", isCalm ? "bg-primary/50" : "bg-primary")}

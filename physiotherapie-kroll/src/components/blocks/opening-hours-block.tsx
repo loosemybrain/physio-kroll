@@ -181,6 +181,8 @@ export function OpeningHoursBlock({
             {hours.map((row, index) => (
               <div
                 key={row.id}
+                data-repeater-field="hours"
+                data-repeater-item-id={row.id}
                 className={cn(
                   layout === "twoColumn"
                     ? "flex items-baseline justify-between gap-6"
