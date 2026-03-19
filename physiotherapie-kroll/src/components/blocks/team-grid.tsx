@@ -88,9 +88,12 @@ export interface TeamGridBlockProps {
   containerGradientVia?: string
   containerGradientTo?: string
   containerGradientAngle?: number
+  containerOpacity?: number
   
   // Container Shadow
   containerShadow?: ElementShadow
+  containerBorder?: boolean
+  containerBorderColor?: string
 
   /** Admin Live-Preview: Klick auf Member-Card öffnet zugehörige Inspector-Card */
   interactivePreview?: boolean
@@ -573,13 +576,21 @@ export function TeamGridBlock({
   containerGradientVia,
   containerGradientTo,
   containerGradientAngle,
+  containerOpacity = 1,
   containerShadow,
+  containerBorder = false,
+  containerBorderColor,
   typography,
   interactivePreview = false,
   activeItemId = null,
   onItemSelect,
 }: TeamGridBlockProps) {
   const sectionBg = resolveSectionBg(section)
+  const usesContainerPanel = containerBackgroundMode && containerBackgroundMode !== "transparent"
+  const resolvedContainerOpacity =
+    typeof containerOpacity === "number" && Number.isFinite(containerOpacity)
+      ? Math.min(1, Math.max(0, containerOpacity))
+      : 1
   const containerBg = resolveContainerBg({
     mode: containerBackgroundMode,
     color: containerBackgroundColor,
@@ -592,6 +603,13 @@ export function TeamGridBlock({
     },
   })
   const containerShadowCss = resolveBoxShadow(containerShadow)
+  const containerBorderStyle: React.CSSProperties = {}
+  if (containerBorder) {
+    containerBorderStyle.borderWidth = "1px"
+    containerBorderStyle.borderStyle = "solid"
+    const hex = containerBorderColor?.trim()
+    containerBorderStyle.borderColor = hex && /^#[0-9A-Fa-f]{6}$/.test(hex) ? hex : "var(--border)"
+  }
   const handleInlineEdit = useCallback(
     (e: React.MouseEvent, fieldPath: string) => {
       if (!editable || !blockId || !onEditField) return
@@ -610,9 +628,10 @@ export function TeamGridBlock({
     <section
       className={cn(
         "relative overflow-x-hidden",
-        sectionBg.className
+        // Wenn wir ein Inner-Panel nutzen, soll außerhalb des Panels kein zusätzlicher Hintergrund sichtbar sein.
+        !usesContainerPanel && sectionBg.className
       )}
-      style={sectionBg.style}
+      style={!usesContainerPanel ? sectionBg.style : undefined}
       aria-label={headline || "Team"}
     >
       {/* Inner Container Panel (Header + Grid) */}
@@ -621,17 +640,30 @@ export function TeamGridBlock({
           // Mobile: use more width, less side padding/margins so cards don't feel cramped.
           // Desktop: keep existing spacious container.
           // NOTE: Avoid `w-full` + horizontal margins (can exceed viewport and get clipped by overflow-x-hidden).
-          "relative w-[calc(100%-1rem)] max-w-6xl mx-auto rounded-3xl px-4 py-6 sm:w-[calc(100%-2rem)] sm:px-6 sm:py-8 md:w-full md:px-14 md:py-10 md:my-6",
-          containerBackgroundMode && containerBackgroundMode !== "transparent" && "border border-border/80",
-          containerBackgroundMode === "gradient" && "backdrop-blur-sm"
+          "relative overflow-hidden w-[calc(100%-1rem)] max-w-6xl mx-auto rounded-3xl px-4 py-6 sm:w-[calc(100%-2rem)] sm:px-6 sm:py-8 md:w-full md:px-14 md:py-10",
+          // backdrop blur should affect the background layer; applied on overlay below
         )}
         style={{
-          ...containerBg.style,
+          ...(containerBorder ? containerBorderStyle : {}),
           ...(containerShadowCss ? { boxShadow: containerShadowCss } : {}),
         }}
       >
+        {/* Panel Background (only affects background, not content opacity) */}
+        {usesContainerPanel && (
+          <div
+            aria-hidden="true"
+            className={cn(
+              "pointer-events-none absolute inset-0 z-0 rounded-3xl",
+              containerBackgroundMode === "gradient" && "backdrop-blur-sm"
+            )}
+            style={{
+              ...(containerBg.style ?? {}),
+              opacity: resolvedContainerOpacity,
+            }}
+          />
+        )}
         {/* Content Wrapper */}
-        <div className="relative w-full px-0 sm:px-0">
+        <div className="relative z-10 w-full px-0 sm:px-0">
         {/* ---- Header ---- */}
         {(eyebrow || headline || subheadline) && (
           <header className="mb-10 md:mb-12 text-center">

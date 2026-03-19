@@ -54,6 +54,7 @@ import { BUTTON_PRESET_OPTIONS } from "@/lib/buttonPresets"
 import { ElementTypographyAccordion } from "../../cms/inspector/ElementTypographyAccordion"
 import { InspectorCardList } from "../inspector/InspectorCardList"
 import { CalendarDays, ChevronUp, ChevronDown, Plus, Trash2 } from "lucide-react"
+import { GRADIENT_PRESETS } from "@/lib/theme/gradientPresets"
 import type { AdminPage } from "@/lib/cms/supabaseStore"
 import { usePageEditorActions } from "@/hooks/usePageEditorActions"
 
@@ -782,20 +783,11 @@ export function PageEditorInspector({
                     <Button
                       key="courseSchedule-calendar"
                       variant="outline"
-                      className="h-auto flex-col gap-2 py-4 bg-transparent col-span-2 sm:col-span-1"
+                      className="h-auto flex-col gap-2 py-4 bg-transparent col-span-2"
                       onClick={() => editorActions.addBlock("courseSchedule")}
                     >
                       <CalendarDays className="h-5 w-5" />
-                      <span className="text-xs">Kursplan – Kalender</span>
-                    </Button>
-                    <Button
-                      key="courseSchedule-timeline"
-                      variant="outline"
-                      className="h-auto flex-col gap-2 py-4 bg-transparent col-span-2 sm:col-span-1"
-                      onClick={() => editorActions.addBlock("courseSchedule", { mode: "timeline" })}
-                    >
-                      <CalendarDays className="h-5 w-5" />
-                      <span className="text-xs">Kursplan – Timeline</span>
+                      <span className="text-xs">Kursplan</span>
                     </Button>
                   </>
                 )}
@@ -962,15 +954,23 @@ export function PageEditorInspector({
                 />
               </div>              <Separator />
 
-              {/* Global Element Shadow Inspector */}
-              {selectedElementId && (
+              {/* Global Element Shadow Inspector (nur wenn Element Shadow unterstützt) */}
+              {selectedElementId && selectedBlock.type !== "section" && (() => {
+                const def = getBlockDefinition(selectedBlock.type)
+                const elementDef = def?.elements?.find((e: any) => e?.id === selectedElementId) ?? null
+                const elementShadowConfig =
+                  ((selectedBlock.props as Record<string, unknown>)?.elements as Record<string, ElementConfig> | undefined)?.[
+                    selectedElementId
+                  ]?.style?.shadow
+
+                const shouldShowShadow = Boolean((elementDef as any)?.supportsShadow)
+                if (!shouldShowShadow) return null
+                return (
                   <>
                     <div className="space-y-3">
                     <h3 className="text-sm font-semibold mb-4">Shadow</h3>
                       <ShadowInspector
-                        config={
-                          ((selectedBlock.props as Record<string, unknown>)?.elements as Record<string, ElementConfig> | undefined)?.[selectedElementId]?.style?.shadow
-                        }
+                        config={elementShadowConfig}
                         onChange={(shadowConfig) => {
                           const currentElements = ((selectedBlock.props as Record<string, unknown>)?.elements ?? {}) as Record<string, ElementConfig>
                           const currentElement = currentElements[selectedElementId] ?? { style: {} }
@@ -993,7 +993,8 @@ export function PageEditorInspector({
                     </div>
                     <Separator />
                   </>
-                )}
+                )
+              })()}
 
               {/* Inner Panel (Container) – for all blocks with enableInnerPanel (FAQ, courseSchedule, team, etc.) */}
               {getBlockDefinition(selectedBlock.type)?.enableInnerPanel && (
@@ -1024,15 +1025,15 @@ export function PageEditorInspector({
                     {(selectedBlock.props as Record<string, unknown>)?.containerBackgroundMode === "color" && (
                       <div className="space-y-1.5">
                         <Label className="text-xs">Panel-Farbe</Label>
-                        <input
-                          type="color"
-                          value={((selectedBlock.props as Record<string, unknown>)?.containerBackgroundColor as string) ?? "#ffffff"}
-                          onChange={(e) => {
+                        <ColorField
+                          value={String((selectedBlock.props as Record<string, unknown>)?.containerBackgroundColor ?? "")}
+                          onChange={(v: string) => {
                             if (!selectedBlock) return
                             const currentProps = selectedBlock.props as Record<string, unknown>
-                            updateSelectedProps({ ...currentProps, containerBackgroundColor: e.target.value } as CMSBlock["props"])
+                            updateSelectedProps({ ...currentProps, containerBackgroundColor: v } as CMSBlock["props"])
                           }}
-                          className="h-8 w-full rounded border border-border bg-background"
+                          placeholder="#RRGGBB"
+                          disableAlpha
                         />
                       </div>
                     )}
@@ -1050,11 +1051,105 @@ export function PageEditorInspector({
                           <SelectTrigger className="h-8 text-sm">
                             <SelectValue />
                           </SelectTrigger>
-                          <GradientPresetSelectContent />
+                          <SelectContent>
+                            {selectedBlock.type === "section" && (
+                              <SelectItem value="custom">Custom (manuell)</SelectItem>
+                            )}
+                            {GRADIENT_PRESETS.map((preset) => (
+                              <SelectItem key={preset.value} value={preset.value}>
+                                {preset.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
                         </Select>
+
+                        {(() => {
+                          const props = selectedBlock.props as Record<string, unknown>
+                          const preset = String(props.containerBackgroundGradientPreset ?? "soft")
+                          const from = String(props.containerGradientFrom ?? "").trim()
+                          const via = String(props.containerGradientVia ?? "").trim()
+                          const to = String(props.containerGradientTo ?? "").trim()
+                          const angle = typeof props.containerGradientAngle === "number" ? props.containerGradientAngle : 135
+                          const showCustom = preset === "custom" || !!from || !!via || !!to
+                          if (!showCustom) return null
+                          return (
+                            <div className="mt-2 space-y-2 rounded-md border border-border/60 bg-background/40 p-2">
+                              <div className="text-[11px] font-semibold text-muted-foreground">Custom Verlauf</div>
+                              <div className="grid grid-cols-1 gap-2">
+                                <div className="space-y-1">
+                                  <Label className="text-xs">From</Label>
+                                  <ColorField
+                                    value={String(props.containerGradientFrom ?? "")}
+                                    onChange={(v: string) => updateSelectedProps({ ...props, containerGradientFrom: v } as CMSBlock["props"])}
+                                    placeholder="#RRGGBB"
+                                  />
+                                </div>
+                                <div className="space-y-1">
+                                  <Label className="text-xs">Via (optional)</Label>
+                                  <ColorField
+                                    value={String(props.containerGradientVia ?? "")}
+                                    onChange={(v: string) => updateSelectedProps({ ...props, containerGradientVia: v } as CMSBlock["props"])}
+                                    placeholder="#RRGGBB"
+                                  />
+                                </div>
+                                <div className="space-y-1">
+                                  <Label className="text-xs">To</Label>
+                                  <ColorField
+                                    value={String(props.containerGradientTo ?? "")}
+                                    onChange={(v: string) => updateSelectedProps({ ...props, containerGradientTo: v } as CMSBlock["props"])}
+                                    placeholder="#RRGGBB"
+                                  />
+                                </div>
+                                <div className="space-y-1">
+                                  <Label className="text-xs">Winkel</Label>
+                                  <Input
+                                    className="h-8"
+                                    value={String(angle)}
+                                    onChange={(e) => {
+                                      const n = Number(e.target.value)
+                                      if (!Number.isFinite(n)) return
+                                      updateSelectedProps({ ...props, containerGradientAngle: n } as CMSBlock["props"])
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                              <p className="text-[10px] text-muted-foreground">
+                                Tipp: Leere Stops nutzen weiterhin das Preset als Fallback.
+                              </p>
+                            </div>
+                          )
+                        })()}
                       </div>
                     )}
                     <div className="mt-3 pt-3 border-t border-border/50 space-y-3">
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Opacity</Label>
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="range"
+                            min={0}
+                            max={100}
+                            value={Math.round(((selectedBlock.props as Record<string, unknown>)?.containerOpacity as number | undefined ?? 1) * 100)}
+                            onChange={(e) => {
+                              if (!selectedBlock) return
+                              const next = Math.min(1, Math.max(0, Number(e.target.value) / 100))
+                              updateSelectedProps({ ...(selectedBlock.props as Record<string, unknown>), containerOpacity: next } as CMSBlock["props"])
+                            }}
+                            className="flex-1"
+                          />
+                          <Input
+                            className="h-8 w-20 font-mono text-sm"
+                            value={String(Math.round(((selectedBlock.props as Record<string, unknown>)?.containerOpacity as number | undefined ?? 1) * 100))}
+                            onChange={(e) => {
+                              if (!selectedBlock) return
+                              const raw = e.target.value.replace(/[^0-9]/g, "").slice(0, 3)
+                              const pct = Math.min(100, Math.max(0, Number(raw || "0")))
+                              updateSelectedProps({ ...(selectedBlock.props as Record<string, unknown>), containerOpacity: pct / 100 } as CMSBlock["props"])
+                            }}
+                          />
+                          <span className="text-xs text-muted-foreground">%</span>
+                        </div>
+                      </div>
                       <div className="flex items-center gap-3">
                         <input
                           type="checkbox"
@@ -1431,6 +1526,54 @@ export function PageEditorInspector({
                                       fieldRefs.current[`${selectedBlock.id}.badgeBgColor`] = el
                                     }}
                                   />
+                                </div>
+                                <div className="space-y-1.5">
+                                  <Label className="text-xs">Badge Border</Label>
+                                  <ColorField
+                                    value={String((brandContent as Record<string, unknown>).badgeBorderColor || "")}
+                                    onChange={(v) => handleBrandFieldChange("badgeBorderColor", v)}
+                                    placeholder="#rrggbb"
+                                    inputRef={(el) => {
+                                      fieldRefs.current[`${selectedBlock.id}.badgeBorderColor`] = el
+                                    }}
+                                  />
+                                </div>
+                                <div className="space-y-1.5">
+                                  <Label className="text-xs">Badge Radius</Label>
+                                  {(() => {
+                                    const bc = brandContent as Record<string, unknown>
+                                    const legacy = String(bc.badgeBorderRadius || "")
+                                    const preset =
+                                      String(bc.badgeRadiusPreset || "") ||
+                                      (legacy === "9999px" || legacy === "9999" ? "pill" : "") ||
+                                      (legacy === "16px" || legacy === "16" ? "lg" : "") ||
+                                      (legacy === "12px" || legacy === "12" ? "md" : "") ||
+                                      (legacy === "8px" || legacy === "8" ? "sm" : "") ||
+                                      (legacy === "0px" || legacy === "0" ? "none" : "") ||
+                                      "pill"
+
+                                    return (
+                                      <Select
+                                        value={preset}
+                                        onValueChange={(v) => {
+                                          handleBrandFieldChange("badgeRadiusPreset", v)
+                                          // migrate legacy value away once user touches the select
+                                          if (legacy) handleBrandFieldChange("badgeBorderRadius", "")
+                                        }}
+                                      >
+                                        <SelectTrigger className="h-8 text-sm">
+                                          <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="pill">Pill (rund)</SelectItem>
+                                          <SelectItem value="lg">Groß</SelectItem>
+                                          <SelectItem value="md">Mittel</SelectItem>
+                                          <SelectItem value="sm">Klein</SelectItem>
+                                          <SelectItem value="none">Eckig</SelectItem>
+                                        </SelectContent>
+                                      </Select>
+                                    )
+                                  })()}
                                 </div>
                                 <div className="space-y-1.5">
                                   <Label className="text-xs">Play Text Farbe</Label>
@@ -1941,6 +2084,53 @@ export function PageEditorInspector({
                                   />
                                 </div>
                                 <div className="space-y-1.5">
+                                  <Label className="text-xs">Badge Border</Label>
+                                  <ColorField
+                                    value={String((brandContent as Record<string, unknown>).badgeBorderColor || "")}
+                                    onChange={(v) => handleBrandFieldChange("badgeBorderColor", v)}
+                                    placeholder="#rrggbb"
+                                    inputRef={(el) => {
+                                      fieldRefs.current[`${selectedBlock.id}.badgeBorderColor`] = el
+                                    }}
+                                  />
+                                </div>
+                                <div className="space-y-1.5">
+                                  <Label className="text-xs">Badge Radius</Label>
+                                  {(() => {
+                                    const bc = brandContent as Record<string, unknown>
+                                    const legacy = String(bc.badgeBorderRadius || "")
+                                    const preset =
+                                      String(bc.badgeRadiusPreset || "") ||
+                                      (legacy === "9999px" || legacy === "9999" ? "pill" : "") ||
+                                      (legacy === "16px" || legacy === "16" ? "lg" : "") ||
+                                      (legacy === "12px" || legacy === "12" ? "md" : "") ||
+                                      (legacy === "8px" || legacy === "8" ? "sm" : "") ||
+                                      (legacy === "0px" || legacy === "0" ? "none" : "") ||
+                                      "pill"
+
+                                    return (
+                                      <Select
+                                        value={preset}
+                                        onValueChange={(v) => {
+                                          handleBrandFieldChange("badgeRadiusPreset", v)
+                                          if (legacy) handleBrandFieldChange("badgeBorderRadius", "")
+                                        }}
+                                      >
+                                        <SelectTrigger className="h-8 text-sm">
+                                          <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="pill">Pill (rund)</SelectItem>
+                                          <SelectItem value="lg">Groß</SelectItem>
+                                          <SelectItem value="md">Mittel</SelectItem>
+                                          <SelectItem value="sm">Klein</SelectItem>
+                                          <SelectItem value="none">Eckig</SelectItem>
+                                        </SelectContent>
+                                      </Select>
+                                    )
+                                  })()}
+                                </div>
+                                <div className="space-y-1.5">
                                   <Label className="text-xs">Play Text Farbe</Label>
                                   <ColorField
                                     value={String((brandContent as Record<string, unknown>).playTextColor || "")}
@@ -2321,6 +2511,9 @@ export function PageEditorInspector({
   const fields = def.inspectorFields ?? []
 
   const primaryKeys = new Set(["eyebrow", "headline", "subheadline", "title", "subtitle"])
+  // Kursplan: Eyebrow wird im Spezial-Inspector gerendert (bei Anzeige/Wochenende), damit es nicht "verschwindet"
+  // und wir die Reihenfolge konsistent halten.
+  if (selectedBlock.type === "courseSchedule") primaryKeys.delete("eyebrow")
   const lateKeys = new Set(["autoplay", "interval", "showArrows", "showDots"])
 
   const isArrayItemField = (key: string) => {
@@ -2402,6 +2595,8 @@ export function PageEditorInspector({
   const normalFields = fields.filter((field) => {
     if (isArrayItemField(field.key)) return false
     if (isLegacyHeroField(field.key)) return false
+    // Panel-Felder werden im separaten CONTAINER-Panel gerendert → hier ausblenden, sonst doppelt
+    if (def.enableInnerPanel && field.key.startsWith("container")) return false
     return true
   })
 
@@ -3029,6 +3224,15 @@ export function PageEditorInspector({
             <Separator />
             <div className="space-y-3">
               <div className="space-y-1.5">
+                <Label className="text-xs">Eyebrow (optional)</Label>
+                <Input
+                  value={props.eyebrow ?? ""}
+                  onChange={(e) => updateSelectedProps({ ...props, eyebrow: e.target.value } as CMSBlock["props"])}
+                  className="h-8 text-sm"
+                  placeholder="z.B. KURSE"
+                />
+              </div>
+              <div className="space-y-1.5">
                 <Label className="text-xs">Anzeige</Label>
                 <Select
                   value={props.mode ?? "calendar"}
@@ -3066,24 +3270,6 @@ export function PageEditorInspector({
                     )}
                   />
                 </button>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">Überschrift</Label>
-                <Input
-                  value={props.headline ?? ""}
-                  onChange={(e) => updateSelectedProps({ ...props, headline: e.target.value } as CMSBlock["props"])}
-                  className="h-8 text-sm"
-                  placeholder="Kursplan"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">Untertitel (optional)</Label>
-                <Textarea
-                  value={props.subheadline ?? ""}
-                  onChange={(e) => updateSelectedProps({ ...props, subheadline: e.target.value } as CMSBlock["props"])}
-                  className="min-h-[60px] text-sm"
-                  placeholder="Optionaler Hinweistext"
-                />
               </div>
             </div>
             <Separator />

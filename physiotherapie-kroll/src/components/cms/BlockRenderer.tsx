@@ -507,6 +507,18 @@ export function BlockRenderer({
           return
         }
 
+        // Handle data-cms-field clicks (for inline text editing)
+        if (canEdit && onEditField && fieldEl) {
+          const fieldPath = fieldEl.getAttribute("data-cms-field")
+          if (fieldPath) {
+            e.preventDefault()
+            e.stopPropagation()
+            const anchorRect = fieldEl.getBoundingClientRect()
+            onEditField(block.id, fieldPath, anchorRect)
+            return
+          }
+        }
+
         // Handle data-element-id clicks (for shadow/styling inspector)
         // Only if not already handled by Editable component (check if it's a direct element click, not nested in Editable)
         if (elementEl && onElementClick && !elementEl.closest("[role='region']")) {
@@ -516,17 +528,6 @@ export function BlockRenderer({
             e.stopPropagation()
             onElementClick(block.id, elementId)
             return
-          }
-        }
-
-        // Handle data-cms-field clicks (for inline text editing)
-        if (canEdit && onEditField && fieldEl) {
-          const fieldPath = fieldEl.getAttribute("data-cms-field")
-          if (fieldPath) {
-            e.preventDefault()
-            e.stopPropagation()
-            const anchorRect = fieldEl.getBoundingClientRect()
-            onEditField(block.id, fieldPath, anchorRect)
           }
         }
       }}

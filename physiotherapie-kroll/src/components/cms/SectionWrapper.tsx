@@ -334,7 +334,11 @@ export function SectionWrapper(props: {
     <section
       ref={containerRef}
       className={cn(
-        "relative overflow-x-hidden",
+        // Prevent parallax transforms on background media from creating their own scroll container/scrollbars.
+        // Keep horizontal safety for glows; for image/video we hide both axes.
+        background.type === "image" || background.type === "video"
+          ? "relative overflow-hidden"
+          : "relative overflow-x-hidden",
         "bg-background",
         removeTopGap ? "pt-0" : pad.pt,
         pad.pb,

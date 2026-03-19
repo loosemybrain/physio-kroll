@@ -194,6 +194,11 @@ export type HeroBrandContent = {
   badgeText?: string
   badgeColor?: string
   badgeBgColor?: string
+  badgeBorderColor?: string
+  /** Customer-friendly preset for badge radius */
+  badgeRadiusPreset?: "pill" | "lg" | "md" | "sm" | "none"
+  /** Legacy/advanced CSS border-radius value, e.g. "9999px" or "16px" */
+  badgeBorderRadius?: string
   playText?: string
   playTextColor?: string
   playBorderColor?: string
@@ -890,8 +895,10 @@ export interface CourseScheduleBlock extends BaseBlock {
     section?: BlockSectionProps
     typography?: Record<string, unknown>
     mode: "calendar" | "timeline"
+    eyebrow?: string
     headline?: string
     subheadline?: string
+    eyebrowColor?: string
     headlineColor?: string
     subheadlineColor?: string
     slots: CourseSlot[]

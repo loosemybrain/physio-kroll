@@ -111,7 +111,9 @@ export function Editable({
           "ring-2 ring-primary ring-offset-2 ring-offset-background outline-none",
         // Hover state for editable elements
         !isSelected &&
-          "cursor-pointer rounded px-1 transition-colors hover:bg-primary/10 hover:outline-2 hover:outline-primary/50"
+          // Important: don't change layout on hover (no padding/margins),
+          // otherwise the live-preview overlay anchor can jitter.
+          "cursor-pointer rounded transition-colors hover:bg-primary/10 hover:outline-2 hover:outline-primary/50 hover:outline-offset-2"
       )}
       style={style}
       role="button"

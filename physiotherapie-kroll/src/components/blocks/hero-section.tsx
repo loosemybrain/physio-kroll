@@ -277,6 +277,32 @@ export function HeroSection({
   const resolvedCtaBorderColor = opt(activeBrandContent.ctaBorderColor)
   const resolvedBadgeColor = opt(activeBrandContent.badgeColor)
   const resolvedBadgeBgColor = opt(activeBrandContent.badgeBgColor)
+  const resolvedBadgeBorderColor = opt((activeBrandContent as any).badgeBorderColor)
+  const resolvedBadgeRadiusPreset = opt((activeBrandContent as any).badgeRadiusPreset) as
+    | "pill"
+    | "lg"
+    | "md"
+    | "sm"
+    | "none"
+    | undefined
+  const resolvedBadgeBorderRadius = opt((activeBrandContent as any).badgeBorderRadius)
+
+  const badgeRadiusFromPreset = (() => {
+    switch (resolvedBadgeRadiusPreset) {
+      case "pill":
+        return "9999px"
+      case "lg":
+        return "16px"
+      case "md":
+        return "12px"
+      case "sm":
+        return "8px"
+      case "none":
+        return "0px"
+      default:
+        return undefined
+    }
+  })()
   const resolvedPlayTextColor = opt(activeBrandContent.playTextColor)
   const resolvedPlayBorderColor = opt(activeBrandContent.playBorderColor)
   const resolvedPlayBgColor = opt(activeBrandContent.playBgColor)
@@ -374,6 +400,18 @@ export function HeroSection({
               ...(resolvedBadgeBgColor
                 ? ({ backgroundColor: resolvedBadgeBgColor } as React.CSSProperties)
                 : {}),
+              ...(resolvedBadgeBorderColor
+                ? ({
+                    borderWidth: 1,
+                    borderStyle: "solid",
+                    borderColor: resolvedBadgeBorderColor,
+                  } as React.CSSProperties)
+                : {}),
+              ...(resolvedBadgeBorderRadius
+                ? ({ borderRadius: resolvedBadgeBorderRadius } as React.CSSProperties)
+                : badgeRadiusFromPreset
+                  ? ({ borderRadius: badgeRadiusFromPreset } as React.CSSProperties)
+                  : {}),
             }}
           >
             <div className="inline-flex items-center gap-2">

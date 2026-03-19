@@ -36,8 +36,10 @@ export interface CourseScheduleBlockProps {
   typography?: Record<string, unknown>
 
   mode: "calendar" | "timeline"
+  eyebrow?: string
   headline?: string
   subheadline?: string
+  eyebrowColor?: string
   headlineColor?: string
   subheadlineColor?: string
   slots: CourseSlot[]
@@ -403,8 +405,10 @@ export function CourseScheduleBlock({
   section,
   typography,
   mode = "calendar",
+  eyebrow,
   headline,
   subheadline,
+  eyebrowColor,
   headlineColor,
   subheadlineColor,
   slots,
@@ -457,8 +461,27 @@ export function CourseScheduleBlock({
     >
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        {(headline || subheadline) && (
+        {(eyebrow || headline || subheadline) && (
           <header className="mb-10 text-center md:mb-12">
+            {eyebrow && (
+              <div className="mb-5 flex items-center justify-center gap-4">
+                <div className="h-px w-12 bg-linear-to-r from-transparent to-primary/40" aria-hidden="true" />
+                <span
+                  onClick={(e) => handleInlineEdit(e, "eyebrow")}
+                  className={cn(
+                    mergeTypographyClasses(
+                      "text-xs font-semibold uppercase tracking-[0.2em] text-primary",
+                      (typography ?? {})["courseSchedule.eyebrow"] as Record<string, string> | undefined
+                    ),
+                    editable && blockId && onEditField && "cursor-pointer rounded px-1 hover:bg-primary/10"
+                  )}
+                  style={eyebrowColor ? { color: eyebrowColor } : undefined}
+                >
+                  {eyebrow}
+                </span>
+                <div className="h-px w-12 bg-linear-to-l from-transparent to-primary/40" aria-hidden="true" />
+              </div>
+            )}
             {headline && (
               <h2
                 onClick={(e) => handleInlineEdit(e, "headline")}

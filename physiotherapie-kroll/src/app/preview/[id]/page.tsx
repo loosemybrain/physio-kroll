@@ -33,9 +33,11 @@ export default async function PreviewPage({
     .from("pages")
     .select("id, title, slug, brand, status")
     .eq("id", id)
-    .single()
+    .maybeSingle()
 
-  if (pageErr || !page) {
+  // Only real query errors should fail the preview.
+  // "No row found yet" is a valid state for a new, unsaved page (draft arrives via bridge).
+  if (pageErr) {
     return (
       <main className="container mx-auto py-12 px-4">
         <h1 className="text-2xl font-bold">Vorschau nicht verfügbar</h1>
@@ -49,38 +51,41 @@ export default async function PreviewPage({
     )
   }
 
-  const { data: blocks, error: blocksErr } = await supabase
-    .from("blocks")
-    // Use "*" to stay compatible if DB migrations aren't applied yet
-    // (explicitly selecting a missing column would error).
-    .select("*")
-    .eq("page_id", page.id)
-    .order("sort", { ascending: true })
+  let cmsBlocks: CMSBlock[] = []
+  if (page) {
+    const { data: blocks, error: blocksErr } = await supabase
+      .from("blocks")
+      // Use "*" to stay compatible if DB migrations aren't applied yet
+      // (explicitly selecting a missing column would error).
+      .select("*")
+      .eq("page_id", page.id)
+      .order("sort", { ascending: true })
 
-  if (blocksErr) {
-    return (
-      <main className="container mx-auto py-12 px-4">
-        <h1 className="text-2xl font-bold">Vorschau nicht verfügbar</h1>
-        <p className="mt-4 text-muted-foreground">Die Blöcke konnten nicht geladen werden.</p>
-        <p className="mt-2 text-sm text-muted-foreground">Fehler: {blocksErr.message}</p>
-      </main>
-    )
+    if (blocksErr) {
+      return (
+        <main className="container mx-auto py-12 px-4">
+          <h1 className="text-2xl font-bold">Vorschau nicht verfügbar</h1>
+          <p className="mt-4 text-muted-foreground">Die Blöcke konnten nicht geladen werden.</p>
+          <p className="mt-2 text-sm text-muted-foreground">Fehler: {blocksErr.message}</p>
+        </main>
+      )
+    }
+
+    cmsBlocks = (blocks ?? []).map((b) => {
+      // DB shape: { id, type, sort, props }. We keep typing strict (no `any`)
+      // and cast to CMSBlock at the boundary.
+      const candidate = {
+        id: String((b as { id: unknown }).id),
+        type: (b as { type: unknown }).type as CMSBlock["type"],
+        props: ((b as { props?: unknown }).props ?? {}) as unknown,
+      }
+      return candidate as unknown as CMSBlock
+    })
   }
 
-  const cmsBlocks: CMSBlock[] = (blocks ?? []).map((b) => {
-    // DB shape: { id, type, sort, props }. We keep typing strict (no `any`)
-    // and cast to CMSBlock at the boundary.
-    const candidate = {
-      id: String((b as { id: unknown }).id),
-      type: (b as { type: unknown }).type as CMSBlock["type"],
-      props: ((b as { props?: unknown }).props ?? {}) as unknown,
-    }
-    return candidate as unknown as CMSBlock
-  })
-
   const brandFromQuery = sp.brand === "physio-konzept" ? ("physio-konzept" as const) : sp.brand === "physiotherapy" ? ("physiotherapy" as const) : null
-  const brand: BrandKey = (brandFromQuery ?? (page.brand as BrandKey)) || "physiotherapy"
-  const pageSlug = (page.slug ?? "") as string
+  const brand: BrandKey = (brandFromQuery ?? (page?.brand as BrandKey)) || "physiotherapy"
+  const pageSlug = (page?.slug ?? "") as string
 
   // IMPORTANT: Preview runs under /preview/* (not /konzept/*), so RootLayout's html[data-brand]
   // may still be "physiotherapy" if it can't derive brand for preview requests.
@@ -109,7 +114,7 @@ export default async function PreviewPage({
       style={hasTokens ? (preset.vars as unknown as React.CSSProperties) : undefined}
     >
       <PreviewBrandSetter brand={brand} />
-      <PreviewLiveRenderer pageId={String(page.id)} initialBrand={brand} initialPageSlug={pageSlug} initialBlocks={previewBlocks} />
+      <PreviewLiveRenderer pageId={String(page?.id ?? id)} initialBrand={brand} initialPageSlug={pageSlug} initialBlocks={previewBlocks} />
     </article>
   )
 }

@@ -40,6 +40,7 @@ export function resolveContainerBg(props?: {
       sunset: "linear-gradient(135deg, rgba(249, 115, 22, 0.05), rgba(236, 72, 153, 0.05))",
       hero: "linear-gradient(135deg, rgba(168, 85, 247, 0.08), rgba(59, 130, 246, 0.08))",
       none: "none",
+      custom: "none",
       forest: "linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%)",
       mint: "linear-gradient(135deg, #a8e6cf 0%, #56ab91 50%, #2d7359 100%)",
       sky: "linear-gradient(135deg, #87ceeb 0%, #4a90e2 50%, #2c5aa0 100%)",

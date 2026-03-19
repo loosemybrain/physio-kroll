@@ -9,6 +9,9 @@ import { useElementShadowStyle } from "@/lib/shadow"
 import { resolveButtonPresetStyles } from "@/lib/buttonPresets"
 import { mergeTypographyClasses } from "@/lib/typography"
 import { useMotionPreference, getAnimationInitial, getViewportTrigger } from "@/lib/motion/useMotionPreference"
+import { resolveContainerBg } from "@/lib/theme/resolveContainerBg"
+import { resolveBoxShadow } from "@/lib/shadow/resolveBoxShadow"
+import type { ElementShadow } from "@/types/cms"
 
 /* ================================================================ */
 /*  Types                                                            */
@@ -59,6 +62,19 @@ export interface SectionBlockProps {
 
   /** Enable hover elevation on inner surface */
   enableHoverElevation?: boolean
+
+  /** Inner panel (Container) border */
+  containerBorder?: boolean
+  containerBorderColor?: string
+  containerOpacity?: number
+  containerBackgroundMode?: "transparent" | "color" | "gradient"
+  containerBackgroundColor?: string
+  containerBackgroundGradientPreset?: any
+  containerGradientFrom?: string
+  containerGradientVia?: string
+  containerGradientTo?: string
+  containerGradientAngle?: number
+  containerShadow?: ElementShadow
 
   showCta?: boolean
 
@@ -185,6 +201,17 @@ export function SectionBlock({
   showDivider,
   enableGlow = true,
   enableHoverElevation = true,
+  containerBorder = false,
+  containerBorderColor,
+  containerOpacity = 1,
+  containerBackgroundMode = "transparent",
+  containerBackgroundColor,
+  containerBackgroundGradientPreset,
+  containerGradientFrom,
+  containerGradientVia,
+  containerGradientTo,
+  containerGradientAngle,
+  containerShadow,
   showCta = true,
   dividerColor,
   backgroundColor,
@@ -216,6 +243,25 @@ export function SectionBlock({
   
   const isCentered = align === "center"
   const isJustified = align === "justify"
+
+  const resolvedContainerBorderColor = String(containerBorderColor || "").trim() || undefined
+  const resolvedContainerOpacity =
+    typeof containerOpacity === "number" && Number.isFinite(containerOpacity)
+      ? Math.min(1, Math.max(0, containerOpacity))
+      : 1
+
+  const containerBg = resolveContainerBg({
+    mode: containerBackgroundMode,
+    color: containerBackgroundColor,
+    gradientPreset: containerBackgroundGradientPreset,
+    gradient: {
+      from: containerGradientFrom || "",
+      via: containerGradientVia || "",
+      to: containerGradientTo || "",
+      angle: containerGradientAngle ?? 135,
+    },
+  })
+  const containerShadowCss = resolveBoxShadow(containerShadow)
 
   // Backward compatibility: resolve dividerColor from old props if not set
   const rawDividerColor =
@@ -316,10 +362,9 @@ export function SectionBlock({
 
   /* ---- Background classes ---- */
   const bgClasses = cn(
-    background === "none" && "bg-background",
+    // IMPORTANT: Do not paint a block-wide background by default.
+    // The "inner panel" carries the visual surface; a full-width background creates unwanted side strips.
     background === "muted" && "bg-muted/30 backdrop-blur-sm",
-    background === "gradient-soft" && "bg-background",
-    background === "gradient-brand" && "bg-background",
   )
 
   /* ---- Motion Props for Container ---- */
@@ -341,7 +386,7 @@ export function SectionBlock({
   return (
     <section
       className={cn(
-        "relative rounded-3xl",
+        "relative",
         bgClasses,
       )}
       style={
@@ -431,7 +476,7 @@ export function SectionBlock({
         <div
           className={cn(
             // Inner card surface with layered shadow system
-            "rounded-3xl px-8 py-8 md:px-14 md:py-10",
+            "relative overflow-hidden rounded-3xl px-8 py-8 md:px-14 md:py-10",
             // Check if surface shadow is enabled
             (() => {
               const surfaceShadowEnabled = Boolean(elements?.["section.surface"]?.style?.shadow?.enabled)
@@ -452,6 +497,10 @@ export function SectionBlock({
                 surfaceShadowEnabled && "ring-1 ring-inset ring-border/20",
               )
             })(),
+            // Force border on inner panel when enabled (Inspector → Panel)
+            containerBorder && "border border-border/40",
+            // When using container background props, ensure base is transparent (bg comes from overlay)
+            containerBackgroundMode && containerBackgroundMode !== "transparent" && "bg-transparent",
             // Hover elevation (immer sichtbar)
             enableHoverElevation && "transition-all duration-500 ease-out",
             enableHoverElevation &&
@@ -468,12 +517,33 @@ export function SectionBlock({
           onMouseEnter={() => setSurfaceHovered(true)}
           onMouseLeave={() => setSurfaceHovered(false)}
           data-element-id="section.surface"
-          style={surfaceShadow}
+          style={{
+            ...surfaceShadow,
+            ...(containerShadowCss ? { boxShadow: containerShadowCss } : {}),
+            ...(containerBorder && resolvedContainerBorderColor
+              ? { borderColor: resolvedContainerBorderColor }
+              : {}),
+          }}
           onClick={() => onElementClick?.(blockId || "", "section.surface")}
         >
+          {/* Panel Background (only affects background, not content opacity) */}
+          {containerBackgroundMode !== "transparent" && (
+            <div
+              aria-hidden="true"
+              className={cn(
+                "pointer-events-none absolute inset-0 z-0 rounded-3xl",
+                containerBackgroundMode === "gradient" && "backdrop-blur-sm"
+              )}
+              style={{
+                ...(containerBg.style ?? {}),
+                opacity: resolvedContainerOpacity,
+              }}
+            />
+          )}
           <motion.div
             {...containerMotionProps}
             className={cn(
+              "relative z-10",
               maxWidthMap[maxWidth],
               alignContainerMap[align],
             )}

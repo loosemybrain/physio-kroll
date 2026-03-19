@@ -53,6 +53,11 @@ export interface PreviewSelectPayload {
   elementId?: string | null
   mode: "block" | "element"
   repeater?: { fieldPath: string; itemId: string } | null
+  /**
+   * Bounding rect of the selected BLOCK root in PREVIEW viewport coordinates.
+   * Parent can use this to pin overlay to the selected block without relying on hover state.
+   */
+  rect?: { left: number; top: number; right: number; bottom: number; width: number; height: number } | null
 }
 
 export interface PreviewStartEditPayload {
@@ -69,6 +74,11 @@ export interface PreviewStartEditPayload {
 export interface PreviewHoverPayload {
   blockId?: string | null
   elementId?: string | null
+  /**
+   * Bounding rect in PREVIEW viewport coordinates.
+   * Parent must translate using iframe.getBoundingClientRect().
+   */
+  rect?: { left: number; top: number; right: number; bottom: number; width: number; height: number } | null
 }
 
 export interface PreviewScrollPayload {

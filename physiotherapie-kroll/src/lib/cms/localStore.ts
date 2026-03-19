@@ -154,33 +154,9 @@ export function createEmptyPage(input?: Partial<Pick<AdminPage, "brand" | "title
   const pageSubtype = input?.pageSubtype ?? null;
 
   const legalBlocks = getDefaultBlocksForPageType(pageType, pageSubtype, brand);
-  const blocks: CMSBlock[] =
-    legalBlocks ?? [
-      {
-        id: id + "-hero",
-        type: "hero",
-        props: {
-          mood: brand,
-          headline: title,
-          subheadline: "Kurzbeschreibung hier…",
-          ctaText: "Termin vereinbaren",
-          ctaHref: "/kontakt",
-          showMedia: true,
-          mediaType: "image",
-          mediaUrl: "/placeholder.svg",
-        },
-      },
-      {
-        id: id + "-text",
-        type: "text",
-        props: {
-          content: "Erster Textblock…",
-          alignment: "left",
-          maxWidth: "lg",
-          textSize: "base",
-        },
-      },
-    ];
+  // For new (non-legal) pages we start with an empty block list.
+  // The editor supplies blocks explicitly via the block picker.
+  const blocks: CMSBlock[] = legalBlocks ?? [];
 
   return {
     id,

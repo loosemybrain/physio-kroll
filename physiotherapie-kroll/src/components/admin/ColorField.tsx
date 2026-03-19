@@ -76,6 +76,8 @@ export function ColorField(props: {
   placeholder?: string
   className?: string
   inputRef?: React.Ref<HTMLInputElement>
+  /** Wenn true: Alpha-Slider ausblenden und nur Hex/RGB verwenden */
+  disableAlpha?: boolean
 }) {
   const [picking, setPicking] = React.useState(false)
   const parsed = parseColorWithAlpha(props.value) ?? { hex: "#000000", alpha: 1 }
@@ -86,13 +88,23 @@ export function ColorField(props: {
     props.onChange(`${pickerHex}${alphaHex}`)
   }
 
+  const effectiveInputValue = props.disableAlpha ? parsed.hex : props.value
+
   return (
     <div className={cn("flex flex-col gap-3", props.className)}>
       <div className="flex items-center gap-2">
         <Input
           ref={props.inputRef}
-          value={props.value}
-          onChange={(e) => props.onChange(e.target.value)}
+          value={effectiveInputValue}
+          onChange={(e) => {
+            if (props.disableAlpha) {
+              const next = e.target.value
+              const parsedNext = parseColorWithAlpha(next)
+              props.onChange(parsedNext?.hex ?? next)
+              return
+            }
+            props.onChange(e.target.value)
+          }}
           className="h-8 text-sm"
           placeholder={props.placeholder}
         />
@@ -103,6 +115,10 @@ export function ColorField(props: {
           value={pickerHex}
           onChange={(e) => {
             const newHex = e.target.value
+            if (props.disableAlpha) {
+              props.onChange(newHex)
+              return
+            }
             const alphaHex = toHex2(Math.round(parsed.alpha * 255))
             props.onChange(`${newHex}${alphaHex}`)
           }}
@@ -137,18 +153,20 @@ export function ColorField(props: {
         )}
       </div>
 
-      <div className="flex items-center gap-2">
-        <label className="text-xs text-muted-foreground min-w-fit">Alpha:</label>
-        <input
-          type="range"
-          min="0"
-          max="100"
-          value={Math.round(parsed.alpha * 100)}
-          onChange={(e) => handleAlphaChange(parseInt(e.target.value) / 100)}
-          className="flex-1 h-2 rounded-lg appearance-none cursor-pointer accent-primary"
-        />
-        <span className="text-xs text-muted-foreground w-12 text-right">{Math.round(parsed.alpha * 100)}%</span>
-      </div>
+      {!props.disableAlpha && (
+        <div className="flex items-center gap-2">
+          <label className="text-xs text-muted-foreground min-w-fit">Alpha:</label>
+          <input
+            type="range"
+            min="0"
+            max="100"
+            value={Math.round(parsed.alpha * 100)}
+            onChange={(e) => handleAlphaChange(parseInt(e.target.value) / 100)}
+            className="flex-1 h-2 rounded-lg appearance-none cursor-pointer accent-primary"
+          />
+          <span className="text-xs text-muted-foreground w-12 text-right">{Math.round(parsed.alpha * 100)}%</span>
+        </div>
+      )}
     </div>
   )
 }

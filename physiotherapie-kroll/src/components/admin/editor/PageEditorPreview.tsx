@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { Monitor, Tablet, Smartphone } from "lucide-react"
+import { ArrowDown, ArrowUp, Copy, Monitor, Tablet, Smartphone, Trash2 } from "lucide-react"
 import type { AdminPage } from "@/lib/cms/supabaseStore"
 import { InlineFieldEditor } from "@/components/admin/InlineFieldEditor"
 import {
@@ -58,6 +58,14 @@ export function PageEditorPreview({
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const sessionIdRef = useRef<string | null>(null)
 
+  const overlayHoveringRef = useRef(false)
+  const blockRectMapRef = useRef<Map<string, DOMRect>>(new Map())
+
+  const [hoveredTarget, setHoveredTarget] = useState<{
+    blockId: string | null
+    rect: DOMRect | null
+  }>({ blockId: null, rect: null })
+
   const [viewport, setViewport] = useState<"desktop" | "tablet" | "mobile">(() => {
     if (typeof window === "undefined") return "desktop"
     const v = window.localStorage.getItem("admin.preview.viewport")
@@ -108,9 +116,21 @@ export function PageEditorPreview({
       if (msg.pageId !== String(current.id)) return
       if (msg.type !== PREVIEW_MESSAGE_TYPES.PREVIEW_SELECT) return
 
-      const payload = msg.payload as { blockId?: string; elementId?: string | null }
+      const payload = msg.payload as {
+        blockId?: string
+        elementId?: string | null
+        rect?: { left: number; top: number; width: number; height: number } | null
+      }
       const blockId = payload?.blockId
       if (!blockId) return
+
+      // Persist last-known rect for this block (iframe-relative)
+      if (payload.rect) {
+        blockRectMapRef.current.set(
+          blockId,
+          new DOMRect(payload.rect.left, payload.rect.top, payload.rect.width, payload.rect.height)
+        )
+      }
 
       const repeater = (payload as any)?.repeater as { fieldPath: string; itemId: string } | null | undefined
       if (repeater?.fieldPath && repeater?.itemId) {
@@ -125,6 +145,43 @@ export function PageEditorPreview({
     window.addEventListener("message", handler)
     return () => window.removeEventListener("message", handler)
   }, [current.id, onBlockSelect, onElementClick, onSelectRepeaterItem])
+
+  // Preview -> Editor: hover (block rect) for overlay menu
+  useEffect(() => {
+    const handler = (event: MessageEvent) => {
+      if (!isBridgeMessage(event.data)) return
+      const msg = event.data
+      if (msg.pageId !== String(current.id)) return
+      if (msg.type !== PREVIEW_MESSAGE_TYPES.PREVIEW_HOVER) return
+
+      const payload = msg.payload as {
+        blockId?: string | null
+        rect?:
+          | { left: number; top: number; width: number; height: number }
+          | { left: number; top: number; right: number; bottom: number; width: number; height: number }
+          | null
+      }
+
+      const blockId = payload?.blockId ?? null
+      const r = payload?.rect ?? null
+
+      if (!blockId || !r) {
+        // Don't clear overlay while user is interacting with the overlay itself
+        if (overlayHoveringRef.current) return
+        setHoveredTarget({ blockId: null, rect: null })
+        return
+      }
+
+      // Persist last-known rect for this block (iframe-relative)
+      const rect = new DOMRect(r.left, r.top, r.width, r.height)
+      blockRectMapRef.current.set(blockId, rect)
+      setHoveredTarget({ blockId, rect })
+    }
+    window.addEventListener("message", handler)
+    return () => window.removeEventListener("message", handler)
+  }, [current.id])
+
+  // No scroll/resize recompute needed: overlay is rendered inside iframe container.
 
   // Preview -> Editor: start inline edit (data-cms-field click)
   useEffect(() => {
@@ -200,25 +257,38 @@ export function PageEditorPreview({
     )
   }, [current.id, selectedBlockId, selectedElementId])
 
+  // ---- Overlay Menü Architektur-Update: Overlay immer fest oben rechts ----
+
+  // Bestimme den aktiven Block für das Overlay-Menü (Selection > Hover)
+  const activeOverlayBlockId = selectedBlockId || hoveredTarget.blockId || null;
+  const overlayIndex = useMemo(() => {
+    if (!activeOverlayBlockId) return -1;
+    return (current.blocks ?? []).findIndex(
+      (b: any) => String(b?.id ?? "") === String(activeOverlayBlockId)
+    );
+  }, [current.blocks, activeOverlayBlockId]);
+
   return (
     <div
       ref={liveScrollRef}
       className="flex-1 overflow-y-auto overflow-x-hidden bg-muted/30 p-8 min-h-0"
       onScroll={(e) => {
-        e.stopPropagation()
+        e.stopPropagation();
       }}
       onClick={(e) => {
-        const target = e.target as HTMLElement
-        const link = target.closest("a")
+        const target = e.target as HTMLElement;
+        const link = target.closest("a");
         if (link) {
-          e.preventDefault()
-          e.stopPropagation()
+          e.preventDefault();
+          e.stopPropagation();
         }
       }}
     >
       <div className="mx-auto max-w-6xl">
         <div className="mb-3 flex items-center justify-between gap-3">
-          <div className="text-sm font-semibold text-muted-foreground">Live Preview</div>
+          <div className="text-sm font-semibold text-muted-foreground">
+            Live Preview
+          </div>
           <div className="flex items-center gap-1 rounded-lg border border-border bg-background p-1 shadow-sm">
             <Button
               type="button"
@@ -274,6 +344,74 @@ export function PageEditorPreview({
               className="block h-[calc(100dvh-220px)] w-full bg-background"
               src={`/preview/${current.id}?brand=${encodeURIComponent(String(current.brand || "physiotherapy"))}`}
             />
+
+            {/* Overlay-Menü: Immer statisch oben rechts im Container */}
+            {activeOverlayBlockId && overlayIndex >= 0 && (
+              <div
+                className="absolute z-50 top-4 right-4"
+                style={{
+                  pointerEvents: "none",
+                }}
+              >
+                <div
+                  className="pointer-events-auto flex items-center gap-1 rounded-lg border border-border bg-background/95 p-1 shadow-md backdrop-blur"
+                  onPointerEnter={() => {
+                    overlayHoveringRef.current = true;
+                  }}
+                  onPointerLeave={() => {
+                    overlayHoveringRef.current = false;
+                    if (!selectedBlockId) setHoveredTarget({ blockId: null, rect: null });
+                  }}
+                  onPointerDown={(e) => {
+                    e.stopPropagation();
+                  }}
+                >
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    title="Block nach oben"
+                    disabled={overlayIndex <= 0}
+                    onClick={() => onMoveBlock(overlayIndex, -1)}
+                  >
+                    <ArrowUp className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    title="Block nach unten"
+                    disabled={overlayIndex >= (current.blocks?.length ?? 0) - 1}
+                    onClick={() => onMoveBlock(overlayIndex, 1)}
+                  >
+                    <ArrowDown className="h-4 w-4" />
+                  </Button>
+                  <div className="mx-1 h-6 w-px bg-border" />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    title="Block duplizieren"
+                    onClick={() => onDuplicateBlock(overlayIndex)}
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-destructive hover:text-destructive"
+                    title="Block löschen"
+                    onClick={() => onRemoveBlock(activeOverlayBlockId)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

@@ -141,12 +141,7 @@ export function CtaBlock({
 
   return (
     <AnimatedBlock config={section?.animation}>
-      <section
-        className="bg-muted/50"
-        style={backgroundColor ? ({ backgroundColor } as React.CSSProperties) : undefined}
-        data-block-id={dataBlockId}
-        data-editable={dataEditable}
-      >
+      <section>
         <div>
           <div
             className={cn(

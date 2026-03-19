@@ -9,7 +9,7 @@ import {
   isBridgeMessage,
   createBridgeEnvelope,
 } from "@/shared/previewBridge/contract"
-import type { PreviewSelectPayload, PreviewReadyPayload } from "@/shared/previewBridge/contract"
+import type { PreviewHoverPayload, PreviewSelectPayload, PreviewReadyPayload } from "@/shared/previewBridge/contract"
 
 export function PreviewClickBridge({ pageId }: { pageId?: string }) {
   const lastSelectionRef = useRef<{
@@ -17,7 +17,37 @@ export function PreviewClickBridge({ pageId }: { pageId?: string }) {
     elementId?: string
     repeaterItemId?: string
   }>({})
+  const lastHoverRef = useRef<{
+    blockId?: string
+    left?: number
+    top?: number
+    right?: number
+    bottom?: number
+  }>({})
+  const hoverRafRef = useRef<number | null>(null)
+  const hoveredBlockElRef = useRef<HTMLElement | null>(null)
+  const hoveredBlockIdRef = useRef<string | null>(null)
   const sessionIdRef = useRef<string | null>(null)
+
+  const getBlockRoot = (el: HTMLElement): HTMLElement | null => {
+    const first = el.closest<HTMLElement>("[data-block-id]")
+    if (!first) return null
+    const blockId = first.getAttribute("data-block-id")
+    if (!blockId) return null
+
+    // data-block-id is also present on nested editable elements.
+    // We want the outermost wrapper for the same blockId (BlockRenderer wrapper).
+    let cur: HTMLElement = first
+    while (cur.parentElement) {
+      const p = cur.parentElement
+      if (p instanceof HTMLElement && p.getAttribute("data-block-id") === blockId) {
+        cur = p
+        continue
+      }
+      break
+    }
+    return cur
+  }
 
   // Send PREVIEW_READY on mount + receive EDITOR_ACK with sessionId
   useEffect(() => {
@@ -71,7 +101,7 @@ export function PreviewClickBridge({ pageId }: { pageId?: string }) {
         target.closest<HTMLElement>("[data-repeater-item-id],[data-element-id],[data-block-id]") ?? null
       if (!effectiveTarget) return
 
-      const blockEl = effectiveTarget.closest<HTMLElement>("[data-block-id]") ?? null
+      const blockEl = getBlockRoot(effectiveTarget) ?? null
       if (!blockEl) return
 
       const blockId = blockEl.getAttribute("data-block-id") ?? undefined
@@ -104,6 +134,7 @@ export function PreviewClickBridge({ pageId }: { pageId?: string }) {
       }
 
       // Send PREVIEW_SELECT via contract
+      const rect = blockEl.getBoundingClientRect()
       const selectPayload: PreviewSelectPayload = {
         blockId,
         elementId: elementId ?? null,
@@ -112,6 +143,14 @@ export function PreviewClickBridge({ pageId }: { pageId?: string }) {
           repeaterItemId && repeaterFieldPath
             ? { fieldPath: repeaterFieldPath, itemId: repeaterItemId }
             : null,
+        rect: {
+          left: rect.left,
+          top: rect.top,
+          right: rect.right,
+          bottom: rect.bottom,
+          width: rect.width,
+          height: rect.height,
+        },
       }
       const selectMsg = createBridgeEnvelope(
         PREVIEW_MESSAGE_TYPES.PREVIEW_SELECT,
@@ -142,6 +181,112 @@ export function PreviewClickBridge({ pageId }: { pageId?: string }) {
     document.addEventListener("pointerdown", onPointerDownCapture, true)
     return () => {
       document.removeEventListener("pointerdown", onPointerDownCapture, true)
+    }
+  }, [pageId])
+
+  // Hover tracking (throttled via rAF) for block overlay menu in editor
+  useEffect(() => {
+    if (!pageId) return
+
+    const scheduleHoverSend = (payload: PreviewHoverPayload) => {
+      if (hoverRafRef.current != null) return
+      hoverRafRef.current = window.requestAnimationFrame(() => {
+        hoverRafRef.current = null
+
+        const hoverMsg = createBridgeEnvelope(PREVIEW_MESSAGE_TYPES.PREVIEW_HOVER, pageId, payload, {
+          sessionId: sessionIdRef.current ?? undefined,
+          source: "preview",
+        })
+        window.parent?.postMessage(hoverMsg, "*")
+      })
+    }
+
+    const sendHoveredRect = (blockId: string, blockEl: HTMLElement) => {
+      const rect = blockEl.getBoundingClientRect()
+      lastHoverRef.current = {
+        blockId,
+        left: Math.round(rect.left),
+        top: Math.round(rect.top),
+        right: Math.round(rect.right),
+        bottom: Math.round(rect.bottom),
+      }
+      scheduleHoverSend({
+        blockId,
+        elementId: null,
+        rect: {
+          left: rect.left,
+          top: rect.top,
+          right: rect.right,
+          bottom: rect.bottom,
+          width: rect.width,
+          height: rect.height,
+        },
+      })
+    }
+
+    const onPointerMoveCapture = (e: PointerEvent) => {
+      const target = e.target as HTMLElement | null
+      if (!target) return
+
+      const effectiveTarget =
+        target.closest<HTMLElement>("[data-repeater-item-id],[data-element-id],[data-block-id]") ?? null
+
+      const blockEl = effectiveTarget ? getBlockRoot(effectiveTarget) : null
+      const blockId = blockEl?.getAttribute("data-block-id") ?? undefined
+
+      if (!blockEl || !blockId) {
+        const last = lastHoverRef.current
+        if (last.blockId) {
+          lastHoverRef.current = {}
+          hoveredBlockElRef.current = null
+          hoveredBlockIdRef.current = null
+          scheduleHoverSend({ blockId: null, elementId: null, rect: null })
+        }
+        return
+      }
+
+      // Stabil: Rect nur senden, wenn der Block wechselt.
+      const prevBlockId = hoveredBlockIdRef.current
+      hoveredBlockIdRef.current = blockId
+      hoveredBlockElRef.current = blockEl
+      if (prevBlockId !== blockId) {
+        sendHoveredRect(blockId, blockEl)
+      }
+    }
+
+    const onScrollOrResize = () => {
+      const blockEl = hoveredBlockElRef.current
+      const blockId = hoveredBlockIdRef.current
+      if (!blockEl || !blockId) return
+      sendHoveredRect(blockId, blockEl)
+    }
+
+    const onPointerLeave = () => {
+      const last = lastHoverRef.current
+      if (last.blockId) {
+        lastHoverRef.current = {}
+        hoveredBlockElRef.current = null
+        hoveredBlockIdRef.current = null
+        scheduleHoverSend({ blockId: null, elementId: null, rect: null })
+      }
+    }
+
+    document.addEventListener("pointermove", onPointerMoveCapture, true)
+    window.addEventListener("blur", onPointerLeave)
+    document.addEventListener("pointerleave", onPointerLeave)
+    window.addEventListener("scroll", onScrollOrResize, true)
+    window.addEventListener("resize", onScrollOrResize)
+
+    return () => {
+      document.removeEventListener("pointermove", onPointerMoveCapture, true)
+      window.removeEventListener("blur", onPointerLeave)
+      document.removeEventListener("pointerleave", onPointerLeave)
+      window.removeEventListener("scroll", onScrollOrResize, true)
+      window.removeEventListener("resize", onScrollOrResize)
+      if (hoverRafRef.current != null) {
+        window.cancelAnimationFrame(hoverRafRef.current)
+        hoverRafRef.current = null
+      }
     }
   }, [pageId])
 
