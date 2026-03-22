@@ -116,14 +116,13 @@ function ContactInfoCardRow({
 }
 
 /**
- * Builds Zod schema from form field definitions
+ * Builds Zod schema from form field definitions for client-side validation
+ * Note: Serverseitige Validierung is authoritative
  */
 function buildFormSchema(fields: ContactFormBlock["props"]["fields"], requireConsent: boolean) {
   const schemaFields: Record<string, z.ZodTypeAny> = {
-    // Honeypot field (must be empty)
-    _hp: z.string().max(0, "Spam detected"),
-    // Timestamp for time-to-submit check
-    _ts: z.number(),
+    // Honeypot field (must be empty) - user never sees this
+    website: z.string().max(0).optional().or(z.literal("")),
   }
 
   fields.forEach((field) => {
@@ -133,11 +132,15 @@ function buildFormSchema(fields: ContactFormBlock["props"]["fields"], requireCon
         : z.string().email("Ungültige E-Mail-Adresse").optional().or(z.literal(""))
     } else if (field.type === "message") {
       schemaFields[field.id] = field.required
-        ? z.string().min(10, "Nachricht muss mindestens 10 Zeichen lang sein")
+        ? z.string().min(10, "Nachricht muss mindestens 10 Zeichen lang sein").max(3000, "Nachricht zu lang")
+        : z.string().optional()
+    } else if (field.type === "phone") {
+      schemaFields[field.id] = field.required
+        ? z.string().min(1, `${field.label} ist erforderlich`)
         : z.string().optional()
     } else {
       schemaFields[field.id] = field.required
-        ? z.string().min(1, `${field.label} ist erforderlich`)
+        ? z.string().min(1, `${field.label} ist erforderlich`).max(200, `${field.label} zu lang`)
         : z.string().optional()
     }
   })
@@ -201,7 +204,7 @@ function FloatingLabelInputField({
     setHasValue(e.target.value.length > 0)
   }
 
-  const { ref, ...registerProps } = register(id)
+  const { ref, id: _ignoreHookFormId, ...registerProps } = register(id)
 
   return (
     <div className="group relative">
@@ -213,13 +216,22 @@ function FloatingLabelInputField({
         aria-describedby={error ? errorId : undefined}
         className={cn(
           "peer h-14 rounded-xl border-border/50 bg-background/50 px-4 pt-5 pb-2 text-base backdrop-blur-sm",
+          "text-foreground dark:text-foreground",
           "transition-all duration-300 ease-out",
           "placeholder:text-transparent",
           "hover:border-border hover:bg-background/80",
           "focus-visible:border-primary focus-visible:bg-background focus-visible:ring-2 focus-visible:ring-primary/20",
-          error && "border-destructive/50 hover:border-destructive focus-visible:border-destructive focus-visible:ring-destructive/20"
+          "dark:bg-background/40 dark:hover:bg-background/60",
+          error && "border-destructive/50 hover:border-destructive focus-visible:border-destructive focus-visible:ring-destructive/20",
+          // Hide browser extension icons (e.g., Surfshark in email fields)
+          "[&::-webkit-credentials-auto-fill-button]:hidden",
+          "[&::-webkit-inner-spin-button]:-mr-3!"
         )}
-        style={styleOverrides}
+        style={{
+          ...styleOverrides,
+          // Ensure text color is visible in dark mode
+          colorScheme: "light dark",
+        }}
         ref={(el) => {
           inputRef.current = el
           if (ref) ref(el)
@@ -299,7 +311,7 @@ function FloatingLabelTextareaField({
     setHasValue(e.target.value.length > 0)
   }
 
-  const { ref, ...registerProps } = register(id)
+  const { ref, id: _ignoreHookFormId, ...registerProps } = register(id)
 
   return (
     <div className="group relative">
@@ -310,13 +322,19 @@ function FloatingLabelTextareaField({
         aria-describedby={error ? errorId : undefined}
         className={cn(
           "peer min-h-[160px] resize-none rounded-xl border-border/50 bg-background/50 px-4 pt-8 pb-3 text-base backdrop-blur-sm",
+          "text-foreground dark:text-foreground",
           "transition-all duration-300 ease-out",
           "placeholder:text-transparent",
           "hover:border-border hover:bg-background/80",
           "focus-visible:border-primary focus-visible:bg-background focus-visible:ring-2 focus-visible:ring-primary/20",
+          "dark:bg-background/40 dark:hover:bg-background/60",
           error && "border-destructive/50 hover:border-destructive focus-visible:border-destructive focus-visible:ring-destructive/20"
         )}
-        style={styleOverrides}
+        style={{
+          ...styleOverrides,
+          // Ensure text color is visible in dark mode
+          colorScheme: "light dark",
+        }}
         ref={(el) => {
           textareaRef.current = el
           if (ref) ref(el)
@@ -379,6 +397,7 @@ export function ContactFormBlock({
   elements,
   contactInfoCards,
   buttonPreset,
+  recipientEmail,
   typography,
   blockId,
   pageSlug,
@@ -391,7 +410,16 @@ export function ContactFormBlock({
   const { brand: activeBrand } = useBrand()
   const [formState, setFormState] = useState<FormState>("idle")
   const [submitError, setSubmitError] = useState<string | null>(null)
-  const renderTimeRef = useRef<number>(Date.now())
+  // Initialize renderTimeRef without Date.now() to avoid hydration mismatch
+  // Will be set in useEffect on client mount
+  const renderTimeRef = useRef<number>(0)
+
+  // Set timestamp on client mount only (prevents hydration error)
+  useEffect(() => {
+    if (renderTimeRef.current === 0) {
+      renderTimeRef.current = Date.now()
+    }
+  }, [])
 
   // Collect props for shadow access (elements property from CommonBlockProps)
   const propsFromBlock = { elements: (elements ?? {}) } as Record<string, unknown>
@@ -442,55 +470,33 @@ export function ContactFormBlock({
   } = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      _hp: "",
-      _ts: renderTimeRef.current,
+      website: "",
       consent: false,
     },
   })
 
-  // Set timestamp on mount
-  useEffect(() => {
-    setValue("_ts", renderTimeRef.current)
-  }, [setValue])
+  // No longer needed - formStartedAt is captured on mount via renderTimeRef
 
   const onSubmit = async (data: FormData) => {
-    // Spam checks
-    // 1. Honeypot check
-    const hp = (data as Record<string, unknown>)["_hp"]
-    if (typeof hp === "string" && hp.length > 0) {
-      console.warn("[ContactForm] Honeypot triggered")
-      setFormState("error")
-      setSubmitError("Spam detected")
-      return
-    }
-
-    // 2. Time-to-submit check (must be at least 800ms after render)
-    const tsRaw = (data as Record<string, unknown>)["_ts"]
-    const ts =
-      typeof tsRaw === "number"
-        ? tsRaw
-        : typeof tsRaw === "string"
-          ? Number(tsRaw)
-          : NaN
-    const safeTs = Number.isFinite(ts) ? ts : renderTimeRef.current
-    const timeToSubmit = Date.now() - safeTs
-    if (timeToSubmit < 800) {
-      console.warn("[ContactForm] Time-to-submit check failed:", timeToSubmit, "ms")
-      setFormState("error")
-      setSubmitError("Bitte warten Sie einen Moment, bevor Sie das Formular absenden.")
-      return
-    }
-
     setFormState("loading")
     setSubmitError(null)
 
     try {
-      // Map form data to submission format
-      const submission: Record<string, string | boolean> = {}
+      // Map CMS form fields to API schema
+      const submission: Record<string, string | number | boolean | undefined> = {
+        website: (data as Record<string, unknown>)["website"] as string || "", // Honeypot
+        formStartedAt: renderTimeRef.current, // Timing check
+        privacyAccepted: requireConsent ? (data as Record<string, unknown>)["consent"] === true : true,
+        brand: activeBrand,
+        pageSlug: pageSlug || "",
+        blockId: blockId,
+        // NOTE: Do NOT send cmsRecipientEmail from client - server loads it from CMS
+      }
+
+      // Map CMS field types to API schema
       fields.forEach((field) => {
         const value = data[field.id as keyof FormData]
         if (value !== undefined && value !== null && value !== "") {
-          // Map field types to submission keys
           if (field.type === "name") {
             submission.name = String(value)
           } else if (field.type === "email") {
@@ -505,22 +511,12 @@ export function ContactFormBlock({
         }
       })
 
-      const consentRaw = (data as Record<string, unknown>)["consent"]
-      if (requireConsent && consentRaw === true) {
-        submission.consent = true
-      }
-
       const response = await fetch("/api/contact", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          brand: activeBrand,
-          pageSlug: pageSlug || "",
-          blockId: blockId,
-          ...submission,
-        }),
+        body: JSON.stringify(submission),
       })
 
       if (!response.ok) {
@@ -552,7 +548,7 @@ export function ContactFormBlock({
   // Premium Success State
     if (formState === "success") {
     return (
-      <section className="relative w-full my-4 md:my-6">
+      <section className="relative w-full my-4 md:my-6" suppressHydrationWarning>
         {/* Decorative background blur */}
         <div className="pointer-events-none absolute inset-0 -z-10" aria-hidden="true">
           <div className="absolute left-1/4 top-1/4 size-64 rounded-full bg-green-500/10 blur-3xl" />
@@ -598,7 +594,7 @@ export function ContactFormBlock({
 
   if (normalizedLayout === "split") {
     return (
-      <section className="relative w-full my-4 md:my-6">
+      <section className="relative w-full my-4 md:my-6" suppressHydrationWarning>
         {/* Decorative background elements - subtle ambient glow only */}
         <div className="pointer-events-none absolute inset-0 -z-20" aria-hidden="true">
         <div className="absolute left-1/2 top-1/4 size-96 -translate-x-[65%] rounded-full bg-primary/2 blur-3xl" />
@@ -694,28 +690,37 @@ export function ContactFormBlock({
                 )}
 
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-                  {/* Honeypot field (hidden) */}
+                  {/* Honeypot field - hidden from real users but visible to bots */}
                   <input
                     type="text"
-                    {...register("_hp")}
+                    {...register("website")}
                     tabIndex={-1}
                     autoComplete="off"
                     className="sr-only"
                     aria-hidden="true"
+                    style={{ display: "none", visibility: "hidden", position: "absolute", left: "-9999px" }}
                   />
-
-                  {/* Hidden timestamp */}
-                  <input type="hidden" {...register("_ts", { valueAsNumber: true })} />
 
                   {/* Dynamic form fields - Two column grid */}
                   <div className="grid gap-6 sm:grid-cols-2">
                     {fields.map((field) => {
                       const fieldError = errors[field.id as keyof FormData]
                       const isTextarea = field.type === "message"
+                      
+                      // Build input style with dark mode support
                       const inputStyleOverrides: React.CSSProperties = {
-                        color: inputTextColor || undefined,
+                        // Only set color if explicitly configured - otherwise use theme default (dark mode aware)
+                        ...(inputTextColor ? { color: inputTextColor } : {}),
                         backgroundColor: inputBgColor || undefined,
                         borderColor: inputBorderColor || undefined,
+                      }
+                      
+                      // If custom colors are provided, ensure they work in dark mode
+                      // by using filter to adjust brightness if needed
+                      const hasCustomColors = inputTextColor || inputBgColor || inputBorderColor
+                      if (hasCustomColors && inputBgColor) {
+                        // Add dark mode filter for better visibility
+                        (inputStyleOverrides as any)["--tw-shadow"] = `var(--tw-shadow-colored)`
                       }
 
                       if (isTextarea) {
@@ -789,7 +794,7 @@ export function ContactFormBlock({
                           data-cms-field="consentLabel"
                           htmlFor="consent"
                           className={cn(
-                            "text-sm font-normal cursor-pointer",
+                            "text-sm font-normal cursor-pointer text-muted-foreground",
                             editable && blockId && onEditField && "transition-colors hover:bg-primary/10"
                           )}
                           style={consentLabelColor ? ({ color: consentLabelColor } as React.CSSProperties) : undefined}
@@ -859,7 +864,7 @@ export function ContactFormBlock({
 
   // Stacked Layout (Default)
   return (
-    <section className="w-full my-4 md:my-6">
+    <section className="w-full my-4 md:my-6" suppressHydrationWarning>
       <div className="mx-auto max-w-xl">
         {/* Header */}
         <div className="mb-10 text-center">
@@ -915,27 +920,35 @@ export function ContactFormBlock({
           )}
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            {/* Honeypot field (hidden) */}
+            {/* Honeypot field - hidden from real users but visible to bots */}
             <input
               type="text"
-              {...register("_hp")}
+              {...register("website")}
               tabIndex={-1}
               autoComplete="off"
               className="sr-only"
               aria-hidden="true"
+              style={{ display: "none", visibility: "hidden", position: "absolute", left: "-9999px" }}
             />
-
-            {/* Hidden timestamp */}
-            <input type="hidden" {...register("_ts", { valueAsNumber: true })} />
 
             {/* Dynamic form fields */}
             {fields.map((field) => {
               const fieldError = errors[field.id as keyof FormData]
               const isTextarea = field.type === "message"
+              
+              // Build input style with dark mode support
               const inputStyleOverrides: React.CSSProperties = {
-                color: inputTextColor || undefined,
+                // Only set color if explicitly configured - otherwise use theme default (dark mode aware)
+                ...(inputTextColor ? { color: inputTextColor } : {}),
                 backgroundColor: inputBgColor || undefined,
                 borderColor: inputBorderColor || undefined,
+              }
+              
+              // If custom colors are provided, ensure they work in dark mode
+              const hasCustomColors = inputTextColor || inputBgColor || inputBorderColor
+              if (hasCustomColors && inputBgColor) {
+                // Add dark mode filter for better visibility
+                (inputStyleOverrides as any)["--tw-shadow"] = `var(--tw-shadow-colored)`
               }
 
               if (isTextarea) {
@@ -1008,7 +1021,7 @@ export function ContactFormBlock({
                     data-cms-field="consentLabel"
                     htmlFor="consent"
                     className={cn(
-                      "text-sm font-normal cursor-pointer",
+                      "text-sm font-normal cursor-pointer text-muted-foreground",
                       editable && blockId && onEditField && "transition-colors hover:bg-primary/10"
                     )}
                     style={consentLabelColor ? ({ color: consentLabelColor } as React.CSSProperties) : undefined}

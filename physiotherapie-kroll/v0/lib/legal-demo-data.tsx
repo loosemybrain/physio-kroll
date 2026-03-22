@@ -357,7 +357,7 @@ export const IMPRESSUM_CONFIG: LegalPageConfig = {
     title: "Impressum",
     subtitle: "Angaben gemäß § 5 TMG",
     seoTitle: "Impressum | Physiotherapie Praxis",
-    seoDescription: "Impressum und rechtliche Angaben zur Physiotherapie Musterpraxis.",
+    seoDescription: "Impressum und rechtliche Angaben zur Physiotherapie Kroll.",
     published: true,
     updatedAt: "2024-01-15",
   },

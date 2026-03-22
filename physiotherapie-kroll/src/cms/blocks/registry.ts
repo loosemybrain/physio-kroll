@@ -6,6 +6,7 @@ import { uuid } from "@/lib/cms/arrayOps"
 import { typographySchema, elementTypographySchema } from "@/lib/typography"
 import type { EditableElementDef } from "@/lib/editableElements"
 import { getAvailableIconNames } from "@/components/icons/service-icons"
+import { getLegalIconsWithLabels } from "@/lib/legal/legal-icon-registry"
 
 // ---- TestimonialSlider Extension Types (temporary, until in types/cms) ----
 export type TestimonialSliderBlock = {
@@ -665,10 +666,6 @@ const contactFormPropsSchema = z.object({
   buttonBgColor: z.string().optional(),
   buttonHoverBgColor: z.string().optional(),
   buttonBorderColor: z.string().optional(),
-  recipients: z.object({
-    physiotherapy: z.string().optional(),
-    "physio-konzept": z.string().optional(),
-  }).optional(),
   fields: z.array(
     z.object({
       id: z.string(),
@@ -694,6 +691,11 @@ const contactFormPropsSchema = z.object({
   // Button preset
   buttonPreset: z.string().optional(),
   typography: elementTypographySchema,
+  // Recipient Email Configuration
+  // If set, overrides env vars CONTACT_EMAIL_PHYSIOTHERAPY/PHYSIOKONZEPT
+  // Allows per-block customization of recipient
+  // Falls back to env vars if empty
+  recipientEmail: z.string().email().optional(),
 })
 
 const testimonialsPropsSchema = z.object({
@@ -1498,10 +1500,7 @@ const teamDefaults: TeamBlock["props"] = {
 const contactFormDefaults: ContactFormBlock["props"] = {
   heading: "Kontaktieren Sie uns",
   text: "Wir freuen uns auf Ihre Nachricht und melden uns schnellstmöglich zurück.",
-  recipients: {
-    physiotherapy: "info@physiotherapie-kroll.de",
-    "physio-konzept": "info@physio-konzept.de",
-  },
+  recipientEmail: undefined, // Falls leer: nutzt ENV-Fallback (CONTACT_EMAIL_PHYSIOTHERAPY/PHYSIOKONZEPT)
   fields: [
     { id: uuid(), type: "name", label: "Name", placeholder: "Ihr Name", required: true },
     { id: uuid(), type: "email", label: "E-Mail", placeholder: "ihre@email.de", required: true },
@@ -1696,6 +1695,7 @@ const courseScheduleDefaults: CourseScheduleBlock["props"] = {
 const legalSpacingSchema = z.enum(["none", "sm", "md", "lg"])
 
 const legalHeroPropsSchema = z.object({
+  section: blockSectionPropsSchema,
   eyebrow: z.string().optional(),
   title: z.string(),
   subtitle: z.string().optional(),
@@ -1705,6 +1705,20 @@ const legalHeroPropsSchema = z.object({
   updatedAtValue: z.string().optional(),
   alignment: z.enum(["left", "center"]).optional(),
   variant: z.enum(["default", "minimal"]).optional(),
+  headlineColor: z.string().optional(),
+  subtitleColor: z.string().optional(),
+  eyebrowColor: z.string().optional(),
+  legalIcon: z.string().optional(),
+  legalIconBgColor: z.string().optional(),
+  legalBackLinkColor: z.string().optional(),
+  legalUpdatedAtColor: z.string().optional(),
+  showBackLink: z.boolean().optional(),
+  legalBackLinkFontSize: z.enum(["xs", "sm", "base", "lg"]).optional(),
+  legalBackLinkFontWeight: z.enum(["normal", "medium", "semibold", "bold"]).optional(),
+  legalUpdatedAtFontSize: z.enum(["xs", "sm", "base", "lg"]).optional(),
+  legalUpdatedAtFontWeight: z.enum(["normal", "medium", "semibold", "bold"]).optional(),
+  headlineFontWeight: z.enum(["normal", "medium", "semibold", "bold"]).optional(),
+  subtitleFontWeight: z.enum(["normal", "medium", "semibold", "bold"]).optional(),
 })
 
 const legalRichTextPropsSchema = z.object({
@@ -1774,6 +1788,10 @@ const legalContactCardPropsSchema = z.object({
 })
 
 const legalHeroDefaults: LegalHeroBlock["props"] = {
+  section: {
+    layout: { width: "full", paddingY: "xl" },
+    background: { type: "none" },
+  },
   eyebrow: "",
   title: "Datenschutzerklärung",
   subtitle: "",
@@ -1783,6 +1801,20 @@ const legalHeroDefaults: LegalHeroBlock["props"] = {
   updatedAtValue: "",
   alignment: "left",
   variant: "default",
+  headlineColor: undefined,
+  subtitleColor: undefined,
+  eyebrowColor: undefined,
+  legalIcon: "Scale",
+  legalIconBgColor: "#e5e7eb",
+  legalBackLinkColor: "#2563eb",
+  legalUpdatedAtColor: "#6b7280",
+  showBackLink: true,
+  legalBackLinkFontSize: "sm",
+  legalBackLinkFontWeight: "medium",
+  legalUpdatedAtFontSize: "sm",
+  legalUpdatedAtFontWeight: "normal",
+  headlineFontWeight: "semibold",
+  subtitleFontWeight: "normal",
 }
 
 const legalRichTextDefaults: LegalRichTextBlock["props"] = {
@@ -3361,8 +3393,22 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
       { key: "showUpdatedAt", label: "Stand anzeigen", type: "boolean", group: "content" },
       { key: "updatedAtLabel", label: "Label Stand", type: "text", placeholder: "Zuletzt aktualisiert", group: "content" },
       { key: "updatedAtValue", label: "Datum Stand", type: "text", placeholder: "YYYY-MM-DD", group: "content" },
+      { key: "legalIcon", label: "Icon", type: "select", options: getLegalIconsWithLabels(), group: "design" },
+      { key: "legalIconBgColor", label: "Icon Hintergrund", type: "color", placeholder: "#e5e7eb", group: "design" },
+      { key: "legalBackLinkColor", label: "Rücklink-Farbe", type: "color", placeholder: "#2563eb", group: "design" },
+      { key: "legalBackLinkFontSize", label: "Rücklink-Größe", type: "select", options: [{ value: "xs", label: "XS" }, { value: "sm", label: "S" }, { value: "base", label: "M" }, { value: "lg", label: "L" }], group: "design" },
+      { key: "legalBackLinkFontWeight", label: "Rücklink-Schnitt", type: "select", options: [{ value: "normal", label: "Normal" }, { value: "medium", label: "Mittel" }, { value: "semibold", label: "Halbfett" }, { value: "bold", label: "Fett" }], group: "design" },
+      { key: "legalUpdatedAtColor", label: "Aktualisiert-Text-Farbe", type: "color", placeholder: "#6b7280", group: "design" },
+      { key: "legalUpdatedAtFontSize", label: "Aktualisiert-Größe", type: "select", options: [{ value: "xs", label: "XS" }, { value: "sm", label: "S" }, { value: "base", label: "M" }, { value: "lg", label: "L" }], group: "design" },
+      { key: "legalUpdatedAtFontWeight", label: "Aktualisiert-Schnitt", type: "select", options: [{ value: "normal", label: "Normal" }, { value: "medium", label: "Mittel" }, { value: "semibold", label: "Halbfett" }, { value: "bold", label: "Fett" }], group: "design" },
+      { key: "showBackLink", label: "Rücklink anzeigen", type: "boolean", group: "design" },
       { key: "alignment", label: "Ausrichtung", type: "select", options: [{ value: "left", label: "Links" }, { value: "center", label: "Zentriert" }], group: "design" },
       { key: "variant", label: "Variante", type: "select", options: [{ value: "default", label: "Standard" }, { value: "minimal", label: "Minimal" }], group: "design" },
+      { key: "headlineColor", label: "Titel-Farbe", type: "color", placeholder: "#000000", group: "design" },
+      { key: "headlineFontWeight", label: "Titel-Schnitt", type: "select", options: [{ value: "normal", label: "Normal" }, { value: "medium", label: "Mittel" }, { value: "semibold", label: "Halbfett" }, { value: "bold", label: "Fett" }], group: "design" },
+      { key: "subtitleColor", label: "Untertitel-Farbe", type: "color", placeholder: "#666666", group: "design" },
+      { key: "subtitleFontWeight", label: "Untertitel-Schnitt", type: "select", options: [{ value: "normal", label: "Normal" }, { value: "medium", label: "Mittel" }, { value: "semibold", label: "Halbfett" }, { value: "bold", label: "Fett" }], group: "design" },
+      { key: "eyebrowColor", label: "Überzeile-Farbe", type: "color", placeholder: "#999999", group: "design" },
     ],
   },
   legalRichText: {

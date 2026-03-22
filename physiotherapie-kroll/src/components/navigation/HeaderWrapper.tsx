@@ -10,6 +10,7 @@ import { DEFAULT_NAV_CONFIG } from "@/lib/consent/navigation-defaults"
 /**
  * Client component that wraps children and adds header
  * Loads both brand configs once and switches between them based on active brand
+ * Hides header on legal pages (via API check)
  */
 export function HeaderWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
@@ -19,6 +20,7 @@ export function HeaderWrapper({ children }: { children: React.ReactNode }) {
     "physio-konzept": NavConfig
   } | null>(null)
   const [loading, setLoading] = useState(true)
+  const [isLegalPage, setIsLegalPage] = useState(false)
 
   // Load both navigation configs once
   useEffect(() => {
@@ -61,8 +63,57 @@ export function HeaderWrapper({ children }: { children: React.ReactNode }) {
     loadNavConfigs()
   }, []) // Only load once on mount
 
+  // Check if current page is a legal page
+  useEffect(() => {
+    const checkIfLegalPage = async () => {
+      if (!pathname) return
+
+      // Skip admin pages
+      if (pathname.startsWith("/admin")) {
+        setIsLegalPage(false)
+        return
+      }
+
+      // Extract slug from pathname (e.g., "/imprint" => "imprint", "/konzept/impressum" => "konzept")
+      const segments = pathname.split("/").filter(Boolean)
+      if (segments.length === 0) {
+        setIsLegalPage(false)
+        return
+      }
+
+      // Handle /konzept/* pages (physio-konzept brand)
+      const isKonzeptPage = segments[0] === "konzept"
+      const slug = isKonzeptPage ? segments[1] : segments[0]
+      const checkBrand = isKonzeptPage ? "physio-konzept" : "physiotherapy"
+
+      try {
+        const response = await fetch(`/api/is-legal-page?slug=${slug}&brand=${checkBrand}`)
+        const data = await response.json()
+        setIsLegalPage(data.isLegalPage || false)
+
+        if (process.env.NODE_ENV === "development") {
+          console.log("[HeaderWrapper] Legal page check:", {
+            pathname,
+            slug,
+            brand: checkBrand,
+            isLegalPage: data.isLegalPage,
+          })
+        }
+      } catch (error) {
+        console.error("[HeaderWrapper] Error checking if legal page:", error)
+        setIsLegalPage(false)
+      }
+    }
+    checkIfLegalPage()
+  }, [pathname])
+
   // Don't show header on admin pages
   if (pathname?.startsWith("/admin")) {
+    return <>{children}</>
+  }
+
+  // Hide header on legal pages
+  if (isLegalPage) {
     return <>{children}</>
   }
 

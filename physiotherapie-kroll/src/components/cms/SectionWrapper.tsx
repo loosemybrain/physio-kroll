@@ -4,6 +4,7 @@ import * as React from "react"
 import type { BlockSectionProps, SectionBackground, SectionLayout } from "@/types/cms"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
+import { CMS_SECTION_CONTENT_OUTER_CLASS } from "@/lib/cms/cmsContentWidthClasses"
 import { useResponsiveParallax } from "@/lib/parallax/useResponsiveParallax"
 
 const mediaUrlCache = new Map<string, string | null>()
@@ -251,6 +252,12 @@ export function SectionWrapper(props: {
   isFirst?: boolean
   /** When true, children are not wrapped in max-w container (e.g. for full-width hero) */
   fullBleedChildren?: boolean
+  /**
+   * Parent already spans the full content width (e.g. legal hero lifted out of max-w-7xl + sidebar grid).
+   * Use width: 100% instead of 100vw + ml calc — the vw trick assumes the block sits in a *horizontally
+   * centered* column; a main+sidebar grid is asymmetric and leaves a visible gap on the right.
+   */
+  edgeToEdgeShell?: boolean
   children: React.ReactNode
 }) {
   const { layout, background } = withDefaults(props.section)
@@ -284,16 +291,32 @@ export function SectionWrapper(props: {
   })
 
   const bgIsFullBleed = layout.width === "full"
+  /**
+   * Full-width background inside a max-width page column (e.g. legal pages in max-w-7xl grid):
+   * Absolutely positioned children with left: calc(50% - 50vw) extend past the section and were
+   * clipped by overflow-x-hidden on this section — gradients looked "contained".
+   * Break the section out to 100vw with the classic margin trick so the section IS the viewport
+   * width; background layers can use inset-0 and stay inside overflow bounds.
+   */
+  const sectionViewportBreakout =
+    bgIsFullBleed
+      ? props.edgeToEdgeShell
+        ? cn("w-full max-w-none min-w-0")
+        : cn(
+            "w-screen max-w-none shrink-0",
+            // Only valid when parent is horizontally centered in the viewport; breaks on sidebar grids.
+            "ml-[calc(50%-50vw)]"
+          )
+      : undefined
+
   // Background frame:
-  // - full: true full-bleed (100vw) without horizontal scroll
-  // - contained: background constrained (so it matches "contained")
+  // - full: section is already viewport-wide (breakout); layer fills section (inset-0)
+  // - contained: background constrained to max-w-7xl to match content column
   const bgFrameClass = cn(
-    "absolute inset-y-0 z-0 pointer-events-none",
-    bgIsFullBleed ? "" : "mx-auto w-full max-w-7xl"
+    "absolute z-0 pointer-events-none",
+    bgIsFullBleed ? "inset-0" : "inset-y-0 mx-auto w-full max-w-7xl"
   )
-  const bgFrameStyle: React.CSSProperties = bgIsFullBleed
-    ? { left: "calc(50% - 50vw)", width: "100vw" }
-    : { left: 0, right: 0 }
+  const bgFrameStyle: React.CSSProperties = bgIsFullBleed ? {} : { left: 0, right: 0 }
 
   const baseBgStyle: React.CSSProperties = {}
   if (background.type === "color") baseBgStyle.backgroundColor = background.color?.value ?? "transparent"
@@ -330,15 +353,21 @@ export function SectionWrapper(props: {
   // under the sticky header. Remove it so the first section starts immediately below nav.
   const removeTopGap = !!props.isFirst && background.type === "none"
 
+  const overflowClass =
+    background.type === "image" || background.type === "video"
+      ? "overflow-hidden"
+      : // Full-bleed sections are viewport-wide; no need to clip horizontal overflow for gradient/color
+        bgIsFullBleed
+        ? "overflow-x-clip"
+        : "overflow-x-hidden"
+
   return (
     <section
       ref={containerRef}
       className={cn(
-        // Prevent parallax transforms on background media from creating their own scroll container/scrollbars.
-        // Keep horizontal safety for glows; for image/video we hide both axes.
-        background.type === "image" || background.type === "video"
-          ? "relative overflow-hidden"
-          : "relative overflow-x-hidden",
+        "relative",
+        overflowClass,
+        sectionViewportBreakout,
         "bg-background",
         removeTopGap ? "pt-0" : pad.pt,
         pad.pb,
@@ -410,7 +439,7 @@ export function SectionWrapper(props: {
       {props.fullBleedChildren ? (
         <div className="relative z-10">{props.children}</div>
       ) : (
-        <div className="relative z-10 mx-auto w-full max-w-7xl px-4">
+        <div className={cn("relative z-10", CMS_SECTION_CONTENT_OUTER_CLASS)}>
           {props.children}
         </div>
       )}

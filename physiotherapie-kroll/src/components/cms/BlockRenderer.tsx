@@ -26,8 +26,10 @@ import { LegalTable } from "@/components/legal/LegalTable"
 import { LegalInfoBox } from "@/components/legal/LegalInfoBox"
 import { LegalCookieCategories } from "@/components/legal/LegalCookieCategories"
 import { LegalContactCard } from "@/components/legal/LegalContactCard"
-import type { BlockSectionProps, HeroBlock } from "@/types/cms"
+import type { BlockSectionProps, HeroBlock, LegalHeroBlock } from "@/types/cms"
 import { blockRegistry } from "@/cms/blocks/registry"
+import { mergeBlockSectionWithDefaults } from "@/lib/cms/mergeBlockSection"
+import { CMS_BLOCK_GLOBAL_WIDTH_WRAP_CLASS } from "@/lib/cms/cmsContentWidthClasses"
 import { getTypographyClassName, type TypographySettings } from "@/lib/typography"
 import { getBlockAnchorId } from "@/lib/navigation/scrollToAnchor"
 
@@ -53,6 +55,11 @@ interface BlockRendererProps {
     activeItemId: string | null
     onItemSelect: (itemId: string) => void
   }
+  /**
+   * Legal hero rendered outside the article grid: parent is full page width — SectionWrapper uses
+   * w-full instead of 100vw margin breakout (see SectionWrapper.edgeToEdgeShell).
+   */
+  edgeToEdgeShell?: boolean
 }
 
 /**
@@ -70,6 +77,7 @@ export function BlockRenderer({
   brand,
   courseSchedulePreview,
   repeaterPreview,
+  edgeToEdgeShell = false,
 }: BlockRendererProps) {
   const definition = blockRegistry[block.type]
   const allowInlineEdit = definition?.allowInlineEdit ?? false
@@ -77,10 +85,12 @@ export function BlockRenderer({
 
   const blockProps = (block.props ?? {}) as Record<string, unknown>
   const sectionValue = blockProps.section
-  const section: BlockSectionProps | undefined =
+  const rawSection: BlockSectionProps | undefined =
     sectionValue && typeof sectionValue === "object"
       ? (sectionValue as BlockSectionProps)
       : undefined
+  const defaultSectionFromRegistry = (definition?.defaults as { section?: BlockSectionProps } | undefined)?.section
+  const section = mergeBlockSectionWithDefaults(rawSection, defaultSectionFromRegistry)
 
   const typographyValue = blockProps.typography
   const typography =
@@ -410,8 +420,11 @@ export function BlockRenderer({
         )
       }
 
-      case "legalHero":
-        return <LegalHero {...(block.props as import("@/types/cms").LegalHeroBlock["props"])} />
+      case "legalHero": {
+        // `section` is consumed by the outer SectionWrapper; LegalHero is content-only (no duplicate wrapper/spacing).
+        const { section: _omitSection, ...legalHeroProps } = block.props as LegalHeroBlock["props"]
+        return <LegalHero {...legalHeroProps} edgeToEdgeShell={edgeToEdgeShell} />
+      }
 
       case "legalRichText":
         return <LegalRichText {...(block.props as import("@/types/cms").LegalRichTextBlock["props"])} />
@@ -453,11 +466,7 @@ export function BlockRenderer({
       return blockContent
     }
     // Standard: apply consistent width and padding
-    return (
-      <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
-        {blockContent}
-      </div>
-    )
+    return <div className={CMS_BLOCK_GLOBAL_WIDTH_WRAP_CLASS}>{blockContent}</div>
   }
 
   const wrappedContent = skipGlobalWidthWrap ? content : wrapWithGlobalWidth(content)
@@ -470,7 +479,12 @@ export function BlockRenderer({
     if (typographyClassName) {
       return (
         <div id={blockAnchorId} className={typographyClassName}>
-          <SectionWrapper section={section} isFirst={isFirst} fullBleedChildren={fullBleedChildren}>
+          <SectionWrapper
+            section={section}
+            isFirst={isFirst}
+            fullBleedChildren={fullBleedChildren}
+            edgeToEdgeShell={edgeToEdgeShell}
+          >
             {wrappedContent}
           </SectionWrapper>
         </div>
@@ -478,7 +492,12 @@ export function BlockRenderer({
     }
     return (
       <div id={blockAnchorId}>
-        <SectionWrapper section={section} isFirst={isFirst} fullBleedChildren={fullBleedChildren}>
+        <SectionWrapper
+          section={section}
+          isFirst={isFirst}
+          fullBleedChildren={fullBleedChildren}
+          edgeToEdgeShell={edgeToEdgeShell}
+        >
           {wrappedContent}
         </SectionWrapper>
       </div>
@@ -532,7 +551,13 @@ export function BlockRenderer({
         }
       }}
     >
-      <SectionWrapper section={section} editable isFirst={isFirst} fullBleedChildren={fullBleedChildren}>
+      <SectionWrapper
+        section={section}
+        editable
+        isFirst={isFirst}
+        fullBleedChildren={fullBleedChildren}
+        edgeToEdgeShell={edgeToEdgeShell}
+      >
         {wrappedContent}
       </SectionWrapper>
     </div>
@@ -546,23 +571,35 @@ interface CMSRendererProps {
   onEditField?: (blockId: string, fieldPath: string, anchorRect?: DOMRect) => void
   pageSlug?: string
   brand?: string
+  edgeToEdgeShell?: boolean
+  /** Global index of `blocks[0]` on the page (for split legal-hero + body renderers). */
+  firstBlockGlobalIndex?: number
 }
 
 /**
  * Renders multiple CMS blocks in sequence
  */
-export function CMSRenderer({ blocks, editable, onEditField, pageSlug, brand }: CMSRendererProps) {
+export function CMSRenderer({
+  blocks,
+  editable,
+  onEditField,
+  pageSlug,
+  brand,
+  edgeToEdgeShell = false,
+  firstBlockGlobalIndex = 0,
+}: CMSRendererProps) {
   return (
     <>
       {blocks.map((block, index) => (
         <BlockRenderer
           key={block.id}
           block={block}
-          isFirst={index === 0}
+          isFirst={firstBlockGlobalIndex + index === 0}
           editable={editable}
           onEditField={onEditField}
           pageSlug={pageSlug}
           brand={brand}
+          edgeToEdgeShell={edgeToEdgeShell}
         />
       ))}
     </>

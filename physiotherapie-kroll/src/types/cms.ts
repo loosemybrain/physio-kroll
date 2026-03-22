@@ -623,10 +623,6 @@ export interface ContactFormBlock extends BaseBlock {
     section?: BlockSectionProps
     heading: string
     text?: string
-    recipients?: {
-      physiotherapy?: string
-      "physio-konzept"?: string
-    }
     fields: ContactFormField[]
     submitLabel: string
     successTitle: string
@@ -665,6 +661,12 @@ export interface ContactFormBlock extends BaseBlock {
     
     // Button preset (global)
     buttonPreset?: string
+    
+    // Recipient Email Configuration
+    // If set, overrides env vars CONTACT_EMAIL_PHYSIOTHERAPY/PHYSIOKONZEPT
+    // Allows per-block customization of recipient
+    // Falls back to env vars if empty
+    recipientEmail?: string
   }
 }
 
@@ -997,6 +999,7 @@ export type LegalSpacing = "none" | "sm" | "md" | "lg"
 export interface LegalHeroBlock extends BaseBlock {
   type: "legalHero"
   props: {
+    section?: BlockSectionProps
     eyebrow?: string
     title: string
     subtitle?: string
@@ -1006,6 +1009,20 @@ export interface LegalHeroBlock extends BaseBlock {
     updatedAtValue?: string
     alignment?: "left" | "center"
     variant?: "default" | "minimal"
+    headlineColor?: string
+    subtitleColor?: string
+    eyebrowColor?: string
+    legalIcon?: string
+    legalIconBgColor?: string
+    legalBackLinkColor?: string
+    legalUpdatedAtColor?: string
+    showBackLink?: boolean
+    legalBackLinkFontSize?: "xs" | "sm" | "base" | "lg"
+    legalBackLinkFontWeight?: "normal" | "medium" | "semibold" | "bold"
+    legalUpdatedAtFontSize?: "xs" | "sm" | "base" | "lg"
+    legalUpdatedAtFontWeight?: "normal" | "medium" | "semibold" | "bold"
+    headlineFontWeight?: "normal" | "medium" | "semibold" | "bold"
+    subtitleFontWeight?: "normal" | "medium" | "semibold" | "bold"
   }
 }
 

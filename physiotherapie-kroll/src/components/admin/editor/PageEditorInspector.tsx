@@ -44,6 +44,8 @@ import { InlineFieldEditor } from "../InlineFieldEditor"
 import { ImageField } from "../ImageField"
 import { SectionInspectorSection } from "../SectionInspectorSection"
 import { AnimationInspector } from "../AnimationInspector"
+import { ContactFormInspectorSection } from "./inspectors/ContactFormInspectorSection"
+import { LegalHeroAccordion } from "@/components/cms/inspector/LegalHeroAccordion"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import type { TypographySettings } from "@/lib/typography"
 import { ColorField } from "../ColorField"
@@ -930,6 +932,20 @@ export function PageEditorInspector({
                   void save(nextPage)
                 }}
               />
+
+              {/* ContactForm Inspector Section */}
+              {selectedBlock.type === "contactForm" && (
+                <>
+                  <ContactFormInspectorSection
+                    selectedBlock={selectedBlock}
+                    selectedBlockId={selectedBlockId}
+                    updateBlockPropsById={updateBlockPropsById}
+                    fieldRefs={fieldRefs}
+                    isTypingRef={isTypingRef}
+                  />
+                  <Separator />
+                </>
+              )}
 
               {/* Animation Inspector */}
               <div className="mt-6 pt-6 border-t border-border">
@@ -4724,13 +4740,31 @@ export function PageEditorInspector({
 
         return (
           <>
-            {/* Render grouped fields in order, with special handling for "elements" group */}
+            {/* Render grouped fields in order, with special handling for "elements" group and legalHero "design" group */}
             {effectiveGroupOrder.map((group) => {
               const groupFields = groupedFields[group] || []
               const hasElementTypography = group === "elements" && typographyElements.length > 0
+              const isLegalHeroDesignGroup = selectedBlock.type === "legalHero" && group === "design"
 
               if (groupFields.length === 0 && !hasElementTypography) {
                 return null
+              }
+
+              // Special rendering for legalHero design group with Accordions
+              if (isLegalHeroDesignGroup) {
+                return (
+                  <div key={group}>
+                    <LegalHeroAccordion
+                      block={selectedBlock}
+                      fields={groupFields}
+                      onFieldChange={(key, value) => {
+                        const updatedProps = setByPath(selectedBlock.props as Record<string, unknown>, key, value) as CMSBlock["props"]
+                        updateSelectedProps(updatedProps)
+                      }}
+                      renderInspectorField={renderInspectorField}
+                    />
+                  </div>
+                )
               }
 
               return (

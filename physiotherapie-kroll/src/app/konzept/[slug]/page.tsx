@@ -2,6 +2,7 @@ import { CMSRenderer } from "@/components/cms/BlockRenderer";
 import { StickyMiniToc } from "@/components/blog/StickyMiniToc";
 import { CookieScanTable } from "@/components/legal/CookieScanTable";
 import { getSupabasePublic } from "@/lib/supabase/serverPublic";
+import { splitLeadingLegalHeroes } from "@/lib/cms/splitLeadingLegalHeroes";
 import type { CMSBlock } from "@/types/cms";
 
 export const dynamic = "force-dynamic";
@@ -187,8 +188,15 @@ export default async function KonzeptCMSPageRoute({ params }: { params: Promise<
   // TOC nur auf Legal-Seiten oder Blog-Posts anzeigen, nicht auf Homepage oder normale Content-Seiten
   const isLegalPage = (effectivePage as { page_type?: string }).page_type === "legal";
 
+  const { prefix: legalHeroPrefix, rest: legalBodyBlocks } = splitLeadingLegalHeroes(cmsBlocks, isLegalPage);
+
   return (
     <article>
+      {legalHeroPrefix.length > 0 ? (
+        <div className="w-full min-w-0">
+          <CMSRenderer blocks={legalHeroPrefix} pageSlug={slug} edgeToEdgeShell />
+        </div>
+      ) : null}
       <div className="mx-auto grid w-full max-w-7xl grid-cols-1 gap-8 px-4 lg:grid-cols-[minmax(0,1fr)_240px]">
         <div data-article className="min-w-0">
           {cmsBlocks.length === 0 ? (
@@ -196,9 +204,13 @@ export default async function KonzeptCMSPageRoute({ params }: { params: Promise<
               <p className="text-muted-foreground">Keine Inhalte verfügbar.</p>
               <p className="text-sm text-muted-foreground mt-2">Debug: {cmsBlocks.length} Blöcke, Seite: {effectivePage.title}</p>
             </div>
-          ) : (
-            <CMSRenderer blocks={cmsBlocks} pageSlug={slug} />
-          )}
+          ) : legalBodyBlocks.length > 0 ? (
+            <CMSRenderer
+              blocks={legalBodyBlocks}
+              pageSlug={slug}
+              firstBlockGlobalIndex={legalHeroPrefix.length}
+            />
+          ) : null}
           {isCookieLegalPage && (
             <div className="max-w-7xl">
               <CookieScanTable />

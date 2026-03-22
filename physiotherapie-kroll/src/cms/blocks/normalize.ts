@@ -13,7 +13,7 @@ export function normalizeBlock(block: CMSBlock): CMSBlock {
   const definition = getBlockDefinition(block.type)
 
   // Preserve section config (not part of zod schemas; must not be dropped)
-  const section = (block.props as unknown as { section?: unknown })?.section
+  let section = (block.props as unknown as { section?: unknown })?.section
   
   try {
     // Validate and parse props
@@ -36,7 +36,11 @@ export function normalizeBlock(block: CMSBlock): CMSBlock {
       }
     }
 
-    // Re-attach section config (if present)
+    // Re-attach section config (if present, or use default)
+    if (!section) {
+      // If section not in block, try to get it from defaults
+      section = (definition.defaults as unknown as { section?: unknown })?.section
+    }
     if (section && typeof section === "object") {
       normalizedProps.section = section
     }
