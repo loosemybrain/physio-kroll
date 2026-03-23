@@ -16,59 +16,33 @@ if (!supabaseUrl || !supabaseServiceKey) {
 const supabase = createClient(supabaseUrl, supabaseServiceKey, {
     auth: { persistSession: false },
 });
-/** Setzt alte running-Jobs auf failed (Zombie-Bereinigung). */
+/** Zombie-Bereinigung per RPC: running-Jobs älter als Schwellwert -> failed */
+const ZOMBIE_STALE_MINUTES = Math.max(1, parseInt(process.env.COOKIE_SCAN_ZOMBIE_STALE_MINUTES ?? "15", 10));
 async function cleanupZombies() {
-    const { data: running } = await supabase
-        .from("cookie_scans")
-        .select("id, started_at, created_at")
-        .eq("status", "running");
-    if (!running?.length)
+    const { data: count, error } = await supabase.rpc("cookie_scan_mark_zombies_failed", {
+        p_stale_minutes: ZOMBIE_STALE_MINUTES,
+    });
+    if (error) {
+        console.error("Zombie-RPC Fehler:", error);
         return;
-    const cutoff = Date.now() - ZOMBIE_AFTER_MS;
-    for (const row of running) {
-        const ref = row.started_at ?? row.created_at;
-        if (ref && new Date(ref).getTime() < cutoff) {
-            await supabase
-                .from("cookie_scans")
-                .update({
-                status: "failed",
-                error_message: "Worker-Timeout (Zombie): Job wurde nicht abgeschlossen.",
-                scanned_at: new Date().toISOString(),
-                finished_at: new Date().toISOString(),
-            })
-                .eq("id", row.id);
-            console.warn(`Zombie bereinigt: ${row.id}`);
-        }
+    }
+    if (typeof count === "number" && count > 0) {
+        console.warn(`Zombie-Bereinigung: ${count} Job(s) auf failed gesetzt`);
     }
 }
 /**
- * Nimmt einen queued-Job atomar an: nur wenn status noch 'queued' ist, wird auf 'running' gesetzt.
- * Gibt den übernommenen Scan zurück oder null.
+ * Atomare Job-Übernahme per RPC. Genau ein queued-Job wird übernommen; keine Race Condition.
  */
 async function claimNextJob() {
-    const { data: candidates } = await supabase
-        .from("cookie_scans")
-        .select("id, target_url, environment, consent_mode, status, created_at")
-        .eq("status", "queued")
-        .order("created_at", { ascending: true })
-        .limit(1);
-    const job = candidates?.[0];
-    if (!job)
+    const { data, error } = await supabase.rpc("cookie_scan_claim_next_job", {
+        p_worker_id: WORKER_ID,
+    });
+    if (error) {
+        console.error("Claim-RPC Fehler:", error);
         return null;
-    const { data: updated, error } = await supabase
-        .from("cookie_scans")
-        .update({
-        status: "running",
-        started_at: new Date().toISOString(),
-        processed_by: WORKER_ID,
-    })
-        .eq("id", job.id)
-        .eq("status", "queued")
-        .select()
-        .maybeSingle();
-    if (error || !updated)
-        return null;
-    return updated;
+    }
+    const row = Array.isArray(data) ? data[0] : data;
+    return row ?? null;
 }
 /** Führt den Scan aus und schreibt Erfolg oder Fehler in die DB. */
 async function processJob(job) {

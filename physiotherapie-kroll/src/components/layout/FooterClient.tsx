@@ -25,6 +25,15 @@ interface FooterClientProps {
   legalPages?: LegalPageItem[]
 }
 
+function resolveCopyrightText(raw: string): string {
+  const nowYear = String(new Date().getFullYear())
+  // Preferred explicit placeholders in CMS text.
+  let text = raw.replace(/\{\{\s*year\s*\}\}|\{\s*year\s*\}/gi, nowYear)
+  // Backward-compatible: replace leading copyright year, e.g. "© 2024 ...".
+  text = text.replace(/^(\s*©\s*)\d{4}\b/, `$1${nowYear}`)
+  return text
+}
+
 /**
  * Client Component that renders footer with brand-aware theme
  */
@@ -392,7 +401,7 @@ function FooterBlock({
           )}
           style={{ color: theme.colors.text }}
         >
-          {block.text}
+          {resolveCopyrightText(block.text)}
         </div>
       )
 
