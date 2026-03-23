@@ -40,7 +40,10 @@ export async function POST(request: Request) {
       )
     }
 
-    const consentMode = body.consentMode === "accepted" ? "accepted" : "none"
+    const consentMode =
+      body.consentMode === "accepted" || body.consentMode === "none"
+        ? body.consentMode
+        : "none"
     const environment = typeof body.environment === "string" ? body.environment : "production"
 
     const { data: scan, error: insertErr } = await admin
