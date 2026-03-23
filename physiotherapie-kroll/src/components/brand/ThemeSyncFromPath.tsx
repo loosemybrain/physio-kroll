@@ -5,6 +5,14 @@ import { usePathname } from "next/navigation"
 import type { BrandKey } from "./brandAssets"
 
 function brandFromPath(pathname: string): BrandKey {
+  const segments = pathname.split("/").filter(Boolean)
+  const isKonzept = segments[0] === "konzept"
+  const slug = isKonzept ? segments[1] : segments[0]
+  const legalSlugs = new Set(["impressum", "datenschutz", "cookies", "privacy", "imprint"])
+  if (slug && legalSlugs.has(slug)) {
+    // Legal pages always use the physiotherapy color/brand scheme.
+    return "physiotherapy"
+  }
   if (pathname === "/konzept" || pathname?.startsWith("/konzept/")) {
     return "physio-konzept"
   }
