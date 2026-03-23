@@ -133,7 +133,7 @@ export function CookieScanAdminClient() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           targetUrl: targetUrl || DEFAULT_TARGET_URL,
-          consentMode: "none",
+          consentMode: "accepted",
           environment: "production",
         }),
       })
