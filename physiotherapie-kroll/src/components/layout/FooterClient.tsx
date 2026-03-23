@@ -494,12 +494,19 @@ function LegalLinksBlock({
     lg: "gap-6",
   }[legalLinksConfig.gap ?? "md"]
 
-  const marginTopClass = {
-    none: "",
-    sm: "mt-4",
-    md: "mt-8",
-    lg: "mt-10",
+  const marginTopStyle = {
+    none: undefined,
+    sm: "1rem",
+    md: "2rem",
+    lg: "2.5rem",
   }[legalLinksConfig.marginTop ?? "md"]
+
+  const marginBottomStyle = {
+    none: undefined,
+    sm: "1rem",
+    md: "2rem",
+    lg: "2.5rem",
+  }[legalLinksConfig.marginBottom ?? "none"]
 
   const fontSizeClass = {
     xs: "text-xs",
@@ -575,7 +582,13 @@ function LegalLinksBlock({
   )
 
   return (
-    <nav aria-label={legalLinksConfig.title ?? "Rechtliches"} className={marginTopClass}>
+    <nav
+      aria-label={legalLinksConfig.title ?? "Rechtliches"}
+      style={{
+        ...(marginTopStyle ? { marginTop: marginTopStyle } : {}),
+        ...(marginBottomStyle ? { marginBottom: marginBottomStyle } : {}),
+      }}
+    >
       {legalLinksConfig.showTitle !== false && legalLinksConfig.title && (
         <h3
           className={cn(
@@ -619,6 +632,24 @@ function FooterContent({
     legalLinksConfig.placement === "bottom-bar" &&
     resolvedLegalLinks.length > 0
 
+  const legalToBottomBarGap = {
+    none: "0rem",
+    sm: "1rem",
+    md: "2rem",
+    lg: "2.5rem",
+  }[legalLinksConfig?.marginBottom ?? "none"]
+
+  const baseBottomBarGap = {
+    none: "0rem",
+    sm: "1rem",
+    md: "2rem",
+    lg: "3rem",
+  }[footerConfig.bottomBar?.marginTop ?? "lg"]
+
+  const bottomBarMarginTop = showLegalAsSection
+    ? `calc(${baseBottomBarGap} + ${legalToBottomBarGap})`
+    : baseBottomBarGap
+
   return (
     <>
       {/* Main Footer Sections */}
@@ -637,8 +668,8 @@ function FooterContent({
       {/* Legal-Bereich als eigene Sektion (placement === "section") */}
       {showLegalAsSection && legalLinksConfig && (
         <div
-          className="pt-8 border-t"
-          style={{ borderColor: "var(--border)" }}
+          className={cn("pt-8", legalLinksConfig.separatorColor ? "border-t" : "border-t-0")}
+          style={legalLinksConfig.separatorColor ? { borderColor: legalLinksConfig.separatorColor } : undefined}
         >
           <LegalLinksBlock
             resolvedLinks={resolvedLegalLinks}
@@ -650,7 +681,7 @@ function FooterContent({
 
       {/* Bottom Bar */}
       {footerConfig.bottomBar?.enabled && (
-        <div className={cn("mt-12 pt-8 border-t", theme.bottomBar.class)}>
+        <div className={cn("pt-8 border-t", theme.bottomBar.class)} style={{ marginTop: bottomBarMarginTop }}>
           <div className={cn("flex flex-col sm:flex-row items-center gap-4 flex-wrap", theme.bottomBar.align)}>
             {footerConfig.bottomBar.left && (
               <div>

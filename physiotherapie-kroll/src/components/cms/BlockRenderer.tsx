@@ -427,7 +427,13 @@ export function BlockRenderer({
       }
 
       case "legalRichText":
-        return <LegalRichText {...(block.props as import("@/types/cms").LegalRichTextBlock["props"])} />
+        return (
+          <LegalRichText
+            {...(block.props as import("@/types/cms").LegalRichTextBlock["props"])}
+            cmsBlockId={editable ? block.id : undefined}
+            previewAssistEditing={editable}
+          />
+        )
 
       case "legalTable":
         return <LegalTable {...(block.props as import("@/types/cms").LegalTableBlock["props"])} />

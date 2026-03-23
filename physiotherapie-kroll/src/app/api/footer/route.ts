@@ -36,10 +36,32 @@ export async function GET(request: Request) {
 
     const pagesMap = pages?.map((p) => ({ slug: p.slug, title: p.title })) || []
     const legalSubtypes = new Set(["privacy", "cookies", "imprint"])
-    const legalPages =
+    const ownBrandLegalPages =
       pages?.filter(
         (p) => p.page_type === "legal" && p.page_subtype && legalSubtypes.has(p.page_subtype)
-      ).map((p) => ({ slug: p.slug, title: p.title, page_subtype: p.page_subtype! })) ?? []
+      ).map((p) => ({ slug: p.slug, title: p.title, page_subtype: p.page_subtype!, brand })) ?? []
+
+    // Legal-Seiten sollen für beide Brands verfügbar sein: fehlende Subtypes aus anderer Brand ergänzen.
+    const { data: sharedLegalRows } = await supabase
+      .from("pages")
+      .select("slug, title, page_subtype, brand")
+      .in("brand", ["physiotherapy", "physio-konzept"])
+      .eq("status", "published")
+      .eq("page_type", "legal")
+
+    const bySubtype = new Map<string, { slug: string; title: string; page_subtype: string }>()
+    for (const p of ownBrandLegalPages) bySubtype.set(p.page_subtype, p)
+    for (const row of sharedLegalRows ?? []) {
+      if (!row.page_subtype || !legalSubtypes.has(row.page_subtype)) continue
+      if (!bySubtype.has(row.page_subtype)) {
+        bySubtype.set(row.page_subtype, {
+          slug: row.slug,
+          title: row.title,
+          page_subtype: row.page_subtype,
+        })
+      }
+    }
+    const legalPages = Array.from(bySubtype.values())
 
     return NextResponse.json({
       config: footerConfig,

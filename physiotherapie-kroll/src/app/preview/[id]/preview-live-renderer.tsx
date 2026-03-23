@@ -165,6 +165,30 @@ export function PreviewLiveRenderer({
 
         const blockId = payload.blockId ?? null
         const elementId = payload.elementId ?? null
+        const granular = payload.legalRichGranular
+
+        if (blockId && granular?.contentBlockId) {
+          const root = document.querySelector<HTMLElement>(`[data-block-id="${CSS.escape(blockId)}"]`)
+          let granularEl: HTMLElement | null = null
+          if (root) {
+            if (granular.runId) {
+              granularEl = root.querySelector<HTMLElement>(`[data-run-id="${CSS.escape(granular.runId)}"]`)
+            }
+            if (!granularEl && granular.listItemId) {
+              granularEl = root.querySelector<HTMLElement>(`[data-list-item-id="${CSS.escape(granular.listItemId)}"]`)
+            }
+            if (!granularEl) {
+              granularEl = root.querySelector<HTMLElement>(
+                `[data-content-block-id="${CSS.escape(granular.contentBlockId)}"]`,
+              )
+            }
+          }
+          if (granularEl) {
+            applyInlineOutline(granularEl)
+            lastHighlightedRef.current = granularEl
+            return
+          }
+        }
 
         if (elementId) {
           const el = document.querySelector<HTMLElement>(`[data-element-id="${CSS.escape(elementId)}"]`)

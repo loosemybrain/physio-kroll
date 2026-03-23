@@ -92,7 +92,7 @@ export function ColorField(props: {
 
   return (
     <div className={cn("flex flex-col gap-3", props.className)}>
-      <div className="flex items-center gap-2">
+      <div className="flex min-w-0 items-center gap-2">
         <Input
           ref={props.inputRef}
           value={effectiveInputValue}
@@ -105,7 +105,7 @@ export function ColorField(props: {
             }
             props.onChange(e.target.value)
           }}
-          className="h-8 text-sm"
+          className="h-8 min-w-0 flex-1 text-sm"
           placeholder={props.placeholder}
         />
 

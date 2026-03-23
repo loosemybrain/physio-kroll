@@ -278,6 +278,7 @@ const footerDesignSchema: z.ZodType<FooterDesign> = z
  */
 const footerBottomBarSchema: z.ZodType<FooterBottomBar> = z.object({
   enabled: z.boolean(),
+  marginTop: z.enum(["none", "sm", "md", "lg"]).optional(),
   left: footerBlockSchema.optional(),
   right: footerBlockSchema.optional(),
 })
@@ -303,6 +304,7 @@ const footerLegalLinksSchema: z.ZodType<FooterLegalLinksConfig> = z.object({
   showTitle: z.boolean().optional(),
   gap: z.enum(["sm", "md", "lg"]).optional(),
   marginTop: z.enum(["none", "sm", "md", "lg"]).optional(),
+  marginBottom: z.enum(["none", "sm", "md", "lg"]).optional(),
   textColor: z.string().optional(),
   hoverColor: z.string().optional(),
   activeColor: z.string().optional(),
@@ -347,6 +349,7 @@ export const DEFAULT_LEGAL_LINKS_CONFIG: FooterLegalLinksConfig = {
   showTitle: true,
   gap: "md",
   marginTop: "md",
+  marginBottom: "none",
   items: {
     imprint: true,
     privacy: true,
@@ -473,6 +476,7 @@ export function ensureLegalLinks(config: FooterConfig): FooterConfig {
     showTitle: ll.showTitle ?? DEFAULT_LEGAL_LINKS_CONFIG.showTitle,
     gap: (ll.gap as FooterLegalLinksConfig["gap"]) ?? DEFAULT_LEGAL_LINKS_CONFIG.gap,
     marginTop: (ll.marginTop as FooterLegalLinksConfig["marginTop"]) ?? DEFAULT_LEGAL_LINKS_CONFIG.marginTop,
+    marginBottom: (ll.marginBottom as FooterLegalLinksConfig["marginBottom"]) ?? DEFAULT_LEGAL_LINKS_CONFIG.marginBottom,
     textColor: ll.textColor,
     hoverColor: ll.hoverColor,
     activeColor: ll.activeColor,

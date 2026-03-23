@@ -22,6 +22,7 @@ import {
 import { ImageField } from "./ImageField"
 import { MediaPickerDialog } from "./MediaPickerDialog"
 import { ShadowInspector } from "./ShadowInspector"
+import { ColorField } from "./ColorField"
 import { Plus, Trash2, ChevronUp, ChevronDown, Save, AlertCircle, RotateCcw } from "lucide-react"
 import { arrayMove, arrayRemove, uuid } from "@/lib/cms/arrayOps"
 import type { BrandKey } from "@/components/brand/brandAssets"
@@ -65,17 +66,26 @@ export function FooterEditorClient({
 
   const legalPagesByBrand = useMemo(() => {
     const legalSubtypes = new Set(["privacy", "cookies", "imprint"])
-    const forBrand = (brand: BrandKey) =>
-      pages
-        .filter(
-          (p) =>
-            p.brand === brand &&
-            p.status === "published" &&
-            p.pageType === "legal" &&
-            p.pageSubtype &&
-            legalSubtypes.has(p.pageSubtype)
-        )
-        .map((p) => ({ slug: p.slug, title: p.title, page_subtype: p.pageSubtype! }))
+    const allLegalPages = pages
+      .filter(
+        (p) =>
+          p.status === "published" &&
+          p.pageType === "legal" &&
+          p.pageSubtype &&
+          legalSubtypes.has(p.pageSubtype)
+      )
+      .map((p) => ({ slug: p.slug, title: p.title, page_subtype: p.pageSubtype!, brand: p.brand }))
+
+    const forBrand = (brand: BrandKey) => {
+      const own = allLegalPages.filter((p) => p.brand === brand)
+      const bySubtype = new Map<string, { slug: string; title: string; page_subtype: string }>()
+      for (const p of own) bySubtype.set(p.page_subtype, p)
+      // Legal-Seiten sind brandübergreifend nutzbar: fehlende Subtypes aus anderer Brand ergänzen.
+      for (const p of allLegalPages) {
+        if (!bySubtype.has(p.page_subtype)) bySubtype.set(p.page_subtype, p)
+      }
+      return Array.from(bySubtype.values())
+    }
     return {
       physiotherapy: forBrand("physiotherapy"),
       "physio-konzept": forBrand("physio-konzept"),
@@ -645,111 +655,112 @@ export function FooterEditorClient({
 
                         <Separator />
 
-                        <Label className="text-sm font-semibold">Farben & Styling (Legal-Links)</Label>
-                        <p className="text-xs text-muted-foreground mb-2">
-                          Wie in anderen Blöcken: Farben für Text, Hover und Trennlinie.
-                        </p>
-                        <div className="flex flex-wrap gap-2 mb-3">
-                          <span className="text-xs text-muted-foreground self-center">Schnellpresets:</span>
-                          {[
-                            { label: "Standard", text: "#000000", hover: "#374151", active: "#111827", sep: "#e5e7eb" },
-                            { label: "Hell (Zinc)", text: "#3f3f46", hover: "#18181b", active: "#09090b", sep: "#d4d4d8" },
-                            { label: "Dunkel", text: "#f4f4f5", hover: "#ffffff", active: "#ffffff", sep: "#52525b" },
-                            { label: "Dezent", text: "#71717a", hover: "#18181b", active: "#18181b", sep: "#e4e4e7" },
-                          ].map((preset) => (
-                            <Button
-                              key={preset.label}
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              className="h-7 text-xs"
-                              onClick={() =>
-                                updateConfig({
-                                  legalLinks: {
-                                    ...DEFAULT_LEGAL_LINKS_CONFIG,
-                                    ...footerConfig.legalLinks,
-                                    textColor: preset.text,
-                                    hoverColor: preset.hover,
-                                    activeColor: preset.active,
-                                    separatorColor: preset.sep,
-                                  },
-                                })
-                              }
-                            >
-                              {preset.label}
-                            </Button>
-                          ))}
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-1">
-                            <Label className="text-xs">Textfarbe</Label>
-                            <input
-                              type="color"
-                              value={footerConfig.legalLinks?.textColor ?? "#000000"}
-                              onChange={(e) =>
-                                updateConfig({
-                                  legalLinks: {
-                                    ...DEFAULT_LEGAL_LINKS_CONFIG,
-                                    ...footerConfig.legalLinks,
-                                    textColor: e.target.value || undefined,
-                                  },
-                                })
-                              }
-                              className="h-8 w-full rounded border border-input cursor-pointer"
-                            />
-                          </div>
-                          <div className="space-y-1">
-                            <Label className="text-xs">Hover-Farbe</Label>
-                            <input
-                              type="color"
-                              value={footerConfig.legalLinks?.hoverColor ?? "#374151"}
-                              onChange={(e) =>
-                                updateConfig({
-                                  legalLinks: {
-                                    ...DEFAULT_LEGAL_LINKS_CONFIG,
-                                    ...footerConfig.legalLinks,
-                                    hoverColor: e.target.value || undefined,
-                                  },
-                                })
-                              }
-                              className="h-8 w-full rounded border border-input cursor-pointer"
-                            />
-                          </div>
-                          <div className="space-y-1">
-                            <Label className="text-xs">Aktive Farbe</Label>
-                            <input
-                              type="color"
-                              value={footerConfig.legalLinks?.activeColor ?? "#111827"}
-                              onChange={(e) =>
-                                updateConfig({
-                                  legalLinks: {
-                                    ...DEFAULT_LEGAL_LINKS_CONFIG,
-                                    ...footerConfig.legalLinks,
-                                    activeColor: e.target.value || undefined,
-                                  },
-                                })
-                              }
-                              className="h-8 w-full rounded border border-input cursor-pointer"
-                            />
-                          </div>
-                          <div className="space-y-1">
-                            <Label className="text-xs">Separator-Farbe</Label>
-                            <input
-                              type="color"
-                              value={footerConfig.legalLinks?.separatorColor ?? "#e5e7eb"}
-                              onChange={(e) =>
-                                updateConfig({
-                                  legalLinks: {
-                                    ...DEFAULT_LEGAL_LINKS_CONFIG,
-                                    ...footerConfig.legalLinks,
-                                    separatorColor: e.target.value || undefined,
-                                  },
-                                })
-                              }
-                              className="h-8 w-full rounded border border-input cursor-pointer"
-                            />
-                          </div>
-                        </div>
+                        <Accordion type="single" collapsible className="w-full">
+                          <AccordionItem value="legal-colors" className="border-border/50">
+                            <AccordionTrigger className="py-2 text-sm font-semibold hover:no-underline">
+                              Farben & Styling (Legal-Links)
+                            </AccordionTrigger>
+                            <AccordionContent className="space-y-3">
+                              <p className="text-xs text-muted-foreground">
+                                Wie in anderen Blöcken: Farben für Text, Hover und Trennlinie.
+                              </p>
+                              <div className="flex flex-wrap gap-2">
+                                <span className="text-xs text-muted-foreground self-center">Schnellpresets:</span>
+                                {[
+                                  { label: "Standard", text: "#000000", hover: "#374151", active: "#111827", sep: "#e5e7eb" },
+                                  { label: "Hell (Zinc)", text: "#3f3f46", hover: "#18181b", active: "#09090b", sep: "#d4d4d8" },
+                                  { label: "Dunkel", text: "#f4f4f5", hover: "#ffffff", active: "#ffffff", sep: "#52525b" },
+                                  { label: "Dezent", text: "#71717a", hover: "#18181b", active: "#18181b", sep: "#e4e4e7" },
+                                ].map((preset) => (
+                                  <Button
+                                    key={preset.label}
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-7 text-xs"
+                                    onClick={() =>
+                                      updateConfig({
+                                        legalLinks: {
+                                          ...DEFAULT_LEGAL_LINKS_CONFIG,
+                                          ...footerConfig.legalLinks,
+                                          textColor: preset.text,
+                                          hoverColor: preset.hover,
+                                          activeColor: preset.active,
+                                          separatorColor: preset.sep,
+                                        },
+                                      })
+                                    }
+                                  >
+                                    {preset.label}
+                                  </Button>
+                                ))}
+                              </div>
+
+                              <div className="flex flex-col gap-4">
+                                <div className="space-y-1">
+                                  <Label className="text-xs">Textfarbe</Label>
+                                  <ColorField
+                                    value={footerConfig.legalLinks?.textColor ?? "#000000"}
+                                    onChange={(v) =>
+                                      updateConfig({
+                                        legalLinks: {
+                                          ...DEFAULT_LEGAL_LINKS_CONFIG,
+                                          ...footerConfig.legalLinks,
+                                          textColor: v.trim() || undefined,
+                                        },
+                                      })
+                                    }
+                                  />
+                                </div>
+                                <div className="space-y-1">
+                                  <Label className="text-xs">Hover-Farbe</Label>
+                                  <ColorField
+                                    value={footerConfig.legalLinks?.hoverColor ?? "#374151"}
+                                    onChange={(v) =>
+                                      updateConfig({
+                                        legalLinks: {
+                                          ...DEFAULT_LEGAL_LINKS_CONFIG,
+                                          ...footerConfig.legalLinks,
+                                          hoverColor: v.trim() || undefined,
+                                        },
+                                      })
+                                    }
+                                  />
+                                </div>
+                                <div className="space-y-1">
+                                  <Label className="text-xs">Aktive Farbe</Label>
+                                  <ColorField
+                                    value={footerConfig.legalLinks?.activeColor ?? "#111827"}
+                                    onChange={(v) =>
+                                      updateConfig({
+                                        legalLinks: {
+                                          ...DEFAULT_LEGAL_LINKS_CONFIG,
+                                          ...footerConfig.legalLinks,
+                                          activeColor: v.trim() || undefined,
+                                        },
+                                      })
+                                    }
+                                  />
+                                </div>
+                                <div className="space-y-1">
+                                  <Label className="text-xs">Separator-Farbe</Label>
+                                  <ColorField
+                                    value={footerConfig.legalLinks?.separatorColor ?? "#e5e7eb"}
+                                    onChange={(v) =>
+                                      updateConfig({
+                                        legalLinks: {
+                                          ...DEFAULT_LEGAL_LINKS_CONFIG,
+                                          ...footerConfig.legalLinks,
+                                          separatorColor: v.trim() || undefined,
+                                        },
+                                      })
+                                    }
+                                  />
+                                </div>
+                              </div>
+                            </AccordionContent>
+                          </AccordionItem>
+                        </Accordion>
                         <div className="grid grid-cols-2 gap-4 mt-2">
                           <div className="space-y-2">
                             <Label className="text-xs">Abstand (Gap)</Label>
@@ -785,6 +796,31 @@ export function FooterEditorClient({
                                     ...DEFAULT_LEGAL_LINKS_CONFIG,
                                     ...footerConfig.legalLinks,
                                     marginTop: marginTop as "none" | "sm" | "md" | "lg",
+                                  },
+                                })
+                              }
+                            >
+                              <SelectTrigger className="h-8">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="none">Keiner</SelectItem>
+                                <SelectItem value="sm">Klein</SelectItem>
+                                <SelectItem value="md">Mittel</SelectItem>
+                                <SelectItem value="lg">Groß</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-xs">Abstand nach unten</Label>
+                            <Select
+                              value={footerConfig.legalLinks?.marginBottom ?? DEFAULT_LEGAL_LINKS_CONFIG.marginBottom ?? "none"}
+                              onValueChange={(marginBottom) =>
+                                updateConfig({
+                                  legalLinks: {
+                                    ...DEFAULT_LEGAL_LINKS_CONFIG,
+                                    ...footerConfig.legalLinks,
+                                    marginBottom: marginBottom as "none" | "sm" | "md" | "lg",
                                   },
                                 })
                               }
@@ -1135,36 +1171,32 @@ export function FooterEditorClient({
                         {footerConfig.glassmorphism?.highlightLine && (
                           <div className="space-y-2">
                             <Label className="text-xs">Highlight-Farbe</Label>
-                            <input
-                              type="color"
+                            <ColorField
                               value={footerConfig.glassmorphism?.highlightColor || "#e5e7eb"}
-                              onChange={(e) => {
+                              onChange={(v) => {
                                 updateConfig({
                                   glassmorphism: {
                                     ...footerConfig.glassmorphism,
-                                    highlightColor: e.target.value,
+                                    highlightColor: v.trim() || undefined,
                                   },
                                 })
                               }}
-                              className="h-8 w-full rounded border border-input cursor-pointer"
                             />
                           </div>
                         )}
 
                         <div className="space-y-2 border-t pt-3">
                           <Label className="text-xs">Border-Farbe</Label>
-                          <input
-                            type="color"
+                          <ColorField
                             value={footerConfig.glassmorphism?.borderColor || "#e5e7eb"}
-                            onChange={(e) => {
+                            onChange={(v) => {
                               updateConfig({
                                 glassmorphism: {
                                   ...footerConfig.glassmorphism,
-                                  borderColor: e.target.value,
+                                  borderColor: v.trim() || undefined,
                                 },
                               })
                             }}
-                            className="h-8 w-full rounded border border-input cursor-pointer"
                           />
                           <p className="text-xs text-muted-foreground">Border-Opazität wird über die Intensität gesteuert</p>
                         </div>
@@ -1186,19 +1218,17 @@ export function FooterEditorClient({
 
                         <div className="space-y-2 border-t pt-3">
                           <Label className="text-xs">Panel-Tönung (optional)</Label>
-                          <input
-                            type="color"
+                          <ColorField
                             value={footerConfig.glassmorphism?.tintColor || "#ffffff"}
-                            onChange={(e) => {
-                              const v = e.target.value
+                            onChange={(v) => {
+                              const next = v.trim()
                               updateConfig({
                                 glassmorphism: {
                                   ...footerConfig.glassmorphism,
-                                  tintColor: v === "#ffffff" ? undefined : v,
+                                  tintColor: !next || next.toLowerCase() === "#ffffff" ? undefined : next,
                                 },
                               })
                             }}
-                            className="h-8 w-full rounded border border-input cursor-pointer"
                           />
                         </div>
                       </div>
@@ -1615,6 +1645,31 @@ export function FooterEditorClient({
 
                     {footerConfig.bottomBar?.enabled && (
                       <div className="space-y-4 rounded-lg border border-border p-4">
+                        <div className="space-y-2">
+                          <Label className="text-sm font-medium">Abstand nach oben (Bottom Bar)</Label>
+                          <Select
+                            value={footerConfig.bottomBar?.marginTop ?? "lg"}
+                            onValueChange={(marginTop) =>
+                              updateConfig({
+                                bottomBar: {
+                                  ...footerConfig.bottomBar!,
+                                  marginTop: marginTop as "none" | "sm" | "md" | "lg",
+                                },
+                              })
+                            }
+                          >
+                            <SelectTrigger className="h-8">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">Keiner</SelectItem>
+                              <SelectItem value="sm">Klein</SelectItem>
+                              <SelectItem value="md">Mittel</SelectItem>
+                              <SelectItem value="lg">Groß</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
                         <div className="space-y-3">
                           <Label className="text-sm font-medium">Links (Copyright)</Label>
                           {footerConfig.bottomBar.left && (

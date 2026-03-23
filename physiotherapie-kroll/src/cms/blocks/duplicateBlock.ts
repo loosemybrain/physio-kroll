@@ -1,5 +1,6 @@
 import type { CMSBlock } from "@/types/cms"
 import { uuid } from "@/lib/cms/arrayOps"
+import { renewLegalRichContentBlockIds } from "@/lib/legal/legalRichContentFactories"
 
 /**
  * Creates a deep copy of a CMS block with new IDs
@@ -133,8 +134,16 @@ export function duplicateBlock(block: CMSBlock): CMSBlock {
       break
     }
 
+    case "legalRichText": {
+      const props = cloned.props as { contentBlocks?: import("@/types/cms").LegalRichContentBlock[] }
+      if (props.contentBlocks?.length) {
+        props.contentBlocks = renewLegalRichContentBlockIds(props.contentBlocks)
+      }
+      break
+    }
+
     // hero.trustItems is string[] - no IDs needed
-    // section, text, cta, imageText, legalHero, legalRichText, legalInfoBox - only block.id needs renewal (already done)
+    // section, text, cta, imageText, legalHero, legalInfoBox - only block.id needs renewal (already done); legalRichText.contentBlocks oben
     default:
       break
   }

@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils"
+import { legalPlainTextToParagraphs } from "@/lib/legal/legalPlainTextParagraphs"
 import type { LegalTableColumn, LegalTableRow } from "@/types/cms"
 
 const spacingTopMap = { none: "pt-0", sm: "pt-4", md: "pt-8", lg: "pt-12" }
@@ -71,11 +72,25 @@ export function LegalTable({
                     zebra && rowIndex % 2 === 1 && "bg-muted/30",
                   )}
                 >
-                  {safeColumns.map((col) => (
-                    <td key={col.id} className={cn(cellPadding, "text-muted-foreground")}>
-                      {cells[col.id] ?? "—"}
-                    </td>
-                  ))}
+                  {safeColumns.map((col) => {
+                    const raw = cells[col.id]
+                    const paras = legalPlainTextToParagraphs(raw ?? "")
+                    return (
+                      <td key={col.id} className={cn(cellPadding, "text-muted-foreground align-top")}>
+                        {paras.length === 0 ? (
+                          "—"
+                        ) : (
+                          <div className="space-y-2">
+                            {paras.map((line, i) => (
+                              <p key={i} className="m-0 leading-relaxed">
+                                {line}
+                              </p>
+                            ))}
+                          </div>
+                        )}
+                      </td>
+                    )
+                  })}
                 </tr>
               )
             })}

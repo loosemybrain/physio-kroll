@@ -29,6 +29,7 @@ import { InlineFieldEditor } from "./InlineFieldEditor"
 import { ImageField } from "./ImageField"
 import { Accordion } from "@/components/ui/accordion"
 import { validatePageForPublish, type PublishIssue } from "@/cms/validation/publishValidator"
+import type { LegalRichPreviewGranularSelection } from "@/shared/previewBridge/contract"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { AlertCircle, X } from "lucide-react"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
@@ -389,8 +390,21 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
   const [expandedRepeaterCards, setExpandedRepeaterCards] = useState<Record<string, string | null>>({})
   /** Nach "Item hinzufügen": Fokus auf erste Eingabe der neuen Card (key + itemId). */
   const lastAddedRepeaterRef = useRef<{ key: string; itemId: string } | null>(null)
-  /** Preview-Klick auf Repeater-Card: Fokus nach Expand setzen. */
-  const pendingPreviewRepeaterFocusRef = useRef<{ key: string; itemId: string } | null>(null)
+  /** Preview-Klick auf Repeater-Card: Fokus nach Expand setzen. Optional: legalRichText Listenpunkt / Run. */
+  const pendingPreviewRepeaterFocusRef = useRef<{
+    key: string
+    itemId: string
+    legalRichListItemId?: string
+    legalRichRunId?: string
+  } | null>(null)
+  /** Letzte feingranulare Preview-Selektion für Highlight im iframe + Inspector. */
+  const [legalRichInspectorTarget, setLegalRichInspectorTarget] = useState<LegalRichPreviewGranularSelection | null>(
+    null,
+  )
+
+  useEffect(() => {
+    if (!selectedBlockId) setLegalRichInspectorTarget(null)
+  }, [selectedBlockId])
   /** Löst Effect aus bei jedem Repeater-Klick (auch wenn derselbe Block schon gewählt war). */
   const [repeaterFocusRequestId, setRepeaterFocusRequestId] = useState(0)
 
@@ -420,15 +434,67 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
     }, focusDelay)
   }, [])
 
+  /** Preview → legalRichText: Textteil (Run) im Inspector kurz einrahmen. */
+  const highlightLegalRichRunInInspector = useCallback((runId: string, retryCount = 0) => {
+    const container = inspectorScrollRef.current
+    if (!container) return
+    const row = container.querySelector<HTMLElement>(
+      `[data-inspector-legal-rich-run="${CSS.escape(runId)}"]`,
+    )
+    if (!row) {
+      if (retryCount < 8) {
+        const delay = [80, 120, 200, 320, 450, 600, 800, 1000][retryCount]
+        setTimeout(() => highlightLegalRichRunInInspector(runId, retryCount + 1), delay)
+      }
+      return
+    }
+    row.scrollIntoView({ behavior: "smooth", block: "nearest" })
+    row.classList.add("ring-2", "ring-primary/50", "ring-offset-2", "rounded-md")
+    window.setTimeout(() => {
+      row.classList.remove("ring-2", "ring-primary/50", "ring-offset-2", "rounded-md")
+    }, 1600)
+  }, [])
+
+  /** Preview → legalRichText: Listenpunkt im Inspector kurz einrahmen. */
+  const highlightLegalRichListRowInInspector = useCallback((listItemId: string, retryCount = 0) => {
+    const container = inspectorScrollRef.current
+    if (!container) return
+    const row = container.querySelector<HTMLElement>(
+      `[data-inspector-legal-rich-list-item="${CSS.escape(listItemId)}"]`
+    )
+    if (!row) {
+      if (retryCount < 8) {
+        const delay = [80, 120, 200, 320, 450, 600, 800, 1000][retryCount]
+        setTimeout(() => highlightLegalRichListRowInInspector(listItemId, retryCount + 1), delay)
+      }
+      return
+    }
+    row.scrollIntoView({ behavior: "smooth", block: "nearest" })
+    row.classList.add("ring-2", "ring-primary/50", "ring-offset-2", "rounded-md")
+    window.setTimeout(() => {
+      row.classList.remove("ring-2", "ring-primary/50", "ring-offset-2", "rounded-md")
+    }, 1600)
+  }, [])
+
   // Preview-Klick auf Repeater: aufklappen + Fokus (repeaterFocusRequestId löst bei jedem Klick aus, auch bei gleichem Block)
   useEffect(() => {
     const pending = pendingPreviewRepeaterFocusRef.current
     if (!pending) return
     pendingPreviewRepeaterFocusRef.current = null
+    const listSubId = pending.legalRichListItemId
     setExpandedRepeaterCards((prev) => ({ ...prev, [pending.key]: pending.itemId }))
-    const t = setTimeout(() => runScrollAndFocusForItem(pending.itemId), 220)
+    const runSubId = pending.legalRichRunId
+    const t = setTimeout(() => {
+      runScrollAndFocusForItem(pending.itemId)
+      if (listSubId) {
+        setTimeout(() => highlightLegalRichListRowInInspector(listSubId), 420)
+      }
+      if (runSubId) {
+        setTimeout(() => highlightLegalRichRunInInspector(runSubId), 480)
+      }
+    }, 220)
     return () => clearTimeout(t)
-  }, [repeaterFocusRequestId, runScrollAndFocusForItem])
+  }, [repeaterFocusRequestId, runScrollAndFocusForItem, highlightLegalRichListRowInInspector, highlightLegalRichRunInInspector])
 
   // Nach "Item hinzufügen": scroll + Fokus (expandedRepeaterCards ist schon gesetzt)
   useEffect(() => {
@@ -736,13 +802,41 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
 
   /** Preview → Inspector: Repeater-Item angeklickt → Block auswählen, passende Card öffnen; scroll/focus im Effect nach Commit. */
   const handleSelectRepeaterItem = useCallback(
-    (blockId: string, fieldPath: string, itemId: string) => {
+    (
+      blockId: string,
+      fieldPath: string,
+      itemId: string,
+      legalRichListItemId?: string | null,
+      legalRichRunId?: string | null,
+    ) => {
       const key = `${blockId}:${fieldPath}`
-      pendingPreviewRepeaterFocusRef.current = { key, itemId }
+      if (fieldPath === "contentBlocks") {
+        setLegalRichInspectorTarget({
+          contentBlockId: itemId,
+          listItemId: legalRichListItemId ?? null,
+          runId: legalRichRunId ?? null,
+        })
+      } else {
+        setLegalRichInspectorTarget(null)
+      }
+      pendingPreviewRepeaterFocusRef.current = {
+        key,
+        itemId,
+        ...(legalRichListItemId ? { legalRichListItemId } : {}),
+        ...(legalRichRunId ? { legalRichRunId } : {}),
+      }
       setRepeaterFocusRequestId((n) => n + 1)
       selectBlock(blockId)
     },
-    [selectBlock]
+    [selectBlock],
+  )
+
+  const selectBlockClearingLegalRichGranular = useCallback(
+    (id: string) => {
+      setLegalRichInspectorTarget(null)
+      selectBlock(id)
+    },
+    [selectBlock],
   )
 
   // Initialize editor actions hook with all mutations
@@ -1068,6 +1162,7 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
           current={current}
           selectedBlockId={selectedBlockId}
           selectedElementId={selectedElementId}
+          legalRichInspectorTarget={legalRichInspectorTarget}
           expandedRepeaterCards={expandedRepeaterCards}
           inlineOpen={inlineOpen}
           inlineAnchorRect={inlineAnchorRect}
@@ -1078,7 +1173,7 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
           onInlineClose={handleInlineClose}
           onEditField={handleEditField}
           onBlockSelect={(blockId) => {
-            selectBlock(blockId)
+            selectBlockClearingLegalRichGranular(blockId)
           }}
           onElementClick={(blockId, elementId) => {
             selectElement(blockId, elementId)
@@ -1127,7 +1222,7 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
             isTypingRef={isTypingRef}
             blockTypes={blockTypes}
             moveBlock={moveBlock}
-            selectBlock={selectBlock}
+            selectBlock={selectBlockClearingLegalRichGranular}
             activeBrandTab={activeBrandTab}
             setActiveBrandTab={setActiveBrandTab}
             accordionValue={accordionValue}

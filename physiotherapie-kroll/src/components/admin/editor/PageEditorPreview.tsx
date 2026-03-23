@@ -11,12 +11,14 @@ import {
   PREVIEW_MESSAGE_TYPES,
   createBridgeEnvelope,
   isBridgeMessage,
+  type LegalRichPreviewGranularSelection,
 } from "@/shared/previewBridge/contract"
 
 interface PageEditorPreviewProps {
   current: AdminPage
   selectedBlockId: string | null
   selectedElementId: string | null
+  legalRichInspectorTarget: LegalRichPreviewGranularSelection | null
   expandedRepeaterCards: Record<string, string | null>
   inlineOpen: boolean
   inlineAnchorRect: DOMRect | null
@@ -31,13 +33,20 @@ interface PageEditorPreviewProps {
   onMoveBlock: (index: number, direction: -1 | 1) => void
   onDuplicateBlock: (index: number) => void
   onRemoveBlock: (blockId: string) => void
-  onSelectRepeaterItem: (blockId: string, fieldPath: string, itemId: string) => void
+  onSelectRepeaterItem: (
+    blockId: string,
+    fieldPath: string,
+    itemId: string,
+    legalRichListItemId?: string | null,
+    legalRichRunId?: string | null,
+  ) => void
 }
 
 export function PageEditorPreview({
   current,
   selectedBlockId,
   selectedElementId,
+  legalRichInspectorTarget,
   expandedRepeaterCards,
   inlineOpen,
   inlineAnchorRect,
@@ -82,6 +91,13 @@ export function PageEditorPreview({
     if (viewport === "tablet") return 820
     return null
   }, [viewport])
+
+  const legalRichGranularForHighlight = useMemo((): LegalRichPreviewGranularSelection | null => {
+    if (!selectedBlockId || !legalRichInspectorTarget?.contentBlockId) return null
+    const b = current.blocks?.find((x) => x.id === selectedBlockId)
+    if (b?.type !== "legalRichText") return null
+    return legalRichInspectorTarget
+  }, [current.blocks, selectedBlockId, legalRichInspectorTarget])
 
   // Handshake: PREVIEW_READY -> EDITOR_ACK
   useEffect(() => {
@@ -132,9 +148,11 @@ export function PageEditorPreview({
         )
       }
 
-      const repeater = (payload as any)?.repeater as { fieldPath: string; itemId: string } | null | undefined
+      const repeater = (payload as { repeater?: { fieldPath: string; itemId: string } | null }).repeater
+      const legalRichListItemId = (payload as { legalRichListItemId?: string | null }).legalRichListItemId ?? null
+      const legalRichRunId = (payload as { legalRichRunId?: string | null }).legalRichRunId ?? null
       if (repeater?.fieldPath && repeater?.itemId) {
-        onSelectRepeaterItem(blockId, repeater.fieldPath, repeater.itemId)
+        onSelectRepeaterItem(blockId, repeater.fieldPath, repeater.itemId, legalRichListItemId, legalRichRunId)
         return
       }
 
@@ -250,12 +268,13 @@ export function PageEditorPreview({
           state: selectedBlockId || selectedElementId ? "on" : "off",
           blockId: selectedBlockId,
           elementId: selectedElementId,
+          legalRichGranular: legalRichGranularForHighlight,
         },
         { source: "editor", sessionId: sessionIdRef.current ?? undefined }
       ),
       "*"
     )
-  }, [current.id, selectedBlockId, selectedElementId])
+  }, [current.id, selectedBlockId, selectedElementId, legalRichGranularForHighlight])
 
   // ---- Overlay Menü Architektur-Update: Overlay immer fest oben rechts ----
 

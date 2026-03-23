@@ -8,46 +8,106 @@ import type { CMSBlock } from "@/types/cms";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
+const BRANDS = ["physiotherapy", "physio-konzept"] as const;
+
 export default async function CMSPageRoute({ params }: { params: Promise<{ slug: string }> }) {
-  // physiotherapy only
+  const currentBrand = "physiotherapy" as const;
   const resolvedParams = await params;
   const slug = resolvedParams.slug;
   const supabasePublic = await getSupabasePublic();
 
-  // First, try to find the page without status filter to see if it exists (brand="physiotherapy")
+  // First, check if page exists in current brand (any status)
   const { data: allPages, error: checkErr } = await supabasePublic
     .from("pages")
     .select("id, title, slug, status")
     .eq("slug", slug)
-    .eq("brand", "physiotherapy");
+    .eq("brand", currentBrand);
 
   if (checkErr) {
     console.error("Error checking page existence:", checkErr);
   }
 
-  // Now get the published page (brand="physiotherapy")
-  const { data: page, error: pageErr } = await supabasePublic
+  // Prefer published page in current brand
+  const { data: ownBrandPage, error: ownBrandErr } = await supabasePublic
     .from("pages")
     .select("*")
     .eq("slug", slug)
-    .eq("brand", "physiotherapy")
+    .eq("brand", currentBrand)
     .eq("status", "published")
-    .single();
+    .maybeSingle();
 
-  if (pageErr) {
+  if (ownBrandErr) {
     console.error("Error fetching page:", {
-      message: pageErr.message,
-      details: pageErr.details,
-      hint: pageErr.hint,
-      code: pageErr.code,
+      message: ownBrandErr.message,
+      details: ownBrandErr.details,
+      hint: ownBrandErr.hint,
+      code: ownBrandErr.code,
       slug,
     });
     return (
       <div className="container mx-auto py-12 px-4">
         <h1 className="text-2xl font-bold">Fehler beim Laden</h1>
         <p className="mt-4 text-muted-foreground">
-          Fehler: {pageErr.message}
-          {pageErr.hint && <span className="block mt-2 text-sm">Hinweis: {pageErr.hint}</span>}
+          Fehler: {ownBrandErr.message}
+          {ownBrandErr.hint && <span className="block mt-2 text-sm">Hinweis: {ownBrandErr.hint}</span>}
+        </p>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Slug: &quot;{slug}&quot;
+        </p>
+      </div>
+    );
+  }
+
+  // Legal pages are shared between both brands: fallback to other brand's published legal page.
+  let page = ownBrandPage;
+  if (!page) {
+    const { data: sharedLegalPage, error: sharedLegalErr } = await supabasePublic
+      .from("pages")
+      .select("*")
+      .eq("slug", slug)
+      .eq("status", "published")
+      .eq("page_type", "legal")
+      .in("brand", [...BRANDS])
+      .limit(1)
+      .maybeSingle();
+    if (sharedLegalErr) {
+      console.error("Error fetching shared legal page:", {
+        message: sharedLegalErr.message,
+        details: sharedLegalErr.details,
+        hint: sharedLegalErr.hint,
+        code: sharedLegalErr.code,
+        slug,
+      });
+      return (
+        <div className="container mx-auto py-12 px-4">
+          <h1 className="text-2xl font-bold">Fehler beim Laden</h1>
+          <p className="mt-4 text-muted-foreground">
+            Fehler: {sharedLegalErr.message}
+            {sharedLegalErr.hint && <span className="block mt-2 text-sm">Hinweis: {sharedLegalErr.hint}</span>}
+          </p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Slug: &quot;{slug}&quot;
+          </p>
+        </div>
+      );
+    }
+    page = sharedLegalPage ?? null;
+  }
+
+  if (!page && checkErr) {
+    console.error("Error fetching page:", {
+      message: checkErr.message,
+      details: checkErr.details,
+      hint: checkErr.hint,
+      code: checkErr.code,
+      slug,
+    });
+    return (
+      <div className="container mx-auto py-12 px-4">
+        <h1 className="text-2xl font-bold">Fehler beim Laden</h1>
+        <p className="mt-4 text-muted-foreground">
+          Fehler: {checkErr.message}
+          {checkErr.hint && <span className="block mt-2 text-sm">Hinweis: {checkErr.hint}</span>}
         </p>
         <p className="mt-2 text-sm text-muted-foreground">
           Slug: &quot;{slug}&quot;

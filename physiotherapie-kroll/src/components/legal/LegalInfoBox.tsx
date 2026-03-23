@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils"
+import { LegalPlainTextBody } from "@/components/legal/LegalPlainTextBody"
 import { Info, AlertTriangle, CheckCircle2, FileText } from "lucide-react"
 
 const variantConfig = {
@@ -58,7 +59,7 @@ export function LegalInfoBox({
       role="note"
     >
       <div className={cn("flex gap-4 rounded-xl border p-4 md:p-5", config.container)}>
-        <div className="flex-shrink-0 pt-0.5">
+        <div className="shrink-0 pt-0.5">
           <Icon className={cn("h-5 w-5", config.iconColor)} aria-hidden="true" />
         </div>
         <div className="min-w-0 flex-1">
@@ -67,9 +68,10 @@ export function LegalInfoBox({
               {headline}
             </p>
           )}
-          <div
-            className="prose prose-sm prose-neutral dark:prose-invert max-w-none text-muted-foreground"
-            dangerouslySetInnerHTML={{ __html: content }}
+          <LegalPlainTextBody
+            text={content}
+            className="prose prose-sm prose-neutral dark:prose-invert max-w-none text-muted-foreground prose-p:mb-0"
+            classNameParagraph="text-muted-foreground leading-relaxed"
           />
         </div>
       </div>

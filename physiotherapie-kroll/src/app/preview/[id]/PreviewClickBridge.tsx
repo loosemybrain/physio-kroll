@@ -16,6 +16,8 @@ export function PreviewClickBridge({ pageId }: { pageId?: string }) {
     blockId?: string
     elementId?: string
     repeaterItemId?: string
+    legalRichListItemId?: string | null
+    legalRichRunId?: string | null
   }>({})
   const lastHoverRef = useRef<{
     blockId?: string
@@ -98,7 +100,16 @@ export function PreviewClickBridge({ pageId }: { pageId?: string }) {
 
       // Ignoriere Klicks auf SVG / Icons → wir wollen das semantische Element
       const effectiveTarget =
-        target.closest<HTMLElement>("[data-repeater-item-id],[data-element-id],[data-block-id]") ?? null
+        target.closest<HTMLElement>(
+          [
+            "[data-run-id]",
+            "[data-list-item-id]",
+            "[data-legal-rich-list-item-id]",
+            "[data-repeater-item-id]",
+            "[data-element-id]",
+            "[data-block-id]",
+          ].join(","),
+        ) ?? null
       if (!effectiveTarget) return
 
       const blockEl = getBlockRoot(effectiveTarget) ?? null
@@ -114,17 +125,32 @@ export function PreviewClickBridge({ pageId }: { pageId?: string }) {
       const repeaterItemId = repeaterEl?.getAttribute("data-repeater-item-id") ?? undefined
       const repeaterFieldPath = repeaterEl?.getAttribute("data-repeater-field") ?? undefined
 
+      const runEl = effectiveTarget.closest<HTMLElement>("[data-run-id]")
+      const legalRichRunId = runEl?.getAttribute("data-run-id") ?? null
+
+      const listItemEl =
+        effectiveTarget.closest<HTMLElement>("[data-list-item-id]") ??
+        effectiveTarget.closest<HTMLElement>("[data-legal-rich-list-item-id]") ??
+        runEl?.closest<HTMLElement>("[data-list-item-id]") ??
+        runEl?.closest<HTMLElement>("[data-legal-rich-list-item-id]")
+      const legalRichListItemId =
+        listItemEl?.getAttribute("data-list-item-id") ??
+        listItemEl?.getAttribute("data-legal-rich-list-item-id") ??
+        null
+
       // Deduplication: nur gleicher Block+Element+Repeater-Item als Duplikat ignorieren
       const last = lastSelectionRef.current
       if (
         last.blockId === blockId &&
         last.elementId === elementId &&
-        last.repeaterItemId === repeaterItemId
+        last.repeaterItemId === repeaterItemId &&
+        last.legalRichListItemId === legalRichListItemId &&
+        last.legalRichRunId === legalRichRunId
       ) {
         return
       }
 
-      lastSelectionRef.current = { blockId, elementId, repeaterItemId }
+      lastSelectionRef.current = { blockId, elementId, repeaterItemId, legalRichListItemId, legalRichRunId }
 
       // Navigation im Preview verhindern (Links, Buttons)
       const link = effectiveTarget.closest("a")
@@ -143,6 +169,8 @@ export function PreviewClickBridge({ pageId }: { pageId?: string }) {
           repeaterItemId && repeaterFieldPath
             ? { fieldPath: repeaterFieldPath, itemId: repeaterItemId }
             : null,
+        legalRichListItemId,
+        legalRichRunId,
         rect: {
           left: rect.left,
           top: rect.top,
@@ -229,7 +257,16 @@ export function PreviewClickBridge({ pageId }: { pageId?: string }) {
       if (!target) return
 
       const effectiveTarget =
-        target.closest<HTMLElement>("[data-repeater-item-id],[data-element-id],[data-block-id]") ?? null
+        target.closest<HTMLElement>(
+          [
+            "[data-run-id]",
+            "[data-list-item-id]",
+            "[data-legal-rich-list-item-id]",
+            "[data-repeater-item-id]",
+            "[data-element-id]",
+            "[data-block-id]",
+          ].join(","),
+        ) ?? null
 
       const blockEl = effectiveTarget ? getBlockRoot(effectiveTarget) : null
       const blockId = blockEl?.getAttribute("data-block-id") ?? undefined

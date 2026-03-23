@@ -1721,14 +1721,67 @@ const legalHeroPropsSchema = z.object({
   subtitleFontWeight: z.enum(["normal", "medium", "semibold", "bold"]).optional(),
 })
 
+const legalRichTextRunSchema = z.object({
+  id: z.string().optional(),
+  text: z.string(),
+  bold: z.boolean().optional(),
+  italic: z.boolean().optional(),
+  link: z.object({ href: z.string(), label: z.string().optional() }).optional(),
+})
+
+const legalRichListItemSchema = z.object({
+  id: z.string().optional(),
+  runs: z.array(legalRichTextRunSchema),
+})
+
+const legalRichParagraphBlockSchema = z.object({
+  id: z.string(),
+  type: z.literal("paragraph"),
+  runs: z.array(legalRichTextRunSchema),
+})
+
+const legalRichHeadingBlockSchema = z.object({
+  id: z.string(),
+  type: z.literal("heading"),
+  level: z.union([z.literal(3), z.literal(4)]),
+  runs: z.array(legalRichTextRunSchema),
+})
+
+const legalRichBulletListBlockSchema = z.object({
+  id: z.string(),
+  type: z.literal("bulletList"),
+  items: z.array(legalRichListItemSchema),
+})
+
+const legalRichOrderedListBlockSchema = z.object({
+  id: z.string(),
+  type: z.literal("orderedList"),
+  items: z.array(legalRichListItemSchema),
+})
+
+const legalRichContentBlockSchema = z.discriminatedUnion("type", [
+  legalRichParagraphBlockSchema,
+  legalRichHeadingBlockSchema,
+  legalRichBulletListBlockSchema,
+  legalRichOrderedListBlockSchema,
+])
+
 const legalRichTextPropsSchema = z.object({
   headline: z.string(),
   content: z.string(),
+  contentBlocks: z.array(legalRichContentBlockSchema).optional(),
   alignment: z.enum(["left", "center", "justify"]).optional(),
   headlineSize: z.enum(["h2", "h3", "h4"]).optional(),
   variant: z.enum(["default", "muted"]).optional(),
   spacingTop: legalSpacingSchema.optional(),
   spacingBottom: legalSpacingSchema.optional(),
+  headingColor: z.string().optional(),
+  textColor: z.string().optional(),
+  listColor: z.string().optional(),
+  listMarkerColor: z.string().optional(),
+  linkColor: z.string().optional(),
+  linkHoverColor: z.string().optional(),
+  backgroundColor: z.string().optional(),
 })
 
 const legalTableColumnSchema = z.object({ id: z.string(), label: z.string(), width: z.string().optional() })
@@ -1819,7 +1872,7 @@ const legalHeroDefaults: LegalHeroBlock["props"] = {
 
 const legalRichTextDefaults: LegalRichTextBlock["props"] = {
   headline: "Abschnitt",
-  content: "<p>Inhalt hier…</p>",
+  content: "Inhalt hier…",
   alignment: "left",
   headlineSize: "h2",
   variant: "default",
@@ -1840,7 +1893,7 @@ const legalTableDefaults: LegalTableBlock["props"] = {
 const legalInfoBoxDefaults: LegalInfoBoxBlock["props"] = {
   variant: "info",
   headline: "",
-  content: "<p>Hinweistext…</p>",
+  content: "Hinweistext…",
   spacingTop: "sm",
   spacingBottom: "sm",
 }
@@ -3389,7 +3442,14 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
       { key: "eyebrow", label: "Überzeile", type: "text", placeholder: "Optional", group: "content" },
       { key: "title", label: "Titel", type: "text", required: true, group: "content" },
       { key: "subtitle", label: "Untertitel", type: "text", placeholder: "Optional", group: "content" },
-      { key: "introText", label: "Intro-Text", type: "textarea", placeholder: "Optional", group: "content" },
+      {
+        key: "introText",
+        label: "Intro-Text",
+        type: "textarea",
+        placeholder: "Drücke Enter für neuen Absatz",
+        helpText: "Zeilenumbrüche werden als Absätze dargestellt.",
+        group: "content",
+      },
       { key: "showUpdatedAt", label: "Stand anzeigen", type: "boolean", group: "content" },
       { key: "updatedAtLabel", label: "Label Stand", type: "text", placeholder: "Zuletzt aktualisiert", group: "content" },
       { key: "updatedAtValue", label: "Datum Stand", type: "text", placeholder: "YYYY-MM-DD", group: "content" },
@@ -3420,7 +3480,6 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
     allowInlineEdit: true,
     inspectorFields: [
       { key: "headline", label: "Überschrift", type: "text", required: true, group: "content" },
-      { key: "content", label: "Inhalt", type: "textarea", placeholder: "HTML möglich", required: true, group: "content" },
       { key: "alignment", label: "Ausrichtung", type: "select", options: [{ value: "left", label: "Links" }, { value: "center", label: "Zentriert" }, { value: "justify", label: "Blocksatz" }], group: "design" },
       { key: "headlineSize", label: "Überschrift-Größe", type: "select", options: [{ value: "h2", label: "H2" }, { value: "h3", label: "H3" }, { value: "h4", label: "H4" }], group: "design" },
       { key: "variant", label: "Variante", type: "select", options: [{ value: "default", label: "Standard" }, { value: "muted", label: "Gedämpft" }], group: "design" },
@@ -3451,7 +3510,15 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
     inspectorFields: [
       { key: "variant", label: "Variante", type: "select", options: [{ value: "info", label: "Info" }, { value: "warning", label: "Hinweis" }, { value: "success", label: "Erfolg" }, { value: "neutral", label: "Neutral" }], group: "design" },
       { key: "headline", label: "Überschrift", type: "text", placeholder: "Optional", group: "content" },
-      { key: "content", label: "Inhalt", type: "textarea", required: true, group: "content" },
+      {
+        key: "content",
+        label: "Inhalt",
+        type: "textarea",
+        placeholder: "Drücke Enter für neuen Absatz",
+        helpText: "Reiner Text mit Zeilenumbrüchen — keine HTML-Tags nötig.",
+        required: true,
+        group: "content",
+      },
       { key: "spacingTop", label: "Abstand oben", type: "select", options: [{ value: "none", label: "Keiner" }, { value: "sm", label: "Klein" }, { value: "md", label: "Mittel" }, { value: "lg", label: "Groß" }], group: "layout" },
       { key: "spacingBottom", label: "Abstand unten", type: "select", options: [{ value: "none", label: "Keiner" }, { value: "sm", label: "Klein" }, { value: "md", label: "Mittel" }, { value: "lg", label: "Groß" }], group: "layout" },
     ],

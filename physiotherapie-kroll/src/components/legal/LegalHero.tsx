@@ -6,6 +6,7 @@ import {
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
 import { getLegalIcon } from "@/lib/legal/legal-icon-registry"
+import { LegalPlainTextBody } from "@/components/legal/LegalPlainTextBody"
 
 export type LegalHeroProps = {
   eyebrow?: string
@@ -142,9 +143,12 @@ export function LegalHero({
         </p>
       )}
       {introText !== undefined && (
-        <p data-cms-field="introText" className={cn("mt-6 max-w-2xl text-base leading-relaxed text-muted-foreground", align)}>
-          {introText}
-        </p>
+        <LegalPlainTextBody
+          text={introText}
+          dataCmsField="introText"
+          className={cn("mt-6 max-w-2xl text-base text-muted-foreground", align)}
+          classNameParagraph="leading-relaxed"
+        />
       )}
       {showUpdatedAt && updatedAtValue && (
         <p

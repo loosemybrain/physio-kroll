@@ -92,7 +92,8 @@ function getDefaultBlocksPrivacy(): CMSBlock[] {
     }),
     createBlock("legalRichText", {
       headline: "Allgemeine Hinweise",
-      content: "<p>Die folgenden Abschnitte informieren Sie über die Verarbeitung personenbezogener Daten auf dieser Website.</p>",
+      content:
+        "Die folgenden Abschnitte informieren Sie über die Verarbeitung personenbezogener Daten auf dieser Website.",
       alignment: "left",
       headlineSize: "h2",
       variant: "default",
@@ -139,7 +140,7 @@ function getDefaultBlocksCookies(): CMSBlock[] {
     createBlock("legalInfoBox", {
       variant: "info",
       headline: "Ihre Einwilligung",
-      content: "<p>Sie können Ihre Einwilligung zur Speicherung von Cookies jederzeit widerrufen oder anpassen.</p>",
+      content: "Sie können Ihre Einwilligung zur Speicherung von Cookies jederzeit widerrufen oder anpassen.",
       spacingTop: "sm",
       spacingBottom: "sm",
     }),
@@ -167,7 +168,7 @@ function getDefaultBlocksImprint(): CMSBlock[] {
     }),
     createBlock("legalRichText", {
       headline: "Weitere Angaben",
-      content: "<p>Weitere gesetzlich vorgesehene Angaben können Sie hier ergänzen.</p>",
+      content: "Weitere gesetzlich vorgesehene Angaben können Sie hier ergänzen.",
       alignment: "left",
       headlineSize: "h2",
       variant: "default",

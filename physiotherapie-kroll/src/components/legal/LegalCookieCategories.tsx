@@ -11,6 +11,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion"
 import type { LegalCookieCategory } from "@/types/cms"
+import { LegalPlainTextBody } from "@/components/legal/LegalPlainTextBody"
 
 const spacingTopMap = { none: "pt-0", sm: "pt-4", md: "pt-8", lg: "pt-12" }
 const spacingBottomMap = { none: "pb-0", sm: "pb-4", md: "pb-8", lg: "pb-12" }
@@ -31,14 +32,14 @@ function CategoryCard({ category }: { category: LegalCookieCategory }) {
       className={cn(
         "rounded-2xl border bg-card transition-all duration-300",
         category.required
-          ? "border-primary/30 bg-primary/[0.02]"
+          ? "border-primary/30 bg-primary/2"
           : "border-border hover:border-primary/20",
       )}
     >
       <div className="flex items-start gap-4 p-5 md:p-6">
         <div
           className={cn(
-            "flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl",
+            "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl",
             category.required ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground",
           )}
         >
@@ -53,9 +54,11 @@ function CategoryCard({ category }: { category: LegalCookieCategory }) {
               </Badge>
             )}
           </div>
-          <p className="text-sm leading-relaxed text-muted-foreground">
-            {category.description}
-          </p>
+          <LegalPlainTextBody
+            text={category.description}
+            className="text-sm text-muted-foreground"
+            classNameParagraph="leading-relaxed"
+          />
         </div>
       </div>
       {hasCookies && (
@@ -124,14 +127,14 @@ function CategoryAccordion({ categories }: { categories: LegalCookieCategory[] }
             value={category.id}
             className={cn(
               "rounded-xl border px-5 data-[state=open]:border-primary/30",
-              category.required ? "border-primary/20 bg-primary/[0.02]" : "border-border",
+              category.required ? "border-primary/20 bg-primary/2" : "border-border",
             )}
           >
             <AccordionTrigger className="py-4 hover:no-underline">
               <div className="flex items-center gap-3">
                 <div
                   className={cn(
-                    "flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg",
+                    "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg",
                     category.required ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground",
                   )}
                 >
@@ -146,7 +149,11 @@ function CategoryAccordion({ categories }: { categories: LegalCookieCategory[] }
               </div>
             </AccordionTrigger>
             <AccordionContent className="pb-5">
-              <p className="mb-4 text-sm text-muted-foreground">{category.description}</p>
+              <LegalPlainTextBody
+                text={category.description}
+                className="mb-4 text-sm text-muted-foreground"
+                classNameParagraph="leading-relaxed"
+              />
               {category.cookies && category.cookies.length > 0 && (
                 <div className="overflow-x-auto rounded-lg border border-border">
                   <table className="w-full min-w-[400px] text-sm">

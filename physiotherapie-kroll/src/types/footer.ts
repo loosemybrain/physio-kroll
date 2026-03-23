@@ -106,6 +106,8 @@ export type FooterSection = {
  */
 export type FooterBottomBar = {
   enabled: boolean
+  /** Abstand zur vorherigen Footer-Sektion */
+  marginTop?: "none" | "sm" | "md" | "lg"
   left?: FooterBlock
   right?: FooterBlock
 }
@@ -186,6 +188,7 @@ export type FooterLegalLinksConfig = {
   showTitle?: boolean
   gap?: "sm" | "md" | "lg"
   marginTop?: "none" | "sm" | "md" | "lg"
+  marginBottom?: "none" | "sm" | "md" | "lg"
   textColor?: string
   hoverColor?: string
   activeColor?: string

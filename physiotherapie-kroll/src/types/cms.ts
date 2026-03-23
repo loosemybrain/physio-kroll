@@ -1026,17 +1026,65 @@ export interface LegalHeroBlock extends BaseBlock {
   }
 }
 
+/**
+ * Ein kontrolliertes Textsegment (Run) innerhalb von Absatz oder Zwischenüberschrift.
+ * Kein Markdown, kein HTML — nur explizite Felder.
+ *
+ * Link-Ziel: `link.href` (kein separates Top-Level-`href`, damit optionaler Anzeigetext sauber bleibt).
+ */
+export interface LegalRichTextRun {
+  /**
+   * Stabile ID für Preview/Inspector (Runs). Optional bei älteren Daten —
+   * Normalisierung vergibt UUIDs beim Laden/Speichern; Renderer nutzt deterministischen DOM-Fallback.
+   */
+  id?: string
+  text: string
+  /** Fett (rendert als `<strong>`). */
+  bold?: boolean
+  /** Kursiv (rendert als `<em>`). */
+  italic?: boolean
+  /**
+   * Link: Ziel-URL unter `href`, optional eigener Anzeigetext unter `label`.
+   * Ohne `label` gilt der sichtbare Text aus `text` (sonst Fallback URL).
+   */
+  link?: { href: string; label?: string }
+}
+
+/** Listenpunkt im strukturierten Legal-Fließtext. */
+export interface LegalRichListItem {
+  id: string
+  runs: LegalRichTextRun[]
+}
+
+/** Strukturierter Inhalt für `legalRichText` (bevorzugt gegenüber `content`). */
+export type LegalRichContentBlock =
+  | { id: string; type: "paragraph"; runs: LegalRichTextRun[] }
+  | { id: string; type: "heading"; level: 3 | 4; runs: LegalRichTextRun[] }
+  | { id: string; type: "bulletList"; items: LegalRichListItem[] }
+  | { id: string; type: "orderedList"; items: LegalRichListItem[] }
+
 /** legalRichText: Überschrift + Rich-Text (ersetzt separaten legalSection). */
 export interface LegalRichTextBlock extends BaseBlock {
   type: "legalRichText"
   props: {
     headline: string
+    /** Legacy / Fallback: Klartext mit Zeilenumbrüchen für Absätze. */
     content: string
+    /** Strukturierter Modus: wenn non-empty, wird dieses gerendert (statt `content`). */
+    contentBlocks?: LegalRichContentBlock[]
     alignment?: "left" | "center" | "justify"
     headlineSize?: "h2" | "h3" | "h4"
     variant?: "default" | "muted"
     spacingTop?: LegalSpacing
     spacingBottom?: LegalSpacing
+    /** Blockweite Farben (Phase 3A). Leer/`undefined` = Theme-Defaults (Tailwind/prose). */
+    headingColor?: string
+    textColor?: string
+    listColor?: string
+    listMarkerColor?: string
+    linkColor?: string
+    linkHoverColor?: string
+    backgroundColor?: string
   }
 }
 

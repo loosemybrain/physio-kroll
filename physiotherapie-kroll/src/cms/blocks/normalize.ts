@@ -1,4 +1,5 @@
-import type { CMSBlock } from "@/types/cms"
+import type { CMSBlock, LegalRichContentBlock } from "@/types/cms"
+import { normalizeLegalRichContentBlocksForStorage } from "@/lib/legal/legalRichContentFactories"
 import { getBlockDefinition } from "./registry"
 
 /**
@@ -151,6 +152,12 @@ export function normalizeBlock(block: CMSBlock): CMSBlock {
       const seen = new Set<string>()
       normalizedProps.lines = lines.map((l, i) => (seen.has(l.id) ? { ...l, id: generateUniqueId("line", i) } : (seen.add(l.id), l)))
     }
+    if (block.type === "legalRichText" && Array.isArray(normalizedProps.contentBlocks)) {
+      normalizedProps.contentBlocks = normalizeLegalRichContentBlocksForStorage(
+        normalizedProps.contentBlocks as LegalRichContentBlock[],
+      )
+    }
+
     if (block.type === "legalCookieCategories" && "categories" in normalizedProps) {
       const categories = normalizedProps.categories as Array<{ id: string; cookies?: Array<{ id: string }> }>
       const seenCat = new Set<string>()

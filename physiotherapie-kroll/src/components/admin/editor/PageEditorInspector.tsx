@@ -46,6 +46,7 @@ import { SectionInspectorSection } from "../SectionInspectorSection"
 import { AnimationInspector } from "../AnimationInspector"
 import { ContactFormInspectorSection } from "./inspectors/ContactFormInspectorSection"
 import { LegalHeroAccordion } from "@/components/cms/inspector/LegalHeroAccordion"
+import { LegalRichTextColorAccordion } from "@/components/cms/inspector/LegalRichTextColorAccordion"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import type { TypographySettings } from "@/lib/typography"
 import { ColorField } from "../ColorField"
@@ -55,6 +56,7 @@ import { UniversalRepeaterInspector } from "./repeater/UniversalRepeaterInspecto
 import { BUTTON_PRESET_OPTIONS } from "@/lib/buttonPresets"
 import { ElementTypographyAccordion } from "../../cms/inspector/ElementTypographyAccordion"
 import { InspectorCardList } from "../inspector/InspectorCardList"
+import { LegalRichTextContentInspector } from "./LegalRichTextContentInspector"
 import { CalendarDays, ChevronUp, ChevronDown, Plus, Trash2 } from "lucide-react"
 import { GRADIENT_PRESETS } from "@/lib/theme/gradientPresets"
 import type { AdminPage } from "@/lib/cms/supabaseStore"
@@ -244,7 +246,15 @@ export function PageEditorInspector({
     arrayPath: string,
     index: number,
     item: Record<string, unknown>,
-    itemFields: Array<{ key: string; label: string; type: InspectorFieldType; placeholder?: string; required?: boolean; options?: Array<{ value: string; label: string }> }>
+    itemFields: Array<{
+      key: string
+      label: string
+      type: InspectorFieldType
+      placeholder?: string
+      helpText?: string
+      required?: boolean
+      options?: Array<{ value: string; label: string }>
+    }>
   ): React.ReactNode => (
     <div className="space-y-3 pt-2 border-t border-border">
       {itemFields.map((itemField) => {
@@ -272,7 +282,15 @@ export function PageEditorInspector({
             return (
               <div key={itemField.key} className="space-y-1.5">
                 <Label htmlFor={itemFieldId} className="text-xs">{itemField.label}</Label>
-                <Textarea id={itemFieldId} value={String(itemFieldValue)} onChange={(e) => handleItemFieldChange(e.target.value)} className={cn("text-sm min-h-[60px]", isActive && "ring-2 ring-primary")} placeholder={itemField.label} />
+                <Textarea
+                  id={itemFieldId}
+                  value={String(itemFieldValue)}
+                  onChange={(e) => handleItemFieldChange(e.target.value)}
+                  className={cn("text-sm min-h-[80px]", isActive && "ring-2 ring-primary")}
+                  placeholder={itemField.placeholder ?? itemField.label}
+                  rows={itemField.key === "description" ? 5 : 4}
+                />
+                {itemField.helpText ? <p className="text-[11px] text-muted-foreground">{itemField.helpText}</p> : null}
               </div>
             )
           case "color":
@@ -342,7 +360,15 @@ export function PageEditorInspector({
     itemLabel: string,
     getItemLabel: (item: T, index: number) => string,
     createItem: () => T,
-    itemFields: Array<{ key: string; label: string; type: InspectorFieldType; placeholder?: string; required?: boolean; options?: Array<{ value: string; label: string }> }>,
+    itemFields: Array<{
+      key: string
+      label: string
+      type: InspectorFieldType
+      placeholder?: string
+      helpText?: string
+      required?: boolean
+      options?: Array<{ value: string; label: string }>
+    }>,
     minItems?: number,
     maxItems?: number
   ) => {
@@ -516,7 +542,7 @@ export function PageEditorInspector({
                 isTypingRef.current = false
               }}
               placeholder={field.placeholder}
-              rows={field.key === "content" ? 8 : 4}
+              rows={field.key === "content" ? 8 : field.key === "introText" ? 6 : 4}
               className={cn("flex-1", isActive && "ring-2 ring-primary")}
             />
             {!field.required && (
@@ -2647,6 +2673,18 @@ export function PageEditorInspector({
       {/* 1) Head/Subline (und ggf. Background) */}
       {primaryFields.filter(shouldShowField).map((field) => renderInspectorField(field, selectedBlock))}
 
+      {selectedBlock.type === "legalRichText" && (
+        <>
+          <Separator />
+          <LegalRichTextContentInspector
+            block={selectedBlock as CMSBlock & { type: "legalRichText" }}
+            updateSelectedProps={updateSelectedProps}
+            expandedRepeaterCards={expandedRepeaterCards}
+            setExpandedRepeaterCards={setExpandedRepeaterCards}
+          />
+        </>
+      )}
+
       {/* Button Preset (one dropdown per block for card, section, imageText, cta, hero, team, contactForm) */}
       {(() => {
         const showButtonPreset = selectedBlock.type === "card" ||
@@ -4356,7 +4394,13 @@ export function PageEditorInspector({
             const addCategory = () => editorActions.handleAddArrayItem(selectedBlock.id, "categories", createLegalCookieCategory)
             const categoryFields = [
               { key: "name", label: "Name", type: "text" as const },
-              { key: "description", label: "Beschreibung", type: "textarea" as const },
+              {
+                key: "description",
+                label: "Beschreibung",
+                type: "textarea" as const,
+                placeholder: "Drücke Enter für neuen Absatz",
+                helpText: "Zeilenumbrüche werden als Absätze dargestellt.",
+              },
               { key: "required", label: "Erforderlich", type: "boolean" as const },
             ]
             return (
@@ -4745,9 +4789,31 @@ export function PageEditorInspector({
               const groupFields = groupedFields[group] || []
               const hasElementTypography = group === "elements" && typographyElements.length > 0
               const isLegalHeroDesignGroup = selectedBlock.type === "legalHero" && group === "design"
+              const isLegalRichTextDesignGroup = selectedBlock.type === "legalRichText" && group === "design"
 
               if (groupFields.length === 0 && !hasElementTypography) {
                 return null
+              }
+
+              // legalRichText: Design (Ausrichtung, Überschrift-Größe, Variante) + Farben im Akkordeon
+              if (isLegalRichTextDesignGroup) {
+                return (
+                  <div key={group}>
+                    <Separator />
+                    <div className="mt-3 pt-3 border-t border-border/50">
+                      <Label className="text-xs font-semibold">{INSPECTOR_GROUP_LABELS[group] || group}</Label>
+                      <div className="space-y-3 mt-2">
+                        {groupFields.map((field) => (
+                          <div key={field.key}>{renderInspectorField(field, selectedBlock)}</div>
+                        ))}
+                        <LegalRichTextColorAccordion
+                          block={selectedBlock as CMSBlock & { type: "legalRichText" }}
+                          updateSelectedProps={updateSelectedProps}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )
               }
 
               // Special rendering for legalHero design group with Accordions

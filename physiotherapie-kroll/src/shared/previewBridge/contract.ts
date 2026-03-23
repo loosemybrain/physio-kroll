@@ -48,11 +48,27 @@ export interface PreviewReadyPayload {
   capabilities: string[] // e.g. ["select", "startEdit", "hover"]
 }
 
+/** Feine Preview-Selektion innerhalb `legalRichText` (strukturierte `contentBlocks`). */
+export type LegalRichPreviewGranularSelection = {
+  contentBlockId: string
+  listItemId?: string | null
+  runId?: string | null
+}
+
 export interface PreviewSelectPayload {
   blockId: string
   elementId?: string | null
   mode: "block" | "element"
   repeater?: { fieldPath: string; itemId: string } | null
+  /**
+   * `legalRichText` structured list: clicked `<li>` id (`data-legal-rich-list-item-id`).
+   * Nur sinnvoll wenn `repeater.fieldPath === "contentBlocks"`.
+   */
+  legalRichListItemId?: string | null
+  /**
+   * Geklicktes Textsegment (`data-run-id`), sofern im Preview-Kontext markiert.
+   */
+  legalRichRunId?: string | null
   /**
    * Bounding rect of the selected BLOCK root in PREVIEW viewport coordinates.
    * Parent can use this to pin overlay to the selected block without relying on hover state.
@@ -97,6 +113,8 @@ export interface EditorHighlightPayload {
   state: "on" | "off"
   blockId?: string | null
   elementId?: string | null
+  /** Rechteck-Highlight innerhalb eines `legalRichText`-Blocks (Preview). */
+  legalRichGranular?: LegalRichPreviewGranularSelection | null
 }
 
 export interface EditorScrollToPayload {
