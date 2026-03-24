@@ -111,13 +111,22 @@ export function MfaVerifyClient({ nextPath }: Props) {
       await supabase.auth.refreshSession()
       const sessionAfterRefresh = await supabase.auth.getSession()
       console.log("[MFA VERIFY] session:afterRefresh", sessionAfterRefresh)
-      const aalAfterVerify = await supabase.auth.mfa.getAuthenticatorAssuranceLevel()
-      console.log("[MFA VERIFY] aal:afterVerify", aalAfterVerify)
+      const { data: aalData, error: aalError } =
+        await supabase.auth.mfa.getAuthenticatorAssuranceLevel()
+      console.log("[MFA VERIFY] aal:afterVerify", { data: aalData, error: aalError })
+      if (aalError) throw aalError
+      const currentLevel =
+        (aalData as { currentLevel?: string; current_level?: string } | null | undefined)
+          ?.currentLevel ??
+        (aalData as { current_level?: string } | null | undefined)?.current_level
+      if (currentLevel !== "aal2") {
+        throw new Error("AAL2 konnte nach der Verifizierung nicht bestätigt werden.")
+      }
+      await new Promise((resolve) => setTimeout(resolve, 150))
       console.log("[MFA VERIFY] redirect:next", {
         safeNext,
       })
-      router.replace(safeNext)
-      router.refresh()
+      window.location.href = safeNext
     } catch (e) {
       console.error("[MFA VERIFY] error", e)
       setError(mapVerifyError(e))
