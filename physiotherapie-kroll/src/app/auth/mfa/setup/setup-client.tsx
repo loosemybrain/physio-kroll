@@ -95,6 +95,8 @@ export function MfaSetupClient({ nextPath }: Props) {
         const { data: factorsData, error: factorsError } = await supabase.auth.mfa.listFactors()
         if (factorsError) throw factorsError
 
+        console.log("[MFA SETUP] factors:list", factorsData)
+
         // Primär: factorsData.totp (Supabase liefert hier typischerweise TOTP-Faktoren).
         // Fallback: factorsData.all filtern auf factor_type === "totp", falls totp leer ist
         // (sonst droht erneutes enroll → "friendly name already exists").
@@ -117,6 +119,9 @@ export function MfaSetupClient({ nextPath }: Props) {
         )
 
         if (verifiedTotp) {
+          console.log("[MFA SETUP] redirect:verify", {
+            next: safeNext,
+          })
           router.replace(`/auth/mfa/verify?next=${encodeURIComponent(safeNext)}`)
           return
         }
@@ -125,6 +130,9 @@ export function MfaSetupClient({ nextPath }: Props) {
 
         if (unverifiedTotp) {
           if (hasTotpEnrollmentDisplay(unverifiedTotp)) {
+            console.log("[MFA SETUP] using:unverifiedFactor", {
+              factorId: unverifiedTotp?.id,
+            })
             factorToSet = unverifiedTotp
           } else {
             const { error: unenrollError } = await supabase.auth.mfa.unenroll({
@@ -136,17 +144,21 @@ export function MfaSetupClient({ nextPath }: Props) {
         }
 
         if (!factorToSet) {
+          console.log("[MFA SETUP] enroll:start", {
+            friendlyName: "Admin Authenticator",
+          })
           const { data: enrollData, error: enrollError } = await supabase.auth.mfa.enroll({
             factorType: "totp",
             friendlyName: "Admin Authenticator",
           })
           if (enrollError) throw enrollError
+          console.log("[MFA SETUP] enroll:success", enrollData)
           factorToSet = enrollData as TotpFactor
         }
 
         setFactor(factorToSet)
       } catch (e) {
-        console.error("MFA setup failed", e)
+        console.error("[MFA SETUP] boot:error", e)
         setError(getErrorMessage(e))
       } finally {
         setLoading(false)
@@ -171,11 +183,6 @@ export function MfaSetupClient({ nextPath }: Props) {
     setError(null)
     try {
       const supabase = createSupabaseBrowserClient()
-      console.log("MFA VERIFY DEBUG", {
-        factorId: factor.id,
-        code: code.trim(),
-      })
-
       const { error: verifyError } = await supabase.auth.mfa.challengeAndVerify({
         factorId: factor.id,
         code: code.trim(),
@@ -186,7 +193,7 @@ export function MfaSetupClient({ nextPath }: Props) {
       router.replace(safeNext)
       router.refresh()
     } catch (e) {
-      console.error("MFA setup failed", e)
+      console.error("[MFA SETUP] submit:error", e)
       setError(getErrorMessage(e))
     } finally {
       setSubmitting(false)

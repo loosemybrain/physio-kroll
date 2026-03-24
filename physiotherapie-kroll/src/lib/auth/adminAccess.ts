@@ -3,6 +3,7 @@ import type { SupabaseClient, User } from "@supabase/supabase-js"
 type AAL = "aal1" | "aal2" | null
 
 type FactorLike = {
+  id?: string
   factor_type?: string
   factorType?: string
   status?: string
@@ -56,7 +57,16 @@ export async function getAdminMfaState(
   supabase: SupabaseClient,
   user: User | null
 ): Promise<AdminMfaState> {
+  console.log("[ADMIN GATE] start", {
+    userId: user?.id ?? null,
+    email: user?.email ?? null,
+  })
+
   const admin = isAdminUser(user)
+  console.log("[ADMIN GATE] role", {
+    isAdmin: admin,
+  })
+
   if (!admin) {
     return {
       isAdmin: false,
@@ -69,21 +79,41 @@ export async function getAdminMfaState(
   let hasTotpFactor = false
   let hasVerifiedTotpFactor = false
   let currentAal: AAL = null
+  let verifiedFactorIds: string[] = []
+  let unverifiedFactorIds: string[] = []
 
   try {
     const { data } = await supabase.auth.mfa.listFactors()
     const allFactors = (data?.all ?? []) as FactorLike[]
     hasTotpFactor = allFactors.some(isTotpFactor)
     hasVerifiedTotpFactor = allFactors.some((f) => isTotpFactor(f) && isVerifiedFactor(f))
+    const totpOnly = allFactors.filter(isTotpFactor)
+    verifiedFactorIds = totpOnly
+      .filter(isVerifiedFactor)
+      .map((f) => f.id)
+      .filter((id): id is string => Boolean(id))
+    unverifiedFactorIds = totpOnly
+      .filter((f) => (f.status ?? "").toLowerCase() === "unverified")
+      .map((f) => f.id)
+      .filter((id): id is string => Boolean(id))
+    console.log("[ADMIN GATE] factors", {
+      hasTotpFactor,
+      hasVerifiedTotpFactor,
+      verifiedFactorIds,
+      unverifiedFactorIds,
+    })
   } catch (e) {
-    console.error("MFA listFactors fehlgeschlagen:", e)
+    console.error("[ADMIN GATE] listFactors:error", e)
   }
 
   try {
     const { data } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel()
     currentAal = readAalLevel(data)
+    console.log("[ADMIN GATE] aal", {
+      currentAal,
+    })
   } catch (e) {
-    console.error("MFA AAL-Check fehlgeschlagen:", e)
+    console.error("[ADMIN GATE] aal:error", e)
   }
 
   return {

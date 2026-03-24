@@ -90,6 +90,11 @@ export function MfaVerifyClient({ nextPath }: Props) {
     setSubmitting(true)
     setError(null)
     try {
+      console.log("[MFA VERIFY] submit:start", {
+        factorId,
+        codeLength: code.trim().length,
+        nextPath: safeNext,
+      })
       const supabase = createSupabaseBrowserClient()
       const { data: challengeData, error: challengeError } = await supabase.auth.mfa.challenge({
         factorId,
@@ -102,10 +107,19 @@ export function MfaVerifyClient({ nextPath }: Props) {
         code: code.trim(),
       })
       if (verifyError) throw verifyError
+      console.log("[MFA VERIFY] challengeAndVerify:success")
       await supabase.auth.refreshSession()
+      const sessionAfterRefresh = await supabase.auth.getSession()
+      console.log("[MFA VERIFY] session:afterRefresh", sessionAfterRefresh)
+      const aalAfterVerify = await supabase.auth.mfa.getAuthenticatorAssuranceLevel()
+      console.log("[MFA VERIFY] aal:afterVerify", aalAfterVerify)
+      console.log("[MFA VERIFY] redirect:next", {
+        safeNext,
+      })
       router.replace(safeNext)
       router.refresh()
     } catch (e) {
+      console.error("[MFA VERIFY] error", e)
       setError(mapVerifyError(e))
     } finally {
       setSubmitting(false)
