@@ -12,7 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
-import { Loader2, Play, Cookie, ArrowLeft } from "lucide-react"
+import { Loader2, Play, Cookie, ArrowLeft, Trash2 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 
 type ScanStatus = "queued" | "running" | "success" | "failed"
@@ -66,6 +66,7 @@ export function CookieScanAdminClient() {
   const [detailLoading, setDetailLoading] = useState(false)
   const [editingItemId, setEditingItemId] = useState<string | null>(null)
   const [editForm, setEditForm] = useState({ category: "", purpose: "", provider: "", notes: "" })
+  const [clearingList, setClearingList] = useState(false)
 
   const loadScans = useCallback(async () => {
     setLoading(true)
@@ -204,6 +205,40 @@ export function CookieScanAdminClient() {
         description: e instanceof Error ? e.message : "Unbekannter Fehler",
         variant: "destructive",
       })
+    }
+  }
+
+  const handleClearAllScans = async () => {
+    if (scans.length === 0 || clearingList) return
+    const ok = window.confirm(
+      "Alle Cookie-Scans und zugehörigen Cookie-Einträge unwiderruflich löschen?"
+    )
+    if (!ok) return
+    setClearingList(true)
+    try {
+      const res = await fetch("/api/admin/cookie-scan", { method: "DELETE" })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        throw new Error(data.error ?? "Liste konnte nicht geleert werden")
+      }
+      setScans([])
+      setSelectedId(null)
+      setDetail(null)
+      toast({
+        title: "Gelöscht",
+        description:
+          typeof data.deletedScans === "number"
+            ? `${data.deletedScans} Scan(s) entfernt.`
+            : "Alle Scans wurden entfernt.",
+      })
+    } catch (e) {
+      toast({
+        title: "Fehler",
+        description: e instanceof Error ? e.message : "Unbekannter Fehler",
+        variant: "destructive",
+      })
+    } finally {
+      setClearingList(false)
     }
   }
 
@@ -378,7 +413,27 @@ export function CookieScanAdminClient() {
       </div>
 
       <div className="rounded-lg border border-border">
-        <h2 className="px-4 py-3 font-medium border-b border-border">Scans</h2>
+        <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 border-b border-border">
+          <h2 className="font-medium">Scans</h2>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="gap-2 text-destructive hover:text-destructive"
+            disabled={loading || scans.length === 0 || clearingList}
+            onClick={(e) => {
+              e.stopPropagation()
+              void handleClearAllScans()
+            }}
+          >
+            {clearingList ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Trash2 className="h-4 w-4" />
+            )}
+            Alle löschen
+          </Button>
+        </div>
         {loading ? (
           <div className="p-8 flex items-center justify-center gap-2 text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" />
