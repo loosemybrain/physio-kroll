@@ -67,8 +67,18 @@ export function MfaSetupClient({ nextPath }: Props) {
         const { data: factorsData, error: factorsError } = await supabase.auth.mfa.listFactors()
         if (factorsError) throw factorsError
 
-        const totpFactorsRaw = (factorsData as { totp?: unknown } | null)?.totp
-        const totpFactors = Array.isArray(totpFactorsRaw) ? (totpFactorsRaw as TotpFactor[]) : []
+        // Primär: factorsData.totp (Supabase liefert hier typischerweise TOTP-Faktoren).
+        // Fallback: factorsData.all filtern auf factor_type === "totp", falls totp leer ist
+        // (sonst droht erneutes enroll → "friendly name already exists").
+        const raw = factorsData as { totp?: unknown; all?: unknown } | null
+        let totpFactors: TotpFactor[] = Array.isArray(raw?.totp)
+          ? (raw.totp as TotpFactor[])
+          : []
+        if (totpFactors.length === 0 && Array.isArray(raw?.all)) {
+          totpFactors = (raw.all as TotpFactor[]).filter(
+            (f) => (f.factor_type ?? f.factorType ?? "").toLowerCase() === "totp"
+          )
+        }
 
         const verifiedTotp = totpFactors.find(
           (f) => (f.status ?? "").toLowerCase() === "verified"
