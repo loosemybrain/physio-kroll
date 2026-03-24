@@ -67,11 +67,12 @@ export function CookieScanAdminClient() {
   const [editingItemId, setEditingItemId] = useState<string | null>(null)
   const [editForm, setEditForm] = useState({ category: "", purpose: "", provider: "", notes: "" })
   const [clearingList, setClearingList] = useState(false)
+  const [forcePolling, setForcePolling] = useState(false)
 
-  const loadScans = useCallback(async () => {
-    setLoading(true)
+  const loadScans = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true)
     try {
-      const res = await fetch("/api/admin/cookie-scan")
+      const res = await fetch("/api/admin/cookie-scan", { cache: "no-store" })
       const data = await res.json().catch(() => ({}))
       setScans(Array.isArray(data.scans) ? data.scans : [])
       if (!res.ok) {
@@ -86,9 +87,35 @@ export function CookieScanAdminClient() {
       })
       setScans([])
     } finally {
-      setLoading(false)
+      if (!silent) setLoading(false)
     }
   }, [toast])
+
+  const fetchDetail = useCallback(
+    async (id: string, silent = false) => {
+      if (!silent) setDetailLoading(true)
+      try {
+        const res = await fetch(`/api/admin/cookie-scan/${id}`, { cache: "no-store" })
+        if (!res.ok) throw new Error("Scan konnte nicht geladen werden")
+        const data = await res.json()
+        setDetail({ scan: data.scan, items: data.items ?? [] })
+        return true
+      } catch (e) {
+        if (!silent) {
+          toast({
+            title: "Fehler",
+            description: e instanceof Error ? e.message : "Unbekannter Fehler",
+            variant: "destructive",
+          })
+          setDetail(null)
+        }
+        return false
+      } finally {
+        if (!silent) setDetailLoading(false)
+      }
+    },
+    [toast]
+  )
 
   useEffect(() => {
     loadScans()
@@ -96,33 +123,42 @@ export function CookieScanAdminClient() {
 
   // Polling, solange mindestens ein Scan queued oder running ist
   const hasPending = scans.some((s) => s.status === "queued" || s.status === "running")
+  const shouldPoll = hasPending || forcePolling
   useEffect(() => {
-    if (!hasPending) return
-    const t = setInterval(loadScans, 5000)
+    if (!shouldPoll) return
+    const t = setInterval(async () => {
+      await loadScans(true)
+      if (selectedId) await fetchDetail(selectedId, true)
+    }, 3000)
     return () => clearInterval(t)
-  }, [hasPending, loadScans])
+  }, [shouldPoll, selectedId, loadScans, fetchDetail])
+
+  useEffect(() => {
+    if (forcePolling && !hasPending) {
+      setForcePolling(false)
+    }
+  }, [forcePolling, hasPending])
+
+  useEffect(() => {
+    const handleVisibilityOrFocus = async () => {
+      if (document.visibilityState === "hidden") return
+      await loadScans(true)
+      if (selectedId) await fetchDetail(selectedId, true)
+    }
+    window.addEventListener("focus", handleVisibilityOrFocus)
+    document.addEventListener("visibilitychange", handleVisibilityOrFocus)
+    return () => {
+      window.removeEventListener("focus", handleVisibilityOrFocus)
+      document.removeEventListener("visibilitychange", handleVisibilityOrFocus)
+    }
+  }, [selectedId, loadScans, fetchDetail])
 
   const loadDetail = useCallback(
     async (id: string) => {
-      setDetailLoading(true)
       setSelectedId(id)
-      try {
-        const res = await fetch(`/api/admin/cookie-scan/${id}`)
-        if (!res.ok) throw new Error("Scan konnte nicht geladen werden")
-        const data = await res.json()
-        setDetail({ scan: data.scan, items: data.items ?? [] })
-      } catch (e) {
-        toast({
-          title: "Fehler",
-          description: e instanceof Error ? e.message : "Unbekannter Fehler",
-          variant: "destructive",
-        })
-        setDetail(null)
-      } finally {
-        setDetailLoading(false)
-      }
+      await fetchDetail(id)
     },
-    [toast]
+    [fetchDetail]
   )
 
   const handleRunScan = async () => {
@@ -132,6 +168,7 @@ export function CookieScanAdminClient() {
       const res = await fetch("/api/admin/cookie-scan/run", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        cache: "no-store",
         body: JSON.stringify({
           targetUrl: targetUrl || DEFAULT_TARGET_URL,
           consentMode: "accepted",
@@ -147,8 +184,9 @@ export function CookieScanAdminClient() {
         description: data.message ?? "Ein Worker verarbeitet den Job. Liste wird aktualisiert.",
         variant: "default",
       })
-      await loadScans()
-      if (data.id) loadDetail(data.id)
+      setForcePolling(true)
+      await loadScans(true)
+      if (data.id) await loadDetail(data.id)
     } catch (e) {
       toast({
         title: "Fehler",
@@ -190,14 +228,14 @@ export function CookieScanAdminClient() {
       const res = await fetch(`/api/admin/cookie-scan/${scanId}/items/${itemId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
+        cache: "no-store",
         body: JSON.stringify(editForm),
       })
       if (!res.ok) throw new Error("Item konnte nicht gespeichert werden")
       toast({ title: "Gespeichert" })
       setEditingItemId(null)
       if (detail?.scan.id === scanId) {
-        const updated = await fetch(`/api/admin/cookie-scan/${scanId}`).then((r) => r.json())
-        setDetail({ scan: updated.scan, items: updated.items ?? [] })
+        await fetchDetail(scanId, true)
       }
     } catch (e) {
       toast({
