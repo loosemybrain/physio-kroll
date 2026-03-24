@@ -66,8 +66,8 @@ export function FooterWrapper() {
     loadFooterConfigs()
   }, [])
 
-  // Don't show footer on admin pages
-  if (pathname?.startsWith("/admin")) {
+  // Don't show footer on admin/auth pages
+  if (pathname?.startsWith("/admin") || pathname?.startsWith("/auth")) {
     return null
   }
 

@@ -68,8 +68,8 @@ export function HeaderWrapper({ children }: { children: React.ReactNode }) {
     const checkIfLegalPage = async () => {
       if (!pathname) return
 
-      // Skip admin pages
-      if (pathname.startsWith("/admin")) {
+      // Skip admin/auth pages
+      if (pathname.startsWith("/admin") || pathname.startsWith("/auth")) {
         setIsLegalPage(false)
         return
       }
@@ -107,8 +107,8 @@ export function HeaderWrapper({ children }: { children: React.ReactNode }) {
     checkIfLegalPage()
   }, [pathname])
 
-  // Don't show header on admin pages
-  if (pathname?.startsWith("/admin")) {
+  // Don't show header on admin/auth pages
+  if (pathname?.startsWith("/admin") || pathname?.startsWith("/auth")) {
     return <>{children}</>
   }
 
