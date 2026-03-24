@@ -27,20 +27,9 @@ type TotpFactor = {
   }
 }
 
-function mapAuthError(error: unknown): string {
-  const msg = error instanceof Error ? error.message : String(error)
-  if (msg.toLowerCase().includes("session")) return "Ihre Sitzung ist abgelaufen. Bitte erneut anmelden."
-  if (msg.toLowerCase().includes("invalid")) return "Der eingegebene Code ist ungültig."
-  return "MFA konnte nicht eingerichtet werden. Bitte erneut versuchen."
-}
-
-function getTotpFactor(list: TotpFactor[] | undefined): TotpFactor | null {
-  if (!Array.isArray(list)) return null
-  return (
-    list.find((f) => (f.factor_type ?? f.factorType) === "totp" && (f.status ?? "").toLowerCase() === "unverified") ??
-    list.find((f) => (f.factor_type ?? f.factorType) === "totp") ??
-    null
-  )
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message
+  return String(error)
 }
 
 export function MfaSetupClient({ nextPath }: Props) {
@@ -78,13 +67,23 @@ export function MfaSetupClient({ nextPath }: Props) {
         const { data: factorsData, error: factorsError } = await supabase.auth.mfa.listFactors()
         if (factorsError) throw factorsError
 
-        const existingTotp = getTotpFactor((factorsData?.all ?? []) as TotpFactor[])
-        if (existingTotp && (existingTotp.status ?? "").toLowerCase() === "verified") {
+        const totpFactorsRaw = (factorsData as { totp?: unknown } | null)?.totp
+        const totpFactors = Array.isArray(totpFactorsRaw) ? (totpFactorsRaw as TotpFactor[]) : []
+
+        const verifiedTotp = totpFactors.find(
+          (f) => (f.status ?? "").toLowerCase() === "verified"
+        )
+
+        const unverifiedTotp = totpFactors.find(
+          (f) => (f.status ?? "").toLowerCase() === "unverified"
+        )
+
+        if (verifiedTotp) {
           router.replace(`/auth/mfa/verify?next=${encodeURIComponent(safeNext)}`)
           return
         }
-        if (existingTotp && existingTotp.totp?.secret) {
-          setFactor(existingTotp)
+        if (unverifiedTotp) {
+          setFactor(unverifiedTotp)
           return
         }
 
@@ -95,7 +94,8 @@ export function MfaSetupClient({ nextPath }: Props) {
         if (enrollError) throw enrollError
         setFactor(enrollData as TotpFactor)
       } catch (e) {
-        setError(mapAuthError(e))
+        console.error("MFA setup failed", e)
+        setError(getErrorMessage(e))
       } finally {
         setLoading(false)
       }
@@ -105,7 +105,13 @@ export function MfaSetupClient({ nextPath }: Props) {
 
   const handleVerifyFirstCode = async (event: React.FormEvent) => {
     event.preventDefault()
-    if (!factor?.id || code.trim().length !== 6) {
+
+    if (!factor?.id) {
+      setError("TOTP Faktor fehlt. Seite neu laden.")
+      return
+    }
+
+    if (code.trim().length !== 6) {
       setError("Bitte einen gültigen 6-stelligen Code eingeben.")
       return
     }
@@ -113,14 +119,13 @@ export function MfaSetupClient({ nextPath }: Props) {
     setError(null)
     try {
       const supabase = createSupabaseBrowserClient()
-      const { data: challengeData, error: challengeError } = await supabase.auth.mfa.challenge({
+      console.log("MFA VERIFY DEBUG", {
         factorId: factor.id,
+        code: code.trim(),
       })
-      if (challengeError) throw challengeError
 
-      const { error: verifyError } = await supabase.auth.mfa.verify({
+      const { error: verifyError } = await supabase.auth.mfa.challengeAndVerify({
         factorId: factor.id,
-        challengeId: challengeData.id,
         code: code.trim(),
       })
       if (verifyError) throw verifyError
@@ -129,7 +134,8 @@ export function MfaSetupClient({ nextPath }: Props) {
       router.replace(safeNext)
       router.refresh()
     } catch (e) {
-      setError(mapAuthError(e))
+      console.error("MFA setup failed", e)
+      setError(getErrorMessage(e))
     } finally {
       setSubmitting(false)
     }
