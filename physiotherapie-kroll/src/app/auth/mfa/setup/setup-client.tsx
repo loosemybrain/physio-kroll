@@ -32,6 +32,37 @@ function getErrorMessage(error: unknown): string {
   return String(error)
 }
 
+/**
+ * Supabase liefert `totp.qr_code` je nach Version/Backend unterschiedlich:
+ * - vollständige data-URL (`data:image/png;base64,...` oder `data:image/svg+xml;base64,...`)
+ * - rohe Base64-PNG ohne Prefix
+ * - SVG-Markup als String
+ * Falsch wäre: alles als SVG per encodeURIComponent zu behandeln → kaputtes <img>.
+ */
+function toQrImageSrc(raw: string | null | undefined): string | null {
+  if (!raw?.trim()) return null
+  const s = raw.trim()
+  if (s.startsWith("data:image/")) return s
+
+  const compact = s.replace(/\s/g, "")
+  // Rohe Base64-Zeichenkette (typisch PNG von GoTrue)
+  if (/^[A-Za-z0-9+/]+=*$/.test(compact) && compact.length >= 40) {
+    return `data:image/png;base64,${compact}`
+  }
+
+  if (/^<svg[\s/>]/i.test(s) || s.startsWith("<?xml")) {
+    return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(s)}`
+  }
+
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(s)}`
+}
+
+/** Nach listFactors() liefert Supabase bei unverified oft kein qr_code/secret mehr – nur direkt nach enroll(). */
+function hasTotpEnrollmentDisplay(f: TotpFactor): boolean {
+  const t = f.totp
+  return Boolean(t?.qr_code?.trim() || t?.secret?.trim() || t?.uri?.trim())
+}
+
 export function MfaSetupClient({ nextPath }: Props) {
   const router = useRouter()
   const safeNext = normalizeInternalRedirectTarget(nextPath, "/admin/pages")
@@ -42,13 +73,10 @@ export function MfaSetupClient({ nextPath }: Props) {
   const [code, setCode] = useState("")
   const [factor, setFactor] = useState<TotpFactor | null>(null)
 
-  const qrCodeSvg = factor?.totp?.qr_code ?? null
+  const qrCodeRaw = factor?.totp?.qr_code ?? null
   const totpSecret = factor?.totp?.secret ?? null
   const otpauthUri = factor?.totp?.uri ?? null
-  const qrDataUri = useMemo(() => {
-    if (!qrCodeSvg) return null
-    return `data:image/svg+xml;utf8,${encodeURIComponent(qrCodeSvg)}`
-  }, [qrCodeSvg])
+  const qrImageSrc = useMemo(() => toQrImageSrc(qrCodeRaw), [qrCodeRaw])
 
   useEffect(() => {
     const boot = async () => {
@@ -92,17 +120,31 @@ export function MfaSetupClient({ nextPath }: Props) {
           router.replace(`/auth/mfa/verify?next=${encodeURIComponent(safeNext)}`)
           return
         }
+
+        let factorToSet: TotpFactor | null = null
+
         if (unverifiedTotp) {
-          setFactor(unverifiedTotp)
-          return
+          if (hasTotpEnrollmentDisplay(unverifiedTotp)) {
+            factorToSet = unverifiedTotp
+          } else {
+            const { error: unenrollError } = await supabase.auth.mfa.unenroll({
+              factorId: unverifiedTotp.id,
+            })
+            if (unenrollError) throw unenrollError
+            // Ohne QR/Secret ist Setup nicht fortsetzbar → Faktor entfernen, enroll liefert neue Anzeige-Daten.
+          }
         }
 
-        const { data: enrollData, error: enrollError } = await supabase.auth.mfa.enroll({
-          factorType: "totp",
-          friendlyName: "Admin Authenticator",
-        })
-        if (enrollError) throw enrollError
-        setFactor(enrollData as TotpFactor)
+        if (!factorToSet) {
+          const { data: enrollData, error: enrollError } = await supabase.auth.mfa.enroll({
+            factorType: "totp",
+            friendlyName: "Admin Authenticator",
+          })
+          if (enrollError) throw enrollError
+          factorToSet = enrollData as TotpFactor
+        }
+
+        setFactor(factorToSet)
       } catch (e) {
         console.error("MFA setup failed", e)
         setError(getErrorMessage(e))
@@ -189,10 +231,10 @@ export function MfaSetupClient({ nextPath }: Props) {
               </Alert>
             ) : null}
 
-            {qrDataUri ? (
+            {qrImageSrc ? (
               <div className="flex justify-center rounded-md border p-4 bg-white">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={qrDataUri} alt="TOTP QR-Code" className="h-44 w-44" />
+                <img src={qrImageSrc} alt="TOTP QR-Code" className="h-44 w-44" />
               </div>
             ) : null}
 
@@ -207,6 +249,15 @@ export function MfaSetupClient({ nextPath }: Props) {
               <p className="text-xs text-muted-foreground break-all">
                 Falls der QR-Code nicht angezeigt wird, nutzen Sie diesen URI in Ihrer App: {otpauthUri}
               </p>
+            ) : null}
+
+            {factor && !qrImageSrc && !totpSecret && !otpauthUri ? (
+              <Alert>
+                <AlertDescription>
+                  Es wurden keine QR-/Secret-Daten geliefert. Bitte Seite neu laden. Wenn das weiterhin passiert,
+                  prüfen Sie in Supabase unter Authentication → MFA, ob TOTP aktiv ist.
+                </AlertDescription>
+              </Alert>
             ) : null}
 
             <div className="space-y-2">
