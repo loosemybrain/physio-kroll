@@ -10,11 +10,35 @@ import { Card, CardContent, CardDescription, CardHeader, CardSurface, CardTitle 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, Loader2, CheckCircle2 } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { getAdminMfaState } from "@/lib/auth/adminAccess";
+import { normalizeInternalRedirectTarget } from "@/lib/auth/redirects";
+
+function mapLoginMessage(message: string | null): string | null {
+  if (!message) return null
+  if (message === "password-reset-success") {
+    return "Ihr Passwort wurde erfolgreich zurückgesetzt. Sie können sich jetzt anmelden."
+  }
+  return null
+}
+
+function mapLoginError(errorCode: string | null): string | null {
+  if (!errorCode) return null
+  if (errorCode === "admin-required") {
+    return "Sie haben keine Admin-Berechtigung für diesen Bereich."
+  }
+  if (errorCode === "callback-missing-code") {
+    return "Der Bestätigungslink ist unvollständig oder abgelaufen. Bitte erneut anmelden."
+  }
+  if (errorCode.startsWith("callback-")) {
+    return "Der Anmelde- oder Bestätigungslink konnte nicht verarbeitet werden."
+  }
+  return "Anmeldung fehlgeschlagen. Bitte erneut versuchen."
+}
 
 export function LoginPageClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const next = searchParams.get("next") || "/admin/pages";
+  const next = normalizeInternalRedirectTarget(searchParams.get("next"), "/admin/pages")
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -23,10 +47,10 @@ export function LoginPageClient() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    const message = searchParams.get("message");
-    if (message === "password-reset-success") {
-      setSuccessMessage("Ihr Passwort wurde erfolgreich zurückgesetzt. Sie können sich jetzt anmelden.");
-    }
+    const message = mapLoginMessage(searchParams.get("message"))
+    const error = mapLoginError(searchParams.get("error"))
+    setSuccessMessage(message)
+    if (error) setError(error)
   }, [searchParams]);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -47,6 +71,21 @@ export function LoginPageClient() {
       }
 
       if (data.session) {
+        const { data: userData } = await supabase.auth.getUser()
+        const mfaState = await getAdminMfaState(supabase, userData.user)
+        if (mfaState.isAdmin) {
+          const target = encodeURIComponent(next)
+          if (!mfaState.hasTotpFactor || !mfaState.hasVerifiedTotpFactor) {
+            router.push(`/auth/mfa/setup?next=${target}`)
+            router.refresh()
+            return
+          }
+          if (mfaState.currentAal !== "aal2") {
+            router.push(`/auth/mfa/verify?next=${target}`)
+            router.refresh()
+            return
+          }
+        }
         router.push(next);
         router.refresh();
       }

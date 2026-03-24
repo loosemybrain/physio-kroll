@@ -3,6 +3,8 @@ import type { Metadata } from "next"
 import { redirect } from "next/navigation"
 import { AdminClientShell } from "./AdminClientShell"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
+import { getAdminMfaState } from "@/lib/auth/adminAccess"
+import { toLoginRedirect } from "@/lib/auth/redirects"
 import "@/styles/admin-theme.css"
 
 export const metadata: Metadata = {
@@ -24,7 +26,18 @@ export default async function Layout({ children }: { children: React.ReactNode }
 
   if (!userData.user) {
     // Redirect to login; user will be sent back to /admin/pages after auth
-    redirect("/auth/login?next=/admin/pages")
+    redirect(toLoginRedirect("/admin/pages"))
+  }
+
+  const mfaState = await getAdminMfaState(supabase, userData.user)
+  if (!mfaState.isAdmin) {
+    redirect("/auth/login?error=admin-required")
+  }
+  if (!mfaState.hasTotpFactor || !mfaState.hasVerifiedTotpFactor) {
+    redirect("/auth/mfa/setup?next=/admin/pages")
+  }
+  if (mfaState.currentAal !== "aal2") {
+    redirect("/auth/mfa/verify?next=/admin/pages")
   }
 
   return <AdminClientShell user={userData.user}>{children}</AdminClientShell>

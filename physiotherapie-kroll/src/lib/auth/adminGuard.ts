@@ -15,19 +15,9 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js"
 import type { User } from "@supabase/supabase-js"
+import { isAdminUser } from "@/lib/auth/adminAccess"
 
-export type AdminGuardResult =
-  | { ok: true; user: User }
-  | { ok: false; status: 401 | 403; message: string }
-
-function getAdminEmails(): string[] {
-  const raw = process.env.ADMIN_EMAILS
-  if (!raw || typeof raw !== "string") return []
-  return raw
-    .split(",")
-    .map((e) => e.trim().toLowerCase())
-    .filter(Boolean)
-}
+export type AdminGuardResult = | { ok: true; user: User } | { ok: false; status: 401 | 403; message: string }
 
 /**
  * Prüft, ob der aktuelle Nutzer (über den Supabase-Client) Admin ist.
@@ -47,14 +37,7 @@ export async function requireAdminGuard(
     return { ok: false, status: 401, message: "Nicht authentifiziert." }
   }
 
-  const role = (user.app_metadata?.role as string) ?? ""
-  if (role === "admin") {
-    return { ok: true, user }
-  }
-
-  const adminEmails = getAdminEmails()
-  const email = (user.email ?? "").toLowerCase()
-  if (adminEmails.length > 0 && adminEmails.includes(email)) {
+  if (isAdminUser(user)) {
     return { ok: true, user }
   }
 

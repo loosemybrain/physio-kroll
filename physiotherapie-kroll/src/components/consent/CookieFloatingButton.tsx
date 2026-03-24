@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils"
 import { useState, useEffect } from "react"
 import { Cookie } from "lucide-react"
 import { useFooterInView } from "@/hooks/useFooterInView"
+import { usePathname } from "next/navigation"
 
 /**
  * Floating cookie settings button (V0 design)
@@ -13,6 +14,7 @@ import { useFooterInView } from "@/hooks/useFooterInView"
  */
 export function CookieFloatingButton() {
   const { hasUserConsented, openSettings, isLoading } = useCookieConsent()
+  const pathname = usePathname()
   const [isHovered, setIsHovered] = useState(false)
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false)
   const footerInView = useFooterInView({ rootMargin: "0px 0px -10% 0px", threshold: 0 })
@@ -22,6 +24,9 @@ export function CookieFloatingButton() {
       typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches
     )
   }, [])
+
+  // Don't show in admin area
+  if (pathname?.startsWith("/admin")) return null
 
   // Only show after user has consented AND loading complete
   if (isLoading || !hasUserConsented) return null

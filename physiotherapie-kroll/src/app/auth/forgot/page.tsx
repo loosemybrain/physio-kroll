@@ -9,19 +9,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardSurface 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, CheckCircle2, Loader2, ArrowLeft } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { buildAbsoluteUrl } from "@/lib/auth/redirects";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
-
-  const getAppOrigin = () => {
-    if (typeof window !== "undefined") {
-      return window.location.origin;
-    }
-    return process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,7 +25,7 @@ export default function ForgotPasswordPage() {
 
     try {
       const supabase = createSupabaseBrowserClient();
-      const redirectTo = `${getAppOrigin()}/auth/reset`;
+      const redirectTo = buildAbsoluteUrl("/auth/reset");
 
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo,
