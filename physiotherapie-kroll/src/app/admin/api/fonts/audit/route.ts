@@ -9,6 +9,8 @@
 import { NextResponse } from "next/server"
 import { readFileSync, readdirSync, statSync } from "fs"
 import { join } from "path"
+import { createSupabaseServerClient } from "@/lib/supabase/server"
+import { requireAdminGuard } from "@/lib/auth/adminGuard"
 
 /**
  * Patterns to search for external Google Font requests
@@ -80,7 +82,14 @@ function scanDirectory(dir: string, findings: Finding[] = [], depth = 0): Findin
 
 export async function GET() {
   try {
-    // TODO: Add auth check (admin only)
+    const supabase = await createSupabaseServerClient()
+    const guard = await requireAdminGuard(supabase)
+    if (!guard.ok) {
+      return NextResponse.json(
+        { error: guard.status === 401 ? "Unauthorized" : "Forbidden" },
+        { status: guard.status }
+      )
+    }
 
     const srcDir = join(process.cwd(), "src")
     const findings = scanDirectory(srcDir)
@@ -94,6 +103,6 @@ export async function GET() {
     })
   } catch (error) {
     console.error("Error during font audit:", error)
-    return NextResponse.json({ error: String(error) }, { status: 500 })
+    return NextResponse.json({ error: "Request failed" }, { status: 500 })
   }
 }

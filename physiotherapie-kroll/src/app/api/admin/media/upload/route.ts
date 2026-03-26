@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import type { BrandKey } from "@/components/brand/brandAssets"
 import { createMediaAsset } from "@/lib/supabase/mediaLibrary"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
+import { requireAdminGuard } from "@/lib/auth/adminGuard"
 
 function isValidBrand(v: unknown): v is BrandKey {
   return v === "physiotherapy" || v === "physio-konzept"
@@ -27,9 +28,12 @@ function generateObjectKey(filename: string): string {
 export async function POST(request: Request) {
   try {
     const supabase = await createSupabaseServerClient()
-    const { data: userData, error: userErr } = await supabase.auth.getUser()
-    if (userErr || !userData.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    const guard = await requireAdminGuard(supabase)
+    if (!guard.ok) {
+      return NextResponse.json(
+        { error: guard.status === 401 ? "Unauthorized" : "Forbidden" },
+        { status: guard.status }
+      )
     }
 
     const formData = await request.formData()
@@ -54,7 +58,8 @@ export async function POST(request: Request) {
       })
 
     if (uploadErr) {
-      return NextResponse.json({ error: uploadErr.message }, { status: 400 })
+      console.error("media upload storage error:", uploadErr)
+      return NextResponse.json({ error: "Upload failed" }, { status: 400 })
     }
 
     const assetId = await createMediaAsset(
@@ -79,8 +84,7 @@ export async function POST(request: Request) {
       { status: 200 }
     )
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Unknown error"
-    const status = msg === "Unauthorized" ? 401 : 400
-    return NextResponse.json({ error: msg }, { status })
+    console.error("media upload failed:", e)
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }

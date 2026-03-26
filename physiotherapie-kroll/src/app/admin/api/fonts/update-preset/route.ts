@@ -8,11 +8,19 @@
 import { NextRequest, NextResponse } from "next/server"
 import { updateSansFontPreset } from "@/lib/fonts/storage.server"
 import { isValidFontPresetId } from "@/lib/fonts/presets"
+import { createSupabaseServerClient } from "@/lib/supabase/server"
+import { requireAdminGuard } from "@/lib/auth/adminGuard"
 
 export async function POST(request: NextRequest) {
   try {
-    // TODO: Add auth check here (verify admin role)
-    // if (!isAdmin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    const supabase = await createSupabaseServerClient()
+    const guard = await requireAdminGuard(supabase)
+    if (!guard.ok) {
+      return NextResponse.json(
+        { error: guard.status === 401 ? "Unauthorized" : "Forbidden" },
+        { status: guard.status }
+      )
+    }
 
     const { presetId } = await request.json()
 
@@ -31,6 +39,6 @@ export async function POST(request: NextRequest) {
     }
   } catch (error) {
     console.error("Error updating font preset:", error)
-    return NextResponse.json({ error: String(error) }, { status: 500 })
+    return NextResponse.json({ error: "Request failed" }, { status: 500 })
   }
 }

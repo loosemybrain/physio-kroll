@@ -148,7 +148,7 @@ WHERE table_name = 'contact_submissions';
 **Option 1: Use Resend Sandbox (Default)**
 
 ```bash
-RESEND_API_KEY=re_xxx...  # Free sandbox key
+RESEND_API_KEY=re_YOUR_RESEND_API_KEY
 ```
 
 - Emails sent to verified addresses

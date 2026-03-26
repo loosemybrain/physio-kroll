@@ -215,7 +215,7 @@ Zod schema enforces:
 CONTACT_EMAIL_PHYSIOTHERAPY=contact@physiotherapy.example.com
 CONTACT_EMAIL_PHYSIOKONZEPT=contact@physio-konzept.example.com
 CONTACT_FROM_EMAIL=noreply@example.com
-RESEND_API_KEY=re_xxx...
+RESEND_API_KEY=re_YOUR_RESEND_API_KEY
 CONTACT_ALLOWED_ORIGINS=localhost,example.com,www.example.com
 ```
 

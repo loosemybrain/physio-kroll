@@ -1,0 +1,24 @@
+.env
+.env.*
+!.env.example
+
+# local secrets / overrides
+.env.local
+.env.development
+.env.production
+
+# archives / exports
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+
+# build outputs
+.next
+out
+dist
+
+# tooling caches
+.turbo
+.vercel
+

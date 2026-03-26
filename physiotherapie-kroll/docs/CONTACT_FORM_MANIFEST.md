@@ -388,7 +388,7 @@ Vollständig produktionsreife Kontaktformular-Implementierung für ein mehrsprac
    - CONTACT_EMAIL_PHYSIOTHERAPY=your-email
    - CONTACT_EMAIL_PHYSIOKONZEPT=your-email
    - CONTACT_FROM_EMAIL=noreply@your-domain
-   - RESEND_API_KEY=re_xxx
+   - RESEND_API_KEY=re_YOUR_RESEND_API_KEY
 3. npm run dev
 4. Test form locally
 ```

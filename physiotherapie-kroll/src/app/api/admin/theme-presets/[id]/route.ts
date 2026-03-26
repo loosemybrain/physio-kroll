@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
+import { requireAdminGuard } from "@/lib/auth/adminGuard"
 import { deleteThemePreset } from "@/lib/supabase/themePresets"
 
 /**
@@ -12,9 +13,12 @@ export async function DELETE(
 ) {
   try {
     const supabase = await createSupabaseServerClient()
-    const { data: userData, error: authError } = await supabase.auth.getUser()
-    if (authError || !userData.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    const guard = await requireAdminGuard(supabase)
+    if (!guard.ok) {
+      return NextResponse.json(
+        { error: guard.status === 401 ? "Unauthorized" : "Forbidden" },
+        { status: guard.status }
+      )
     }
 
     const { id } = await params
@@ -25,8 +29,7 @@ export async function DELETE(
     await deleteThemePreset(id)
     return NextResponse.json({ success: true }, { status: 200 })
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Unknown error"
-    const status = msg === "Unauthorized" ? 401 : 400
-    return NextResponse.json({ error: msg }, { status })
+    console.error("theme-presets delete failed:", e)
+    return NextResponse.json({ error: "Request failed" }, { status: 500 })
   }
 }

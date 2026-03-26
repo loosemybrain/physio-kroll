@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import type { BrandKey } from "@/components/brand/brandAssets"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
+import { requireAdminGuard } from "@/lib/auth/adminGuard"
 import { getBrandPresets, saveBrandPresets } from "@/lib/supabase/sectionPresets.server"
 
 /**
@@ -11,9 +12,12 @@ import { getBrandPresets, saveBrandPresets } from "@/lib/supabase/sectionPresets
 export async function GET(request: Request) {
   try {
     const supabase = await createSupabaseServerClient()
-    const { data: userData, error: authError } = await supabase.auth.getUser()
-    if (authError || !userData.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    const guard = await requireAdminGuard(supabase)
+    if (!guard.ok) {
+      return NextResponse.json(
+        { error: guard.status === 401 ? "Unauthorized" : "Forbidden" },
+        { status: guard.status }
+      )
     }
 
     const { searchParams } = new URL(request.url)
@@ -25,9 +29,8 @@ export async function GET(request: Request) {
     const presets = await getBrandPresets(brand, { seedIfEmpty: true })
     return NextResponse.json({ presets }, { status: 200 })
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Unknown error"
-    const status = msg === "Unauthorized" ? 401 : 500
-    return NextResponse.json({ error: msg }, { status })
+    console.error("section-presets GET failed:", e)
+    return NextResponse.json({ error: "Request failed" }, { status: 500 })
   }
 }
 
@@ -39,9 +42,12 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const supabase = await createSupabaseServerClient()
-    const { data: userData, error: authError } = await supabase.auth.getUser()
-    if (authError || !userData.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    const guard = await requireAdminGuard(supabase)
+    if (!guard.ok) {
+      return NextResponse.json(
+        { error: guard.status === 401 ? "Unauthorized" : "Forbidden" },
+        { status: guard.status }
+      )
     }
 
     const body = await request.json()
@@ -53,9 +59,8 @@ export async function POST(request: Request) {
     await saveBrandPresets(brand, presets)
     return NextResponse.json({ success: true }, { status: 200 })
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Unknown error"
-    const status = msg === "Unauthorized" ? 401 : 400
-    return NextResponse.json({ error: msg }, { status })
+    console.error("section-presets POST failed:", e)
+    return NextResponse.json({ error: "Request failed" }, { status: 500 })
   }
 }
 

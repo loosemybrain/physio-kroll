@@ -1,17 +1,19 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createSupabaseServerClient, getSupabaseAdmin } from "@/lib/supabase/server"
+import { requireAdminGuard } from "@/lib/auth/adminGuard"
 import { getCustomFonts } from "@/lib/fonts/storage.custom"
 
 export const runtime = "nodejs"
 
 export async function GET(request: NextRequest) {
   try {
-    // Auth prüfen (Cookie Client)
     const authClient = await createSupabaseServerClient()
-    const { data: userData, error: userError } = await authClient.auth.getUser()
-
-    if (userError || !userData.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    const guard = await requireAdminGuard(authClient)
+    if (!guard.ok) {
+      return NextResponse.json(
+        { error: guard.status === 401 ? "Unauthorized" : "Forbidden" },
+        { status: guard.status }
+      )
     }
 
     // Optional Filter aus Query
@@ -27,7 +29,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error("Error fetching custom fonts:", error)
     return NextResponse.json(
-      { error: "Fehler beim Abrufen der Fonts", details: String(error) },
+      { error: "Fehler beim Abrufen der Fonts", details: null },
       { status: 500 }
     )
   }

@@ -1,20 +1,19 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createSupabaseServerClient, getSupabaseAdmin } from "@/lib/supabase/server"
+import { requireAdminGuard } from "@/lib/auth/adminGuard"
 import { uploadFontFile, createCustomFont } from "@/lib/fonts/storage.custom"
 
 export const runtime = "nodejs"
 
 export async function POST(request: NextRequest) {
   try {
-    // 1) Auth prüfen (Cookie/Anon Client)
     const authClient = await createSupabaseServerClient()
-    const { data: userData, error: userError } = await authClient.auth.getUser()
-
-    if (userError) {
-      return NextResponse.json({ error: userError.message }, { status: 401 })
-    }
-    if (!userData.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    const guard = await requireAdminGuard(authClient)
+    if (!guard.ok) {
+      return NextResponse.json(
+        { error: guard.status === 401 ? "Unauthorized" : "Forbidden" },
+        { status: guard.status }
+      )
     }
 
     // 2) FormData
@@ -60,7 +59,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("Font upload error:", error)
     return NextResponse.json(
-      { error: "Font-Upload fehlgeschlagen", details: String(error) },
+      { error: "Font-Upload fehlgeschlagen", details: null },
       { status: 500 }
     )
   }

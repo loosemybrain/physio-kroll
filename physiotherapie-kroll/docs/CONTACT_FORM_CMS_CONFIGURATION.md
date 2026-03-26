@@ -107,7 +107,7 @@ CONTACT_EMAIL_PHYSIOKONZEPT=contact@physio-konzept.example.com
 CONTACT_FROM_EMAIL=noreply@example.com
 
 # Mail Provider
-RESEND_API_KEY=re_xxx...
+RESEND_API_KEY=re_YOUR_RESEND_API_KEY
 
 # Erlaubte Domains (CSRF)
 CONTACT_ALLOWED_ORIGINS=example.com,www.example.com

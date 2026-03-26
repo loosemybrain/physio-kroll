@@ -1,17 +1,16 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createSupabaseServerClient, getSupabaseAdmin } from "@/lib/supabase/server"
+import { requireAdminGuard } from "@/lib/auth/adminGuard"
 import { deleteCustomFont } from "@/lib/fonts/storage.custom"
 
 export async function POST(request: NextRequest) {
   try {
-    // Authentifizierung prüfen
     const supabase = await createSupabaseServerClient()
-    const { data: userData } = await supabase.auth.getUser()
-
-    if (!userData.user) {
+    const guard = await requireAdminGuard(supabase)
+    if (!guard.ok) {
       return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
+        { error: guard.status === 401 ? "Unauthorized" : "Forbidden" },
+        { status: guard.status }
       )
     }
 

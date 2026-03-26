@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { requireAdminGuard } from "@/lib/auth/adminGuard";
 
 /**
  * GET /api/admin/pages
@@ -10,10 +11,12 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 export async function GET(request: Request) {
   const supabase = await createSupabaseServerClient();
 
-  // --- Auth check (mandatory) ---
-  const { data: userData, error: authError } = await supabase.auth.getUser()
-  if (authError || !userData.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  const guard = await requireAdminGuard(supabase)
+  if (!guard.ok) {
+    return NextResponse.json(
+      { error: guard.status === 401 ? "Unauthorized" : "Forbidden" },
+      { status: guard.status }
+    )
   }
 
   // --- Extract brand filter from query params ---
@@ -32,8 +35,9 @@ export async function GET(request: Request) {
   const { data: pages, error: pagesError } = await query.order("updated_at", { ascending: false });
 
   if (pagesError) {
+    console.error("admin pages list error:", pagesError)
     return NextResponse.json(
-      { error: pagesError.message },
+      { error: "Failed to load pages" },
       { status: 500 }
     );
   }

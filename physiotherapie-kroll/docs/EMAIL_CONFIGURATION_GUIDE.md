@@ -108,7 +108,7 @@ CONTACT_FALLBACK_EMAIL=admin@example.de
 4. Kopiere den Key in `.env.local`:
 
 ```bash
-RESEND_API_KEY=re_abc123def456...
+RESEND_API_KEY=re_YOUR_RESEND_API_KEY
 ```
 
 ### 3.3 Schritt 3: Sender Email setzen
@@ -135,7 +135,7 @@ npm run dev
 # === SUPABASE ===
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_abc123...
-SUPABASE_SERVICE_ROLE_KEY=eyJhbG...
+SUPABASE_SERVICE_ROLE_KEY=YOUR_SUPABASE_SERVICE_ROLE_KEY
 
 # === CONTACT FORM - CORS ===
 CONTACT_ALLOWED_ORIGINS=localhost,127.0.0.1,localhost:3000,127.0.0.1:3000
@@ -191,7 +191,7 @@ Der Server versucht in dieser Reihenfolge die Empfänger zu finden:
 CONTACT_EMAIL_PHYSIOTHERAPY=deine-email@example.de
 CONTACT_EMAIL_PHYSIOKONZEPT=deine-email@example.de
 CONTACT_FROM_EMAIL=noreply@example.de
-RESEND_API_KEY=re_xxx...
+RESEND_API_KEY=re_YOUR_RESEND_API_KEY
 
 # 1. Server starten:
 npm run dev
@@ -272,7 +272,7 @@ CONTACT_EMAIL_PHYSIOTHERAPY=contact@example.de
 # Error beim Email-Versand kommt von der Mail-Provider Seite
 
 # ✅ Geh zu resend.com und hole deinen Key
-RESEND_API_KEY=re_abc123...
+RESEND_API_KEY=re_YOUR_RESEND_API_KEY
 ```
 
 ---

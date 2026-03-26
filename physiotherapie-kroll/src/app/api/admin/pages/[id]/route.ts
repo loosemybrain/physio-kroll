@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { requireAdminGuard } from "@/lib/auth/adminGuard";
 import { PAGE_TYPE_VALUES, PAGE_SUBTYPE_VALUES } from "@/types/cms";
 
 type PageStatus = "draft" | "published";
@@ -34,13 +35,6 @@ function isUuid(v: unknown): v is string {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(v);
 }
 
-async function requireSession() {
-  const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase.auth.getSession();
-  if (error || !data.session) return null;
-  return data.session.user;
-}
-
 async function getDbClient() {
   // Prefer service role (bypasses RLS) if configured,
   // otherwise fall back to user-scoped server client (anon key + cookies + RLS).
@@ -69,9 +63,13 @@ export async function GET(
   ctx: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await requireSession();
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const supabase = await createSupabaseServerClient()
+    const guard = await requireAdminGuard(supabase)
+    if (!guard.ok) {
+      return NextResponse.json(
+        { error: guard.status === 401 ? "Unauthorized" : "Forbidden" },
+        { status: guard.status }
+      )
     }
 
     const { id } = await ctx.params;
@@ -98,7 +96,8 @@ export async function GET(
       .order("sort", { ascending: true });
 
     if (blocksErr) {
-      return NextResponse.json({ error: blocksErr.message }, { status: 500 });
+      console.error("admin page blocks load error:", blocksErr)
+      return NextResponse.json({ error: "Failed to load blocks" }, { status: 500 });
     }
 
     const mappedBlocks = ((blocks ?? []) as unknown as Array<{ id: string; type: string; props?: unknown | null }>).map(
@@ -127,8 +126,8 @@ export async function GET(
       { status: 200 }
     );
   } catch (e) {
-    const message = e instanceof Error ? e.message : "Unknown error";
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error("admin page GET failed:", e)
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
 
@@ -142,9 +141,13 @@ export async function PUT(
   ctx: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await requireSession();
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const supabase = await createSupabaseServerClient()
+    const guard = await requireAdminGuard(supabase)
+    if (!guard.ok) {
+      return NextResponse.json(
+        { error: guard.status === 401 ? "Unauthorized" : "Forbidden" },
+        { status: guard.status }
+      )
     }
 
     const { id } = await ctx.params;
@@ -225,13 +228,15 @@ export async function PUT(
       .single();
 
     if (pageErr || !savedPage) {
-      return NextResponse.json({ error: pageErr?.message ?? "Failed to save page" }, { status: 500 });
+      console.error("admin page upsert error:", pageErr)
+      return NextResponse.json({ error: "Failed to save page" }, { status: 500 });
     }
 
     // 2) replace blocks (simple + deterministic)
     const { error: delErr } = await admin.from("blocks").delete().eq("page_id", id);
     if (delErr) {
-      return NextResponse.json({ error: delErr.message }, { status: 500 });
+      console.error("admin blocks delete error:", delErr)
+      return NextResponse.json({ error: "Failed to save blocks" }, { status: 500 });
     }
 
     if (blocks.length > 0) {
@@ -245,7 +250,8 @@ export async function PUT(
 
       const { error: insErr } = await admin.from("blocks").insert(rows);
       if (insErr) {
-        return NextResponse.json({ error: insErr.message }, { status: 500 });
+        console.error("admin blocks insert error:", insErr)
+        return NextResponse.json({ error: "Failed to save blocks" }, { status: 500 });
       }
     }
 
@@ -257,7 +263,8 @@ export async function PUT(
       .order("sort", { ascending: true });
 
     if (freshErr) {
-      return NextResponse.json({ error: freshErr.message }, { status: 500 });
+      console.error("admin fresh blocks load error:", freshErr)
+      return NextResponse.json({ error: "Failed to load blocks" }, { status: 500 });
     }
 
     const mappedFreshBlocks = (
@@ -286,8 +293,8 @@ export async function PUT(
       { status: 200 }
     );
   } catch (e) {
-    const message = e instanceof Error ? e.message : "Unknown error";
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error("admin page PUT failed:", e)
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
 
@@ -299,9 +306,13 @@ export async function DELETE(
   ctx: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await requireSession();
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const supabase = await createSupabaseServerClient()
+    const guard = await requireAdminGuard(supabase)
+    if (!guard.ok) {
+      return NextResponse.json(
+        { error: guard.status === 401 ? "Unauthorized" : "Forbidden" },
+        { status: guard.status }
+      )
     }
 
     const { id } = await ctx.params;
@@ -314,17 +325,19 @@ export async function DELETE(
     // blocks first (FK safety)
     const { error: delBlocksErr } = await admin.from("blocks").delete().eq("page_id", id);
     if (delBlocksErr) {
-      return NextResponse.json({ error: delBlocksErr.message }, { status: 500 });
+      console.error("admin delete blocks error:", delBlocksErr)
+      return NextResponse.json({ error: "Failed to delete page" }, { status: 500 });
     }
 
     const { error: delPageErr } = await admin.from("pages").delete().eq("id", id);
     if (delPageErr) {
-      return NextResponse.json({ error: delPageErr.message }, { status: 500 });
+      console.error("admin delete page error:", delPageErr)
+      return NextResponse.json({ error: "Failed to delete page" }, { status: 500 });
     }
 
     return NextResponse.json({ ok: true }, { status: 200 });
   } catch (e) {
-    const message = e instanceof Error ? e.message : "Unknown error";
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error("admin page DELETE failed:", e)
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
