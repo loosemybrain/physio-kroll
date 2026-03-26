@@ -789,6 +789,8 @@ export function ContactFormBlock({
                           checked={consentChecked}
                           onCheckedChange={(checked) => setValue("consent", checked === true)}
                           aria-invalid={!!errors.consent}
+                          aria-required="true"
+                          className={cn(errors.consent && "border-destructive")}
                         />
                         <Label
                           data-cms-field="consentLabel"
@@ -800,9 +802,9 @@ export function ContactFormBlock({
                           style={consentLabelColor ? ({ color: consentLabelColor } as React.CSSProperties) : undefined}
                           onClick={handleInlineEdit("props.consentLabel")}
                         >
-                        {/* <p className="text-destructive ml-1">*</p> */}
-                          {consentLabel || "Ich habe die Datenschutzerklärung gelesen und bin mit der Verarbeitung meiner Daten zur Kontaktaufnahme einverstanden. "}
-                         
+                          {consentLabel ||
+                            "Ich habe die Datenschutzerklärung gelesen und bin mit der Verarbeitung meiner Daten zur Kontaktaufnahme einverstanden."}
+                          <span className="text-destructive ml-1">*</span>
                         </Label>
                       </div>
                     )}

@@ -8,20 +8,12 @@ function isValidBrand(v: unknown): v is BrandKey {
   return v === "physiotherapy" || v === "physio-konzept"
 }
 
-function safeFilename(name: string) {
-  return name
-    .trim()
-    .replaceAll(" ", "-")
-    .replace(/[^a-zA-Z0-9._-]/g, "")
-}
-
 function generateObjectKey(filename: string): string {
   const uuid =
     typeof crypto !== "undefined" && "randomUUID" in crypto
       ? crypto.randomUUID()
       : `${Date.now()}-${Math.random().toString(16).slice(2)}`
   const ext = filename.includes(".") ? filename.split(".").pop() : ""
-  const safeName = safeFilename(filename.replace(/\.[^/.]+$/, ""))
   return `media/${uuid}${ext ? `.${ext}` : ""}`
 }
 

@@ -31,6 +31,7 @@ import {
   isSamePage,
   buildAnchorHref,
   resolvePagePathForBrand,
+  normalizeAnchorToBlockId,
 } from "@/lib/navigation/scrollToAnchor"
 import { useScrollSpy } from "@/components/navigation/ScrollSpyProvider"
 import { SearchWindow } from "@/components/search"
@@ -253,10 +254,12 @@ export function HeaderClient({ brand, navConfig }: HeaderClientProps) {
       const samePage = isSamePage(pathname || "/", link.anchorPageSlug, brand)
       if (!samePage) return
       e.preventDefault()
+      const blockId = normalizeAnchorToBlockId(link.anchorBlockId)
+      if (!blockId) return
       const headerOffset = headerRef.current ? Math.ceil(headerRef.current.getBoundingClientRect().height) : 80
-      scrollToBlockAnchor(link.anchorBlockId, headerOffset)
+      scrollToBlockAnchor(blockId, headerOffset)
       if (typeof history !== "undefined" && history.replaceState) {
-        const hash = `#block-${link.anchorBlockId}`
+        const hash = `#block-${blockId}`
         const url = `${pathname || "/"}${hash}`
         history.replaceState(undefined, "", url)
       }
@@ -308,10 +311,42 @@ export function HeaderClient({ brand, navConfig }: HeaderClientProps) {
   const isAnchorLinkActive = useCallback(
     (link: NavLink): boolean => {
       if (link.type !== "anchor" || !link.anchorBlockId) return false
-      const samePage = isSamePage(pathname || "/", link.anchorPageSlug)
-      return samePage && activeAnchor === link.anchorBlockId
+      const samePage = isSamePage(pathname || "/", link.anchorPageSlug, brand)
+      const linkBlockId = normalizeAnchorToBlockId(link.anchorBlockId)
+      return samePage && !!linkBlockId && activeAnchor === linkBlockId
     },
-    [pathname, activeAnchor]
+    [pathname, activeAnchor, brand]
+  )
+
+  /**
+   * Einige Navigationseinträge können (historisch/CMS) als URL-Link mit Hash gespeichert sein,
+   * z.B. "#block-abc" oder "/#block-abc". Diese sollen wie Anchor-Links aktiv werden.
+   */
+  const isHashAnchorHrefActive = useCallback(
+    (href: string): boolean => {
+      if (!href || !activeAnchor) return false
+      const hashIndex = href.indexOf("#")
+      if (hashIndex < 0) return false
+      const hash = href.slice(hashIndex + 1) // ohne "#"
+      const blockId = normalizeAnchorToBlockId(hash)
+      if (!blockId) return false
+
+      // Wenn ein Pfad vor dem Hash steht, muss er zur aktuellen Seite passen.
+      const pathPart = href.slice(0, hashIndex)
+      if (!pathPart) return blockId === activeAnchor // reine "#..."-Links gelten auf aktueller Seite
+
+      // Interne Pfade ("/...") vergleichen wir direkt mit pathname (ohne Query/Hash).
+      if (pathPart.startsWith("/")) {
+        const current = (pathname || "/").split(/[?#]/)[0] || "/"
+        const target = pathPart.split(/[?#]/)[0] || "/"
+        // einfache Normalisierung: trailing slash weg (außer "/")
+        const norm = (p: string) => (p !== "/" && p.endsWith("/") ? p.slice(0, -1) : p) || "/"
+        if (norm(current) !== norm(target)) return false
+      }
+
+      return blockId === activeAnchor
+    },
+    [activeAnchor, pathname]
   )
 
   /* ---- motion presets ---- */
@@ -331,7 +366,10 @@ export function HeaderClient({ brand, navConfig }: HeaderClientProps) {
     secondary?: boolean
   }) => {
     const href = getLinkHref(link)
-    const active = isLinkActive(href) || isAnchorLinkActive(link)
+    const active =
+      isLinkActive(href) ||
+      isAnchorLinkActive(link) ||
+      (link.type !== "anchor" && isHashAnchorHrefActive(href))
     const hoverPreset = getNavHoverPreset(navConfig.navHoverPresetId)
     
     // Check if we should apply motion (respect reduced motion)

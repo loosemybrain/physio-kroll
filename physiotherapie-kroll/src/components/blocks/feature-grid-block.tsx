@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardSurface 
 import { useElementShadowStyle } from "@/lib/shadow"
 import { useMotionPreference, getAnimationInitial, getViewportTrigger } from "@/lib/motion/useMotionPreference"
 import type { FeatureGridStyle, FeatureGridAnimation } from "@/types/cms"
+import { sanitizeCmsHtml } from "@/lib/security/sanitizeCmsHtml"
 
 interface Feature {
   id: string
@@ -301,7 +302,7 @@ function FeatureCardWithShadow({
             <div
               className="mb-4 text-4xl"
               style={{ color: feature.iconColor || iconColor || undefined }}
-              dangerouslySetInnerHTML={{ __html: feature.icon }}
+              dangerouslySetInnerHTML={{ __html: sanitizeCmsHtml(feature.icon, "inlineIcon") }}
             />
           )}
           <CardTitle

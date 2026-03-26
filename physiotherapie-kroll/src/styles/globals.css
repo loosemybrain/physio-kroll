@@ -80,6 +80,48 @@
   --hero-highlight: oklch(0.92 0.03 150);
 }
 
+/* Prevent accidental horizontal overflow (e.g. dvw/vw breakouts, shadows, transforms) */
+html,
+body {
+  max-width: 100%;
+}
+/* Prefer clip (no scrollbars) where supported */
+@supports (overflow: clip) {
+  html,
+  body {
+    overflow-x: clip;
+  }
+}
+@supports not (overflow: clip) {
+  html,
+  body {
+    overflow-x: hidden;
+  }
+}
+
+/* Scrollbar styling aligned to active preset tokens */
+html {
+  /* Firefox */
+  scrollbar-width: thin;
+  scrollbar-color: var(--primary) color-mix(in oklch, var(--background) 80%, var(--muted) 20%);
+}
+/* Chromium / Safari */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: color-mix(in oklch, var(--background) 75%, var(--muted) 25%);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--primary);
+  border-radius: 999px;
+  border: 2px solid color-mix(in oklch, var(--background) 75%, var(--muted) 25%);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent);
+}
+
 /* dark mode overrides ALL brands */
 .dark,
 .dark.physio-konzept {

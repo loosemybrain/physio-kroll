@@ -3,6 +3,7 @@ import { cn } from "@/lib/utils"
 import { AnimatedBlock } from "@/components/blocks/AnimatedBlock"
 import { RevealOnScroll } from "@/components/ui/RevealOnScroll"
 import type { BlockSectionProps } from "@/types/cms"
+import { sanitizeCmsHtml } from "@/lib/security/sanitizeCmsHtml"
 
 interface TextBlockProps {
   section?: BlockSectionProps
@@ -68,7 +69,7 @@ export function TextBlock({
                 "prose prose-neutral dark:prose-invert max-w-none"
               )}
               style={proseStyle}
-              dangerouslySetInnerHTML={{ __html: content }}
+              dangerouslySetInnerHTML={{ __html: sanitizeCmsHtml(content, "richText") }}
             />
           </div>
         </section>

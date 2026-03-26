@@ -15,6 +15,7 @@ import { resolveBoxShadow } from "@/lib/shadow/resolveBoxShadow"
 import { mergeTypographyClasses } from "@/lib/typography"
 import type { BlockSectionProps } from "@/types/cms"
 import type { GradientPresetValue } from "@/lib/theme/gradientPresets"
+import { sanitizeCmsHtml } from "@/lib/security/sanitizeCmsHtml"
 
 /* ================================================================ */
 /*  Props                                                            */
@@ -220,7 +221,7 @@ function FaqItemComponent({
             color: item.answerColor || answerColor || undefined,
           }}
           dangerouslySetInnerHTML={{
-            __html: item.answer || "Antwort eingeben...",
+            __html: sanitizeCmsHtml(item.answer || "Antwort eingeben...", "richText"),
           }}
         />
       </AccordionContent>

@@ -6,22 +6,16 @@ import {
   type ContactSubmissionInput,
 } from "@/lib/contact/contact-schema"
 import {
-  getContactEmailForBrand,
-  getBrandFromSlug,
   isValidBrand,
-  getAllContactEmails,
 } from "@/lib/contact/contact-brand"
 import { checkAllRateLimits, type RateLimitResult } from "@/lib/contact/contact-rate-limit"
 import { checkHoneypot, isSubmitTooFast } from "@/lib/contact/contact-honeypot"
 import { sendContactEmail } from "@/lib/contact/contact-mailer"
 import {
   resolveRecipientEmail,
-  isTestModeEnabled,
-  getTestEmail,
   type EmailResolutionResult,
 } from "@/lib/contact/contact-email-resolver"
 import { getContactFormBlockFromCMS } from "@/lib/contact/contact-cms-resolver.server"
-import type { BrandKey } from "@/components/brand/brandAssets"
 
 /**
  * Logging helper (respect privacy, avoid excess logging)
@@ -60,48 +54,135 @@ function partialEmail(email: string): string {
 /**
  * Check Origin and Host for CSRF protection
  */
+type AllowedHosts = {
+  allowedHostnames: Set<string>
+  allowedHosts: Set<string> // may include port, e.g. "localhost:3000"
+  allowedSuffixHostnames: Set<string> // e.g. "vercel.app" allows *.vercel.app
+}
+
+function normalizeHostEntry(raw: string): string | null {
+  const v = raw.trim()
+  if (!v) return null
+
+  // Support entries written as URLs (we only take their host part).
+  if (v.includes("://")) {
+    try {
+      const u = new URL(v)
+      return u.host.toLowerCase()
+    } catch {
+      return null
+    }
+  }
+
+  // Support hostname[:port] (no path).
+  if (v.includes("/") || v.includes("?") || v.includes("#")) return null
+  return v.toLowerCase()
+}
+
+function getAllowedHostsFromEnv(): AllowedHosts {
+  const allowedHostnames = new Set<string>()
+  const allowedHosts = new Set<string>()
+  const allowedSuffixHostnames = new Set<string>()
+
+  const envList = (process.env.CONTACT_ALLOWED_ORIGINS || "localhost")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean)
+
+  const derived: string[] = []
+  if (process.env.VERCEL_URL) derived.push(process.env.VERCEL_URL)
+  if (process.env.NEXT_PUBLIC_SITE_URL) derived.push(process.env.NEXT_PUBLIC_SITE_URL)
+
+  const all = [...envList, ...derived]
+  for (const raw of all) {
+    const normalized = normalizeHostEntry(raw)
+    if (!normalized) continue
+
+    // Explicit, controlled wildcard modeling:
+    // - ".vercel.app" or "*.vercel.app" => allow any subdomain of vercel.app
+    if (normalized.startsWith("*.")) {
+      const suffix = normalized.slice(2)
+      if (suffix) allowedSuffixHostnames.add(suffix)
+      continue
+    }
+    if (normalized.startsWith(".")) {
+      const suffix = normalized.slice(1)
+      if (suffix) allowedSuffixHostnames.add(suffix)
+      continue
+    }
+
+    // Exact host (with optional port)
+    if (normalized.includes(":")) {
+      allowedHosts.add(normalized)
+    } else {
+      allowedHostnames.add(normalized)
+    }
+  }
+
+  return { allowedHostnames, allowedHosts, allowedSuffixHostnames }
+}
+
+function isAllowedHostname(hostname: string, allow: AllowedHosts): boolean {
+  const h = hostname.toLowerCase()
+  if (allow.allowedHostnames.has(h)) return true
+  for (const suffix of allow.allowedSuffixHostnames) {
+    if (h === suffix || h.endsWith(`.${suffix}`)) return true
+  }
+  return false
+}
+
 function validateOrigin(request: NextRequest): boolean {
   const origin = request.headers.get("origin")
-  const host = request.headers.get("host")
   const referer = request.headers.get("referer")
+  const allow = getAllowedHostsFromEnv()
 
-  // Allowed origins from env (comma-separated)
-  const allowedOrigins = (process.env.CONTACT_ALLOWED_ORIGINS || "localhost").split(",").map((o) => o.trim())
-
-  // Log incoming request info for debugging
-  console.log("[Contact API] Origin check:", {
-    origin,
-    host,
-    referer,
-    allowedOrigins,
-  })
-
-  // Check origin header (most reliable for cross-origin checks)
+  // Preferred: Origin header (explicit cross-origin signal).
   if (origin) {
-    const isAllowed = allowedOrigins.some((allowed) => origin.includes(allowed))
-    if (!isAllowed) {
+    let originUrl: URL
+    try {
+      originUrl = new URL(origin)
+    } catch {
+      logContactSubmission("warn", "Origin rejected (invalid URL)", { origin: "invalid" })
+      return false
+    }
+
+    const hostnameAllowed = isAllowedHostname(originUrl.hostname, allow)
+    const hostAllowed = allow.allowedHosts.has(originUrl.host.toLowerCase())
+    if (!hostnameAllowed && !hostAllowed) {
       logContactSubmission("warn", "Origin rejected", {
-        origin,
-        allowedOrigins,
+        originHost: originUrl.host,
       })
       return false
     }
+
+    return true
   }
 
-  // Check referer as fallback
+  // Fallback: Referer only when Origin is missing (controlled, no substring matching).
   if (referer) {
-    const refererUrl = new URL(referer)
-    const isAllowed = allowedOrigins.some((allowed) => refererUrl.origin.includes(allowed))
-    if (!isAllowed) {
+    let refUrl: URL
+    try {
+      refUrl = new URL(referer)
+    } catch {
+      logContactSubmission("warn", "Referer rejected (invalid URL)", { referer: "invalid" })
+      return false
+    }
+
+    const hostnameAllowed = isAllowedHostname(refUrl.hostname, allow)
+    const hostAllowed = allow.allowedHosts.has(refUrl.host.toLowerCase())
+    if (!hostnameAllowed && !hostAllowed) {
       logContactSubmission("warn", "Referer rejected", {
-        referer,
-        allowedOrigins,
+        refererHost: refUrl.host,
       })
       return false
     }
+
+    return true
   }
 
-  return true
+  // Neither header present => reject to avoid CSRF bypass.
+  logContactSubmission("warn", "Request rejected (missing origin and referer)")
+  return false
 }
 
 /**

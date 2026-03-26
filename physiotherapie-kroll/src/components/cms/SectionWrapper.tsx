@@ -303,9 +303,10 @@ export function SectionWrapper(props: {
       ? props.edgeToEdgeShell
         ? cn("w-full max-w-none min-w-0")
         : cn(
-            "w-screen max-w-none shrink-0",
+            // Use dvw to avoid 100vw including scrollbar width (common cause of 1–2px horizontal overflow).
+            "w-[100dvw] max-w-none shrink-0",
             // Only valid when parent is horizontally centered in the viewport; breaks on sidebar grids.
-            "ml-[calc(50%-50vw)]"
+            "ml-[calc(50%-50dvw)]"
           )
       : undefined
 
