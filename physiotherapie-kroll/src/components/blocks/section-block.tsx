@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { ArrowRight } from "lucide-react"
 import { motion, useReducedMotion, cubicBezier } from "framer-motion"
+import type { BlockSectionProps } from "@/types/cms"
 import { useElementShadowStyle } from "@/lib/shadow"
 import { resolveButtonPresetStyles } from "@/lib/buttonPresets"
 import { mergeTypographyClasses } from "@/lib/typography"
@@ -12,6 +13,7 @@ import { useMotionPreference, getAnimationInitial, getViewportTrigger } from "@/
 import { resolveContainerBg } from "@/lib/theme/resolveContainerBg"
 import { resolveBoxShadow } from "@/lib/shadow/resolveBoxShadow"
 import type { ElementShadow } from "@/types/cms"
+import { AnimatedBlock } from "@/components/blocks/AnimatedBlock"
 
 /* ================================================================ */
 /*  Types                                                            */
@@ -103,6 +105,9 @@ export interface SectionBlockProps {
   secondaryCtaHref?: string
 
   buttonPreset?: string
+
+  /** Section wrapper props (incl. CMS animation config) */
+  section?: BlockSectionProps
 }
 
 /* ================================================================ */
@@ -190,6 +195,7 @@ export function SectionBlock({
   onEditField,
   onElementClick,
   selectedElementId,
+  section,
   eyebrow,
   headline,
   subheadline,
@@ -473,81 +479,82 @@ export function SectionBlock({
           </div>
         )}
 
-        <div
-          className={cn(
-            // Inner card surface with layered shadow system
-            "relative overflow-hidden rounded-3xl px-8 py-8 md:px-14 md:py-10",
-            // Check if surface shadow is enabled
-            (() => {
-              const surfaceShadowEnabled = Boolean(elements?.["section.surface"]?.style?.shadow?.enabled)
-              return cn(
-                // Soft outer shadow with blue tint for brand
-                background === "gradient-brand"
-                  ? "shadow-0_4px_24px_-4px_oklch(0.45_0.12_160_/_0.06),0_12px_48px_-12px_oklch(0.45_0.12_160_/_0.08)"
-                  : "shadow-[0_4px_24px_-4px_rgba(0,0,0,0.04),0_12px_48px_-12px_rgba(0,0,0,0.06)]",
-                // Background & border
-                background === "muted"
-                  ? "border border-border/20 bg-card/80 backdrop-blur-md"
-                  : background === "gradient-soft" || background === "gradient-brand"
-                    ? "border border-border/15 bg-card/60 backdrop-blur-md"
-                    : surfaceShadowEnabled
-                      ? "border border-border/20 bg-card/20 backdrop-blur-sm"
-                      : "border border-transparent bg-transparent shadow-none",
-                // Add subtle top border/ring when shadow is enabled for top edge visibility
-                surfaceShadowEnabled && "ring-1 ring-inset ring-border/20",
-              )
-            })(),
-            // Force border on inner panel when enabled (Inspector → Panel)
-            containerBorder && "border border-border/40",
-            // When using container background props, ensure base is transparent (bg comes from overlay)
-            containerBackgroundMode && containerBackgroundMode !== "transparent" && "bg-transparent",
-            // Hover elevation (immer sichtbar)
-            enableHoverElevation && "transition-all duration-500 ease-out",
-            enableHoverElevation &&
-              surfaceHovered &&
-              (
-                background === "gradient-brand"
-                  ? "scale-[1.006] shadow-[0_8px_32px_-4px_oklch(0.45_0.12_160/0.1),0_20px_64px_-16px_oklch(0.45_0.12_160/0.12)]"
-                  : (background === "gradient-soft" || background === "muted")
-                    ? "scale-[1.006] shadow-[0_8px_32px_-4px_rgba(0,0,0,0.06),0_20px_64px_-16px_rgba(0,0,0,0.1)]"
-                    // Fallback für background="none"
-                    : "scale-[1.006] ring-1 ring-border/25 bg-card/20 shadow-[0_8px_32px_-16px_rgba(0,0,0,0.10)]"
-              ),
-          )}
-          onMouseEnter={() => setSurfaceHovered(true)}
-          onMouseLeave={() => setSurfaceHovered(false)}
-          data-element-id="section.surface"
-          style={{
-            ...surfaceShadow,
-            ...(containerShadowCss ? { boxShadow: containerShadowCss } : {}),
-            ...(containerBorder && resolvedContainerBorderColor
-              ? { borderColor: resolvedContainerBorderColor }
-              : {}),
-          }}
-          onClick={() => onElementClick?.(blockId || "", "section.surface")}
-        >
-          {/* Panel Background (only affects background, not content opacity) */}
-          {containerBackgroundMode !== "transparent" && (
-            <div
-              aria-hidden="true"
-              className={cn(
-                "pointer-events-none absolute inset-0 z-0 rounded-3xl",
-                containerBackgroundMode === "gradient" && "backdrop-blur-sm"
-              )}
-              style={{
-                ...(containerBg.style ?? {}),
-                opacity: resolvedContainerOpacity,
-              }}
-            />
-          )}
-          <motion.div
-            {...containerMotionProps}
+        <AnimatedBlock config={section?.animation}>
+          <div
             className={cn(
-              "relative z-10",
-              maxWidthMap[maxWidth],
-              alignContainerMap[align],
+              // Inner card surface with layered shadow system
+              "relative overflow-hidden rounded-3xl px-8 py-8 md:px-14 md:py-10",
+              // Check if surface shadow is enabled
+              (() => {
+                const surfaceShadowEnabled = Boolean(elements?.["section.surface"]?.style?.shadow?.enabled)
+                return cn(
+                  // Soft outer shadow with blue tint for brand
+                  background === "gradient-brand"
+                    ? "shadow-0_4px_24px_-4px_oklch(0.45_0.12_160_/_0.06),0_12px_48px_-12px_oklch(0.45_0.12_160_/_0.08)"
+                    : "shadow-[0_4px_24px_-4px_rgba(0,0,0,0.04),0_12px_48px_-12px_rgba(0,0,0,0.06)]",
+                  // Background & border
+                  background === "muted"
+                    ? "border border-border/20 bg-card/80 backdrop-blur-md"
+                    : background === "gradient-soft" || background === "gradient-brand"
+                      ? "border border-border/15 bg-card/60 backdrop-blur-md"
+                      : surfaceShadowEnabled
+                        ? "border border-border/20 bg-card/20 backdrop-blur-sm"
+                        : "border border-transparent bg-transparent shadow-none",
+                  // Add subtle top border/ring when shadow is enabled for top edge visibility
+                  surfaceShadowEnabled && "ring-1 ring-inset ring-border/20",
+                )
+              })(),
+              // Force border on inner panel when enabled (Inspector → Panel)
+              containerBorder && "border border-border/40",
+              // When using container background props, ensure base is transparent (bg comes from overlay)
+              containerBackgroundMode && containerBackgroundMode !== "transparent" && "bg-transparent",
+              // Hover elevation (immer sichtbar)
+              enableHoverElevation && "transition-all duration-500 ease-out",
+              enableHoverElevation &&
+                surfaceHovered &&
+                (
+                  background === "gradient-brand"
+                    ? "scale-[1.006] shadow-[0_8px_32px_-4px_oklch(0.45_0.12_160/0.1),0_20px_64px_-16px_oklch(0.45_0.12_160/0.12)]"
+                    : (background === "gradient-soft" || background === "muted")
+                      ? "scale-[1.006] shadow-[0_8px_32px_-4px_rgba(0,0,0,0.06),0_20px_64px_-16px_rgba(0,0,0,0.1)]"
+                      // Fallback für background="none"
+                      : "scale-[1.006] ring-1 ring-border/25 bg-card/20 shadow-[0_8px_32px_-16px_rgba(0,0,0,0.10)]"
+                ),
             )}
+            onMouseEnter={() => setSurfaceHovered(true)}
+            onMouseLeave={() => setSurfaceHovered(false)}
+            data-element-id="section.surface"
+            style={{
+              ...surfaceShadow,
+              ...(containerShadowCss ? { boxShadow: containerShadowCss } : {}),
+              ...(containerBorder && resolvedContainerBorderColor
+                ? { borderColor: resolvedContainerBorderColor }
+                : {}),
+            }}
+            onClick={() => onElementClick?.(blockId || "", "section.surface")}
           >
+            {/* Panel Background (only affects background, not content opacity) */}
+            {containerBackgroundMode !== "transparent" && (
+              <div
+                aria-hidden="true"
+                className={cn(
+                  "pointer-events-none absolute inset-0 z-0 rounded-3xl",
+                  containerBackgroundMode === "gradient" && "backdrop-blur-sm"
+                )}
+                style={{
+                  ...(containerBg.style ?? {}),
+                  opacity: resolvedContainerOpacity,
+                }}
+              />
+            )}
+            <motion.div
+              {...containerMotionProps}
+              className={cn(
+                "relative z-10",
+                maxWidthMap[maxWidth],
+                alignContainerMap[align],
+              )}
+            >
             {/* ---- Eyebrow ---- */}
             {eyebrow && (
               <motion.div
@@ -831,7 +838,8 @@ export function SectionBlock({
               </motion.div>
             )}
           </motion.div>
-        </div>
+          </div>
+        </AnimatedBlock>
       </div>
     </section>
   )

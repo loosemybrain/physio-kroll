@@ -16,6 +16,7 @@ import { mergeTypographyClasses } from "@/lib/typography"
 import type { BlockSectionProps } from "@/types/cms"
 import type { GradientPresetValue } from "@/lib/theme/gradientPresets"
 import { sanitizeCmsHtml } from "@/lib/security/sanitizeCmsHtml"
+import { AnimatedBlock } from "@/components/blocks/AnimatedBlock"
 
 /* ================================================================ */
 /*  Props                                                            */
@@ -323,28 +324,29 @@ export function FaqAccordion({
     >
       <div className="mx-auto max-w-4xl px-4 sm:px-6">
         {/* Inner Container Panel (EIN Panel - nicht doppelt!) */}
-        <div
-          data-element-id="faq.surface"
-          onClick={(e) => {
-            if (editable && blockId && onElementClick) {
-              e.stopPropagation()
-              onElementClick(blockId, "faq.surface")
-            }
-          }}
-          className={cn(
-            "relative rounded-3xl px-8 py-8 md:px-14 md:py-10",
-            !containerBorder && containerBackgroundMode && containerBackgroundMode !== "transparent" && "border border-border/20",
-            containerBackgroundMode === "gradient" && "backdrop-blur-sm",
-            isElementSelected("faq.surface") && "ring-2 ring-primary/30",
-            editable && blockId && onElementClick && "cursor-pointer"
-          )}
-          style={{
-            ...surfaceShadow,
-            ...containerBg.style,
-            ...containerBorderStyle,
-            ...(containerShadowCss ? { boxShadow: containerShadowCss } : {}),
-          }}
-        >
+        <AnimatedBlock config={section?.animation}>
+          <div
+            data-element-id="faq.surface"
+            onClick={(e) => {
+              if (editable && blockId && onElementClick) {
+                e.stopPropagation()
+                onElementClick(blockId, "faq.surface")
+              }
+            }}
+            className={cn(
+              "relative rounded-3xl px-8 py-8 md:px-14 md:py-10",
+              !containerBorder && containerBackgroundMode && containerBackgroundMode !== "transparent" && "border border-border/20",
+              containerBackgroundMode === "gradient" && "backdrop-blur-sm",
+              isElementSelected("faq.surface") && "ring-2 ring-primary/30",
+              editable && blockId && onElementClick && "cursor-pointer"
+            )}
+            style={{
+              ...surfaceShadow,
+              ...containerBg.style,
+              ...containerBorderStyle,
+              ...(containerShadowCss ? { boxShadow: containerShadowCss } : {}),
+            }}
+          >
           {/* Headline */}
           {headline && (
             <div className="mb-10">
@@ -413,7 +415,8 @@ export function FaqAccordion({
               />
             ))}
           </Accordion>
-        </div>
+          </div>
+        </AnimatedBlock>
       </div>
     </section>
   )

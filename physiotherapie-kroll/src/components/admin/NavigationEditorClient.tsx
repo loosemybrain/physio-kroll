@@ -515,7 +515,7 @@ export function NavigationEditorClient({
                   value={navConfig.navStylePresetId ?? "minimal"}
                   onValueChange={(value) => updateConfig({ navStylePresetId: value as any })}
                 >
-                  <SelectTrigger className="h-9">
+                  <SelectTrigger className="px-4 py-2.5">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -550,7 +550,7 @@ export function NavigationEditorClient({
                   value={navConfig.navHoverPresetId ?? "underline-slide"}
                   onValueChange={(value) => updateConfig({ navHoverPresetId: value as any })}
                 >
-                  <SelectTrigger className="h-9">
+                  <SelectTrigger className="px-4 py-2.5">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>

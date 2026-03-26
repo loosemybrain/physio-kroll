@@ -9,6 +9,7 @@ import { resolveBoxShadow } from "@/lib/shadow/resolveBoxShadow"
 import { mergeTypographyClasses } from "@/lib/typography"
 import type { BlockSectionProps, ElementShadow, CourseSlot, ElementConfig } from "@/types/cms"
 import type { GradientPresetValue } from "@/lib/theme/gradientPresets"
+import { AnimatedBlock } from "@/components/blocks/AnimatedBlock"
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -516,26 +517,27 @@ export function CourseScheduleBlock({
         )}
 
         {/* Content panel */}
-        <div
-          data-element-id={CONTAINER_ELEMENT_ID}
-          role={editable && onElementClick ? "button" : undefined}
-          tabIndex={editable && onElementClick ? 0 : undefined}
-          onClick={
-            editable && blockId && onElementClick
-              ? () => onElementClick(blockId, CONTAINER_ELEMENT_ID)
-              : undefined
-          }
-          className={cn(
-            "rounded-2xl border border-border/60 bg-card/80 p-4 backdrop-blur-sm sm:p-6 md:p-8",
-            "shadow-[0_1px_2px_rgba(0,0,0,0.03),0_8px_32px_-12px_rgba(0,0,0,0.08)]",
-            editable && onElementClick && "cursor-pointer transition-[box-shadow,outline] hover:outline-2 hover:outline-primary/30 hover:outline-offset-2",
-            selectedElementId === CONTAINER_ELEMENT_ID && "outline-2 outline-primary outline-offset-2"
-          )}
-          style={{
-            ...(usesContainerPanel ? containerBg.style : {}),
-            ...(containerShadowCss ? { boxShadow: containerShadowCss } : {}),
-          }}
-        >
+        <AnimatedBlock config={section?.animation}>
+          <div
+            data-element-id={CONTAINER_ELEMENT_ID}
+            role={editable && onElementClick ? "button" : undefined}
+            tabIndex={editable && onElementClick ? 0 : undefined}
+            onClick={
+              editable && blockId && onElementClick
+                ? () => onElementClick(blockId, CONTAINER_ELEMENT_ID)
+                : undefined
+            }
+            className={cn(
+              "rounded-2xl border border-border/60 bg-card/80 p-4 backdrop-blur-sm sm:p-6 md:p-8",
+              "shadow-[0_1px_2px_rgba(0,0,0,0.03),0_8px_32px_-12px_rgba(0,0,0,0.08)]",
+              editable && onElementClick && "cursor-pointer transition-[box-shadow,outline] hover:outline-2 hover:outline-primary/30 hover:outline-offset-2",
+              selectedElementId === CONTAINER_ELEMENT_ID && "outline-2 outline-primary outline-offset-2"
+            )}
+            style={{
+              ...(usesContainerPanel ? containerBg.style : {}),
+              ...(containerShadowCss ? { boxShadow: containerShadowCss } : {}),
+            }}
+          >
           {slots.length === 0 ? (
             <p className="text-center text-muted-foreground">Keine Kurse eingetragen.</p>
           ) : mode === "calendar" ? (
@@ -555,7 +557,8 @@ export function CourseScheduleBlock({
               onSlotSelect={onSlotSelect}
             />
           )}
-        </div>
+          </div>
+        </AnimatedBlock>
       </div>
     </section>
   )

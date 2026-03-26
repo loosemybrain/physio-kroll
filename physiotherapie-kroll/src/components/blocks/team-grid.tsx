@@ -13,6 +13,7 @@ import { resolveSectionBg } from "@/lib/theme/resolveSectionBg"
 import { resolveContainerBg } from "@/lib/theme/resolveContainerBg"
 import { resolveBoxShadow } from "@/lib/shadow/resolveBoxShadow"
 import { mergeTypographyClasses } from "@/lib/typography"
+import { AnimatedBlock } from "@/components/blocks/AnimatedBlock"
 import type { BlockSectionProps, ElementShadow } from "@/types/cms"
 import type { GradientPresetValue } from "@/lib/theme/gradientPresets"
 
@@ -635,19 +636,20 @@ export function TeamGridBlock({
       aria-label={headline || "Team"}
     >
       {/* Inner Container Panel (Header + Grid) */}
-      <div
-        className={cn(
-          // Mobile: use more width, less side padding/margins so cards don't feel cramped.
-          // Desktop: keep existing spacious container.
-          // NOTE: Avoid `w-full` + horizontal margins (can exceed viewport and get clipped by overflow-x-hidden).
-          "relative overflow-hidden w-[calc(100%-1rem)] max-w-6xl mx-auto rounded-3xl px-4 py-6 sm:w-[calc(100%-2rem)] sm:px-6 sm:py-8 md:w-full md:px-14 md:py-10",
-          // backdrop blur should affect the background layer; applied on overlay below
-        )}
-        style={{
-          ...(containerBorder ? containerBorderStyle : {}),
-          ...(containerShadowCss ? { boxShadow: containerShadowCss } : {}),
-        }}
-      >
+      <AnimatedBlock config={section?.animation}>
+        <div
+          className={cn(
+            // Mobile: use more width, less side padding/margins so cards don't feel cramped.
+            // Desktop: keep existing spacious container.
+            // NOTE: Avoid `w-full` + horizontal margins (can exceed viewport and get clipped by overflow-x-hidden).
+            "relative overflow-hidden w-[calc(100%-1rem)] max-w-6xl mx-auto rounded-3xl px-4 py-6 sm:w-[calc(100%-2rem)] sm:px-6 sm:py-8 md:w-full md:px-14 md:py-10",
+            // backdrop blur should affect the background layer; applied on overlay below
+          )}
+          style={{
+            ...(containerBorder ? containerBorderStyle : {}),
+            ...(containerShadowCss ? { boxShadow: containerShadowCss } : {}),
+          }}
+        >
         {/* Panel Background (only affects background, not content opacity) */}
         {usesContainerPanel && (
           <div
@@ -752,7 +754,8 @@ export function TeamGridBlock({
           ))}
         </div>
       </div>
-      </div>
+        </div>
+      </AnimatedBlock>
     </section>
   )
 }

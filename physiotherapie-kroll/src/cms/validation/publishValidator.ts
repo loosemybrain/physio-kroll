@@ -170,6 +170,17 @@ function validateBlock(block: CMSBlock): PublishIssue[] {
             ? (props.brandContent[pageBrand] as Record<string, unknown>)
             : null
 
+        const getText = (key: string): string => {
+          // If brandContent exists for this brand, it MUST be the source of truth.
+          // Do not fall back to root props for missing keys; otherwise clearing brand-specific values
+          // would incorrectly re-activate legacy defaults and trigger validation errors.
+          if (brandContent) {
+            const v = asString(brandContent[key])
+            return (v ?? "").trim()
+          }
+          return (asString(props[key]) ?? "").trim()
+        }
+
         const headline = (asString(brandContent?.headline) ?? asString(props.headline) ?? "").trim()
         if (headline.length < 3) {
           issues.push({
@@ -180,8 +191,8 @@ function validateBlock(block: CMSBlock): PublishIssue[] {
           })
         }
 
-        const ctaText = (asString(brandContent?.ctaText) ?? asString(props.ctaText) ?? "").trim()
-        const ctaHref = (asString(brandContent?.ctaHref) ?? asString(props.ctaHref) ?? "").trim()
+        const ctaText = getText("ctaText")
+        const ctaHref = getText("ctaHref")
         if ((ctaText && !ctaHref) || (ctaHref && !ctaText)) {
           issues.push({
             blockId: block.id,

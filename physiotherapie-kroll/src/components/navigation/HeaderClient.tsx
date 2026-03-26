@@ -300,11 +300,64 @@ export function HeaderClient({ brand, navConfig }: HeaderClientProps) {
 
   // Querying + ranking is handled inside SearchWindow.
 
+  const normalizePathForActive = useCallback((raw: string | null | undefined): string | null => {
+    if (!raw) return null
+    const v = raw.trim()
+    if (!v) return null
+
+    // Pure hash links are handled by anchor logic.
+    if (v.startsWith("#")) return null
+
+    // Absolute URL (possibly same-origin)
+    if (/^https?:\/\//i.test(v)) {
+      try {
+        const u = new URL(v)
+        if (typeof window !== "undefined" && u.origin !== window.location.origin) return null
+        const p = u.pathname || "/"
+        return p !== "/" && p.endsWith("/") ? p.slice(0, -1) : p
+      } catch {
+        return null
+      }
+    }
+
+    // Internal path, tolerant for missing leading slash ("team" -> "/team")
+    const withoutQueryHash = v.split(/[?#]/)[0] || "/"
+    const withSlash = withoutQueryHash.startsWith("/") ? withoutQueryHash : `/${withoutQueryHash}`
+    return withSlash !== "/" && withSlash.endsWith("/") ? withSlash.slice(0, -1) : withSlash
+  }, [])
+
   /* ---- active link check (Seiten + Anchor-ScrollSpy) ---- */
   const isLinkActive = useCallback(
-    (href: string) =>
-      pathname === href || (href !== "/" && pathname?.startsWith(href)),
-    [pathname]
+    (href: string) => {
+      const current = normalizePathForActive(pathname || "/")
+      const target = normalizePathForActive(href)
+      if (!current || !target) return false
+
+      // Brand-specific hash URL handling:
+      // In physio-konzept, some CMS links can be stored as "/konzept#block-...".
+      // They must not be "always active" based on path alone.
+      if (brand === "physio-konzept" && href.includes("#")) {
+        const hash = href.slice(href.indexOf("#") + 1).trim()
+        if (!hash) return false
+        const currentHash = typeof window !== "undefined" ? (window.location.hash || "").replace(/^#/, "") : ""
+        const targetBlockId = normalizeAnchorToBlockId(hash)
+        const currentBlockId = normalizeAnchorToBlockId(currentHash)
+
+        // If hash path points to another page, it's not active here.
+        const hashPath = normalizePathForActive(href.slice(0, href.indexOf("#")))
+        if (hashPath && hashPath !== current) return false
+
+        return currentHash === hash || (targetBlockId && currentBlockId === targetBlockId) || (targetBlockId && activeAnchor === targetBlockId)
+      }
+
+      // Brand-specific guard:
+      // In physio-konzept, "/konzept" is the brand home prefix and must NOT mark all subpages as active.
+      if (brand === "physio-konzept" && target === "/konzept") {
+        return current === target
+      }
+      return current === target || (target !== "/" && current.startsWith(`${target}/`))
+    },
+    [pathname, normalizePathForActive, brand, activeAnchor]
   )
 
   /** Anchor-Links: aktiv, wenn gleiche Seite und dieser Block aktuell sichtbar (ScrollSpy). */
@@ -313,40 +366,14 @@ export function HeaderClient({ brand, navConfig }: HeaderClientProps) {
       if (link.type !== "anchor" || !link.anchorBlockId) return false
       const samePage = isSamePage(pathname || "/", link.anchorPageSlug, brand)
       const linkBlockId = normalizeAnchorToBlockId(link.anchorBlockId)
-      return samePage && !!linkBlockId && activeAnchor === linkBlockId
+      if (!samePage || !linkBlockId) return false
+      const hashBlockId =
+        typeof window !== "undefined"
+          ? normalizeAnchorToBlockId((window.location.hash || "").replace(/^#/, ""))
+          : ""
+      return activeAnchor === linkBlockId || hashBlockId === linkBlockId
     },
     [pathname, activeAnchor, brand]
-  )
-
-  /**
-   * Einige Navigationseinträge können (historisch/CMS) als URL-Link mit Hash gespeichert sein,
-   * z.B. "#block-abc" oder "/#block-abc". Diese sollen wie Anchor-Links aktiv werden.
-   */
-  const isHashAnchorHrefActive = useCallback(
-    (href: string): boolean => {
-      if (!href || !activeAnchor) return false
-      const hashIndex = href.indexOf("#")
-      if (hashIndex < 0) return false
-      const hash = href.slice(hashIndex + 1) // ohne "#"
-      const blockId = normalizeAnchorToBlockId(hash)
-      if (!blockId) return false
-
-      // Wenn ein Pfad vor dem Hash steht, muss er zur aktuellen Seite passen.
-      const pathPart = href.slice(0, hashIndex)
-      if (!pathPart) return blockId === activeAnchor // reine "#..."-Links gelten auf aktueller Seite
-
-      // Interne Pfade ("/...") vergleichen wir direkt mit pathname (ohne Query/Hash).
-      if (pathPart.startsWith("/")) {
-        const current = (pathname || "/").split(/[?#]/)[0] || "/"
-        const target = pathPart.split(/[?#]/)[0] || "/"
-        // einfache Normalisierung: trailing slash weg (außer "/")
-        const norm = (p: string) => (p !== "/" && p.endsWith("/") ? p.slice(0, -1) : p) || "/"
-        if (norm(current) !== norm(target)) return false
-      }
-
-      return blockId === activeAnchor
-    },
-    [activeAnchor, pathname]
   )
 
   /* ---- motion presets ---- */
@@ -366,10 +393,7 @@ export function HeaderClient({ brand, navConfig }: HeaderClientProps) {
     secondary?: boolean
   }) => {
     const href = getLinkHref(link)
-    const active =
-      isLinkActive(href) ||
-      isAnchorLinkActive(link) ||
-      (link.type !== "anchor" && isHashAnchorHrefActive(href))
+    const active = isLinkActive(href) || isAnchorLinkActive(link)
     const hoverPreset = getNavHoverPreset(navConfig.navHoverPresetId)
     
     // Check if we should apply motion (respect reduced motion)

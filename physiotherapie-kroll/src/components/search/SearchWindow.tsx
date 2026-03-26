@@ -40,6 +40,10 @@ export function SearchWindow({ brand, navItems, isOpen, onOpenChange }: SearchWi
   const inputRef = useRef<HTMLInputElement>(null)
   const requestSeqRef = useRef(0)
 
+  const brandTintHover = brand === "physio-konzept" ? "hover:bg-accent/10" : "hover:bg-primary/10"
+  const brandTintIcon = brand === "physio-konzept" ? "text-accent/70" : "text-primary/70"
+  const brandTintIconSoft = brand === "physio-konzept" ? "text-accent/60" : "text-primary/60"
+
   const [query, setQuery] = useState("")
   const [hasSearched, setHasSearched] = useState(false)
   const [pageItems, setPageItems] = useState<SearchItem[]>([])
@@ -156,7 +160,7 @@ export function SearchWindow({ brand, navItems, isOpen, onOpenChange }: SearchWi
           <motion.div {...motionPanel} className="fixed left-1/2 top-24 z-50 w-full max-w-2xl -translate-x-1/2 px-4">
             <div className="rounded-2xl border border-border/30 bg-card/95 backdrop-blur-lg shadow-xl shadow-black/10">
               <div className="flex items-center gap-2 border-b border-border/20 px-4 py-3">
-                <Search className="h-5 w-5 text-primary/60 shrink-0" />
+                <Search className={cn("h-5 w-5 shrink-0", brandTintIconSoft)} />
                 <input
                   ref={inputRef}
                   type="text"
@@ -201,7 +205,8 @@ export function SearchWindow({ brand, navItems, isOpen, onOpenChange }: SearchWi
                           onClick={() => navigateTo(s.href)}
                           className={cn(
                             "p-3 rounded-lg border border-border/20 text-left",
-                            "bg-muted/40 hover:bg-muted/70",
+                            "bg-muted/40",
+                            brandTintHover,
                             "transition-all duration-200",
                             "text-sm font-medium text-foreground",
                             "focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring"
@@ -232,11 +237,12 @@ export function SearchWindow({ brand, navItems, isOpen, onOpenChange }: SearchWi
                             transition={{ delay: prefersReducedMotion ? 0 : idx * 0.03, duration: 0.2 }}
                             className={cn(
                               "flex w-full items-start gap-3 px-4 py-3 mx-1 rounded-lg text-left",
-                              "hover:bg-muted/60 transition-colors",
+                              brandTintHover,
+                              "transition-colors",
                               "focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring"
                             )}
                           >
-                            <div className="text-primary/70 shrink-0 mt-0.5">{iconFor(r)}</div>
+                            <div className={cn("shrink-0 mt-0.5", brandTintIcon)}>{iconFor(r)}</div>
                             <div className="flex-1 min-w-0">
                               <div className="font-medium text-foreground text-sm">{r.title}</div>
                               {r.description ? (

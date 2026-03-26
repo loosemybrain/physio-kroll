@@ -53,7 +53,8 @@ const physiotherapyTheme: NavTheme = {
   },
   iconButton: {
     base: "text-muted-foreground",
-    hover: "hover:text-foreground hover:bg-muted",
+    // Use theme/preset color instead of neutral muted on hover
+    hover: "hover:text-foreground hover:bg-primary/10",
   },
   cta: {
     default: "bg-primary text-primary-foreground",
@@ -88,7 +89,8 @@ const physioKonzeptTheme: NavTheme = {
   },
   iconButton: {
     base: "text-muted-foreground",
-    hover: "hover:text-foreground hover:bg-muted",
+    // Use theme/preset accent instead of neutral muted on hover
+    hover: "hover:text-foreground hover:bg-accent/10",
   },
   cta: {
     default: "bg-accent text-accent-foreground",

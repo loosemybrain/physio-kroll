@@ -11,6 +11,7 @@ import { resolveContainerBg } from "@/lib/theme/resolveContainerBg"
 import { resolveBoxShadow } from "@/lib/shadow/resolveBoxShadow"
 import { mergeTypographyClasses } from "@/lib/typography"
 import { useMotionPreference, getAnimationInitial, getViewportTrigger } from "@/lib/motion/useMotionPreference"
+import { AnimatedBlock } from "@/components/blocks/AnimatedBlock"
 import type { BlockSectionProps, ElementShadow } from "@/types/cms"
 import type { GradientPresetValue } from "@/lib/theme/gradientPresets"
 
@@ -760,38 +761,40 @@ export function GalleryBlock({
             </motion.header>
           )}
 
-          <div
-            className={cn(
-              usesContainerPanel && "rounded-3xl p-6 md:p-10 m-4 md:m-6",
-              usesContainerPanel && containerBackgroundMode === "gradient" && "backdrop-blur-sm",
-              usesContainerPanel && containerBorder && "border border-border/40"
-            )}
-            style={
-              usesContainerPanel
-                ? { ...containerBg.style, ...(containerShadowCss ? { boxShadow: containerShadowCss } : {}) }
-                : undefined
-            }
-            data-element-id={blockId ? "gallery.container" : undefined}
-          >
-            <motion.div
-              key={effectiveLayout}
-              variants={noMotion ? undefined : stagger}
-              initial={noMotion ? "visible" : "hidden"}
-              animate="visible"
+          <AnimatedBlock config={section?.animation}>
+            <div
+              className={cn(
+                usesContainerPanel && "rounded-3xl p-6 md:p-10 m-4 md:m-6",
+                usesContainerPanel && containerBackgroundMode === "gradient" && "backdrop-blur-sm",
+                usesContainerPanel && containerBorder && "border border-border/40"
+              )}
+              style={
+                usesContainerPanel
+                  ? { ...containerBg.style, ...(containerShadowCss ? { boxShadow: containerShadowCss } : {}) }
+                  : undefined
+              }
+              data-element-id={blockId ? "gallery.container" : undefined}
             >
-              {effectiveLayout === "grid" && (
-                <GridLayout images={images} columns={columns ?? 3} gap={gap} tp={tp} />
-              )}
-              {effectiveLayout === "masonry" && (
-                <MasonryLayout images={images} columns={columns ?? 3} gap={gap} tp={tp} />
-              )}
-              {effectiveLayout === "carousel" && <CarouselLayout images={images} gap={gap} tp={tp} />}
-              {effectiveLayout === "stack" && <StackLayout images={images} gap={gap} tp={tp} />}
-              {effectiveLayout === "highlight-first" && (
-                <HighlightFirstLayout images={images} columns={columns ?? 3} gap={gap} tp={tp} />
-              )}
-            </motion.div>
-          </div>
+              <motion.div
+                key={effectiveLayout}
+                variants={noMotion ? undefined : stagger}
+                initial={noMotion ? "visible" : "hidden"}
+                animate="visible"
+              >
+                {effectiveLayout === "grid" && (
+                  <GridLayout images={images} columns={columns ?? 3} gap={gap} tp={tp} />
+                )}
+                {effectiveLayout === "masonry" && (
+                  <MasonryLayout images={images} columns={columns ?? 3} gap={gap} tp={tp} />
+                )}
+                {effectiveLayout === "carousel" && <CarouselLayout images={images} gap={gap} tp={tp} />}
+                {effectiveLayout === "stack" && <StackLayout images={images} gap={gap} tp={tp} />}
+                {effectiveLayout === "highlight-first" && (
+                  <HighlightFirstLayout images={images} columns={columns ?? 3} gap={gap} tp={tp} />
+                )}
+              </motion.div>
+            </div>
+          </AnimatedBlock>
         </div>
       </section>
 

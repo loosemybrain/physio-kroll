@@ -16,9 +16,10 @@ import {
 import { ChevronLeft, ChevronRight, Pause, Play } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useReducedMotion } from "framer-motion"
-import type { ElementShadow } from "@/types/cms"
+import type { BlockSectionProps, ElementShadow } from "@/types/cms"
 import { resolveBoxShadow } from "@/lib/shadow/resolveBoxShadow"
 import type { GradientPresetValue } from "@/lib/theme/gradientPresets"
+import { AnimatedBlock } from "@/components/blocks/AnimatedBlock"
 
 /* ================================================================ */
 /*  Types                                                            */
@@ -40,7 +41,7 @@ export interface SlideItem {
 }
 
 export interface ImageSliderBlockProps {
-  section?: unknown
+  section?: BlockSectionProps
   typography?: unknown
 
   blockId?: string
@@ -969,115 +970,117 @@ export function ImageSliderBlock({
           style={containerStyle}
           className="rounded-3xl p-8 md:p-12"
         >
-          {variant === "classic" && (
-            <ClassicVariant
-              slides={slides}
-              aspect={aspectClass}
-              cardBgColor={cardBgColor}
-              cardBorderColor={cardBorderColor}
-              slideTitleColor={slideTitleColor}
-              slideTextColor={slideTextColor}
-              controls={controls}
-              loop={loop}
-              autoplay={autoplay}
-              autoplayDelayMs={autoplayDelayMs}
-              pauseOnHover={pauseOnHover}
-              peek={peek}
-              ariaLabel={ariaLabel}
-              headline={headline}
-              interactivePreview={interactivePreview}
-              activeItemId={activeItemId}
-              onItemSelect={onItemSelect}
-            />
-          )}
+          <AnimatedBlock config={section?.animation}>
+            {variant === "classic" && (
+              <ClassicVariant
+                slides={slides}
+                aspect={aspectClass}
+                cardBgColor={cardBgColor}
+                cardBorderColor={cardBorderColor}
+                slideTitleColor={slideTitleColor}
+                slideTextColor={slideTextColor}
+                controls={controls}
+                loop={loop}
+                autoplay={autoplay}
+                autoplayDelayMs={autoplayDelayMs}
+                pauseOnHover={pauseOnHover}
+                peek={peek}
+                ariaLabel={ariaLabel}
+                headline={headline}
+                interactivePreview={interactivePreview}
+                activeItemId={activeItemId}
+                onItemSelect={onItemSelect}
+              />
+            )}
 
-          {variant === "progress" && (
-            <ProgressVariant
-              slides={slides}
-              aspect={aspectClass}
-              cardBgColor={cardBgColor}
-              cardBorderColor={cardBorderColor}
-              slideTitleColor={slideTitleColor}
-              slideTextColor={slideTextColor}
-              controls={controls}
-              loop={loop}
-              autoplay={autoplay}
-              autoplayDelayMs={autoplayDelayMs}
-              pauseOnHover={pauseOnHover}
-              peek={peek}
-              ariaLabel={ariaLabel}
-              headline={headline}
-              interactivePreview={interactivePreview}
-              activeItemId={activeItemId}
-              onItemSelect={onItemSelect}
-            />
-          )}
+            {variant === "progress" && (
+              <ProgressVariant
+                slides={slides}
+                aspect={aspectClass}
+                cardBgColor={cardBgColor}
+                cardBorderColor={cardBorderColor}
+                slideTitleColor={slideTitleColor}
+                slideTextColor={slideTextColor}
+                controls={controls}
+                loop={loop}
+                autoplay={autoplay}
+                autoplayDelayMs={autoplayDelayMs}
+                pauseOnHover={pauseOnHover}
+                peek={peek}
+                ariaLabel={ariaLabel}
+                headline={headline}
+                interactivePreview={interactivePreview}
+                activeItemId={activeItemId}
+                onItemSelect={onItemSelect}
+              />
+            )}
 
-          {variant === "thumbnails" && (
-            <ThumbnailsVariant
-              slides={slides}
-              aspect={aspectClass}
-              cardBgColor={cardBgColor}
-              cardBorderColor={cardBorderColor}
-              slideTitleColor={slideTitleColor}
-              slideTextColor={slideTextColor}
-              controls={controls}
-              loop={loop}
-              autoplay={autoplay}
-              autoplayDelayMs={autoplayDelayMs}
-              pauseOnHover={pauseOnHover}
-              peek={peek}
-              ariaLabel={ariaLabel}
-              headline={headline}
-              interactivePreview={interactivePreview}
-              activeItemId={activeItemId}
-              onItemSelect={onItemSelect}
-            />
-          )}
+            {variant === "thumbnails" && (
+              <ThumbnailsVariant
+                slides={slides}
+                aspect={aspectClass}
+                cardBgColor={cardBgColor}
+                cardBorderColor={cardBorderColor}
+                slideTitleColor={slideTitleColor}
+                slideTextColor={slideTextColor}
+                controls={controls}
+                loop={loop}
+                autoplay={autoplay}
+                autoplayDelayMs={autoplayDelayMs}
+                pauseOnHover={pauseOnHover}
+                peek={peek}
+                ariaLabel={ariaLabel}
+                headline={headline}
+                interactivePreview={interactivePreview}
+                activeItemId={activeItemId}
+                onItemSelect={onItemSelect}
+              />
+            )}
 
-          {variant === "hero" && (
-            <HeroVariant
-              slides={slides}
-              cardBgColor={cardBgColor}
-              cardBorderColor={cardBorderColor}
-              slideTitleColor={slideTitleColor}
-              slideTextColor={slideTextColor}
-              controls={controls}
-              loop={loop}
-              autoplay={autoplay}
-              autoplayDelayMs={autoplayDelayMs}
-              pauseOnHover={pauseOnHover}
-              peek={peek}
-              ariaLabel={ariaLabel}
-              headline={headline}
-              interactivePreview={interactivePreview}
-              activeItemId={activeItemId}
-              onItemSelect={onItemSelect}
-            />
-          )}
+            {variant === "hero" && (
+              <HeroVariant
+                slides={slides}
+                cardBgColor={cardBgColor}
+                cardBorderColor={cardBorderColor}
+                slideTitleColor={slideTitleColor}
+                slideTextColor={slideTextColor}
+                controls={controls}
+                loop={loop}
+                autoplay={autoplay}
+                autoplayDelayMs={autoplayDelayMs}
+                pauseOnHover={pauseOnHover}
+                peek={peek}
+                ariaLabel={ariaLabel}
+                headline={headline}
+                interactivePreview={interactivePreview}
+                activeItemId={activeItemId}
+                onItemSelect={onItemSelect}
+              />
+            )}
 
-          {variant === "cards" && (
-            <CardsVariant
-              slides={slides}
-              aspect={aspectClass}
-              slidesPerView={slidesPerView}
-              cardBgColor={cardBgColor}
-              cardBorderColor={cardBorderColor}
-              slideTitleColor={slideTitleColor}
-              slideTextColor={slideTextColor}
-              controls={controls}
-              loop={loop}
-              autoplay={autoplay}
-              autoplayDelayMs={autoplayDelayMs}
-              pauseOnHover={pauseOnHover}
-              peek={peek}
-              ariaLabel={ariaLabel}
-              headline={headline}
-              interactivePreview={interactivePreview}
-              activeItemId={activeItemId}
-              onItemSelect={onItemSelect}
-            />
-          )}
+            {variant === "cards" && (
+              <CardsVariant
+                slides={slides}
+                aspect={aspectClass}
+                slidesPerView={slidesPerView}
+                cardBgColor={cardBgColor}
+                cardBorderColor={cardBorderColor}
+                slideTitleColor={slideTitleColor}
+                slideTextColor={slideTextColor}
+                controls={controls}
+                loop={loop}
+                autoplay={autoplay}
+                autoplayDelayMs={autoplayDelayMs}
+                pauseOnHover={pauseOnHover}
+                peek={peek}
+                ariaLabel={ariaLabel}
+                headline={headline}
+                interactivePreview={interactivePreview}
+                activeItemId={activeItemId}
+                onItemSelect={onItemSelect}
+              />
+            )}
+          </AnimatedBlock>
         </div>
       </div>
     </section>
