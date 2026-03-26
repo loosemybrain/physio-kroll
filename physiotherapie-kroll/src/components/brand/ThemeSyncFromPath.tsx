@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react"
 import { usePathname } from "next/navigation"
 import type { BrandKey } from "./brandAssets"
+import { writeLastPublicHome, type PublicHomePath } from "@/lib/publicHomePreference"
 
 function brandFromPath(pathname: string): BrandKey {
   const segments = pathname.split("/").filter(Boolean)
@@ -29,6 +30,13 @@ export function ThemeSyncFromPath() {
   const pathname = usePathname()
   const brand = brandFromPath(pathname ?? "/")
   const appliedBrandRef = useRef<BrandKey | null>(null)
+
+  useEffect(() => {
+    const p = pathname ?? "/"
+    if (p === "/" || p === "/konzept") {
+      writeLastPublicHome(p as PublicHomePath)
+    }
+  }, [pathname])
 
   useEffect(() => {
     if (typeof document === "undefined") return

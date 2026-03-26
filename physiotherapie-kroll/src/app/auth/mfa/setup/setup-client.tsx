@@ -72,11 +72,34 @@ export function MfaSetupClient({ nextPath }: Props) {
   const [success, setSuccess] = useState<string | null>(null)
   const [code, setCode] = useState("")
   const [factor, setFactor] = useState<TotpFactor | null>(null)
+  const [uriQrDataUrl, setUriQrDataUrl] = useState<string | null>(null)
 
   const qrCodeRaw = factor?.totp?.qr_code ?? null
   const totpSecret = factor?.totp?.secret ?? null
   const otpauthUri = factor?.totp?.uri ?? null
   const qrImageSrc = useMemo(() => toQrImageSrc(qrCodeRaw), [qrCodeRaw])
+  const displayQrSrc = qrImageSrc || uriQrDataUrl
+
+  /** Wenn Supabase kein nutzbares `qr_code` liefert, aber `otpauth://…` vorhanden ist. */
+  useEffect(() => {
+    if (!otpauthUri?.trim() || qrImageSrc) {
+      setUriQrDataUrl(null)
+      return
+    }
+    let cancelled = false
+    void import("qrcode")
+      .then((mod) => mod.default.toDataURL(otpauthUri, { width: 176, margin: 2, errorCorrectionLevel: "M" }))
+      .then((url) => {
+        if (!cancelled) setUriQrDataUrl(url)
+      })
+      .catch((e) => {
+        console.error("[MFA SETUP] uriQr:gen:error", e)
+        if (!cancelled) setUriQrDataUrl(null)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [otpauthUri, qrImageSrc])
 
   useEffect(() => {
     const boot = async () => {
@@ -238,10 +261,10 @@ export function MfaSetupClient({ nextPath }: Props) {
               </Alert>
             ) : null}
 
-            {qrImageSrc ? (
+            {displayQrSrc ? (
               <div className="flex justify-center rounded-md border p-4 bg-white">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={qrImageSrc} alt="TOTP QR-Code" className="h-44 w-44" />
+                <img src={displayQrSrc} alt="TOTP QR-Code" className="h-44 w-44" />
               </div>
             ) : null}
 
@@ -258,7 +281,7 @@ export function MfaSetupClient({ nextPath }: Props) {
               </p>
             ) : null}
 
-            {factor && !qrImageSrc && !totpSecret && !otpauthUri ? (
+            {factor && !displayQrSrc && !totpSecret && !otpauthUri ? (
               <Alert>
                 <AlertDescription>
                   Es wurden keine QR-/Secret-Daten geliefert. Bitte Seite neu laden. Wenn das weiterhin passiert,

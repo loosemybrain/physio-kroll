@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
-import { Bell, LogOut, Home } from "lucide-react"
+import { Bell, LogOut, Home, ChevronDown } from "lucide-react"
 import type { User } from "@supabase/supabase-js"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -16,6 +16,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { AdminThemeToggle } from "./AdminThemeToggle"
+import { readLastPublicHome, writeLastPublicHome, type PublicHomePath } from "@/lib/publicHomePreference"
 
 type AdminTopbarProps = {
   /**
@@ -27,6 +28,17 @@ type AdminTopbarProps = {
 
 export function AdminTopbar({ user }: AdminTopbarProps) {
   const router = useRouter()
+  const [websiteHome, setWebsiteHome] = React.useState<PublicHomePath>("/")
+
+  React.useEffect(() => {
+    setWebsiteHome(readLastPublicHome())
+  }, [])
+
+  const navigatePublicHome = (path: PublicHomePath) => {
+    writeLastPublicHome(path)
+    setWebsiteHome(path)
+    router.push(path)
+  }
 
   const handleLogout = async () => {
     // Server-owned session: sign out via route handler (clears HttpOnly cookies).
@@ -52,15 +64,41 @@ export function AdminTopbar({ user }: AdminTopbarProps) {
       </div>
 
       <div className="flex items-center gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => router.push("/")}
-          className="gap-2 hover:text-accent"
-        >
-          <Home className="h-4 w-4" />
-          <span>Zur Website</span>
-        </Button>
+        <DropdownMenu>
+          <div className="flex">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigatePublicHome(websiteHome)}
+              className="gap-2 rounded-r-none border-r-0 hover:text-accent"
+            >
+              <Home className="h-4 w-4" />
+              <span>Zur Website</span>
+            </Button>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-l-none px-2 hover:text-accent"
+                aria-label="Website-Marke wählen"
+              >
+                <ChevronDown className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+          </div>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+              Startseite öffnen (Theme und Inhalt passen zur Route)
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => navigatePublicHome("/")}>
+              Physiotherapie — /
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigatePublicHome("/konzept")}>
+              Physio-Konzept — /konzept
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
 
         {/* Admin Theme Toggle - scoped to admin area only */}
         {/* <AdminThemeToggle /> */}

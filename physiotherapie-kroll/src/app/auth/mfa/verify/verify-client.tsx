@@ -155,7 +155,9 @@ export function MfaVerifyClient({ nextPath }: Props) {
         <CardHeader>
           <CardTitle>MFA bestätigen</CardTitle>
           <CardDescription>
-            Bitte den 6-stelligen Code aus Ihrer Authenticator-App eingeben, um den Adminbereich zu öffnen.
+            Bitte den 6-stelligen Code aus Ihrer Authenticator-App eingeben, um den Adminbereich zu öffnen. Auf dieser
+            Seite wird kein QR-Code angezeigt – der wird nur bei der ersten Einrichtung unter „TOTP einrichten“
+            benötigt.
           </CardDescription>
         </CardHeader>
         <CardContent>
