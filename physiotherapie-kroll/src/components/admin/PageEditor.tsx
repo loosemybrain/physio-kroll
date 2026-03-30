@@ -45,6 +45,7 @@ import { PageEditorInspector } from "./editor/PageEditorInspector"
 import { usePageEditorActions } from "@/hooks/usePageEditorActions"
 import { useEditorSelection } from "@/hooks/useEditorSelection"
 import { useSetLeaveGuard } from "./AdminLeaveGuardContext"
+import { reorderLegalSections } from "@/lib/cms/reorderLegalSections"
 
 
 interface PageEditorProps {
@@ -862,6 +863,15 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
     addBlockFn: (defaultBlock as (type: CMSBlock["type"], brand?: BrandKey) => CMSBlock),
   })
 
+  const handleReorderLegalSections = useCallback((activeId: string, overId: string) => {
+    setPage((prev) => {
+      if (!prev || prev.pageType !== "legal") return prev
+      const nextBlocks = reorderLegalSections(prev.blocks, activeId, overId)
+      if (nextBlocks === prev.blocks) return prev
+      return { ...prev, blocks: nextBlocks }
+    })
+  }, [setPage])
+
   // Return early until mounted + page state is ready (prevents SSR/client mismatch)
   // This must come AFTER all hooks to follow Rules of Hooks
   if (!mounted || !page) {
@@ -1193,7 +1203,7 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
         <div
           ref={inspectorScrollRef}
           tabIndex={-1}
-          className="relative w-96 border-l border-border bg-background overflow-y-auto overflow-x-hidden z-50 min-h-0"
+          className="relative min-w-0 w-96 border-l border-border bg-background overflow-y-auto overflow-x-hidden z-50 min-h-0"
           style={{ height: "100%" }}
         >
           <PageEditorInspector
@@ -1228,6 +1238,7 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
             setActiveBrandTab={setActiveBrandTab}
             accordionValue={accordionValue}
             setAccordionValue={setAccordionValue}
+            onReorderLegalSections={handleReorderLegalSections}
           />
         </div>
       </div>

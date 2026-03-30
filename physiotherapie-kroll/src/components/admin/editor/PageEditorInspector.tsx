@@ -57,6 +57,7 @@ import { BUTTON_PRESET_OPTIONS } from "@/lib/buttonPresets"
 import { ElementTypographyAccordion } from "../../cms/inspector/ElementTypographyAccordion"
 import { InspectorCardList } from "../inspector/InspectorCardList"
 import { LegalRichTextContentInspector } from "./LegalRichTextContentInspector"
+import { LegalOutlinePanel } from "../legal/LegalOutlinePanel"
 import { CalendarDays, ChevronUp, ChevronDown, Plus, Trash2 } from "lucide-react"
 import { GRADIENT_PRESETS } from "@/lib/theme/gradientPresets"
 import type { AdminPage } from "@/lib/cms/supabaseStore"
@@ -109,6 +110,8 @@ export interface PageEditorInspectorProps {
   setActiveBrandTab: React.Dispatch<React.SetStateAction<Record<string, "physiotherapy" | "physio-konzept">>>
   accordionValue: string | undefined
   setAccordionValue: React.Dispatch<React.SetStateAction<string | undefined>>
+  /** Nur Legal-Seiten: Abschnitte per DnD sortieren (Struktur-Panel). */
+  onReorderLegalSections?: (activeId: string, overId: string) => void
 }
 
 export function PageEditorInspector({
@@ -143,6 +146,7 @@ export function PageEditorInspector({
   setActiveBrandTab,
   accordionValue,
   setAccordionValue,
+  onReorderLegalSections,
 }: PageEditorInspectorProps) {
   const renderStringArrayControls = (
     block: CMSBlock,
@@ -904,6 +908,15 @@ export function PageEditorInspector({
           </div>
         </div>
       )}
+
+      {(current.pageType ?? "default") === "legal" && onReorderLegalSections ? (
+        <LegalOutlinePanel
+          blocks={current.blocks}
+          selectedBlockId={selectedBlockId}
+          onSelectBlock={selectBlock}
+          onReorder={onReorderLegalSections}
+        />
+      ) : null}
 
       <Separator />
 

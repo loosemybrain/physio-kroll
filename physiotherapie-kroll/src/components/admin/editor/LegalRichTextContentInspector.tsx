@@ -1,7 +1,23 @@
 "use client"
 
 import * as React from "react"
-import { ChevronDown, ChevronUp, Plus, Trash2 } from "lucide-react"
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core"
+import { CSS } from "@dnd-kit/utilities"
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable"
+import { ChevronDown, ChevronUp, GripVertical, Plus, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
@@ -9,7 +25,9 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
-import { InspectorCardList } from "../inspector/InspectorCardList"
+import { InspectorCardItem } from "../inspector/InspectorCardItem"
+import { arrayMove } from "@/lib/cms/arrayOps"
+import { cn } from "@/lib/utils"
 import type { CMSBlock, LegalRichContentBlock, LegalRichTextRun } from "@/types/cms"
 import { uuid } from "@/lib/cms/arrayOps"
 import {
@@ -158,6 +176,65 @@ function blockTypeLabel(t: LegalRichContentBlock["type"]): string {
   }
 }
 
+function getBlockPreviewText(block: LegalRichContentBlock): string {
+  if (block.type === "paragraph" || block.type === "heading") {
+    const text = block.runs.map((r) => r.text).join("").trim()
+    if (!text) return ""
+    return text.length > 42 ? `${text.slice(0, 42)}…` : text
+  }
+  return ""
+}
+
+function SortableContentBlockCard({
+  item,
+  isExpanded,
+  onToggle,
+  summary,
+  headerActions,
+  children,
+}: {
+  item: LegalRichContentBlock
+  isExpanded: boolean
+  onToggle: () => void
+  summary: React.ReactNode
+  headerActions: React.ReactNode
+  children: React.ReactNode
+}) {
+  const { setNodeRef, transform, transition, isDragging, attributes, listeners } = useSortable({ id: item.id })
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      className={cn(isDragging && "opacity-70")}
+    >
+      <InspectorCardItem
+        itemId={item.id}
+        isExpanded={isExpanded}
+        onToggle={onToggle}
+        summary={summary}
+        headerActions={
+          <div className="flex items-center gap-0.5">
+            <button
+              type="button"
+              className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+              aria-label="Inhaltsblock ziehen"
+              title="Ziehen"
+              onClick={(e) => e.stopPropagation()}
+              {...attributes}
+              {...listeners}
+            >
+              <GripVertical className="h-3.5 w-3.5" />
+            </button>
+            {headerActions}
+          </div>
+        }
+      >
+        {children}
+      </InspectorCardItem>
+    </div>
+  )
+}
+
 function BlockContentEditor({
   block,
   onChange,
@@ -296,6 +373,11 @@ export function LegalRichTextContentInspector({
   }
 
   const blocks = props.contentBlocks ?? []
+  const blockIds = React.useMemo(() => blocks.map((b) => b.id), [blocks])
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  )
 
   const setBlocks = (next: LegalRichContentBlock[]) => {
     patchProps({ contentBlocks: next.length > 0 ? next : undefined })
@@ -311,6 +393,17 @@ export function LegalRichTextContentInspector({
             ? createLegalRichBulletListBlock()
             : createLegalRichOrderedListBlock()
     setBlocks([...blocks, next])
+  }
+
+  const onDragEnd = ({ active, over }: DragEndEvent) => {
+    if (!over) return
+    const activeId = String(active.id)
+    const overId = String(over.id)
+    if (activeId === overId) return
+    const from = blocks.findIndex((b) => b.id === activeId)
+    const to = blocks.findIndex((b) => b.id === overId)
+    if (from < 0 || to < 0) return
+    setBlocks(arrayMove(blocks, from, to))
   }
 
   return (
@@ -366,89 +459,132 @@ export function LegalRichTextContentInspector({
             </Button>
           </div>
 
-          <InspectorCardList<LegalRichContentBlock>
-            items={blocks}
-            getItemId={(b) => b.id}
-            mode="single"
-            expandedId={expandedId}
-            onToggle={(id: string) =>
-              setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: expandedId === id ? null : id }))
-            }
-            onCollapseAll={() => setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: null }))}
-            countLabel={`${blocks.length} Inhaltsblöcke`}
-            renderSummary={(b) => (
-              <span className="truncate text-xs">
-                {blockTypeLabel(b.type)}
-                {b.type === "paragraph" || b.type === "heading"
-                  ? `: ${b.runs.map((r) => r.text).join("").slice(0, 42)}${b.runs.map((r) => r.text).join("").length > 42 ? "…" : ""}`
-                  : ""}
-              </span>
-            )}
-            renderHeaderActions={(item) => {
-              const i = blocks.findIndex((x) => x.id === item.id)
-              return (
-                <div className="flex items-center gap-0.5">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7"
-                    disabled={i === 0}
-                    title="Nach oben"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      if (i <= 0) return
-                      const next = [...blocks]
-                      ;[next[i - 1], next[i]] = [next[i], next[i - 1]]
-                      setBlocks(next)
-                    }}
-                  >
-                    <ChevronUp className="h-3 w-3" />
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7"
-                    disabled={i >= blocks.length - 1}
-                    title="Nach unten"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      if (i < 0 || i >= blocks.length - 1) return
-                      const next = [...blocks]
-                      ;[next[i], next[i + 1]] = [next[i + 1], next[i]]
-                      setBlocks(next)
-                    }}
-                  >
-                    <ChevronDown className="h-3 w-3" />
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 text-destructive"
-                    title="Löschen"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setBlocks(blocks.filter((_, j) => j !== i))
-                    }}
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <span className="truncate text-xs text-muted-foreground">{`${blocks.length} Inhaltsblöcke`}</span>
+              <button
+                type="button"
+                className="text-xs text-muted-foreground hover:text-foreground underline"
+                onClick={() => setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: null }))}
+              >
+                Alle einklappen
+              </button>
+            </div>
+            <div className="min-w-0 space-y-1 text-[11px] leading-snug text-muted-foreground">
+              <p className="font-medium text-foreground/80">Tastatur (Reihenfolge)</p>
+              <ul className="list-inside list-disc space-y-1.5 wrap-break-word pl-0.5">
+                <li>
+                  <kbd className="whitespace-nowrap rounded border bg-muted/40 px-1 py-0.5 font-mono text-[10px]">Tab</kbd>{" "}
+                  zum Drag-Handle
+                </li>
+                <li>
+                  <kbd className="whitespace-nowrap rounded border bg-muted/40 px-1 py-0.5 font-mono text-[10px]">Leertaste</kbd>{" "}
+                  aufnehmen
+                </li>
+                <li>
+                  <kbd className="whitespace-nowrap rounded border bg-muted/40 px-1 py-0.5 font-mono text-[10px]">↑</kbd>{" "}
+                  <kbd className="whitespace-nowrap rounded border bg-muted/40 px-1 py-0.5 font-mono text-[10px]">↓</kbd>{" "}
+                  bewegen
+                </li>
+                <li>
+                  <kbd className="whitespace-nowrap rounded border bg-muted/40 px-1 py-0.5 font-mono text-[10px]">Leertaste</kbd>{" "}
+                  ablegen ·{" "}
+                  <kbd className="whitespace-nowrap rounded border bg-muted/40 px-1 py-0.5 font-mono text-[10px]">Esc</kbd>{" "}
+                  abbrechen
+                </li>
+              </ul>
+            </div>
+
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+              <SortableContext items={blockIds} strategy={verticalListSortingStrategy}>
+                <div className="flex flex-col gap-1.5">
+                  {blocks.map((b) => {
+                    const isExpanded = expandedId === b.id
+                    const summary = (
+                      <span className="truncate text-xs">
+                        {blockTypeLabel(b.type)}
+                        {getBlockPreviewText(b) ? `: ${getBlockPreviewText(b)}` : ""}
+                      </span>
+                    )
+                    const item = b
+                    const i = blocks.findIndex((x) => x.id === item.id)
+                    const headerActions = (
+                      <div className="flex items-center gap-0.5">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          disabled={i === 0}
+                          title="Nach oben"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            if (i <= 0) return
+                            const next = [...blocks]
+                            ;[next[i - 1], next[i]] = [next[i], next[i - 1]]
+                            setBlocks(next)
+                          }}
+                        >
+                          <ChevronUp className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          disabled={i >= blocks.length - 1}
+                          title="Nach unten"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            if (i < 0 || i >= blocks.length - 1) return
+                            const next = [...blocks]
+                            ;[next[i], next[i + 1]] = [next[i + 1], next[i]]
+                            setBlocks(next)
+                          }}
+                        >
+                          <ChevronDown className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-destructive"
+                          title="Löschen"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setBlocks(blocks.filter((_, j) => j !== i))
+                          }}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    )
+                    return (
+                      <SortableContentBlockCard
+                        key={item.id}
+                        item={item}
+                        isExpanded={isExpanded}
+                        onToggle={() =>
+                          setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: expandedId === item.id ? null : item.id }))
+                        }
+                        summary={summary}
+                        headerActions={headerActions}
+                      >
+                        <BlockContentEditor
+                          block={item}
+                          onChange={(updated) => {
+                            const idx = blocks.findIndex((x) => x.id === updated.id)
+                            if (idx < 0) return
+                            setBlocks(blocks.map((x, j) => (j === idx ? updated : x)))
+                          }}
+                        />
+                      </SortableContentBlockCard>
+                    )
+                  })}
                 </div>
-              )
-            }}
-            renderContent={(b) => (
-              <BlockContentEditor
-                block={b}
-                onChange={(updated) => {
-                  const i = blocks.findIndex((x) => x.id === updated.id)
-                  if (i < 0) return
-                  setBlocks(blocks.map((x, j) => (j === i ? updated : x)))
-                }}
-              />
-            )}
-          />
+              </SortableContext>
+            </DndContext>
+          </div>
 
           <Separator />
 
