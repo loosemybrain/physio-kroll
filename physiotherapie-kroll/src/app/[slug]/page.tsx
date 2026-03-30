@@ -3,6 +3,7 @@ import { StickyMiniToc } from "@/components/blog/StickyMiniToc";
 import { CookieScanTable } from "@/components/legal/CookieScanTable";
 import { getSupabasePublic } from "@/lib/supabase/serverPublic";
 import { splitLeadingLegalHeroes } from "@/lib/cms/splitLeadingLegalHeroes";
+import { migrateLegalBlocksForPageType } from "@/lib/cms/migrations/legalSections";
 import type { CMSBlock } from "@/types/cms";
 
 export const dynamic = "force-dynamic";
@@ -176,7 +177,7 @@ export default async function CMSPageRoute({ params }: { params: Promise<{ slug:
     );
   }
 
-  const cmsBlocks: CMSBlock[] = (blocks ?? []).map((b: any) => ({
+  const cmsBlocksRaw: CMSBlock[] = (blocks ?? []).map((b: any) => ({
     id: b.id,
     type: b.type,
     props: (b.props ?? {}) as any,
@@ -187,7 +188,9 @@ export default async function CMSPageRoute({ params }: { params: Promise<{ slug:
     (page as { page_type?: string; page_subtype?: string }).page_subtype === "cookies";
 
   // TOC nur auf Legal-Seiten oder Blog-Posts anzeigen, nicht auf Homepage oder normale Content-Seiten
-  const isLegalPage = (page as { page_type?: string }).page_type === "legal";
+  const pageType = (page as { page_type?: string }).page_type
+  const isLegalPage = pageType === "legal";
+  const cmsBlocks = migrateLegalBlocksForPageType(cmsBlocksRaw, pageType)
 
   const { prefix: legalHeroPrefix, rest: legalBodyBlocks } = splitLeadingLegalHeroes(cmsBlocks, isLegalPage);
 

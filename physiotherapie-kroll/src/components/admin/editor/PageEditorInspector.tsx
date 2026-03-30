@@ -775,15 +775,29 @@ export function PageEditorInspector({
         {(() => {
           const pageType = current.pageType ?? "default"
           const allowedTypes = getBlockTypesForPageType(pageType)
-          const pickerBlockTypes = blockTypes.filter((bt) => bt.type !== "courseSchedule" && allowedTypes.includes(bt.type))
-          const showCourseSchedule = allowedTypes.includes("courseSchedule")
+          const legalPickerWhitelist: Array<CMSBlock["type"]> = [
+            "legalHero",
+            "legalSection",
+            "legalRichText",
+            "legalTable",
+            "legalInfoBox",
+            "legalCookieCategories",
+            "legalContactCard",
+          ]
           const isLegal = pageType === "legal"
+          const pickerBlockTypes = blockTypes.filter((bt) => {
+            if (bt.type === "courseSchedule") return false
+            if (!allowedTypes.includes(bt.type)) return false
+            if (!isLegal) return true
+            return legalPickerWhitelist.includes(bt.type)
+          })
+          const showCourseSchedule = allowedTypes.includes("courseSchedule")
           const count = pickerBlockTypes.length + (showCourseSchedule ? 2 : 0)
           return (
             <>
               {isLegal && (
                 <p className="mb-3 text-xs text-muted-foreground">
-                  Für Rechtlich-Seiten ist die Blockauswahl eingeschränkt. Spezielle Rechtlich-Blöcke folgen in einem weiteren Schritt.
+                  Für Rechtlich-Seiten stehen nur rechtlich passende Blocktypen zur Verfügung.
                 </p>
               )}
               {!isLegal && count < blockTypes.length && (

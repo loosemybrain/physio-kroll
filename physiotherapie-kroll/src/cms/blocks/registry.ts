@@ -1,5 +1,5 @@
 import { z } from "zod"
-import type { CMSBlock, BlockType, HeroBlock, TextBlock, ImageTextBlock, FeatureGridBlock, CtaBlock, SectionBlock, CardBlock, ServicesGridBlock, FaqBlock, TeamBlock, ContactFormBlock, TestimonialsBlock, GalleryBlock, OpeningHoursBlock, ImageSliderBlock, CourseScheduleBlock, HeroAction, PageType, PageSubtype, LegalHeroBlock, LegalRichTextBlock, LegalTableBlock, LegalInfoBoxBlock, LegalCookieCategoriesBlock, LegalContactCardBlock, LegalTableColumn, LegalTableRow, LegalCookieCategory, LegalCookieItem, LegalContactLine } from "@/types/cms"
+import type { CMSBlock, BlockType, HeroBlock, TextBlock, ImageTextBlock, FeatureGridBlock, CtaBlock, SectionBlock, CardBlock, ServicesGridBlock, FaqBlock, TeamBlock, ContactFormBlock, TestimonialsBlock, GalleryBlock, OpeningHoursBlock, ImageSliderBlock, CourseScheduleBlock, HeroAction, PageType, PageSubtype, LegalHeroBlock, LegalSectionBlock, LegalRichTextBlock, LegalTableBlock, LegalInfoBoxBlock, LegalCookieCategoriesBlock, LegalContactCardBlock, LegalTableColumn, LegalTableRow, LegalCookieCategory, LegalCookieItem, LegalContactLine } from "@/types/cms"
 import { PAGE_TYPE_VALUES } from "@/types/cms"
 import type { BrandKey } from "@/components/brand/brandAssets"
 import { uuid } from "@/lib/cms/arrayOps"
@@ -1721,6 +1721,15 @@ const legalHeroPropsSchema = z.object({
   subtitleFontWeight: z.enum(["normal", "medium", "semibold", "bold"]).optional(),
 })
 
+const legalSectionPropsSchema = z.object({
+  section: blockSectionPropsSchema.optional(),
+  title: z.string(),
+  content: z.string(),
+  containerBackground: z.string().optional(),
+  containerMode: z.enum(["transparent", "color", "gradient"]).optional(),
+  spacing: legalSpacingSchema.optional(),
+})
+
 const legalRichTextRunSchema = z.object({
   id: z.string().optional(),
   text: z.string(),
@@ -1868,6 +1877,18 @@ const legalHeroDefaults: LegalHeroBlock["props"] = {
   legalUpdatedAtFontWeight: "normal",
   headlineFontWeight: "semibold",
   subtitleFontWeight: "normal",
+}
+
+const legalSectionDefaults: LegalSectionBlock["props"] = {
+  section: {
+    layout: { width: "contained", paddingY: "md" },
+    background: { type: "none" },
+  },
+  title: "Abschnitt",
+  content: "<p>Inhalt hier…</p>",
+  containerBackground: undefined,
+  containerMode: "transparent",
+  spacing: "md",
 }
 
 const legalRichTextDefaults: LegalRichTextBlock["props"] = {
@@ -3469,6 +3490,49 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
       { key: "subtitleColor", label: "Untertitel-Farbe", type: "color", placeholder: "#666666", group: "design" },
       { key: "subtitleFontWeight", label: "Untertitel-Schnitt", type: "select", options: [{ value: "normal", label: "Normal" }, { value: "medium", label: "Mittel" }, { value: "semibold", label: "Halbfett" }, { value: "bold", label: "Fett" }], group: "design" },
       { key: "eyebrowColor", label: "Überzeile-Farbe", type: "color", placeholder: "#999999", group: "design" },
+    ],
+  },
+  legalSection: {
+    type: "legalSection",
+    label: "Legal Section",
+    allowedPageTypes: ["legal"],
+    defaults: legalSectionDefaults,
+    zodSchema: legalSectionPropsSchema,
+    allowInlineEdit: true,
+    enableInnerPanel: true,
+    inspectorFields: [
+      { key: "title", label: "Titel", type: "text", group: "content" },
+      { key: "content", label: "Inhalt (HTML)", type: "textarea", group: "content" },
+      {
+        key: "spacing",
+        label: "Abstand",
+        type: "select",
+        options: [
+          { value: "sm", label: "Klein" },
+          { value: "md", label: "Mittel" },
+          { value: "lg", label: "Groß" },
+        ],
+        group: "layout",
+      },
+      {
+        key: "containerMode",
+        label: "Container-Modus",
+        type: "select",
+        options: [
+          { value: "transparent", label: "Transparent" },
+          { value: "color", label: "Farbe" },
+          { value: "gradient", label: "Gradient" },
+        ],
+        group: "panel",
+      },
+      {
+        key: "containerBackground",
+        label: "Container-Hintergrund",
+        type: "color",
+        placeholder: "#ffffff",
+        showWhen: { key: "containerMode", equals: "color" },
+        group: "panel",
+      },
     ],
   },
   legalRichText: {

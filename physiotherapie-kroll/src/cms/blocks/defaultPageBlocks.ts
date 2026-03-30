@@ -29,9 +29,9 @@ function createBlock<T extends CMSBlock["type"]>(
 
 /** Block type sequence for each legal subtype (used to detect "still initial default" for subtype-change replacement). */
 export const LEGAL_SUBTYPE_BLOCK_TYPES: Record<NonNullable<PageSubtype>, CMSBlock["type"][]> = {
-  privacy: ["legalHero", "legalRichText", "legalTable"],
+  privacy: ["legalHero", "legalSection", "legalTable"],
   cookies: ["legalHero", "legalCookieCategories", "legalInfoBox"],
-  imprint: ["legalHero", "legalContactCard", "legalRichText"],
+  imprint: ["legalHero", "legalContactCard", "legalSection"],
 }
 
 /**
@@ -90,13 +90,12 @@ function getDefaultBlocksPrivacy(): CMSBlock[] {
       alignment: "left",
       variant: "default",
     }),
-    createBlock("legalRichText", {
-      headline: "Allgemeine Hinweise",
+    createBlock("legalSection", {
+      title: "Allgemeine Hinweise",
       content:
-        "Die folgenden Abschnitte informieren Sie über die Verarbeitung personenbezogener Daten auf dieser Website.",
-      alignment: "left",
-      headlineSize: "h2",
-      variant: "default",
+        "<p>Die folgenden Abschnitte informieren Sie über die Verarbeitung personenbezogener Daten auf dieser Website.</p>",
+      spacing: "md",
+      containerMode: "transparent",
     }),
     createBlock("legalTable", {
       caption: "",
@@ -166,12 +165,11 @@ function getDefaultBlocksImprint(): CMSBlock[] {
       ],
       variant: "default",
     }),
-    createBlock("legalRichText", {
-      headline: "Weitere Angaben",
-      content: "Weitere gesetzlich vorgesehene Angaben können Sie hier ergänzen.",
-      alignment: "left",
-      headlineSize: "h2",
-      variant: "default",
+    createBlock("legalSection", {
+      title: "Weitere Angaben",
+      content: "<p>Weitere gesetzlich vorgesehene Angaben können Sie hier ergänzen.</p>",
+      spacing: "md",
+      containerMode: "transparent",
     }),
   ]
 }

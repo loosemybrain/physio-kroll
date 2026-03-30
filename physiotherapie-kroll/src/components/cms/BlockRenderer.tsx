@@ -21,6 +21,7 @@ import { ImageSliderBlock } from "@/components/blocks/image-slider-block"
 import { TestimonialSliderBlock } from "@/components/blocks/testimonial-slider"
 import { CourseScheduleBlock } from "@/components/blocks/course-schedule-block"
 import { LegalHero } from "@/components/legal/LegalHero"
+import { LegalSection } from "@/components/blocks/LegalSection"
 import { LegalRichText } from "@/components/legal/LegalRichText"
 import { LegalTable } from "@/components/legal/LegalTable"
 import { LegalInfoBox } from "@/components/legal/LegalInfoBox"
@@ -425,6 +426,9 @@ export function BlockRenderer({
         const { section: _omitSection, ...legalHeroProps } = block.props as LegalHeroBlock["props"]
         return <LegalHero {...legalHeroProps} edgeToEdgeShell={edgeToEdgeShell} />
       }
+
+      case "legalSection":
+        return <LegalSection {...(block.props as import("@/types/cms").LegalSectionBlock["props"])} />
 
       case "legalRichText":
         return (

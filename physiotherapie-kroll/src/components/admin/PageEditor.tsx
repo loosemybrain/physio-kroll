@@ -69,6 +69,7 @@ const blockTypes: Array<{ icon: React.ElementType; label: string; type: CMSBlock
   { icon: Users, label: "Team", type: "team" },
   { icon: FileText, label: "Kontaktformular", type: "contactForm" },
   { icon: FileText, label: "Seitenkopf", type: "legalHero" },
+  { icon: Type, label: "Legal Section", type: "legalSection" },
   { icon: Type, label: "Fließtext", type: "legalRichText" },
   { icon: Table2, label: "Tabelle", type: "legalTable" },
   { icon: Info, label: "Info-Box", type: "legalInfoBox" },

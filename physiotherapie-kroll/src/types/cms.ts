@@ -60,6 +60,7 @@ export type BlockType =
   | "imageSlider"
   | "courseSchedule"
   | "legalHero"
+  | "legalSection"
   | "legalRichText"
   | "legalTable"
   | "legalInfoBox"
@@ -1026,6 +1027,19 @@ export interface LegalHeroBlock extends BaseBlock {
   }
 }
 
+/** legalSection: strukturierter Abschnitt für Legal-Seiten (Titel + HTML-Inhalt). */
+export interface LegalSectionBlock extends BaseBlock {
+  type: "legalSection"
+  props: {
+    section?: BlockSectionProps
+    title: string
+    content: string
+    containerBackground?: string
+    containerMode?: "transparent" | "color" | "gradient"
+    spacing?: LegalSpacing
+  }
+}
+
 /**
  * Ein kontrolliertes Textsegment (Run) innerhalb von Absatz oder Zwischenüberschrift.
  * Kein Markdown, kein HTML — nur explizite Felder.
@@ -1194,6 +1208,7 @@ export type CMSBlock =
   | ImageSliderBlock
   | CourseScheduleBlock
   | LegalHeroBlock
+  | LegalSectionBlock
   | LegalRichTextBlock
   | LegalTableBlock
   | LegalInfoBoxBlock

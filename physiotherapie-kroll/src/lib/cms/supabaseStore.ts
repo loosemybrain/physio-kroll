@@ -4,6 +4,7 @@ import type { CMSBlock, CMSPage, PageSubtype, PageType } from "@/types/cms";
 import type { BrandKey } from "@/components/brand/brandAssets";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { getDefaultBlocksForPageType } from "@/cms/blocks/defaultPageBlocks";
+import { migrateLegalBlocksForPageType } from "@/lib/cms/migrations/legalSections";
 
 export type PageStatus = "draft" | "published";
 
@@ -133,16 +134,20 @@ export async function getPage(id: string): Promise<AdminPage | null> {
     throw new Error(body?.error || `Failed to load page (${res.status})`);
   }
   const p = (await res.json()) as any;
+  const pageType = (p.pageType ?? p.page_type ?? "default") as PageType
+  const blocks = (p.blocks ?? []) as CMSBlock[]
+  const migratedBlocks = migrateLegalBlocksForPageType(blocks, pageType)
+
   return {
     id: p.id,
     title: p.title,
     slug: p.slug,
     brand: p.brand,
     status: p.status,
-    pageType: (p.pageType ?? p.page_type ?? "default") as PageType,
+    pageType,
     pageSubtype: normalizePageSubtype(p.pageSubtype ?? p.page_subtype),
     updatedAt: p.updatedAt ?? nowIso(),
-    blocks: (p.blocks ?? []) as CMSBlock[],
+    blocks: migratedBlocks,
     meta: undefined,
   };
 }
@@ -168,11 +173,13 @@ export async function getPublishedPageBySlug(slug: string): Promise<AdminPage | 
 
   if (blocksErr) throw blocksErr;
 
-  const cmsBlocks: CMSBlock[] = (blocks ?? []).map((b: any) => ({
+  const cmsBlocksRaw: CMSBlock[] = (blocks ?? []).map((b: any) => ({
     id: b.id,
     type: b.type,
     props: (b.props ?? {}) as any,
   }));
+  const pageType = (page.page_type ?? "default") as PageType
+  const cmsBlocks = migrateLegalBlocksForPageType(cmsBlocksRaw, pageType)
 
   return {
     id: page.id,
@@ -180,7 +187,7 @@ export async function getPublishedPageBySlug(slug: string): Promise<AdminPage | 
     slug: page.slug,
     brand: page.brand,
     status: page.status,
-    pageType: (page.page_type ?? "default") as PageType,
+    pageType,
     pageSubtype: normalizePageSubtype(page.page_subtype),
     updatedAt: page.updated_at ?? nowIso(),
     blocks: cmsBlocks,
