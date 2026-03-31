@@ -59,6 +59,8 @@ export type BlockType =
   | "openingHours"
   | "imageSlider"
   | "courseSchedule"
+  /** Strukturierte externe Medien (Whitelist-Provider, nur Embed-URL — kein freies HTML/iframe-Snippet). */
+  | "externalEmbed"
   | "legalHero"
   | "legalSection"
   | "legalRichText"
@@ -922,6 +924,30 @@ export interface CourseScheduleBlock extends BaseBlock {
 /**
  * Opening hours block configuration
  */
+/** Erlaubte Drittanbieter für CMS-Embeds (muss mit Consent-Providern übereinstimmen). */
+export type CmsExternalEmbedProvider = "google_maps" | "facebook"
+
+/**
+ * Externe Medien-Einbettung: nur Provider + HTTPS-Embed-URL.
+ * Ausgabe ausschließlich über zentrale Renderer mit ExternalMediaGate.
+ */
+export interface ExternalEmbedBlock extends BaseBlock {
+  type: "externalEmbed"
+  props: {
+    section?: BlockSectionProps
+    provider: CmsExternalEmbedProvider
+    /** Offizielle Embed-URL des Anbieters (kein iframe-HTML). */
+    embedUrl: string
+    /** Optional: sichtbare Überschrift und iframe-title. */
+    title?: string
+    /** Optionaler erklärender Text oberhalb des Embeds. */
+    description?: string
+    elements?: Record<string, ElementConfig>
+    /** Wie bei anderen Blöcken (Inspector/Typografie). */
+    typography?: Record<string, unknown>
+  }
+}
+
 export interface OpeningHoursBlock extends BaseBlock {
   type: "openingHours"
   props: {
@@ -1207,6 +1233,7 @@ export type CMSBlock =
   | OpeningHoursBlock
   | ImageSliderBlock
   | CourseScheduleBlock
+  | ExternalEmbedBlock
   | LegalHeroBlock
   | LegalSectionBlock
   | LegalRichTextBlock

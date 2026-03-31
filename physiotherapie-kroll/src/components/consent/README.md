@@ -1,95 +1,77 @@
 # Cookie Consent System
 
-DSGVO/ePrivacy-konformes Cookie-Consent-System ohne LocalStorage.
+DSGVO/ePrivacy-konformes Cookie-Consent ohne LocalStorage für die Zustimmung (Cookie `pc_consent`).
 
-## Verwendung
+## Produktive Kategorien
 
-### ConsentGate für funktionelle Medien
+- **`necessary`**: immer aktiv (Speicherung der Auswahl).
+- **`externalMedia`**: Opt-in für eingebettete Inhalte Dritter (z. B. Google Maps, Facebook).
 
-Wrappe externe Inhalte (Maps, Videos, iframes) mit `ConsentGate`:
+Es gibt **keine** produktiven Kategorien `functional`, `analytics` oder `marketing`. Alte Cookies mit `functional` werden beim Lesen auf `externalMedia` gemappt; beim nächsten Speichern wird nur noch das schlanke Modell geschrieben.
+
+## External Media Gate
+
+Einbettungen, die externe `iframe`- oder Script-URLs nutzen, sollten über **`ExternalMediaGate`** bzw. die Hilfskomponenten **`GoogleMapsEmbed`** / **`FacebookEmbed`** laufen.
+
+- **Nur globale, persistente Freigabe:** Sichtbarkeit der Kinder hängt ausschließlich von `hasConsent("externalMedia")` (Cookie) ab — kein separates Session- oder Einmal-Opt-in im Gate.
+- **Kein `fallback`-Prop:** Eigene Fallback-Knoten könnten versehentlich externe Inhalte ohne Consent rendern; der Platzhalter ist fest im Gate definiert.
+- **`GoogleMapsEmbed` / `FacebookEmbed`:** Prüfen URLs zentral (`validateExternalEmbedUrl.ts`); bei Fehler nur interne Hinweis-UI, kein iframe.
 
 ```tsx
-import { ConsentGate } from "@/components/consent/ConsentGate"
+import { GoogleMapsEmbed } from "@/components/embeds/GoogleMapsEmbed"
 
-// Beispiel: Google Maps
-<ConsentGate category="functional">
-  <iframe
-    src="https://www.google.com/maps/embed?..."
-    width="100%"
-    height="450"
-    style={{ border: 0 }}
-    allowFullScreen
-    loading="lazy"
-  />
-</ConsentGate>
-
-// Beispiel: YouTube Video
-<ConsentGate category="functional">
-  <iframe
-    src="https://www.youtube.com/embed/..."
-    width="560"
-    height="315"
-    frameBorder="0"
-    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-    allowFullScreen
-  />
-</ConsentGate>
+<GoogleMapsEmbed embedSrc="https://www.google.com/maps/embed?..." title="Standort" />
 ```
 
-### Cookie-Einstellungen Link im Footer
-
 ```tsx
-import { CookiePreferencesLink } from "@/components/consent/CookiePreferencesLink"
+import { FacebookEmbed } from "@/components/embeds/FacebookEmbed"
 
-// Als Link
-<CookiePreferencesLink />
-
-// Als Button
-<CookiePreferencesLink variant="button" />
-
-// Mit eigenem Text
-<CookiePreferencesLink>Datenschutz & Cookies</CookiePreferencesLink>
+<FacebookEmbed embedSrc="https://www.facebook.com/plugins/page.php?..." />
 ```
 
-### Consent-Status prüfen (in Komponenten)
+Direkt mit Gate und eigenem Inhalt:
 
 ```tsx
-"use client"
+import { ExternalMediaGate } from "@/components/embeds/ExternalMediaGate"
+
+<ExternalMediaGate provider="google_maps">
+  {/* Nur nach Zustimmung: iframe mit externer src */}
+</ExternalMediaGate>
+```
+
+## Programmgesteuert
+
+```tsx
 import { useCookieConsent } from "@/components/consent/CookieProvider"
 
-export function MyComponent() {
-  const { hasConsent } = useCookieConsent()
-  
-  if (hasConsent("functional")) {
-    // Lade funktionelle Inhalte
-  }
+const { hasConsent } = useCookieConsent()
+
+if (hasConsent("externalMedia")) {
+  // externes Embed erlaubt
 }
 ```
 
-## Compliance-Features
-
-✅ **Vorab-Block**: Keine nicht-notwendigen Cookies/Tracker vor Zustimmung  
-✅ **Gleichwertige Buttons**: "Alle ablehnen" gleich prominent wie "Alle akzeptieren"  
-✅ **Granularität**: Notwendig (immer an) + Funktional/Media (Opt-in)  
-✅ **Keine Pre-Checked Toggles**: Nur "Notwendig" ist standardmäßig aktiv  
-✅ **Widerruf jederzeit**: Footer-Link öffnet Settings-Dialog  
-✅ **Cookie-basiert**: Kein LocalStorage, nur First-Party Cookie  
-✅ **Brand-aware**: Passt sich an Physio/Konzept Design an  
-
-## Cookie-Struktur
+## Cookie-Format (Beispiel)
 
 ```json
 {
-  "v": 1,
+  "v": 2,
   "necessary": true,
-  "functional": false,
-  "analytics": false,
-  "marketing": false,
-  "ts": 1234567890
+  "externalMedia": false,
+  "ts": 1730000000000
 }
 ```
 
-Cookie-Name: `pc_consent`  
-Max-Age: 180 Tage  
-SameSite: Lax  
-Secure: Nur in Production
+Cookie-Name: `pc_consent`
+
+## Komponenten
+
+- `CookieProvider` / `useCookieConsent`
+- `CookieBanner`
+- `CookieSettingsDialog`
+- `CookieFloatingButton`
+- `CookiePreferencesLink`
+
+## Server-seitig
+
+`getConsentFromRequestCookies(cookieHeader)` in `@/lib/consent/cookie` — gleiche Migration wie im Browser.

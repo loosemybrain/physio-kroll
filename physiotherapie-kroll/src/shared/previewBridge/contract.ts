@@ -122,6 +122,8 @@ export interface EditorScrollToPayload {
   behavior?: "auto" | "smooth"
   block?: "start" | "center" | "end" | "nearest"
   inline?: "start" | "center" | "end" | "nearest"
+  /** Optional: Ursprung (Debugging/UX); ändert keine Scroll-Logik im Preview. */
+  source?: "outline" | "editor"
 }
 
 export interface EditorSetModePayload {

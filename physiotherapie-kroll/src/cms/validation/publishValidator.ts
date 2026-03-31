@@ -1,5 +1,6 @@
 import { z } from "zod"
-import type { CMSBlock } from "@/types/cms"
+import type { CMSBlock, ExternalEmbedBlock } from "@/types/cms"
+import { validateEmbedUrlForProvider } from "@/lib/consent/validateExternalEmbedUrl"
 import type { BrandKey } from "@/components/brand/brandAssets"
 
 /**
@@ -432,6 +433,30 @@ function validateBlock(block: CMSBlock): PublishIssue[] {
               message: "Zustimmungs-Text erforderlich, wenn Zustimmung erforderlich ist",
             })
           }
+        }
+        break
+      }
+
+      case "externalEmbed": {
+        const p = block.props as ExternalEmbedBlock["props"]
+        const url = (p.embedUrl ?? "").trim()
+        if (!url) {
+          issues.push({
+            blockId: block.id,
+            blockType: block.type,
+            fieldPath: "embedUrl",
+            message: "Embed-URL ist erforderlich zum Veröffentlichen.",
+          })
+          break
+        }
+        const v = validateEmbedUrlForProvider(p.provider, url)
+        if (!v.ok) {
+          issues.push({
+            blockId: block.id,
+            blockType: block.type,
+            fieldPath: "embedUrl",
+            message: v.message,
+          })
         }
         break
       }

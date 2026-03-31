@@ -1,5 +1,5 @@
 import { z } from "zod"
-import type { CMSBlock, BlockType, HeroBlock, TextBlock, ImageTextBlock, FeatureGridBlock, CtaBlock, SectionBlock, CardBlock, ServicesGridBlock, FaqBlock, TeamBlock, ContactFormBlock, TestimonialsBlock, GalleryBlock, OpeningHoursBlock, ImageSliderBlock, CourseScheduleBlock, HeroAction, PageType, PageSubtype, LegalHeroBlock, LegalSectionBlock, LegalRichTextBlock, LegalTableBlock, LegalInfoBoxBlock, LegalCookieCategoriesBlock, LegalContactCardBlock, LegalTableColumn, LegalTableRow, LegalCookieCategory, LegalCookieItem, LegalContactLine } from "@/types/cms"
+import type { CMSBlock, BlockType, HeroBlock, TextBlock, ImageTextBlock, FeatureGridBlock, CtaBlock, SectionBlock, CardBlock, ServicesGridBlock, FaqBlock, TeamBlock, ContactFormBlock, TestimonialsBlock, GalleryBlock, OpeningHoursBlock, ImageSliderBlock, CourseScheduleBlock, ExternalEmbedBlock, HeroAction, PageType, PageSubtype, LegalHeroBlock, LegalSectionBlock, LegalRichTextBlock, LegalTableBlock, LegalInfoBoxBlock, LegalCookieCategoriesBlock, LegalContactCardBlock, LegalTableColumn, LegalTableRow, LegalCookieCategory, LegalCookieItem, LegalContactLine } from "@/types/cms"
 import { PAGE_TYPE_VALUES } from "@/types/cms"
 import type { BrandKey } from "@/components/brand/brandAssets"
 import { uuid } from "@/lib/cms/arrayOps"
@@ -7,6 +7,7 @@ import { typographySchema, elementTypographySchema } from "@/lib/typography"
 import type { EditableElementDef } from "@/lib/editableElements"
 import { getAvailableIconNames } from "@/components/icons/service-icons"
 import { getLegalIconsWithLabels } from "@/lib/legal/legal-icon-registry"
+import { validateEmbedUrlForProvider } from "@/lib/consent/validateExternalEmbedUrl"
 
 // ---- TestimonialSlider Extension Types (temporary, until in types/cms) ----
 export type TestimonialSliderBlock = {
@@ -959,6 +960,29 @@ const openingHoursPropsSchema = z.object({
   typography: elementTypographySchema,
 })
 
+const externalEmbedPropsSchema = z
+  .object({
+    section: blockSectionPropsSchema,
+    provider: z.enum(["google_maps", "facebook"]),
+    embedUrl: z.string(),
+    title: z.string().optional(),
+    description: z.string().optional(),
+    typography: elementTypographySchema,
+    elements: z.record(z.string(), z.any()).optional(),
+  })
+  .superRefine((data, ctx) => {
+    const url = data.embedUrl.trim()
+    if (!url) return
+    const v = validateEmbedUrlForProvider(data.provider, url)
+    if (!v.ok) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: v.message,
+        path: ["embedUrl"],
+      })
+    }
+  })
+
 function getDefaultBrand(): BrandKey {
   return "physiotherapy"
 }
@@ -1602,6 +1626,18 @@ const openingHoursDefaults: OpeningHoursBlock["props"] = {
     { id: generateUniqueId("hours", 3), label: "Donnerstag", value: "08:00 – 18:00" },
     { id: generateUniqueId("hours", 4), label: "Freitag", value: "08:00 – 14:00" },
   ],
+}
+
+const externalEmbedDefaults: ExternalEmbedBlock["props"] = {
+  section: {
+    layout: { width: "contained", paddingY: "md", paddingX: "md" },
+    background: { type: "none" },
+  },
+  provider: "google_maps",
+  embedUrl: "",
+  title: "",
+  description: "",
+  typography: {},
 }
 
 const imageSliderDefaults: ImageSliderBlock["props"] = {
@@ -3427,6 +3463,53 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
           { value: "muted", label: "Muted" },
           { value: "gradient", label: "Gradient" },
         ],
+      },
+    ],
+  },
+  externalEmbed: {
+    type: "externalEmbed",
+    label: "Externes Embed",
+    allowedPageTypes: ["default", "landing"],
+    defaults: externalEmbedDefaults,
+    zodSchema: externalEmbedPropsSchema,
+    inspectorGroupOrder: ["basics", "content", "layout", "design", "interactions", "elements"],
+    inspectorFields: [
+      {
+        key: "provider",
+        label: "Anbieter",
+        type: "select",
+        required: true,
+        group: "basics",
+        helpText: "Nur freigegebene Anbieter. Kein freies HTML oder iframe-Code.",
+        options: [
+          { value: "google_maps", label: "Google Maps" },
+          { value: "facebook", label: "Facebook (Plugin-URL)" },
+        ],
+      },
+      {
+        key: "embedUrl",
+        label: "Embed-URL (HTTPS)",
+        type: "url",
+        required: false,
+        group: "basics",
+        placeholder: "https://www.google.com/maps/embed?…",
+        helpText:
+          "Nur die offizielle Embed-URL einfügen (Google: /maps/embed…, Facebook: …/plugins/…). Kein iframe-Tag.",
+      },
+      {
+        key: "title",
+        label: "Titel (optional)",
+        type: "text",
+        group: "content",
+        placeholder: "z. B. Standort",
+        helpText: "Wird als Überschrift und als iframe-Titel verwendet.",
+      },
+      {
+        key: "description",
+        label: "Beschreibung (optional)",
+        type: "textarea",
+        group: "content",
+        placeholder: "Kurzer Hinweistext über dem Embed",
       },
     ],
   },

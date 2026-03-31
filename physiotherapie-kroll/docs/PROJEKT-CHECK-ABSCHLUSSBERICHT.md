@@ -31,7 +31,7 @@
 | Datei | Grund | Empfohlener nächster Schritt |
 |-------|--------|------------------------------|
 | Viele Dateien | `@typescript-eslint/no-explicit-any` | Schrittweise `any` durch konkrete Typen/Generics ersetzen (z. B. CMS-Props, Registry, Inspector). |
-| ElementTypographySection, TypographyInspectorSection, InlineFieldEditor, ConsentGate, CookieBanner, CookieFloatingButton, CookieProvider, CookieSettingsDialog | set-state-in-effect (Sync von Props/Cookie) | Entweder gezieltes eslint-disable mit Kurz-Kommentar oder Umstellung auf kontrollierte Komponente / key-Reset / useSyncExternalStore je nach Fall. |
+| ElementTypographySection, TypographyInspectorSection, InlineFieldEditor, ExternalMediaGate, CookieBanner, CookieFloatingButton, CookieProvider, CookieSettingsDialog | set-state-in-effect (Sync von Props/Cookie) | Entweder gezieltes eslint-disable mit Kurz-Kommentar oder Umstellung auf kontrollierte Komponente / key-Reset / useSyncExternalStore je nach Fall. |
 | ThemePresetSettings.tsx | useMemo in .map-Callback (rules-of-hooks) | Tab-Inhalt in eigene Komponente auslagern, dort useMemo auf Top-Level aufrufen. |
 | PageEditor.tsx | Sehr viele any + ungenutzte Variablen/Imports | Gezielte Typen für Inspector-Renderer; ungenutzte Imports/Variablen entfernen. |
 | BackgroundInspectorSection, ImageField, MediaLibrary, NavigationEditorClient, team-grid, gallery-block | `<img>` statt `next/image` | Wo sinnvoll auf `next/image` umstellen (LCP/Bandbreite); bei dynamischen/Admin-URLs ggf. mit `unoptimized` oder eigenem Loader. |

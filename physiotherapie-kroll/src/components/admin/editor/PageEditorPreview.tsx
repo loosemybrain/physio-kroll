@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState } from "react"
+import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { ArrowDown, ArrowUp, Copy, Monitor, Tablet, Smartphone, Trash2 } from "lucide-react"
@@ -11,8 +11,13 @@ import {
   PREVIEW_MESSAGE_TYPES,
   createBridgeEnvelope,
   isBridgeMessage,
+  type EditorScrollToPayload,
   type LegalRichPreviewGranularSelection,
 } from "@/shared/previewBridge/contract"
+
+export type PageEditorPreviewHandle = {
+  scrollPreviewToBlock: (blockId: string, options?: { source?: "outline" | "editor" }) => void
+}
 
 interface PageEditorPreviewProps {
   current: AdminPage
@@ -42,30 +47,60 @@ interface PageEditorPreviewProps {
   ) => void
 }
 
-export function PageEditorPreview({
-  current,
-  selectedBlockId,
-  selectedElementId,
-  legalRichInspectorTarget,
-  expandedRepeaterCards,
-  inlineOpen,
-  inlineAnchorRect,
-  inlineLabel,
-  inlineValue,
-  inlineMultiline,
-  onInlineChange,
-  onInlineClose,
-  onEditField,
-  onBlockSelect,
-  onElementClick,
-  onMoveBlock,
-  onDuplicateBlock,
-  onRemoveBlock,
-  onSelectRepeaterItem,
-}: PageEditorPreviewProps) {
+export const PageEditorPreview = forwardRef<PageEditorPreviewHandle, PageEditorPreviewProps>(function PageEditorPreview(
+  {
+    current,
+    selectedBlockId,
+    selectedElementId,
+    legalRichInspectorTarget,
+    expandedRepeaterCards,
+    inlineOpen,
+    inlineAnchorRect,
+    inlineLabel,
+    inlineValue,
+    inlineMultiline,
+    onInlineChange,
+    onInlineClose,
+    onEditField,
+    onBlockSelect,
+    onElementClick,
+    onMoveBlock,
+    onDuplicateBlock,
+    onRemoveBlock,
+    onSelectRepeaterItem,
+  },
+  ref
+) {
   const liveScrollRef = useRef<HTMLDivElement>(null)
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const sessionIdRef = useRef<string | null>(null)
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      scrollPreviewToBlock: (blockId: string, options?: { source?: "outline" | "editor" }) => {
+        const w = iframeRef.current?.contentWindow
+        if (!w || !blockId) return
+        const payload: EditorScrollToPayload = {
+          blockId,
+          behavior: "smooth",
+          block: "center",
+          inline: "nearest",
+          source: options?.source ?? "outline",
+        }
+        w.postMessage(
+          createBridgeEnvelope(
+            EDITOR_MESSAGE_TYPES.EDITOR_SCROLL_TO,
+            String(current.id),
+            payload,
+            { source: "editor", sessionId: sessionIdRef.current ?? undefined }
+          ),
+          "*"
+        )
+      },
+    }),
+    [current.id]
+  )
 
   const overlayHoveringRef = useRef(false)
   const blockRectMapRef = useRef<Map<string, DOMRect>>(new Map())
@@ -449,4 +484,4 @@ export function PageEditorPreview({
       />
     </div>
   )
-}
+})

@@ -3,7 +3,7 @@ import type { CMSBlock } from "@/types/cms"
 import { reorderLegalSections } from "@/lib/cms/reorderLegalSections"
 
 function block(type: CMSBlock["type"], id: string): CMSBlock {
-  return { id, type, props: {} as CMSBlock["props"] }
+  return { id, type, props: {} } as CMSBlock
 }
 
 describe("reorderLegalSections", () => {

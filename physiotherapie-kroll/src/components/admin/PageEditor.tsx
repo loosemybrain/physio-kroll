@@ -3,7 +3,7 @@
 import { useMemo, useState, useRef, useEffect, useCallback, useLayoutEffect } from "react"
 import { useLiveScrollLock } from "@/hooks/use-live-scroll-lock"
 import { useInspectorAutoscroll } from "@/hooks/use-inspector-autoscroll"
-import { ArrowLeft, Save, Send, Type, ImageIcon, Layout, Grid3X3, Megaphone, Trash2, Square, Grid, HelpCircle, Users, User, Plus, ChevronUp, ChevronDown, Copy, FileText, MessageSquareQuote, Images, Clock, CalendarDays, Table2, Info, Cookie } from "lucide-react"
+import { ArrowLeft, Save, Send, Type, ImageIcon, Layout, Grid3X3, Megaphone, Trash2, Square, Grid, HelpCircle, Users, User, Plus, ChevronUp, ChevronDown, Copy, FileText, MessageSquareQuote, Images, Clock, CalendarDays, Table2, Info, Cookie, Globe2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
 import { Input } from "@/components/ui/input"
@@ -40,12 +40,13 @@ import { ShadowInspector } from "./ShadowInspector"
 import type { ElementConfig } from "@/types/cms"
 import { INSPECTOR_CARD_ID_ATTR } from "./inspector/InspectorCardItem"
 import { PageEditorHeader } from "./editor/PageEditorHeader"
-import { PageEditorPreview } from "./editor/PageEditorPreview"
+import { PageEditorPreview, type PageEditorPreviewHandle } from "./editor/PageEditorPreview"
 import { PageEditorInspector } from "./editor/PageEditorInspector"
 import { usePageEditorActions } from "@/hooks/usePageEditorActions"
 import { useEditorSelection } from "@/hooks/useEditorSelection"
 import { useSetLeaveGuard } from "./AdminLeaveGuardContext"
 import { reorderLegalSections } from "@/lib/cms/reorderLegalSections"
+import { validateDraftExternalEmbeds } from "@/lib/cms/validateDraftExternalEmbeds"
 
 
 interface PageEditorProps {
@@ -66,6 +67,7 @@ const blockTypes: Array<{ icon: React.ElementType; label: string; type: CMSBlock
   { icon: Images, label: "Bild-Slider", type: "imageSlider" },
   { icon: CalendarDays, label: "Kursplan", type: "courseSchedule" },
   { icon: Clock, label: "Öffnungszeiten", type: "openingHours" },
+  { icon: Globe2, label: "Externes Embed", type: "externalEmbed" },
   { icon: HelpCircle, label: "FAQ", type: "faq" },
   { icon: Users, label: "Team", type: "team" },
   { icon: FileText, label: "Kontaktformular", type: "contactForm" },
@@ -329,12 +331,15 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
   const { selectedBlockId, selectedElementId, activeFieldPath, selectBlock, selectField, selectElement, deselectElement, clearSelection, blockIdChanged } = editorSelection
   
   const fieldRefs = useRef<Record<string, HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null>>({})
+  /** Auswahl-Metadaten für Legal-Outline UX (nicht persistiert). */
+  const [lastSelectionSource, setLastSelectionSource] = useState<"outline" | "preview" | null>(null)
 
   /** Internal marker: true only while the page is a new legal page with untouched default start blocks. Used to allow automatic block replacement on pageSubtype change. Not persisted. */
   const [initialLegalDefaultsActive, setInitialLegalDefaultsActive] = useState(false)
   
   // Inspector scroll ref and accordion state (must be defined before hooks that use it)
   const inspectorScrollRef = useRef<HTMLDivElement>(null)
+  const previewRef = useRef<PageEditorPreviewHandle>(null)
   const [accordionValue, setAccordionValue] = useState<string | undefined>(undefined)
   
   // Live scroll lock hook
@@ -872,6 +877,41 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
     })
   }, [setPage])
 
+  const requestPreviewScrollToBlock = useCallback((blockId: string) => {
+    previewRef.current?.scrollPreviewToBlock(blockId, { source: "outline" })
+  }, [])
+
+  const handleInsertLegalSectionAt = useCallback(
+    (index: number) => {
+      if (!current || current.pageType !== "legal") return
+      const clamped = Math.max(0, Math.min(index, current.blocks.length))
+
+      const nextBlock = defaultBlock("legalSection", (current.brand || "physiotherapy") as BrandKey)
+      const nextSection = {
+        ...nextBlock,
+        props: {
+          ...(nextBlock.props as Record<string, unknown>),
+          title: "",
+          content: "",
+          spacing: "md",
+          containerMode: "transparent",
+        } as CMSBlock["props"],
+      } as Extract<CMSBlock, { type: "legalSection" }>
+
+      setPage((prev) => {
+        if (!prev || prev.pageType !== "legal") return prev
+        const blocks = prev.blocks ?? []
+        const i = Math.max(0, Math.min(clamped, blocks.length))
+        return { ...prev, blocks: arrayInsert(blocks, i, nextSection) }
+      })
+
+      setLastSelectionSource("outline")
+      selectBlockClearingLegalRichGranular(nextSection.id)
+      previewRef.current?.scrollPreviewToBlock(nextSection.id, { source: "outline" })
+    },
+    [current, setPage, selectBlockClearingLegalRichGranular]
+  )
+
   // Return early until mounted + page state is ready (prevents SSR/client mismatch)
   // This must come AFTER all hooks to follow Rules of Hooks
   if (!mounted || !page) {
@@ -893,6 +933,13 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
     if (selectedBlockId === id) {
       clearSelection()
     }
+  }
+
+  const duplicateBlockById = (id: string) => {
+    if (!current) return
+    const index = current.blocks.findIndex((b) => b.id === id)
+    if (index < 0) return
+    editorActions.duplicateAt(index)
   }
 
   const moveBlock = (index: number, direction: -1 | 1) => {
@@ -1013,6 +1060,21 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
   }
 
   const handleSaveDraft = async () => {
+    if (!current) return
+    const embedIssues = validateDraftExternalEmbeds(current.blocks)
+    if (embedIssues.length > 0) {
+      const first = embedIssues[0]
+      selectField(first.blockId, first.fieldPath)
+      toast({
+        title: "Embed-URL ungültig",
+        description: first.message,
+        variant: "destructive",
+      })
+      setTimeout(() => {
+        document.querySelector(`[data-block-id="${first.blockId}"]`)?.scrollIntoView({ behavior: "smooth", block: "center" })
+      }, 50)
+      return
+    }
     try {
       const saved = await save({ ...current, status: "draft" })
       lastSavedRef.current = JSON.stringify(saved)
@@ -1170,6 +1232,7 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
 
       <div className="flex flex-1 overflow-hidden h-full min-h-0">
         <PageEditorPreview
+          ref={previewRef}
           current={current}
           selectedBlockId={selectedBlockId}
           selectedElementId={selectedElementId}
@@ -1184,6 +1247,7 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
           onInlineClose={handleInlineClose}
           onEditField={handleEditField}
           onBlockSelect={(blockId) => {
+            setLastSelectionSource("preview")
             selectBlockClearingLegalRichGranular(blockId)
           }}
           onElementClick={(blockId, elementId) => {
@@ -1239,6 +1303,15 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
             accordionValue={accordionValue}
             setAccordionValue={setAccordionValue}
             onReorderLegalSections={handleReorderLegalSections}
+            onRequestPreviewScroll={requestPreviewScrollToBlock}
+            onInsertLegalSectionAt={handleInsertLegalSectionAt}
+            lastSelectionSource={lastSelectionSource}
+            onSelectionSourceChange={setLastSelectionSource}
+            onConsumePreviewSelectionSource={() => {
+              setLastSelectionSource((prev) => (prev === "preview" ? null : prev))
+            }}
+            onDeleteBlockFromOutline={removeBlock}
+            onDuplicateBlockFromOutline={duplicateBlockById}
           />
         </div>
       </div>

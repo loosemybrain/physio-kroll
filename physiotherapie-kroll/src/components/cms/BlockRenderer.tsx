@@ -17,6 +17,7 @@ import { ContactFormBlock } from "@/components/blocks/contact-form-block"
 import { TestimonialsBlock } from "@/components/blocks/testimonials-block"
 import { GalleryBlock } from "@/components/blocks/gallery-block"
 import { OpeningHoursBlock } from "@/components/blocks/opening-hours-block"
+import { ExternalEmbedBlock } from "@/components/blocks/external-embed-block"
 import { ImageSliderBlock } from "@/components/blocks/image-slider-block"
 import { TestimonialSliderBlock } from "@/components/blocks/testimonial-slider"
 import { CourseScheduleBlock } from "@/components/blocks/course-schedule-block"
@@ -379,6 +380,11 @@ export function BlockRenderer({
         )
       }
 
+      case "externalEmbed": {
+        const { section: _s, elements: _e, typography: _t, ...embedRest } = block.props as import("@/types/cms").ExternalEmbedBlock["props"]
+        return <ExternalEmbedBlock {...embedRest} />
+      }
+
       case "imageSlider": {
         const props = block.props
         const extras = (block.props ?? {}) as Record<string, unknown>
@@ -488,7 +494,7 @@ export function BlockRenderer({
     // Apply typography classes to wrapper even in non-editable mode; stable ID für Anchor-Navigation
     if (typographyClassName) {
       return (
-        <div id={blockAnchorId} className={typographyClassName}>
+        <div id={blockAnchorId} data-block-id={block.id} className={typographyClassName}>
           <SectionWrapper
             section={section}
             isFirst={isFirst}
@@ -501,7 +507,7 @@ export function BlockRenderer({
       )
     }
     return (
-      <div id={blockAnchorId}>
+      <div id={blockAnchorId} data-block-id={block.id}>
         <SectionWrapper
           section={section}
           isFirst={isFirst}

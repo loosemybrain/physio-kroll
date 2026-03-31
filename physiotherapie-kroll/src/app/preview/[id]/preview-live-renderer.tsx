@@ -12,8 +12,10 @@ import {
   createBridgeEnvelope,
   isBridgeMessage,
   type EditorHighlightPayload,
+  type EditorScrollToPayload,
   type EditorSetDraftPayload,
 } from "@/shared/previewBridge/contract"
+import { getBlockAnchorId } from "@/lib/navigation/scrollToAnchor"
 
 function isLikelyBlockArray(v: unknown): v is CMSBlock[] {
   return Array.isArray(v) && v.every((x) => x && typeof x === "object" && "id" in (x as any) && "type" in (x as any))
@@ -149,6 +151,29 @@ export function PreviewLiveRenderer({
         if (typeof payload?.brand === "string") setBrand(nextBrand)
         if (typeof payload?.pageSlug === "string") setPageSlug(payload.pageSlug)
         if (isLikelyBlockArray(payload?.blocks)) setBlocks(withPreviewBrand(payload.blocks, nextBrand))
+        return
+      }
+
+      if (msg.type === EDITOR_MESSAGE_TYPES.EDITOR_SCROLL_TO) {
+        const payload = msg.payload as EditorScrollToPayload
+        const blockId = typeof payload?.blockId === "string" ? payload.blockId : ""
+        if (!blockId) return
+
+        const el =
+          document.querySelector<HTMLElement>(`[data-block-id="${CSS.escape(blockId)}"]`) ??
+          document.getElementById(getBlockAnchorId(blockId))
+        if (!el) return
+
+        const behavior = payload.behavior === "auto" ? "auto" : "smooth"
+        const blockAlign = payload.block ?? "center"
+        const inlineAlign = payload.inline ?? "nearest"
+        el.scrollIntoView({ behavior, block: blockAlign, inline: inlineAlign })
+
+        const flash = ["ring-2", "ring-primary/50", "ring-offset-2", "rounded-lg"] as const
+        el.classList.add(...flash)
+        window.setTimeout(() => {
+          el.classList.remove(...flash)
+        }, 800)
         return
       }
 

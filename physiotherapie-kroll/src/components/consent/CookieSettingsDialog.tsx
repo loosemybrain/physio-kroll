@@ -7,23 +7,15 @@ import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { consentCategoryLabels, type ConsentCategory } from "@/lib/consent/types"
-import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { useEffect, useState, useCallback } from "react"
 import { ChevronLeft } from "lucide-react"
 
 /**
- * Cookie settings dialog with granular category controls
- * V0 design with animations
- * Features:
- * - ESC does NOT close (must be explicit via back or save)
- * - "Save Selection" button to confirm changes
- * - Back button to return to main banner view
- * - Draft mode: changes aren't saved until "Save" is clicked
+ * Cookie-Einstellungen: nur produktive Kategorien `necessary` + `externalMedia`.
  */
 export function CookieSettingsDialog() {
   const { isSettingsOpen, closeSettings, consent, setCategory, acceptAll, rejectAll } = useCookieConsent()
-  const pathname = usePathname()
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false)
   const [draftConsent, setDraftConsent] = useState(consent)
   const [isMounted, setIsMounted] = useState(false)
@@ -35,7 +27,6 @@ export function CookieSettingsDialog() {
     )
   }, [])
 
-  // Sync draft with current consent when dialog opens
   useEffect(() => {
     if (isSettingsOpen && consent) {
       setDraftConsent(consent)
@@ -43,6 +34,7 @@ export function CookieSettingsDialog() {
   }, [isSettingsOpen, consent])
 
   const handleCategoryChange = useCallback((category: ConsentCategory, value: boolean) => {
+    if (category === "necessary") return
     setDraftConsent((prev) => {
       if (!prev) return prev
       return { ...prev, [category]: value }
@@ -51,13 +43,7 @@ export function CookieSettingsDialog() {
 
   const handleSave = useCallback(() => {
     if (draftConsent) {
-      // Always persist the draft state exactly as-is
-      // This ensures consistency between what's shown and what's stored
-      setCategory("functional", draftConsent.functional ?? false)
-      setCategory("analytics", draftConsent.analytics ?? false)
-      setCategory("marketing", draftConsent.marketing ?? false)
       setCategory("externalMedia", draftConsent.externalMedia ?? false)
-      // Close dialog after all updates
       setTimeout(() => closeSettings(), 0)
     }
   }, [draftConsent, setCategory, closeSettings])
@@ -65,31 +51,19 @@ export function CookieSettingsDialog() {
   const handleOpenChange = useCallback(
     (open: boolean) => {
       if (!open) {
-        // User tried to close via ESC or clicking outside
-        // Close without saving draft
         closeSettings()
       }
     },
     [closeSettings]
   )
 
-  const isKonzept = pathname === "/konzept" || pathname?.startsWith("/konzept/")
-
   if (!consent || !draftConsent) return null
 
-  // Only render Dialog on client to avoid hydration issues with Radix ID generation
   if (!isMounted) {
     return null
   }
 
-  // Categories to show in settings dialog
-  const categories: Array<{ key: ConsentCategory; show: boolean }> = [
-    { key: "necessary", show: true },
-    { key: "analytics", show: true },
-    { key: "marketing", show: true },
-    { key: "externalMedia", show: true },
-    { key: "functional", show: false }, // Hidden: replaced by externalMedia
-  ]
+  const categories: ConsentCategory[] = ["necessary", "externalMedia"]
 
   const actionBtnBase =
     "h-11 w-full rounded-xl px-4 text-sm font-semibold sm:w-auto sm:h-10 sm:rounded-full sm:px-6"
@@ -98,8 +72,6 @@ export function CookieSettingsDialog() {
     <Dialog open={isSettingsOpen} onOpenChange={handleOpenChange}>
       <DialogContent
         className={cn(
-          // Mobile-first: near full width, no horizontal overflow, stable height.
-          // Desktop: keep the familiar dialog width.
           "w-[calc(100vw-1rem)] max-w-none sm:w-[calc(100vw-2rem)] sm:max-w-2xl md:max-w-3xl",
           "max-h-[85svh] sm:max-h-[90vh]",
           "overflow-hidden rounded-2xl p-0",
@@ -129,63 +101,57 @@ export function CookieSettingsDialog() {
             </DialogDescription>
           </DialogHeader>
 
-          {/* Scrollable content */}
           <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-4 py-2 sm:px-6">
             <div className="space-y-0">
-              {categories
-                .filter((cat) => cat.show)
-                .map(({ key }, index) => {
-                  const isNecessary = key === "necessary"
-                  const label = consentCategoryLabels[key]
-                  const isEnabled = draftConsent[key]
+              {categories.map((key, index) => {
+                const isNecessary = key === "necessary"
+                const label = consentCategoryLabels[key]
+                const isEnabled = key === "necessary" ? true : draftConsent.externalMedia
 
-                  return (
-                    <div key={key}>
-                      <div
-                        className={cn(
-                          "flex items-start justify-between gap-4 py-4",
-                          prefersReducedMotion ? "" : "animate-in fade-in slide-in-from-bottom-2 duration-300"
-                        )}
-                        style={prefersReducedMotion ? {} : { animationDelay: `${index * 50}ms` }}
-                      >
-                        <div className="min-w-0 flex-1 space-y-1.5">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <Label
-                              htmlFor={`cookie-${key}`}
-                              className={cn(
-                                "text-sm font-medium leading-none",
-                                isNecessary ? "text-muted-foreground" : "text-foreground cursor-pointer"
-                              )}
-                            >
-                              {label.label}
-                            </Label>
-                            {isNecessary && (
-                              <span className="text-xs font-medium text-muted-foreground">(Immer aktiv)</span>
-                            )}
-                          </div>
-                          <p className="text-sm leading-relaxed text-muted-foreground wrap-break-word">
-                            {label.description}
-                          </p>
-                        </div>
-                        <Switch
-                          id={`cookie-${key}`}
-                          checked={isEnabled}
-                          onCheckedChange={(checked) => handleCategoryChange(key, checked)}
-                          disabled={isNecessary}
-                          aria-label={`${label.label} ${isEnabled ? "aktivieren" : "deaktivieren"}`}
-                          className="shrink-0"
-                        />
-                      </div>
-                      {categories.filter((c) => c.show).length > index + 1 && (
-                        <Separator className="bg-border/30" />
+                return (
+                  <div key={key}>
+                    <div
+                      className={cn(
+                        "flex items-start justify-between gap-4 py-4",
+                        prefersReducedMotion ? "" : "animate-in fade-in slide-in-from-bottom-2 duration-300"
                       )}
+                      style={prefersReducedMotion ? {} : { animationDelay: `${index * 50}ms` }}
+                    >
+                      <div className="min-w-0 flex-1 space-y-1.5">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Label
+                            htmlFor={`cookie-${key}`}
+                            className={cn(
+                              "text-sm font-medium leading-none",
+                              isNecessary ? "text-muted-foreground" : "text-foreground cursor-pointer"
+                            )}
+                          >
+                            {label.label}
+                          </Label>
+                          {isNecessary && (
+                            <span className="text-xs font-medium text-muted-foreground">(Immer aktiv)</span>
+                          )}
+                        </div>
+                        <p className="text-sm leading-relaxed text-muted-foreground wrap-break-word">
+                          {label.description}
+                        </p>
+                      </div>
+                      <Switch
+                        id={`cookie-${key}`}
+                        checked={isEnabled}
+                        onCheckedChange={(checked) => handleCategoryChange(key, checked)}
+                        disabled={isNecessary}
+                        aria-label={`${label.label} ${isEnabled ? "aktivieren" : "deaktivieren"}`}
+                        className="shrink-0"
+                      />
                     </div>
-                  )
-                })}
+                    {index < categories.length - 1 && <Separator className="bg-border/30" />}
+                  </div>
+                )
+              })}
             </div>
           </div>
 
-          {/* Sticky actions */}
           <div className="border-t border-border/50 bg-background/80 px-4 py-4 backdrop-blur sm:px-6">
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 sm:gap-2">
               <Button
@@ -197,21 +163,11 @@ export function CookieSettingsDialog() {
                 Alle ablehnen
               </Button>
 
-              <Button
-                variant="default"
-                onClick={handleSave}
-                className={cn(actionBtnBase)}
-                type="button"
-              >
+              <Button variant="default" onClick={handleSave} className={cn(actionBtnBase)} type="button">
                 Auswahl speichern
               </Button>
 
-              <Button
-                variant="default"
-                onClick={acceptAll}
-                className={cn(actionBtnBase)}
-                type="button"
-              >
+              <Button variant="default" onClick={acceptAll} className={cn(actionBtnBase)} type="button">
                 Alle akzeptieren
               </Button>
             </div>

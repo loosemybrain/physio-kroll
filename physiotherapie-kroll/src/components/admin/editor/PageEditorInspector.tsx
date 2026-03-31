@@ -8,7 +8,7 @@ import { Separator } from "@/components/ui/separator"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
 import { cn } from "@/lib/utils"
-import type { BlockSectionProps, CMSBlock, HeroBlock, CourseScheduleBlock, CourseSlot, CourseScheduleWeekday } from "@/types/cms"
+import type { BlockSectionProps, CMSBlock, HeroBlock, CourseScheduleBlock, CourseSlot, CourseScheduleWeekday, ExternalEmbedBlock } from "@/types/cms"
 import type { BrandKey } from "@/components/brand/brandAssets"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { GradientPresetSelectContent } from "@/components/ui/GradientPresetSelectContent"
@@ -47,6 +47,8 @@ import { AnimationInspector } from "../AnimationInspector"
 import { ContactFormInspectorSection } from "./inspectors/ContactFormInspectorSection"
 import { LegalHeroAccordion } from "@/components/cms/inspector/LegalHeroAccordion"
 import { LegalRichTextColorAccordion } from "@/components/cms/inspector/LegalRichTextColorAccordion"
+import { validateEmbedUrlForProvider } from "@/lib/consent/validateExternalEmbedUrl"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import type { TypographySettings } from "@/lib/typography"
 import { ColorField } from "../ColorField"
@@ -112,6 +114,18 @@ export interface PageEditorInspectorProps {
   setAccordionValue: React.Dispatch<React.SetStateAction<string | undefined>>
   /** Nur Legal-Seiten: Abschnitte per DnD sortieren (Struktur-Panel). */
   onReorderLegalSections?: (activeId: string, overId: string) => void
+  /** Outline-Klick: Live-Preview zum Block scrollen (iframe postMessage). */
+  onRequestPreviewScroll?: (blockId: string) => void
+  /** Outline-Insert: neue legalSection an Index einfügen (nur UI). */
+  onInsertLegalSectionAt?: (index: number) => void
+  /** Letzte Auswahlquelle für Outline-UX (nur UI-State). */
+  lastSelectionSource?: "outline" | "preview" | null
+  /** Wird bei direktem Outline-Klick gesetzt. */
+  onSelectionSourceChange?: (source: "outline" | "preview" | null) => void
+  /** Preview-Quelle nach Auto-Expand als verarbeitet markieren. */
+  onConsumePreviewSelectionSource?: () => void
+  onDeleteBlockFromOutline?: (blockId: string) => void
+  onDuplicateBlockFromOutline?: (blockId: string) => void
 }
 
 export function PageEditorInspector({
@@ -147,6 +161,13 @@ export function PageEditorInspector({
   accordionValue,
   setAccordionValue,
   onReorderLegalSections,
+  onRequestPreviewScroll,
+  onInsertLegalSectionAt,
+  lastSelectionSource,
+  onSelectionSourceChange,
+  onConsumePreviewSelectionSource,
+  onDeleteBlockFromOutline,
+  onDuplicateBlockFromOutline,
 }: PageEditorInspectorProps) {
   const renderStringArrayControls = (
     block: CMSBlock,
@@ -850,7 +871,7 @@ export function PageEditorInspector({
 
       <Separator />
 
-      {current.blocks.length > 0 && (
+      {(current.pageType ?? "default") !== "legal" && current.blocks.length > 0 && (
         <div className="p-4 border-b border-border">
           <h3 className="mb-3 font-semibold text-foreground text-sm">Block-Liste</h3>
           <div className="space-y-1">
@@ -914,7 +935,14 @@ export function PageEditorInspector({
           blocks={current.blocks}
           selectedBlockId={selectedBlockId}
           onSelectBlock={selectBlock}
+          onInsertLegalSectionAt={onInsertLegalSectionAt}
+          onRequestPreviewScroll={onRequestPreviewScroll}
+          selectionSource={lastSelectionSource}
+          onSelectionSourceChange={onSelectionSourceChange}
+          onConsumePreviewSelectionSource={onConsumePreviewSelectionSource}
           onReorder={onReorderLegalSections}
+          onDeleteBlock={onDeleteBlockFromOutline}
+          onDuplicateBlock={onDuplicateBlockFromOutline}
         />
       ) : null}
 
@@ -2699,6 +2727,20 @@ export function PageEditorInspector({
     <>
       {/* 1) Head/Subline (und ggf. Background) */}
       {primaryFields.filter(shouldShowField).map((field) => renderInspectorField(field, selectedBlock))}
+
+      {selectedBlock.type === "externalEmbed" &&
+        (() => {
+          const p = selectedBlock.props as ExternalEmbedBlock["props"]
+          const url = (p.embedUrl ?? "").trim()
+          if (!url) return null
+          const v = validateEmbedUrlForProvider(p.provider, url)
+          if (v.ok) return null
+          return (
+            <Alert variant="destructive" className="mt-2">
+              <AlertDescription>{v.message}</AlertDescription>
+            </Alert>
+          )
+        })()}
 
       {selectedBlock.type === "legalRichText" && (
         <>
