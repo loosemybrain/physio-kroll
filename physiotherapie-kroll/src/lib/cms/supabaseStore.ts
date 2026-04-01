@@ -5,6 +5,7 @@ import type { BrandKey } from "@/components/brand/brandAssets";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { getDefaultBlocksForPageType } from "@/cms/blocks/defaultPageBlocks";
 import { migrateLegalBlocksForPageType } from "@/lib/cms/migrations/legalSections";
+import { sanitizeAdminPageForPersistence } from "@/lib/security/sanitizeCmsHtmlOnWrite";
 
 export type PageStatus = "draft" | "published";
 
@@ -196,20 +197,21 @@ export async function getPublishedPageBySlug(slug: string): Promise<AdminPage | 
 }
 
 export async function upsertPage(next: AdminPage): Promise<AdminPage> {
+  const toSave = sanitizeAdminPageForPersistence(next);
   // Server-owned session: save through API route (PUT replaces blocks deterministically).
-  const res = await fetch(`/api/admin/pages/${next.id}`,
+  const res = await fetch(`/api/admin/pages/${toSave.id}`,
     {
       method: "PUT",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        id: next.id,
-        title: next.title,
-        slug: next.slug,
-        brand: next.brand,
-        status: next.status,
-        pageType: next.pageType ?? "default",
-        pageSubtype: normalizePageSubtype(next.pageSubtype),
-        blocks: next.blocks,
+        id: toSave.id,
+        title: toSave.title,
+        slug: toSave.slug,
+        brand: toSave.brand,
+        status: toSave.status,
+        pageType: toSave.pageType ?? "default",
+        pageSubtype: normalizePageSubtype(toSave.pageSubtype),
+        blocks: toSave.blocks,
       }),
     }
   );

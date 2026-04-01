@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createSupabaseServerClient, getSupabaseAdmin } from "@/lib/supabase/server"
+import { createSupabaseServerClient } from "@/lib/supabase/server"
+import { getSupabaseAdmin } from "@/lib/supabase/admin.server"
 import { requireAdminGuard } from "@/lib/auth/adminGuard"
 import { uploadFontFile, createCustomFont } from "@/lib/fonts/storage.custom"
 

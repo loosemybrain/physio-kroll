@@ -1,3 +1,5 @@
+// Kein "server-only": wird auch vom Login-Client importiert; nutzt nur den übergebenen Client (kein Service Role).
+
 import type { SupabaseClient, User } from "@supabase/supabase-js"
 
 type AAL = "aal1" | "aal2" | null
@@ -9,22 +11,18 @@ type FactorLike = {
   status?: string
 }
 
-function getAdminEmails(): string[] {
-  const raw = process.env.ADMIN_EMAILS
-  if (!raw || typeof raw !== "string") return []
-  return raw
-    .split(",")
-    .map((e) => e.trim().toLowerCase())
-    .filter(Boolean)
-}
-
-export function isAdminUser(user: User | null): boolean {
-  if (!user) return false
-  const role = (user.app_metadata?.role as string) ?? ""
-  if (role === "admin") return true
-  const adminEmails = getAdminEmails()
-  const email = (user.email ?? "").toLowerCase()
-  return adminEmails.length > 0 && adminEmails.includes(email)
+/**
+ * Einzige produktive Admin-Quelle: `public.admin_users` (Abfrage via RPC `public.is_admin`).
+ * Kein ENV-E-Mail-Fallback, kein app_metadata.role.
+ */
+export async function isUserAdminInDatabase(supabase: SupabaseClient, userId: string): Promise<boolean> {
+  if (!userId) return false
+  const { data, error } = await supabase.rpc("is_admin", { _user_id: userId })
+  if (error) {
+    console.error("is_admin RPC error:", error.message)
+    return false
+  }
+  return data === true
 }
 
 function isTotpFactor(f: FactorLike): boolean {
@@ -57,16 +55,16 @@ export async function getAdminMfaState(
   supabase: SupabaseClient,
   user: User | null
 ): Promise<AdminMfaState> {
-  console.log("[ADMIN GATE] start", {
-    userId: user?.id ?? null,
-    email: user?.email ?? null,
-  })
+  if (!user?.id) {
+    return {
+      isAdmin: false,
+      hasTotpFactor: false,
+      hasVerifiedTotpFactor: false,
+      currentAal: null,
+    }
+  }
 
-  const admin = isAdminUser(user)
-  console.log("[ADMIN GATE] role", {
-    isAdmin: admin,
-  })
-
+  const admin = await isUserAdminInDatabase(supabase, user.id)
   if (!admin) {
     return {
       isAdmin: false,
@@ -79,41 +77,21 @@ export async function getAdminMfaState(
   let hasTotpFactor = false
   let hasVerifiedTotpFactor = false
   let currentAal: AAL = null
-  let verifiedFactorIds: string[] = []
-  let unverifiedFactorIds: string[] = []
 
   try {
     const { data } = await supabase.auth.mfa.listFactors()
     const allFactors = (data?.all ?? []) as FactorLike[]
     hasTotpFactor = allFactors.some(isTotpFactor)
     hasVerifiedTotpFactor = allFactors.some((f) => isTotpFactor(f) && isVerifiedFactor(f))
-    const totpOnly = allFactors.filter(isTotpFactor)
-    verifiedFactorIds = totpOnly
-      .filter(isVerifiedFactor)
-      .map((f) => f.id)
-      .filter((id): id is string => Boolean(id))
-    unverifiedFactorIds = totpOnly
-      .filter((f) => (f.status ?? "").toLowerCase() === "unverified")
-      .map((f) => f.id)
-      .filter((id): id is string => Boolean(id))
-    console.log("[ADMIN GATE] factors", {
-      hasTotpFactor,
-      hasVerifiedTotpFactor,
-      verifiedFactorIds,
-      unverifiedFactorIds,
-    })
   } catch (e) {
-    console.error("[ADMIN GATE] listFactors:error", e)
+    console.error("getAdminMfaState listFactors error:", e)
   }
 
   try {
     const { data } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel()
     currentAal = readAalLevel(data)
-    console.log("[ADMIN GATE] aal", {
-      currentAal,
-    })
   } catch (e) {
-    console.error("[ADMIN GATE] aal:error", e)
+    console.error("getAdminMfaState aal error:", e)
   }
 
   return {
@@ -123,4 +101,3 @@ export async function getAdminMfaState(
     currentAal,
   }
 }
-

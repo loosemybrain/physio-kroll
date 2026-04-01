@@ -2,8 +2,7 @@
 
 ## Source of Truth für „Admin“
 
-- **Primär:** `auth.users.app_metadata.role === 'admin'` (in Supabase Dashboard unter Authentication → Users → User → Edit → User Metadata setzen, z. B. `{ "role": "admin" }`).
-- **Fallback:** E-Mail in der Umgebungsvariable `ADMIN_EMAILS` (kommagetrennt, z. B. `ADMIN_EMAILS=admin@example.com,other@example.com`).
+- **Admin-Check:** `public.admin_users` + RPC `public.is_admin(uuid)` (siehe Migration `20260402120000_admin_users_and_is_admin.sql`). Ersten Admin per SQL (Service Role / SQL Editor) in `admin_users` eintragen.
 
 Die Prüfung erfolgt **nur serverseitig** in den API-Routen über den zentralen Guard `requireAdminGuard()` in `src/lib/auth/adminGuard.ts`.
 
@@ -61,8 +60,8 @@ Beim Anlegen eines Scan-Jobs (POST /api/admin/cookie-scan/run) werden lokale/pri
 ## Manuelle Sicherheitstests
 
 1. **Nicht eingeloggt:** GET/POST/PATCH auf alle `/api/admin/cookie-scan*` ohne Cookie → 401, Body `{ "error": "Nicht authentifiziert." }`.
-2. **Eingeloggt, nicht Admin:** User ohne `app_metadata.role = 'admin'` und nicht in `ADMIN_EMAILS` → 403, Body `{ "error": "Keine Berechtigung." }`.
-3. **Admin:** User mit role admin oder E-Mail in ADMIN_EMAILS → 200/201 wie erwartet.
+2. **Eingeloggt, nicht Admin:** User ohne Zeile in `public.admin_users` → 403, Body z. B. `{ "error": "Keine Berechtigung." }`.
+3. **Admin:** User mit `user_id` in `public.admin_users` → 200/201 wie erwartet.
 4. **Public approved:** GET `/api/cookie-scan/approved` ohne Auth → 200, nur freigegebene Daten; Response enthält kein `error_message`, kein `status` (außer implizit über gefilterte Daten).
 5. **Direkter DB-Zugriff (anon):** Mit anon Key z. B. `supabase.from('cookie_scans').select('*')` → nur Zeilen mit `approval_status = 'approved'` (RLS). Kein INSERT/UPDATE/DELETE für anon.
 6. **Worker-RPC mit anon/authenticated:** RPC-Aufruf mit anon oder authenticated Key → 403/Fehler; nur mit Service Role erfolgreich.

@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getSupabaseAdmin } from "@/lib/supabase/admin.server";
 import { requireAdminGuard } from "@/lib/auth/adminGuard";
-import { PAGE_TYPE_VALUES, PAGE_SUBTYPE_VALUES } from "@/types/cms";
+import { PAGE_TYPE_VALUES, PAGE_SUBTYPE_VALUES, type CMSBlock } from "@/types/cms";
+import { sanitizeCmsBlocksForPersistence } from "@/lib/security/sanitizeCmsHtmlOnWrite";
 
 type PageStatus = "draft" | "published";
 
@@ -35,24 +36,6 @@ function isUuid(v: unknown): v is string {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(v);
 }
 
-async function getDbClient() {
-  // Prefer service role (bypasses RLS) if configured,
-  // otherwise fall back to user-scoped server client (anon key + cookies + RLS).
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || "";
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
-
-  if (supabaseUrl && serviceKey) {
-    return createClient(supabaseUrl, serviceKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    });
-  }
-
-  return await createSupabaseServerClient();
-}
-
 /**
  * GET /api/admin/pages/:id
  * Returns page + blocks for admin editing.
@@ -77,7 +60,7 @@ export async function GET(
       return NextResponse.json({ error: "Invalid page id" }, { status: 400 });
     }
 
-    const admin = await getDbClient();
+    const admin = await getSupabaseAdmin();
 
     const { data: page, error: pageErr } = await admin
       .from("pages")
@@ -207,7 +190,9 @@ export async function PUT(
       blocks.push({ id, type, props });
     }
 
-    const admin = await getDbClient();
+    const blocksForDb = sanitizeCmsBlocksForPersistence(blocks as CMSBlock[]);
+
+    const admin = await getSupabaseAdmin();
 
     // 1) upsert page
     const { data: savedPage, error: pageErr } = await admin
@@ -239,8 +224,8 @@ export async function PUT(
       return NextResponse.json({ error: "Failed to save blocks" }, { status: 500 });
     }
 
-    if (blocks.length > 0) {
-      const rows = blocks.map((b, index) => ({
+    if (blocksForDb.length > 0) {
+      const rows = blocksForDb.map((b, index) => ({
         id: b.id,
         page_id: id,
         type: b.type,
@@ -320,7 +305,7 @@ export async function DELETE(
       return NextResponse.json({ error: "Invalid page id" }, { status: 400 });
     }
 
-    const admin = await getDbClient();
+    const admin = await getSupabaseAdmin();
 
     // blocks first (FK safety)
     const { error: delBlocksErr } = await admin.from("blocks").delete().eq("page_id", id);

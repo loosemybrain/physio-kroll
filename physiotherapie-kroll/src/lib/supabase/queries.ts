@@ -2,7 +2,7 @@ import "server-only"
 
 import type { BrandKey } from "@/components/brand/brandAssets"
 import type { CMSBlock, CMSPage, PageSubtype, PageType } from "@/types/cms"
-import { getSupabaseAdmin } from "./server"
+import { getSupabaseAdmin } from "./admin.server"
 
 let adminPromise: ReturnType<typeof getSupabaseAdmin> | null = null
 async function supabaseAdmin() {

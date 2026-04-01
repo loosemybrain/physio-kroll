@@ -1,3 +1,5 @@
+import "server-only"
+
 import type { BrandKey } from "@/components/brand/brandAssets"
 import type { FooterConfig } from "@/types/footer"
 import { DEFAULT_FOOTER_CONFIG, ensureSectionSpans, ensureLegalLinks, footerConfigSchema } from "./footer.shared"
@@ -21,8 +23,8 @@ function normalizeBrandKey(brand: string | BrandKey): BrandKey {
 }
 
 /**
- * Get footer configuration for a specific brand
- * Uses service role to bypass RLS policies
+ * Get footer configuration for a specific brand.
+ * Nutzt den SSR-Session-Client (Anon-Key + Cookies) und unterliegt RLS.
  */
 export async function getFooterServer(brand: BrandKey): Promise<FooterConfig> {
   try {

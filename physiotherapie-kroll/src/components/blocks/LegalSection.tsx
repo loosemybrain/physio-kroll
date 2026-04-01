@@ -66,7 +66,7 @@ export function LegalSection({
           </h2>
           <div
             className="prose prose-neutral dark:prose-invert mt-5 max-w-prose text-pretty leading-relaxed"
-            dangerouslySetInnerHTML={{ __html: sanitizeCmsHtml(content || "") }}
+            dangerouslySetInnerHTML={{ __html: sanitizeCmsHtml(content || "", "richText") }}
           />
         </div>
       </div>

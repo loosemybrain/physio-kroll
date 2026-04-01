@@ -1,3 +1,5 @@
+import "server-only"
+
 import type { BrandKey } from "@/components/brand/brandAssets"
 import type { NavConfig } from "@/types/navigation"
 import { DEFAULT_NAV_CONFIG } from "@/lib/consent/navigation-defaults"
@@ -25,8 +27,8 @@ function normalizeBrandKey(brand: string | BrandKey): BrandKey {
 }
 
 /**
- * Get navigation configuration for a specific brand
- * Uses service role to bypass RLS policies
+ * Get navigation configuration for a specific brand.
+ * Nutzt den SSR-Session-Client (Anon-Key + Cookies) und unterliegt RLS.
  */
 export async function getNavigation(brand: BrandKey): Promise<NavConfig> {
   try {

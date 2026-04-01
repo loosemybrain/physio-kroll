@@ -4939,9 +4939,13 @@ export function PageEditorInspector({
 
     </>
   )
-})()}</div>
+})()}
+
+              </div>
+
         </div>
       )}
+
     </>
   )
 }

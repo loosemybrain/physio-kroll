@@ -1,43 +1,44 @@
+import "server-only"
+
 /**
  * Zentraler Admin-Guard für serverseitige Routen.
- * Sicherheit wird hier durchgesetzt – keine rein clientseitige Prüfung.
+ * Source of Truth: `public.admin_users`, geprüft via RPC `public.is_admin(_user_id)`.
  *
- * Source of Truth für "ist Admin":
- * 1. auth.users.app_metadata.role === 'admin' (in Supabase Dashboard oder per API setzen)
- * 2. Fallback: E-Mail in ADMIN_EMAILS (Umgebungsvariable, kommagetrennt)
- *
- * Verwendung in API-Routen:
+ * Verwendung:
+ *   const supabase = await createSupabaseServerClient()
  *   const guard = await requireAdminGuard(supabase)
  *   if (!guard.ok) return NextResponse.json({ error: guard.message }, { status: guard.status })
- *   const admin = await getSupabaseAdmin()
- *   // ... DB-Zugriffe mit admin (Service Role, umgeht RLS)
+ *   const admin = await getSupabaseAdmin() // aus @/lib/supabase/admin.server
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js"
 import type { User } from "@supabase/supabase-js"
-import { isAdminUser } from "@/lib/auth/adminAccess"
+import { isUserAdminInDatabase } from "@/lib/auth/adminAccess"
 
-export type AdminGuardResult = | { ok: true; user: User } | { ok: false; status: 401 | 403; message: string }
+export type AdminGuardResult =
+  | { ok: true; user: User }
+  | { ok: false; status: 401 | 403; message: string }
 
 /**
- * Prüft, ob der aktuelle Nutzer (über den Supabase-Client) Admin ist.
- * 401 = nicht eingeloggt, 403 = eingeloggt aber nicht Admin.
+ * 401 = nicht eingeloggt, 403 = eingeloggt aber nicht in admin_users.
  */
-export async function requireAdminGuard(
-  supabase: SupabaseClient
-): Promise<AdminGuardResult> {
-  const { data: { user }, error } = await supabase.auth.getUser()
+export async function requireAdminGuard(supabase: SupabaseClient): Promise<AdminGuardResult> {
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser()
 
   if (error) {
     console.error("Admin guard: auth error", error.message)
     return { ok: false, status: 401, message: "Nicht authentifiziert." }
   }
 
-  if (!user) {
+  if (!user?.id) {
     return { ok: false, status: 401, message: "Nicht authentifiziert." }
   }
 
-  if (isAdminUser(user)) {
+  const admin = await isUserAdminInDatabase(supabase, user.id)
+  if (admin) {
     return { ok: true, user }
   }
 

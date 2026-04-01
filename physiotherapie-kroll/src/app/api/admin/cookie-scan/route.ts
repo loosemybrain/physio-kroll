@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { requireAdminGuard } from "@/lib/auth/adminGuard"
-import { createSupabaseServerClient, getSupabaseAdmin } from "@/lib/supabase/server"
+import { createSupabaseServerClient } from "@/lib/supabase/server"
+import { getSupabaseAdmin } from "@/lib/supabase/admin.server"
 
 /** Stabile Defaults für einen Scan-Eintrag in der Liste (running/failed/null-safe). */
 function mapScanRow(s: Record<string, unknown> | null): Record<string, unknown> | null {
