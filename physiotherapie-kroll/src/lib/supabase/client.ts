@@ -1,6 +1,7 @@
 "use client";
 
 import { createBrowserClient } from "@supabase/ssr";
+import { getValidatedBrowserSupabaseConfig } from "@/lib/supabase/validatePublicSupabaseBrowserConfig";
 
 function serializeCookie(
   name: string,
@@ -49,9 +50,10 @@ function serializeCookie(
 }
 
 export function createSupabaseBrowserClient() {
+  const { url, anonKey } = getValidatedBrowserSupabaseConfig();
   return createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    url,
+    anonKey,
     {
       cookies: {
         getAll() {

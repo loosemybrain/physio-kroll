@@ -2,7 +2,7 @@
 
 import type { BrandKey } from "@/components/brand/brandAssets"
 import type { FooterConfig } from "@/types/footer"
-import { createClient } from "@supabase/supabase-js"
+import { createSupabaseBrowserClient } from "@/lib/supabase/client"
 import { footerConfigSchema } from "./footer.shared"
 
 /**
@@ -21,10 +21,7 @@ export async function saveFooterClient(
       return { success: false, error: `Validierungsfehler: ${errors}` }
     }
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    )
+    const supabase = createSupabaseBrowserClient()
 
     // Check authentication
     const {

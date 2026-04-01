@@ -1,7 +1,13 @@
-import { createClient } from "@supabase/supabase-js"
+"use client"
+
+import type { SupabaseClient } from "@supabase/supabase-js"
 import type { Database } from "@/types/supabase"
+import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-
-export const supabaseClient = createClient<Database>(supabaseUrl, supabaseAnonKey)
+/**
+ * Zentraler Browser-Client (SSR-Cookies, gleiche Validierung wie überall).
+ * Für neuen Code direkt `getSupabaseBrowserClient` / `createSupabaseBrowserClient` aus `@/lib/supabase/client` nutzen.
+ */
+export function getFontsSupabaseClient(): SupabaseClient<Database> {
+  return getSupabaseBrowserClient() as unknown as SupabaseClient<Database>
+}
