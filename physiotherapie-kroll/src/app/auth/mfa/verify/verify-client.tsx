@@ -10,6 +10,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Card, CardContent, CardDescription, CardHeader, CardSurface, CardTitle } from "@/components/ui/card"
 import { createSupabaseBrowserClient } from "@/lib/supabase/client"
 import { normalizeInternalRedirectTarget, toLoginRedirect } from "@/lib/auth/redirects"
+import { mapMfaVerifyError } from "@/lib/auth/mfaClientErrors"
+import { verifyTotpCodeAndRefreshToAal2 } from "@/lib/auth/sensitiveUserUpdate"
 
 type Props = {
   nextPath: string
@@ -20,15 +22,6 @@ type TotpFactor = {
   status?: string
   factor_type?: string
   factorType?: string
-}
-
-function mapVerifyError(error: unknown): string {
-  const msg = error instanceof Error ? error.message : String(error)
-  const lower = msg.toLowerCase()
-  if (lower.includes("invalid")) return "Der eingegebene Code ist ungültig."
-  if (lower.includes("expired")) return "Der Code ist abgelaufen. Bitte neuen Code eingeben."
-  if (lower.includes("session")) return "Ihre Sitzung ist abgelaufen. Bitte erneut anmelden."
-  return "MFA-Verifizierung fehlgeschlagen. Bitte erneut versuchen."
 }
 
 function getVerifiedTotpFactor(list: TotpFactor[] | undefined): TotpFactor | null {
@@ -73,7 +66,7 @@ export function MfaVerifyClient({ nextPath }: Props) {
         }
         setFactorId(factor.id)
       } catch (e) {
-        setError(mapVerifyError(e))
+        setError(mapMfaVerifyError(e))
       } finally {
         setLoading(false)
       }
@@ -96,32 +89,8 @@ export function MfaVerifyClient({ nextPath }: Props) {
         nextPath: safeNext,
       })
       const supabase = createSupabaseBrowserClient()
-      const { data: challengeData, error: challengeError } = await supabase.auth.mfa.challenge({
-        factorId,
-      })
-      if (challengeError) throw challengeError
-
-      const { error: verifyError } = await supabase.auth.mfa.verify({
-        factorId,
-        challengeId: challengeData.id,
-        code: code.trim(),
-      })
-      if (verifyError) throw verifyError
+      await verifyTotpCodeAndRefreshToAal2(supabase, factorId, code.trim())
       console.log("[MFA VERIFY] challengeAndVerify:success")
-      await supabase.auth.refreshSession()
-      const sessionAfterRefresh = await supabase.auth.getSession()
-      console.log("[MFA VERIFY] session:afterRefresh", sessionAfterRefresh)
-      const { data: aalData, error: aalError } =
-        await supabase.auth.mfa.getAuthenticatorAssuranceLevel()
-      console.log("[MFA VERIFY] aal:afterVerify", { data: aalData, error: aalError })
-      if (aalError) throw aalError
-      const currentLevel =
-        (aalData as { currentLevel?: string; current_level?: string } | null | undefined)
-          ?.currentLevel ??
-        (aalData as { current_level?: string } | null | undefined)?.current_level
-      if (currentLevel !== "aal2") {
-        throw new Error("AAL2 konnte nach der Verifizierung nicht bestätigt werden.")
-      }
       await new Promise((resolve) => setTimeout(resolve, 150))
       console.log("[MFA VERIFY] redirect:next", {
         safeNext,
@@ -129,7 +98,7 @@ export function MfaVerifyClient({ nextPath }: Props) {
       window.location.href = safeNext
     } catch (e) {
       console.error("[MFA VERIFY] error", e)
-      setError(mapVerifyError(e))
+      setError(mapMfaVerifyError(e))
     } finally {
       setSubmitting(false)
     }

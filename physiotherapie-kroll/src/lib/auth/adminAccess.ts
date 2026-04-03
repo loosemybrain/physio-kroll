@@ -1,8 +1,9 @@
 // Kein "server-only": wird auch vom Login-Client importiert; nutzt nur den übergebenen Client (kein Service Role).
 
 import type { SupabaseClient, User } from "@supabase/supabase-js"
+import { parseAalFromAssuranceData, type AalLevel } from "@/lib/auth/mfaAal"
 
-type AAL = "aal1" | "aal2" | null
+type AAL = AalLevel
 
 type FactorLike = {
   id?: string
@@ -32,16 +33,6 @@ function isTotpFactor(f: FactorLike): boolean {
 
 function isVerifiedFactor(f: FactorLike): boolean {
   return (f.status ?? "").toLowerCase() === "verified"
-}
-
-function readAalLevel(data: unknown): AAL {
-  if (!data || typeof data !== "object") return null
-  const level =
-    ((data as { currentLevel?: string }).currentLevel ??
-      (data as { current_level?: string }).current_level ??
-      null) as string | null
-  if (level === "aal1" || level === "aal2") return level
-  return null
 }
 
 export type AdminMfaState = {
@@ -89,7 +80,7 @@ export async function getAdminMfaState(
 
   try {
     const { data } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel()
-    currentAal = readAalLevel(data)
+    currentAal = parseAalFromAssuranceData(data)
   } catch (e) {
     console.error("getAdminMfaState aal error:", e)
   }

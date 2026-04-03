@@ -99,26 +99,30 @@ body {
   }
 }
 
-/* Scrollbar styling aligned to active preset tokens */
-html {
+/* Scrollbar-Farben nur außerhalb des Admin-Bereichs (data-admin-shell setzt AdminClientShell am <html>) */
+html:not([data-admin-shell]) {
   /* Firefox */
   scrollbar-width: thin;
   scrollbar-color: var(--primary) color-mix(in oklch, var(--background) 80%, var(--muted) 20%);
 }
-/* Chromium / Safari */
-::-webkit-scrollbar {
+/* Chromium / Safari: Viewport + alle scrollbaren Bereiche der öffentlichen Site */
+html:not([data-admin-shell])::-webkit-scrollbar,
+html:not([data-admin-shell]) *::-webkit-scrollbar {
   width: 10px;
   height: 10px;
 }
-::-webkit-scrollbar-track {
+html:not([data-admin-shell])::-webkit-scrollbar-track,
+html:not([data-admin-shell]) *::-webkit-scrollbar-track {
   background: color-mix(in oklch, var(--background) 75%, var(--muted) 25%);
 }
-::-webkit-scrollbar-thumb {
+html:not([data-admin-shell])::-webkit-scrollbar-thumb,
+html:not([data-admin-shell]) *::-webkit-scrollbar-thumb {
   background: var(--primary);
   border-radius: 999px;
   border: 2px solid color-mix(in oklch, var(--background) 75%, var(--muted) 25%);
 }
-::-webkit-scrollbar-thumb:hover {
+html:not([data-admin-shell])::-webkit-scrollbar-thumb:hover,
+html:not([data-admin-shell]) *::-webkit-scrollbar-thumb:hover {
   background: var(--accent);
 }
 

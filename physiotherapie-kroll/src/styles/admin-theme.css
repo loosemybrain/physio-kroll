@@ -123,3 +123,15 @@
   --hero-accent: oklch(0.62 0.14 160);
   --hero-highlight: oklch(0.20 0.01 285);
 }
+
+/*
+ * Admin: keine Website-Scrollbars aus globals.css (html[data-admin-shell]).
+ * Keine ::-webkit-scrollbar-Overrides hier — `revert` auf den Pseudos kann in Chromium
+ * die Leiste verschwinden lassen (z. B. Inspector-Panel mit overflow-y-auto).
+ * Firefox: explizit System-Scrollbars.
+ */
+html[data-admin-shell] .admin-root,
+html[data-admin-shell] .admin-root * {
+  scrollbar-width: auto;
+  scrollbar-color: auto;
+}

@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useState } from "react"
+import React, { useEffect, useLayoutEffect, useState } from "react"
 import { AdminLayout } from "@/components/admin/AdminLayout"
 import { AdminRootProvider } from "@/components/admin/AdminRootProvider"
 import type { User } from "@supabase/supabase-js"
@@ -13,6 +13,17 @@ export function AdminClientShell({
   children: React.ReactNode
 }) {
   const [mounted, setMounted] = useState(false)
+
+  /**
+   * Sofort beim Admin-Einstieg (noch vor AdminLayout-Platzhalter-Ende): verhindert,
+   * dass globale Website-Scrollbar-Styles auf den Admin wirken.
+   */
+  useLayoutEffect(() => {
+    document.documentElement.setAttribute("data-admin-shell", "true")
+    return () => {
+      document.documentElement.removeAttribute("data-admin-shell")
+    }
+  }, [])
 
   useEffect(() => {
     // SSR: render placeholder until client mount to avoid hydration mismatch
