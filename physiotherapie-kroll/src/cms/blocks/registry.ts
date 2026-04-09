@@ -831,6 +831,7 @@ const imageSliderPropsSchema = z.object({
 
   variant: z.enum(["classic", "progress", "thumbnails", "hero", "cards"]).optional().default("classic"),
   aspect: z.enum(["video", "square", "portrait", "auto"]).optional().default("video"),
+  viewportHeight: z.enum(["auto", "50vh", "60vh", "70vh", "80vh", "90vh"]).optional().default("auto"),
   slidesPerView: z.object({
     base: z.coerce.number().int().min(1).max(3).optional().default(1),
     md: z.coerce.number().int().min(1).max(3).optional().default(2),
@@ -1653,6 +1654,7 @@ const imageSliderDefaults: ImageSliderBlock["props"] = {
   subheadlineColor: undefined,
   variant: "classic",
   aspect: "video",
+  viewportHeight: "auto",
   slidesPerView: { base: 1, md: 2, lg: 3 },
   controls: {
     showArrows: true,
@@ -3355,6 +3357,20 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
           { value: "square", label: "Square (1:1)" },
           { value: "portrait", label: "Portrait (3:4)" },
           { value: "auto", label: "Auto" },
+        ],
+        group: "layout",
+      },
+      {
+        key: "viewportHeight",
+        label: "Viewport-Höhe",
+        type: "select",
+        options: [
+          { value: "auto", label: "Auto (über Seitenverhältnis)" },
+          { value: "50vh", label: "50vh" },
+          { value: "60vh", label: "60vh" },
+          { value: "70vh", label: "70vh" },
+          { value: "80vh", label: "80vh" },
+          { value: "90vh", label: "90vh" },
         ],
         group: "layout",
       },

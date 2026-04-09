@@ -56,6 +56,7 @@ export interface ImageSliderBlockProps {
 
   variant?: "classic" | "progress" | "thumbnails" | "hero" | "cards"
   aspect?: "video" | "square" | "portrait" | "auto"
+  viewportHeight?: "auto" | "50vh" | "60vh" | "70vh" | "80vh" | "90vh"
   slidesPerView?: { base?: number; md?: number; lg?: number }
 
   controls?: {
@@ -229,6 +230,14 @@ const aspectMap: Record<NonNullable<ImageSliderBlockProps["aspect"]>, string> = 
   auto: "",
 }
 
+const viewportHeightMap: Record<Exclude<NonNullable<ImageSliderBlockProps["viewportHeight"]>, "auto">, string> = {
+  "50vh": "h-[50vh]",
+  "60vh": "h-[60vh]",
+  "70vh": "h-[70vh]",
+  "80vh": "h-[80vh]",
+  "90vh": "h-[90vh]",
+}
+
 const backgroundMap: Record<NonNullable<ImageSliderBlockProps["background"]>, string> = {
   none: "",
   muted: "bg-muted/50",
@@ -242,6 +251,7 @@ const backgroundMap: Record<NonNullable<ImageSliderBlockProps["background"]>, st
 function SlideImage({
   slide,
   aspect,
+  viewportHeight = "auto",
   cardBgColor,
   cardBorderColor,
   slideTitleColor,
@@ -250,6 +260,7 @@ function SlideImage({
 }: {
   slide: SlideItem
   aspect: string
+  viewportHeight?: NonNullable<ImageSliderBlockProps["viewportHeight"]>
   cardBgColor?: string
   cardBorderColor?: string
   slideTitleColor?: string
@@ -258,6 +269,9 @@ function SlideImage({
 }) {
   const shadowCss = resolveBoxShadow(slide.shadow)
   
+  const viewportCls = viewportHeight !== "auto" ? viewportHeightMap[viewportHeight] : ""
+  const mediaWrapperClass = viewportHeight !== "auto" ? cn("relative w-full overflow-hidden bg-muted", viewportCls) : cn("relative w-full overflow-hidden bg-muted", aspect || "aspect-video")
+
   return (
     <div
       className={cn(
@@ -271,7 +285,7 @@ function SlideImage({
         ...(shadowCss ? { boxShadow: shadowCss } : {}),
       }}
     >
-      <div className={cn("relative w-full overflow-hidden bg-muted", aspect || "aspect-video")}>
+      <div className={mediaWrapperClass}>
         <Image
           src={slide.url}
           alt={slide.alt || ""}
@@ -313,6 +327,7 @@ function SlideImage({
 function ClassicVariant({
   slides,
   aspect,
+  viewportHeight = "auto",
   cardBgColor,
   cardBorderColor,
   slideTitleColor,
@@ -331,6 +346,7 @@ function ClassicVariant({
 }: {
   slides: SlideItem[]
   aspect: string
+  viewportHeight?: NonNullable<ImageSliderBlockProps["viewportHeight"]>
   cardBgColor?: string
   cardBorderColor?: string
   slideTitleColor?: string
@@ -366,6 +382,7 @@ function ClassicVariant({
             <SlideImage
               slide={slide}
               aspect={aspect}
+              viewportHeight={viewportHeight}
               cardBgColor={cardBgColor}
               cardBorderColor={cardBorderColor}
               slideTitleColor={slideTitleColor}
@@ -429,6 +446,7 @@ function ClassicVariant({
 function ProgressVariant({
   slides,
   aspect,
+  viewportHeight = "auto",
   cardBgColor,
   cardBorderColor,
   slideTitleColor,
@@ -447,6 +465,7 @@ function ProgressVariant({
 }: {
   slides: SlideItem[]
   aspect: string
+  viewportHeight?: NonNullable<ImageSliderBlockProps["viewportHeight"]>
   cardBgColor?: string
   cardBorderColor?: string
   slideTitleColor?: string
@@ -482,6 +501,7 @@ function ProgressVariant({
             <SlideImage
               slide={slide}
               aspect={aspect}
+              viewportHeight={viewportHeight}
               cardBgColor={cardBgColor}
               cardBorderColor={cardBorderColor}
               slideTitleColor={slideTitleColor}
@@ -567,6 +587,7 @@ function SlideCounter() {
 function ThumbnailsVariant({
   slides,
   aspect,
+  viewportHeight = "auto",
   cardBgColor,
   cardBorderColor,
   slideTitleColor,
@@ -585,6 +606,7 @@ function ThumbnailsVariant({
 }: {
   slides: SlideItem[]
   aspect: string
+  viewportHeight?: NonNullable<ImageSliderBlockProps["viewportHeight"]>
   cardBgColor?: string
   cardBorderColor?: string
   slideTitleColor?: string
@@ -620,6 +642,7 @@ function ThumbnailsVariant({
             <SlideImage
               slide={slide}
               aspect={aspect}
+              viewportHeight={viewportHeight}
               cardBgColor={cardBgColor}
               cardBorderColor={cardBorderColor}
               slideTitleColor={slideTitleColor}
@@ -720,6 +743,7 @@ function ThumbnailStrip({ slides }: { slides: SlideItem[] }) {
 
 function HeroVariant({
   slides,
+  viewportHeight = "auto",
   cardBgColor,
   cardBorderColor,
   slideTitleColor,
@@ -737,6 +761,7 @@ function HeroVariant({
   onItemSelect,
 }: {
   slides: SlideItem[]
+  viewportHeight?: NonNullable<ImageSliderBlockProps["viewportHeight"]>
   cardBgColor?: string
   cardBorderColor?: string
   slideTitleColor?: string
@@ -753,6 +778,7 @@ function HeroVariant({
   activeItemId?: string | null
   onItemSelect?: (itemId: string) => void
 }) {
+  const heroMediaViewportCls = viewportHeight !== "auto" ? viewportHeightMap[viewportHeight] : "aspect-video"
   return (
     <Carousel
       itemsCount={slides.length}
@@ -769,7 +795,7 @@ function HeroVariant({
           const isPreviewActive = interactivePreview && activeItemId === slide.id
           const clickable = interactivePreview && !!onItemSelect
           const inner = (
-            <div className="group relative w-full overflow-hidden rounded-2xl aspect-video">
+            <div className={cn("group relative w-full overflow-hidden rounded-2xl", heroMediaViewportCls)}>
               <Image
                 src={slide.url}
                 alt={slide.alt || ""}
@@ -865,6 +891,7 @@ function HeroVariant({
 function CardsVariant({
   slides,
   aspect,
+  viewportHeight = "auto",
   slidesPerView,
   cardBgColor,
   cardBorderColor,
@@ -886,6 +913,7 @@ function CardsVariant({
 }: {
   slides: SlideItem[]
   aspect: string
+  viewportHeight?: NonNullable<ImageSliderBlockProps["viewportHeight"]>
   slidesPerView?: ImageSliderBlockProps["slidesPerView"]
   cardBgColor?: string
   cardBorderColor?: string
@@ -931,6 +959,7 @@ function CardsVariant({
           <SlideImage
             slide={slide}
             aspect={aspect}
+            viewportHeight={viewportHeight}
             cardBgColor={cardBgColor}
             cardBorderColor={cardBorderColor}
             slideTitleColor={slideTitleColor}
@@ -996,6 +1025,7 @@ export function ImageSliderBlock({
   slides,
   variant = "classic",
   aspect = "video",
+  viewportHeight = "auto",
   slidesPerView,
   controls,
   loop = true,
@@ -1131,6 +1161,7 @@ export function ImageSliderBlock({
               <ClassicVariant
                 slides={slides}
                 aspect={aspectClass}
+                viewportHeight={viewportHeight}
                 cardBgColor={cardBgColor}
                 cardBorderColor={cardBorderColor}
                 slideTitleColor={slideTitleColor}
@@ -1153,6 +1184,7 @@ export function ImageSliderBlock({
               <ProgressVariant
                 slides={slides}
                 aspect={aspectClass}
+                viewportHeight={viewportHeight}
                 cardBgColor={cardBgColor}
                 cardBorderColor={cardBorderColor}
                 slideTitleColor={slideTitleColor}
@@ -1175,6 +1207,7 @@ export function ImageSliderBlock({
               <ThumbnailsVariant
                 slides={slides}
                 aspect={aspectClass}
+                viewportHeight={viewportHeight}
                 cardBgColor={cardBgColor}
                 cardBorderColor={cardBorderColor}
                 slideTitleColor={slideTitleColor}
@@ -1196,6 +1229,7 @@ export function ImageSliderBlock({
             {variant === "hero" && (
               <HeroVariant
                 slides={slides}
+                viewportHeight={viewportHeight}
                 cardBgColor={cardBgColor}
                 cardBorderColor={cardBorderColor}
                 slideTitleColor={slideTitleColor}
@@ -1218,6 +1252,7 @@ export function ImageSliderBlock({
               <CardsVariant
                 slides={slides}
                 aspect={aspectClass}
+                viewportHeight={viewportHeight}
                 slidesPerView={slidesPerView}
                 cardBgColor={cardBgColor}
                 cardBorderColor={cardBorderColor}
