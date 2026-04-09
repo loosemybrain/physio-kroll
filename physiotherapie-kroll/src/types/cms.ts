@@ -849,6 +849,10 @@ export interface ImageSliderBlock extends BaseBlock {
     cardBorderColor?: string
     slideTitleColor?: string
     slideTextColor?: string
+    cardsLightbox?: boolean
+    cardsLightboxBackdropColor?: string
+    cardsLightboxBackdropPreset?: "soft-dark" | "dark" | "darker" | "black"
+    cardsFirstImageLightbox?: boolean
 
     containerBackgroundMode?: "transparent" | "color" | "gradient"
     containerBackgroundColor?: string

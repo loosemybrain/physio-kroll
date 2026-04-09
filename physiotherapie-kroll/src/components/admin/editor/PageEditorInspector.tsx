@@ -817,7 +817,7 @@ export function PageEditorInspector({
             return legalPickerWhitelist.includes(bt.type)
           })
           const showCourseSchedule = allowedTypes.includes("courseSchedule")
-          const count = pickerBlockTypes.length + (showCourseSchedule ? 2 : 0)
+          const count = pickerBlockTypes.length + (showCourseSchedule ? 1 : 0)
           return (
             <>
               {isLegal && (
@@ -850,7 +850,7 @@ export function PageEditorInspector({
                     <Button
                       key="courseSchedule-calendar"
                       variant="outline"
-                      className="h-auto flex-col gap-2 py-4 bg-transparent col-span-2"
+                      className="h-auto flex-col gap-2 py-4 bg-transparent"
                       onClick={() => editorActions.addBlock("courseSchedule")}
                     >
                       <CalendarDays className="h-5 w-5" />

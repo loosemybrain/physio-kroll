@@ -13,9 +13,9 @@ import {
   CarouselTrack,
   useCarousel,
 } from "@/components/ui/carousel"
-import { ChevronLeft, ChevronRight, Pause, Play } from "lucide-react"
+import { ChevronLeft, ChevronRight, Pause, Play, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { useReducedMotion } from "framer-motion"
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion"
 import type { BlockSectionProps, ElementShadow } from "@/types/cms"
 import { resolveBoxShadow } from "@/lib/shadow/resolveBoxShadow"
 import type { GradientPresetValue } from "@/lib/theme/gradientPresets"
@@ -75,6 +75,14 @@ export interface ImageSliderBlockProps {
   cardBorderColor?: string
   slideTitleColor?: string
   slideTextColor?: string
+  /** Cards (Multi-View): öffnet Lightbox bei Klick auf ein Bild */
+  cardsLightbox?: boolean
+  /** Cards (Multi-View): Hintergrundfarbe der Lightbox (z.B. #000000cc) */
+  cardsLightboxBackdropColor?: string
+  /** Cards (Multi-View): Backdrop-Preset für Lightbox */
+  cardsLightboxBackdropPreset?: "soft-dark" | "dark" | "darker" | "black"
+  /** @deprecated legacy key, wird auf cardsLightbox gemappt */
+  cardsFirstImageLightbox?: boolean
   background?: "none" | "muted" | "gradient"
 
   containerBackgroundMode?: "transparent" | "color" | "gradient"
@@ -99,6 +107,115 @@ export interface ImageSliderBlockProps {
   interactivePreview?: boolean
   activeItemId?: string | null
   onItemSelect?: (itemId: string) => void
+}
+
+function SliderLightbox({
+  slides,
+  initialIndex,
+  backdropColor,
+  onClose,
+}: {
+  slides: SlideItem[]
+  initialIndex: number
+  backdropColor?: string
+  onClose: () => void
+}) {
+  const [idx, setIdx] = React.useState(initialIndex)
+  const prev = React.useCallback(() => setIdx((i) => (i <= 0 ? slides.length - 1 : i - 1)), [slides.length])
+  const next = React.useCallback(() => setIdx((i) => (i >= slides.length - 1 ? 0 : i + 1)), [slides.length])
+
+  React.useEffect(() => {
+    const h = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose()
+      if (e.key === "ArrowLeft") prev()
+      if (e.key === "ArrowRight") next()
+    }
+    window.addEventListener("keydown", h)
+    return () => window.removeEventListener("keydown", h)
+  }, [onClose, prev, next])
+
+  React.useEffect(() => {
+    const p = document.body.style.overflow
+    document.body.style.overflow = "hidden"
+    return () => {
+      document.body.style.overflow = p
+    }
+  }, [])
+
+  const slide = slides[idx]
+  if (!slide) return null
+
+  const overlayStyle = backdropColor?.trim()
+    ? { backgroundColor: backdropColor }
+    : undefined
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        className="fixed inset-0 z-100 flex items-center justify-center p-4 backdrop-blur-sm"
+        style={overlayStyle}
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Bild ${idx + 1} von ${slides.length}`}
+        onClick={onClose}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.22, ease: "easeOut" }}
+      >
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute right-4 top-4 rounded-full bg-white/20 p-2 text-white hover:bg-white/35"
+          aria-label="Lightbox schließen"
+        >
+          <X className="h-5 w-5" />
+        </button>
+        {slides.length > 1 && (
+          <>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                prev()
+              }}
+              className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full bg-white/20 p-2.5 text-white hover:bg-white/35"
+              aria-label="Vorheriges Bild"
+            >
+              <ChevronLeft className="h-6 w-6" />
+            </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                next()
+              }}
+              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-white/20 p-2.5 text-white hover:bg-white/35"
+              aria-label="Nächstes Bild"
+            >
+              <ChevronRight className="h-6 w-6" />
+            </button>
+          </>
+        )}
+        <motion.div
+          className="relative max-h-[88vh] max-w-[92vw]"
+          onClick={(e) => e.stopPropagation()}
+          key={slide.id}
+          initial={{ opacity: 0, scale: 0.965, y: 8 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.97, y: 6 }}
+          transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+        >
+          <img
+            src={slide.url}
+            alt={slide.alt || ""}
+            className="max-h-[88vh] max-w-[92vw] rounded-lg object-contain"
+            draggable={false}
+          />
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
+  )
 }
 
 /* ================================================================ */
@@ -764,6 +881,8 @@ function CardsVariant({
   interactivePreview = false,
   activeItemId = null,
   onItemSelect,
+  cardsLightbox = false,
+  onCardsLightboxOpen,
 }: {
   slides: SlideItem[]
   aspect: string
@@ -783,6 +902,8 @@ function CardsVariant({
   interactivePreview?: boolean
   activeItemId?: string | null
   onItemSelect?: (itemId: string) => void
+  cardsLightbox?: boolean
+  onCardsLightboxOpen?: (index: number) => void
 }) {
   const base = slidesPerView?.base ?? 1
   const md = slidesPerView?.md ?? 2
@@ -802,9 +923,10 @@ function CardsVariant({
 
   return (
     <div className={cn("grid gap-4 sm:gap-6", gridClass)}>
-      {slides.map((slide) => {
+      {slides.map((slide, index) => {
         const isPreviewActive = interactivePreview && activeItemId === slide.id
         const clickable = interactivePreview && !!onItemSelect
+        const cardsLightboxEnabled = !interactivePreview && cardsLightbox
         const content = (
           <SlideImage
             slide={slide}
@@ -827,6 +949,25 @@ function CardsVariant({
                 onClick={(e) => { e.stopPropagation(); onItemSelect?.(slide.id) }}
                 onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onItemSelect?.(slide.id) } }}
                 className={cn("cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-2xl", isPreviewActive && "ring-2 ring-primary/60")}
+              >
+                {content}
+              </div>
+            ) : cardsLightboxEnabled ? (
+              <div
+                role="button"
+                tabIndex={0}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onCardsLightboxOpen?.(index)
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault()
+                    onCardsLightboxOpen?.(index)
+                  }
+                }}
+                className="cursor-zoom-in rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                aria-label={`Bild ${index + 1} in Lightbox öffnen`}
               >
                 {content}
               </div>
@@ -866,6 +1007,10 @@ export function ImageSliderBlock({
   cardBorderColor,
   slideTitleColor,
   slideTextColor,
+  cardsLightbox,
+  cardsLightboxBackdropColor,
+  cardsLightboxBackdropPreset = "darker",
+  cardsFirstImageLightbox = false,
   background = "none",
   containerBackgroundMode,
   containerBackgroundColor,
@@ -884,6 +1029,17 @@ export function ImageSliderBlock({
   onItemSelect,
 }: ImageSliderBlockProps) {
   if (!slides || slides.length === 0) return null
+  const [cardsLightboxOpen, setCardsLightboxOpen] = React.useState(false)
+  const [cardsLightboxIndex, setCardsLightboxIndex] = React.useState(0)
+  const effectiveCardsLightbox = cardsLightbox ?? cardsFirstImageLightbox ?? false
+  const cardsBackdropByPreset: Record<NonNullable<ImageSliderBlockProps["cardsLightboxBackdropPreset"]>, string> = {
+    "soft-dark": "rgba(15, 23, 42, 0.78)",
+    dark: "rgba(3, 7, 18, 0.86)",
+    darker: "rgba(0, 0, 0, 0.90)",
+    black: "rgba(0, 0, 0, 0.96)",
+  }
+  const effectiveCardsBackdropColor =
+    cardsLightboxBackdropColor?.trim() || cardsBackdropByPreset[cardsLightboxBackdropPreset]
 
   const handleInlineEdit = (e: React.MouseEvent, fieldPath: string) => {
     if (!editable || !blockId || !onEditField) return
@@ -1078,11 +1234,24 @@ export function ImageSliderBlock({
                 interactivePreview={interactivePreview}
                 activeItemId={activeItemId}
                 onItemSelect={onItemSelect}
+                cardsLightbox={effectiveCardsLightbox}
+                onCardsLightboxOpen={(index) => {
+                  setCardsLightboxIndex(index)
+                  setCardsLightboxOpen(true)
+                }}
               />
             )}
           </AnimatedBlock>
         </div>
       </div>
+      {variant === "cards" && effectiveCardsLightbox && cardsLightboxOpen && (
+        <SliderLightbox
+          slides={slides}
+          initialIndex={cardsLightboxIndex}
+          backdropColor={effectiveCardsBackdropColor}
+          onClose={() => setCardsLightboxOpen(false)}
+        />
+      )}
     </section>
   )
 }

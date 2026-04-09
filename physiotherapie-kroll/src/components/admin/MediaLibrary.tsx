@@ -66,9 +66,17 @@ type MediaLibraryProps = {
   selectMode?: boolean
 }
 
+const MEDIA_LIBRARY_BRAND_STORAGE_KEY = "admin.mediaLibrary.activeBrand"
+
+function readInitialMediaBrand(): BrandKey {
+  if (typeof window === "undefined") return "physiotherapy"
+  const stored = window.localStorage.getItem(MEDIA_LIBRARY_BRAND_STORAGE_KEY)
+  return stored === "physio-konzept" ? "physio-konzept" : "physiotherapy"
+}
+
 export function MediaLibrary(props: MediaLibraryProps) {
   const { toast } = useToast()
-  const [activeBrand, setActiveBrand] = React.useState<BrandKey>("physiotherapy")
+  const [activeBrand, setActiveBrand] = React.useState<BrandKey>(readInitialMediaBrand)
   const [selectedFolderId, setSelectedFolderId] = React.useState<string | null>(null)
   const [folders, setFolders] = React.useState<MediaFolder[]>([])
   const [assets, setAssets] = React.useState<MediaAsset[]>([])
@@ -129,6 +137,10 @@ export function MediaLibrary(props: MediaLibraryProps) {
   React.useEffect(() => {
     loadFolders(activeBrand)
   }, [activeBrand, loadFolders])
+
+  React.useEffect(() => {
+    window.localStorage.setItem(MEDIA_LIBRARY_BRAND_STORAGE_KEY, activeBrand)
+  }, [activeBrand])
 
   React.useEffect(() => {
     loadAssets(activeBrand, selectedFolderId)
