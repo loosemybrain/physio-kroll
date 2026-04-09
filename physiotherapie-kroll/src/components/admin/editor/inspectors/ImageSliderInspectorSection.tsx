@@ -2,6 +2,8 @@
 
 import * as React from "react"
 import { Separator } from "@/components/ui/separator"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import type { CMSBlock } from "@/types/cms"
 import type { ElementShadow } from "@/types/cms"
 import { createImageSlide } from "@/cms/blocks/registry"
@@ -41,9 +43,26 @@ const ImageSliderInspectorSectionContent = React.memo(
   }: PageEditorInspectorSectionProps) => {
     const props = selectedBlock.props as Record<string, unknown>
     const slides = ((getByPath(props, "slides") as Array<{ id: string; title?: string }>) || [])
+    const [shadowSlideId, setShadowSlideId] = React.useState<string>("")
     const repeaterKey = `${selectedBlock.id}:slides`
     const expandedId = expandedRepeaterCards[repeaterKey] ?? null
     const updateSlides = (next: typeof slides) => updateSelectedProps({ ...props, slides: next } as CMSBlock["props"])
+    const selectedShadowSlideIndex = React.useMemo(
+      () => slides.findIndex((slide) => slide.id === shadowSlideId),
+      [slides, shadowSlideId],
+    )
+    const effectiveShadowSlideIndex = selectedShadowSlideIndex >= 0 ? selectedShadowSlideIndex : 0
+    const effectiveShadowSlide = slides[effectiveShadowSlideIndex] ?? null
+
+    React.useEffect(() => {
+      if (slides.length === 0) {
+        setShadowSlideId("")
+        return
+      }
+      if (!slides.some((slide) => slide.id === shadowSlideId)) {
+        setShadowSlideId(slides[0]?.id ?? "")
+      }
+    }, [slides, shadowSlideId])
     const addSlide = () => {
       const newItem = createImageSlide()
       updateSlides([...slides, newItem])
@@ -84,31 +103,42 @@ const ImageSliderInspectorSectionContent = React.memo(
           maxItems={12}
         />
 
-        {((selectedBlock.props as any)?.slides ?? []).map((slide: any, slideIndex: number) => {
-          const slideKey = slide.id || `slide-${slideIndex}-${slide.title || ""}`
-          return (
-            <div key={slideKey} className="mt-4 pt-4 border-t border-border/50">
-              <div className="space-y-3">
-                <h4 className="text-sm font-semibold">
-                  {slide.title ? `Slide ${slideIndex + 1}: ${slide.title}` : `Slide ${slideIndex + 1}`} - Shadow
-                </h4>
-                <ShadowInspector
-                  config={slide.shadow}
-                  onChange={(shadowConfig: ElementShadow | undefined) => {
-                    if (!selectedBlock) return
-                    const currentProps = selectedBlock.props as Record<string, unknown>
-                    const slides = Array.isArray(currentProps.slides) ? [...(currentProps.slides as any[])] : []
-                    if (slides[slideIndex]) {
-                      slides[slideIndex] = { ...slides[slideIndex], shadow: shadowConfig }
-                      const updatedProps = { ...currentProps, slides } as CMSBlock["props"]
-                      updateSelectedProps(updatedProps)
-                    }
-                  }}
-                />
+        {effectiveShadowSlide ? (
+          <div className="mt-4 border-t border-border/50 pt-4">
+            <div className="space-y-3">
+              <div className="space-y-2">
+                <Label htmlFor={`${selectedBlock.id}-slide-shadow-select`}>Slide-Shadow bearbeiten</Label>
+                <Select value={effectiveShadowSlide.id} onValueChange={setShadowSlideId}>
+                  <SelectTrigger id={`${selectedBlock.id}-slide-shadow-select`} className="w-full">
+                    <SelectValue placeholder="Slide wählen" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {slides.map((slide, index) => (
+                      <SelectItem key={slide.id} value={slide.id}>
+                        {slide.title ? `Slide ${index + 1}: ${slide.title}` : `Slide ${index + 1}`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
+              <ShadowInspector
+                config={(effectiveShadowSlide as any).shadow}
+                onChange={(shadowConfig: ElementShadow | undefined) => {
+                  if (!selectedBlock) return
+                  const currentProps = selectedBlock.props as Record<string, unknown>
+                  const currentSlides = Array.isArray(currentProps.slides) ? [...(currentProps.slides as any[])] : []
+                  if (!currentSlides[effectiveShadowSlideIndex]) return
+                  currentSlides[effectiveShadowSlideIndex] = {
+                    ...currentSlides[effectiveShadowSlideIndex],
+                    shadow: shadowConfig,
+                  }
+                  const updatedProps = { ...currentProps, slides: currentSlides } as CMSBlock["props"]
+                  updateSelectedProps(updatedProps)
+                }}
+              />
             </div>
-          )
-        })}
+          </div>
+        ) : null}
       </>
     )
   }

@@ -830,6 +830,8 @@ export interface ImageSliderBlock extends BaseBlock {
     variant?: "classic" | "progress" | "thumbnails" | "hero" | "cards"
     aspect?: "video" | "square" | "portrait" | "auto"
     viewportHeight?: "auto" | "50vh" | "60vh" | "70vh" | "80vh" | "90vh"
+    headerToSliderSpacing?: "none" | "sm" | "md" | "lg" | "xl" | "custom"
+    headerToSliderSpacingCustomPx?: number
     slidesPerView?: { base?: number; md?: number; lg?: number }
 
     controls?: {

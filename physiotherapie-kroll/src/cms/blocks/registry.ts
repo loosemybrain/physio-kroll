@@ -31,7 +31,7 @@ export type TestimonialSliderBlock = {
 }
 
 // Add InspectorFieldType union for "toggle" (needed for testimonialSlider's inspectorFields; fallback to "boolean" if not supported elsewhere)
-export type InspectorFieldType = "text" | "textarea" | "select" | "url" | "image" | "number" | "boolean" | "color" | "toggle"
+export type InspectorFieldType = "text" | "textarea" | "select" | "url" | "image" | "number" | "boolean" | "color" | "toggle" | "slider"
 
 export interface InspectorField {
   key: string
@@ -41,6 +41,9 @@ export interface InspectorField {
   options?: Array<{ value: string; label: string }>
   required?: boolean
   helpText?: string
+  sliderMin?: number
+  sliderMax?: number
+  sliderStep?: number
   showWhen?: { key: string; equals: any }
   group?: "basics" | "layout" | "panel" | "design" | "content" | "interactions" | "elements"
 }
@@ -832,6 +835,8 @@ const imageSliderPropsSchema = z.object({
   variant: z.enum(["classic", "progress", "thumbnails", "hero", "cards"]).optional().default("classic"),
   aspect: z.enum(["video", "square", "portrait", "auto"]).optional().default("video"),
   viewportHeight: z.enum(["auto", "50vh", "60vh", "70vh", "80vh", "90vh"]).optional().default("auto"),
+  headerToSliderSpacing: z.enum(["none", "sm", "md", "lg", "xl", "custom"]).optional().default("md"),
+  headerToSliderSpacingCustomPx: z.coerce.number().min(0).max(120).optional().default(24),
   slidesPerView: z.object({
     base: z.coerce.number().int().min(1).max(3).optional().default(1),
     md: z.coerce.number().int().min(1).max(3).optional().default(2),
@@ -1655,6 +1660,8 @@ const imageSliderDefaults: ImageSliderBlock["props"] = {
   variant: "classic",
   aspect: "video",
   viewportHeight: "auto",
+  headerToSliderSpacing: "md",
+  headerToSliderSpacingCustomPx: 24,
   slidesPerView: { base: 1, md: 2, lg: 3 },
   controls: {
     showArrows: true,
@@ -3372,6 +3379,30 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
           { value: "80vh", label: "80vh" },
           { value: "90vh", label: "90vh" },
         ],
+        group: "layout",
+      },
+      {
+        key: "headerToSliderSpacing",
+        label: "Abstand Header → Slider",
+        type: "select",
+        options: [
+          { value: "none", label: "Kein Abstand" },
+          { value: "sm", label: "Klein" },
+          { value: "md", label: "Mittel (Default)" },
+          { value: "lg", label: "Groß" },
+          { value: "xl", label: "Sehr groß" },
+          { value: "custom", label: "Individuell" },
+        ],
+        group: "layout",
+      },
+      {
+        key: "headerToSliderSpacingCustomPx",
+        label: "Individueller Abstand (px)",
+        type: "slider",
+        sliderMin: 0,
+        sliderMax: 120,
+        sliderStep: 1,
+        showWhen: { key: "headerToSliderSpacing", equals: "custom" },
         group: "layout",
       },
       {

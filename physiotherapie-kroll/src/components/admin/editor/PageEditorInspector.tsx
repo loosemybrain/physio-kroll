@@ -52,6 +52,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import type { TypographySettings } from "@/lib/typography"
 import { ColorField } from "../ColorField"
+import { Slider } from "@/components/ui/slider"
 import { ShadowInspector } from "../ShadowInspector"
 import type { ElementShadow, ElementConfig } from "@/types/cms"
 import { UniversalRepeaterInspector } from "./repeater/UniversalRepeaterInspector"
@@ -169,6 +170,28 @@ export function PageEditorInspector({
   onDeleteBlockFromOutline,
   onDuplicateBlockFromOutline,
 }: PageEditorInspectorProps) {
+  const [imageSliderShadowSlideId, setImageSliderShadowSlideId] = React.useState<string>("")
+  const IMAGE_SLIDER_SHADOW_ALL_VALUE = "__all_slides__"
+
+  React.useEffect(() => {
+    if (!selectedBlock || selectedBlock.type !== "imageSlider") {
+      if (imageSliderShadowSlideId) setImageSliderShadowSlideId("")
+      return
+    }
+    const sliderSlides = (((selectedBlock.props as any)?.slides ?? []) as Array<{ id?: string }>)
+      .filter((slide) => typeof slide?.id === "string" && slide.id.length > 0) as Array<{ id: string }>
+    if (sliderSlides.length === 0) {
+      if (imageSliderShadowSlideId) setImageSliderShadowSlideId("")
+      return
+    }
+    if (
+      imageSliderShadowSlideId !== IMAGE_SLIDER_SHADOW_ALL_VALUE &&
+      !sliderSlides.some((slide) => slide.id === imageSliderShadowSlideId)
+    ) {
+      setImageSliderShadowSlideId(sliderSlides[0].id)
+    }
+  }, [selectedBlock, imageSliderShadowSlideId, IMAGE_SLIDER_SHADOW_ALL_VALUE])
+
   const renderStringArrayControls = (
     block: CMSBlock,
     arrayPath: string,
@@ -502,7 +525,7 @@ export function PageEditorInspector({
 
   // Automatische Erkennung: Wenn field.type === "image" ODER Heuristik true
   // ABER: Expliziter field.type hat IMMER Priorität. Heuristik greift nur bei fehlender Klassifizierung.
-  const knownTypes = ["text", "textarea", "color", "select", "url", "image", "checkbox", "number", "date"]
+  const knownTypes = ["text", "textarea", "color", "select", "url", "image", "checkbox", "number", "date", "slider"]
   const shouldRenderAsImage = field.type === "image" || (knownTypes.indexOf(field.type as string) === -1 && isImageField(field.key, value))
 
   switch (shouldRenderAsImage ? "image" : field.type) {
@@ -617,6 +640,84 @@ export function PageEditorInspector({
           {field.helpText && <p className="text-xs text-muted-foreground">{field.helpText}</p>}
         </div>
       )
+
+    case "number":
+      return (
+        <div key={field.key} className="space-y-2">
+          <Label htmlFor={fieldKey}>
+            {field.label}
+            {field.required && <span className="text-destructive ml-1">*</span>}
+          </Label>
+          <div className="flex gap-2">
+            <Input
+              id={fieldKey}
+              ref={(el) => {
+                fieldRefs.current[fieldKey] = el
+              }}
+              type="number"
+              value={value === null || typeof value === "undefined" ? "" : String(value)}
+              onChange={(e) => {
+                const raw = e.target.value
+                if (raw === "") {
+                  handleChange(undefined)
+                  return
+                }
+                const num = Number(raw)
+                handleChange(Number.isFinite(num) ? num : undefined)
+              }}
+              placeholder={field.placeholder}
+              className={cn("flex-1", isActive && "ring-2 ring-primary")}
+            />
+            {!field.required && (
+              <button
+                type="button"
+                onClick={handleClearField}
+                className="h-10 w-10 px-0 text-xs text-muted-foreground hover:text-destructive transition-colors flex items-center justify-center"
+                title="Löschen"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+          {field.helpText && <p className="text-xs text-muted-foreground">{field.helpText}</p>}
+        </div>
+      )
+
+    case "slider": {
+      const min = typeof field.sliderMin === "number" ? field.sliderMin : 0
+      const max = typeof field.sliderMax === "number" ? field.sliderMax : 100
+      const step = typeof field.sliderStep === "number" ? field.sliderStep : 1
+      const numericValue =
+        typeof value === "number" && Number.isFinite(value)
+          ? Math.min(max, Math.max(min, value))
+          : min
+
+      return (
+        <div key={field.key} className="space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <Label htmlFor={fieldKey}>
+              {field.label}
+              {field.required && <span className="text-destructive ml-1">*</span>}
+            </Label>
+            <span className="text-xs text-muted-foreground tabular-nums">{numericValue}px</span>
+          </div>
+          <Slider
+            value={[numericValue]}
+            min={min}
+            max={max}
+            step={step}
+            onValueChange={(vals) => {
+              const next = vals[0]
+              if (typeof next === "number" && Number.isFinite(next)) handleChange(next)
+            }}
+            aria-label={field.label}
+            id={fieldKey}
+            className={cn(isActive && "ring-2 ring-primary rounded-md")}
+          />
+          {field.helpText && <p className="text-xs text-muted-foreground">{field.helpText}</p>}
+        </div>
+      )
+    }
 
     case "select": {
       // Wichtig: Radix Select darf kein value="" in SelectItem haben.
@@ -890,7 +991,10 @@ export function PageEditorInspector({
                       ? "bg-primary/10 text-primary font-medium"
                       : "hover:bg-muted/50 cursor-pointer"
                   )}
-                  onClick={() => selectBlock(block.id)}
+                  onClick={() => {
+                    selectBlock(block.id)
+                    onRequestPreviewScroll?.(block.id)
+                  }}
                 >
                   <span className="flex-1 truncate">{blockLabel}</span>
                   <div className="flex items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
@@ -2611,7 +2715,12 @@ export function PageEditorInspector({
   // Kursplan: Eyebrow wird im Spezial-Inspector gerendert (bei Anzeige/Wochenende), damit es nicht "verschwindet"
   // und wir die Reihenfolge konsistent halten.
   if (selectedBlock.type === "courseSchedule") primaryKeys.delete("eyebrow")
-  const lateKeys = new Set(["autoplay", "interval", "showArrows", "showDots"])
+  // Legacy fallback: some older blocks had these controls historically at the bottom.
+  // For imageSlider we keep grouped ordering from registry (Interaktionen) intact.
+  const lateKeys =
+    selectedBlock.type === "imageSlider"
+      ? new Set<string>()
+      : new Set(["autoplay", "interval", "showArrows", "showDots"])
 
   const isArrayItemField = (key: string) => {
     if (selectedBlock.type === "hero" && key.startsWith("trustItems.")) return true
@@ -3280,32 +3389,61 @@ export function PageEditorInspector({
             )
           })()}
 
-          {/* Slide Shadow Inspector */}
-          {((selectedBlock.props as any)?.slides ?? []).map((slide: any, slideIndex: number) => {
-            const slideKey = slide.id || `slide-${slideIndex}-${slide.title || ""}`
+          {/* Slide Shadow Inspector (kompakt per Dropdown) */}
+          {(() => {
+            const sliderSlides = (((selectedBlock.props as any)?.slides ?? []) as Array<{ id?: string; title?: string; shadow?: ElementShadow }>)
+              .filter((slide) => typeof slide?.id === "string" && slide.id.length > 0) as Array<{ id: string; title?: string; shadow?: ElementShadow }>
+            if (sliderSlides.length === 0) return null
+            const activeSlideId = sliderSlides.some((slide) => slide.id === imageSliderShadowSlideId)
+              ? imageSliderShadowSlideId
+              : sliderSlides[0].id
+            const applyToAllSlides = imageSliderShadowSlideId === IMAGE_SLIDER_SHADOW_ALL_VALUE
+            const activeSlideIndex = sliderSlides.findIndex((slide) => slide.id === activeSlideId)
+            const activeSlide = sliderSlides[activeSlideIndex] ?? sliderSlides[0]
             return (
-            <div key={slideKey} className="mt-4 pt-4 border-t border-border/50">
-              <div className="space-y-3">
-                <h4 className="text-sm font-semibold">
-                  {slide.title ? `Slide ${slideIndex + 1}: ${slide.title}` : `Slide ${slideIndex + 1}`} - Shadow
-                </h4>
-                <ShadowInspector
-                  config={slide.shadow}
-                  onChange={(shadowConfig) => {
-                    if (!selectedBlock) return
-                    const currentProps = selectedBlock.props as Record<string, unknown>
-                    const slides = Array.isArray(currentProps.slides) ? [...(currentProps.slides as any[])] : []
-                    if (slides[slideIndex]) {
-                      slides[slideIndex] = { ...slides[slideIndex], shadow: shadowConfig }
+              <div className="mt-4 border-t border-border/50 pt-4">
+                <div className="space-y-3">
+                  <div className="space-y-2">
+                    <Label htmlFor={`${selectedBlock.id}-slide-shadow-select`} className="text-xs">
+                      Slide-Shadow bearbeiten
+                    </Label>
+                    <Select value={applyToAllSlides ? IMAGE_SLIDER_SHADOW_ALL_VALUE : activeSlideId} onValueChange={setImageSliderShadowSlideId}>
+                      <SelectTrigger id={`${selectedBlock.id}-slide-shadow-select`} className="w-full">
+                        <SelectValue placeholder="Slide wählen" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={IMAGE_SLIDER_SHADOW_ALL_VALUE}>Alle Slides</SelectItem>
+                        {sliderSlides.map((slide, idx) => (
+                          <SelectItem key={slide.id} value={slide.id}>
+                            {slide.title ? `Slide ${idx + 1}: ${slide.title}` : `Slide ${idx + 1}`}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <ShadowInspector
+                    config={activeSlide.shadow}
+                    onChange={(shadowConfig) => {
+                      if (!selectedBlock) return
+                      const currentProps = selectedBlock.props as Record<string, unknown>
+                      const slides = Array.isArray(currentProps.slides) ? [...(currentProps.slides as any[])] : []
+                      if (slides.length === 0) return
+                      if (applyToAllSlides) {
+                        for (let i = 0; i < slides.length; i += 1) {
+                          slides[i] = { ...slides[i], shadow: shadowConfig }
+                        }
+                      } else {
+                        if (!slides[activeSlideIndex]) return
+                        slides[activeSlideIndex] = { ...slides[activeSlideIndex], shadow: shadowConfig }
+                      }
                       const updatedProps = { ...currentProps, slides } as CMSBlock["props"]
                       updateSelectedProps(updatedProps)
-                    }
-                  }}
-                />
+                    }}
+                  />
+                </div>
               </div>
-            </div>
             )
-          })}
+          })()}
         </>
       )}
 

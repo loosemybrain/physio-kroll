@@ -57,6 +57,8 @@ export interface ImageSliderBlockProps {
   variant?: "classic" | "progress" | "thumbnails" | "hero" | "cards"
   aspect?: "video" | "square" | "portrait" | "auto"
   viewportHeight?: "auto" | "50vh" | "60vh" | "70vh" | "80vh" | "90vh"
+  headerToSliderSpacing?: "none" | "sm" | "md" | "lg" | "xl" | "custom"
+  headerToSliderSpacingCustomPx?: number
   slidesPerView?: { base?: number; md?: number; lg?: number }
 
   controls?: {
@@ -238,6 +240,14 @@ const viewportHeightMap: Record<Exclude<NonNullable<ImageSliderBlockProps["viewp
   "90vh": "h-[90vh]",
 }
 
+const headerSpacingMap: Record<Exclude<NonNullable<ImageSliderBlockProps["headerToSliderSpacing"]>, "custom">, string> = {
+  none: "mb-0",
+  sm: "mb-6",
+  md: "mb-8",
+  lg: "mb-10",
+  xl: "mb-14",
+}
+
 const backgroundMap: Record<NonNullable<ImageSliderBlockProps["background"]>, string> = {
   none: "",
   muted: "bg-muted/50",
@@ -392,19 +402,17 @@ function ClassicVariant({
           )
           return (
             <CarouselSlide key={slide.id} index={index}>
-              {clickable ? (
-                <div
-                  data-repeater-field="slides"
-                  data-repeater-item-id={slide.id}
-                  role="button"
-                  tabIndex={0}
-                  onClick={(e) => { e.stopPropagation(); onItemSelect?.(slide.id) }}
-                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onItemSelect?.(slide.id) } }}
-                  className={cn("cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-2xl", isPreviewActive && "ring-2 ring-primary/60")}
-                >
-                  {content}
-                </div>
-              ) : content}
+              <div
+                data-repeater-field="slides"
+                data-repeater-item-id={slide.id}
+                role={clickable ? "button" : undefined}
+                tabIndex={clickable ? 0 : undefined}
+                onClick={clickable ? (e) => { e.stopPropagation(); onItemSelect?.(slide.id) } : undefined}
+                onKeyDown={clickable ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onItemSelect?.(slide.id) } } : undefined}
+                className={cn(clickable && "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-2xl", isPreviewActive && "ring-2 ring-primary/60")}
+              >
+                {content}
+              </div>
             </CarouselSlide>
           )
         })}
@@ -511,19 +519,17 @@ function ProgressVariant({
           )
           return (
             <CarouselSlide key={slide.id} index={index}>
-              {clickable ? (
-                <div
-                  data-repeater-field="slides"
-                  data-repeater-item-id={slide.id}
-                  role="button"
-                  tabIndex={0}
-                  onClick={(e) => { e.stopPropagation(); onItemSelect?.(slide.id) }}
-                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onItemSelect?.(slide.id) } }}
-                  className={cn("cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-2xl", isPreviewActive && "ring-2 ring-primary/60")}
-                >
-                  {content}
-                </div>
-              ) : content}
+              <div
+                data-repeater-field="slides"
+                data-repeater-item-id={slide.id}
+                role={clickable ? "button" : undefined}
+                tabIndex={clickable ? 0 : undefined}
+                onClick={clickable ? (e) => { e.stopPropagation(); onItemSelect?.(slide.id) } : undefined}
+                onKeyDown={clickable ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onItemSelect?.(slide.id) } } : undefined}
+                className={cn(clickable && "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-2xl", isPreviewActive && "ring-2 ring-primary/60")}
+              >
+                {content}
+              </div>
             </CarouselSlide>
           )
         })}
@@ -652,19 +658,17 @@ function ThumbnailsVariant({
           )
           return (
             <CarouselSlide key={slide.id} index={index}>
-              {clickable ? (
-                <div
-                  data-repeater-field="slides"
-                  data-repeater-item-id={slide.id}
-                  role="button"
-                  tabIndex={0}
-                  onClick={(e) => { e.stopPropagation(); onItemSelect?.(slide.id) }}
-                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onItemSelect?.(slide.id) } }}
-                  className={cn("cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-2xl", isPreviewActive && "ring-2 ring-primary/60")}
-                >
-                  {content}
-                </div>
-              ) : content}
+              <div
+                data-repeater-field="slides"
+                data-repeater-item-id={slide.id}
+                role={clickable ? "button" : undefined}
+                tabIndex={clickable ? 0 : undefined}
+                onClick={clickable ? (e) => { e.stopPropagation(); onItemSelect?.(slide.id) } : undefined}
+                onKeyDown={clickable ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onItemSelect?.(slide.id) } } : undefined}
+                className={cn(clickable && "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-2xl", isPreviewActive && "ring-2 ring-primary/60")}
+              >
+                {content}
+              </div>
             </CarouselSlide>
           )
         })}
@@ -841,19 +845,17 @@ function HeroVariant({
           )
           return (
             <CarouselSlide key={slide.id} index={index}>
-              {clickable ? (
-                <div
-                  data-repeater-field="slides"
-                  data-repeater-item-id={slide.id}
-                  role="button"
-                  tabIndex={0}
-                  onClick={(e) => { e.stopPropagation(); onItemSelect?.(slide.id) }}
-                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onItemSelect?.(slide.id) } }}
-                  className={cn("cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-2xl", isPreviewActive && "ring-2 ring-primary/60")}
-                >
-                  {inner}
-                </div>
-              ) : inner}
+              <div
+                data-repeater-field="slides"
+                data-repeater-item-id={slide.id}
+                role={clickable ? "button" : undefined}
+                tabIndex={clickable ? 0 : undefined}
+                onClick={clickable ? (e) => { e.stopPropagation(); onItemSelect?.(slide.id) } : undefined}
+                onKeyDown={clickable ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onItemSelect?.(slide.id) } } : undefined}
+                className={cn(clickable && "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-2xl", isPreviewActive && "ring-2 ring-primary/60")}
+              >
+                {inner}
+              </div>
             </CarouselSlide>
           )
         })}
@@ -983,6 +985,8 @@ function CardsVariant({
               </div>
             ) : cardsLightboxEnabled ? (
               <div
+                data-repeater-field="slides"
+                data-repeater-item-id={slide.id}
                 role="button"
                 tabIndex={0}
                 onClick={(e) => {
@@ -1000,7 +1004,11 @@ function CardsVariant({
               >
                 {content}
               </div>
-            ) : content}
+            ) : (
+              <div data-repeater-field="slides" data-repeater-item-id={slide.id}>
+                {content}
+              </div>
+            )}
           </div>
         )
       })}
@@ -1026,6 +1034,8 @@ export function ImageSliderBlock({
   variant = "classic",
   aspect = "video",
   viewportHeight = "auto",
+  headerToSliderSpacing = "md",
+  headerToSliderSpacingCustomPx = 24,
   slidesPerView,
   controls,
   loop = true,
@@ -1121,7 +1131,17 @@ export function ImageSliderBlock({
     >
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         {(eyebrow || headline || subheadline) && (
-          <header className="mb-10 text-center">
+          <header
+            className={cn(
+              headerToSliderSpacing === "custom" ? undefined : headerSpacingMap[headerToSliderSpacing],
+              "text-center"
+            )}
+            style={
+              headerToSliderSpacing === "custom"
+                ? { marginBottom: `${Math.min(120, Math.max(0, Math.round(headerToSliderSpacingCustomPx || 0)))}px` }
+                : undefined
+            }
+          >
             {eyebrow && (
               <p
                 onClick={(e) => handleInlineEdit(e, "eyebrow")}
