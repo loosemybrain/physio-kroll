@@ -14,6 +14,7 @@ import { resolveContainerBg } from "@/lib/theme/resolveContainerBg"
 import { resolveBoxShadow } from "@/lib/shadow/resolveBoxShadow"
 import type { ElementShadow } from "@/types/cms"
 import { AnimatedBlock } from "@/components/blocks/AnimatedBlock"
+import { ElementAnimated } from "@/components/blocks/ElementAnimated"
 
 /* ================================================================ */
 /*  Types                                                            */
@@ -480,6 +481,7 @@ export function SectionBlock({
         )}
 
         <AnimatedBlock config={section?.animation}>
+          <ElementAnimated elementId="section.surface" elements={elements}>
           <div
             className={cn(
               // Inner card surface with layered shadow system
@@ -570,6 +572,7 @@ export function SectionBlock({
                   className="h-px w-10 bg-linear-to-r from-transparent via-primary/40 to-primary/60"
                   aria-hidden="true"
                 />
+                <ElementAnimated elementId="section.eyebrow" elements={elements}>
                 <span
                   onClick={(e) => handleInlineEdit(e, "eyebrow", "section.eyebrow")}
                   data-element-id="section.eyebrow"
@@ -591,6 +594,7 @@ export function SectionBlock({
                 >
                   {eyebrow}
                 </span>
+                </ElementAnimated>
                 {isCentered && (
                   <div
                     className="h-px w-10 bg-linear-to-l from-transparent via-primary/40 to-primary/60"
@@ -601,6 +605,7 @@ export function SectionBlock({
             )}
 
             {/* ---- Headline ---- */}
+            <ElementAnimated elementId="section.headline" elements={elements}>
             <motion.h2
               variants={itemVariants}
               initial={disableViewMotion ? "visible" : undefined}
@@ -625,9 +630,11 @@ export function SectionBlock({
             >
               {headline}
             </motion.h2>
+            </ElementAnimated>
 
             {/* ---- Subheadline ---- */}
             {subheadline && (
+              <ElementAnimated elementId="section.subheadline" elements={elements}>
               <motion.p
                 variants={itemVariants}
                 initial={disableViewMotion ? "visible" : undefined}
@@ -652,10 +659,12 @@ export function SectionBlock({
               >
                 {subheadline}
               </motion.p>
+              </ElementAnimated>
             )}
 
             {/* ---- Divider ---- */}
             {resolvedShowDivider && (
+              <ElementAnimated elementId="section.divider" elements={elements}>
               <motion.div
                 variants={itemVariants}
                 initial={disableViewMotion ? "visible" : undefined}
@@ -681,9 +690,11 @@ export function SectionBlock({
                   aria-hidden="true"
                 />
               </motion.div>
+              </ElementAnimated>
             )}
 
             {/* ---- Content paragraphs ---- */}
+            <ElementAnimated elementId="section.content" elements={elements}>
             <motion.div
               variants={itemVariants}
               initial={disableViewMotion ? "visible" : undefined}
@@ -712,6 +723,7 @@ export function SectionBlock({
             >
               {paragraphs.map((p, i) => renderParagraph(p, i))}
             </motion.div>
+            </ElementAnimated>
 
             {/* ---- CTAs ---- */}
             {hasCta && (
@@ -726,6 +738,7 @@ export function SectionBlock({
               >
                 {/* Primary CTA */}
                 {hasPrimaryCta && (
+                  <ElementAnimated elementId="section.ctaPrimary" elements={elements}>
                   <div
                     data-element-id="section.ctaPrimary"
                     style={primaryCtaShadow}
@@ -791,10 +804,12 @@ export function SectionBlock({
                       </Button>
                     )}
                   </div>
+                  </ElementAnimated>
                 )}
 
                 {/* Secondary CTA */}
                 {hasSecondaryCta && (
+                  <ElementAnimated elementId="section.ctaSecondary" elements={elements}>
                   <div
                     data-element-id="section.ctaSecondary"
                     style={secondaryCtaShadow}
@@ -834,11 +849,13 @@ export function SectionBlock({
                       </Button>
                     )}
                   </div>
+                  </ElementAnimated>
                 )}
               </motion.div>
             )}
           </motion.div>
           </div>
+          </ElementAnimated>
         </AnimatedBlock>
       </div>
     </section>

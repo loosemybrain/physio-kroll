@@ -14,6 +14,7 @@ import { resolveContainerBg } from "@/lib/theme/resolveContainerBg"
 import { resolveBoxShadow } from "@/lib/shadow/resolveBoxShadow"
 import { mergeTypographyClasses } from "@/lib/typography"
 import { AnimatedBlock } from "@/components/blocks/AnimatedBlock"
+import { ElementAnimated } from "@/components/blocks/ElementAnimated"
 import type { BlockSectionProps, ElementShadow } from "@/types/cms"
 import type { GradientPresetValue } from "@/lib/theme/gradientPresets"
 
@@ -318,6 +319,7 @@ function MemberCard({
   blockId,
   onEditField,
   typography,
+  elements,
   interactivePreview,
   activeItemId,
   onItemSelect,
@@ -336,6 +338,7 @@ function MemberCard({
   blockId?: string
   onEditField?: TeamGridBlockProps["onEditField"]
   typography?: Record<string, any>
+  elements?: Record<string, any>
   interactivePreview?: boolean
   activeItemId?: string | null
   onItemSelect?: (itemId: string) => void
@@ -426,7 +429,9 @@ function MemberCard({
         )}
       >
         {/* Name */}
+        <ElementAnimated elementId="team.member.name" elements={elements}>
         <h3
+          data-element-id="team.member.name"
           onClick={(e) => handleEdit(e, `members.${index}.name`)}
           className={cn(
             mergeTypographyClasses(
@@ -440,10 +445,13 @@ function MemberCard({
         >
           {member.name}
         </h3>
+        </ElementAnimated>
 
         {/* Role */}
         {member.role && (
+          <ElementAnimated elementId="team.member.role" elements={elements}>
           <p
+            data-element-id="team.member.role"
             onClick={(e) => handleEdit(e, `members.${index}.role`)}
             className={cn(
               mergeTypographyClasses(
@@ -456,6 +464,7 @@ function MemberCard({
           >
             {member.role}
           </p>
+          </ElementAnimated>
         )}
 
         {/* Bio */}
@@ -582,6 +591,7 @@ export function TeamGridBlock({
   containerBorder = false,
   containerBorderColor,
   typography,
+  elements,
   interactivePreview = false,
   activeItemId = null,
   onItemSelect,
@@ -673,7 +683,9 @@ export function TeamGridBlock({
             {eyebrow && (
               <div className="mb-5 flex items-center justify-center gap-4">
                 <div className="h-px w-12 bg-linear-to-r from-transparent to-primary/40" />
+                <ElementAnimated elementId="team.eyebrow" elements={elements}>
                 <span
+                  data-element-id="team.eyebrow"
                   onClick={(e) => handleInlineEdit(e, "eyebrow")}
                   className={cn(
                     mergeTypographyClasses(
@@ -686,13 +698,16 @@ export function TeamGridBlock({
                 >
                   {eyebrow}
                 </span>
+                </ElementAnimated>
                 <div className="h-px w-12 bg-linear-to-l from-transparent to-primary/40" />
               </div>
             )}
 
             {/* Headline */}
             {headline && (
+              <ElementAnimated elementId="team.headline" elements={elements}>
               <h2
+                data-element-id="team.headline"
                 onClick={(e) => handleInlineEdit(e, "headline")}
                 className={cn(
                   mergeTypographyClasses(
@@ -705,11 +720,14 @@ export function TeamGridBlock({
               >
                 {headline}
               </h2>
+              </ElementAnimated>
             )}
 
             {/* Subheadline */}
             {subheadline && (
+              <ElementAnimated elementId="team.subheadline" elements={elements}>
               <p
+                data-element-id="team.subheadline"
                 onClick={(e) => handleInlineEdit(e, "subheadline")}
                 className={cn(
                   mergeTypographyClasses(
@@ -722,6 +740,7 @@ export function TeamGridBlock({
               >
                 {subheadline}
               </p>
+              </ElementAnimated>
             )}
           </header>
         )}
@@ -747,6 +766,7 @@ export function TeamGridBlock({
               blockId={blockId}
               onEditField={onEditField}
               typography={typography}
+              elements={elements}
               interactivePreview={interactivePreview}
               activeItemId={activeItemId}
               onItemSelect={onItemSelect}

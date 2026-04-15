@@ -17,6 +17,7 @@ import * as React from "react"
 import { useElementShadowStyle } from "@/lib/shadow"
 import { resolveButtonPresetStyles } from "@/lib/buttonPresets"
 import { mergeTypographyClasses } from "@/lib/typography"
+import { ElementAnimated } from "@/components/blocks/ElementAnimated"
 import type { CommonBlockProps } from "@/types/cms"
 
 type ContactFormBlockProps = ContactFormBlock["props"] & CommonBlockProps & {
@@ -457,6 +458,17 @@ export function ContactFormBlock({
     elementConfig: (propsFromBlock?.elements as Record<string, unknown>)?.["stackedSubmitButton"] as import("@/types/cms").ElementConfig | undefined,
   })
 
+  const mergedContactElements = React.useMemo(() => {
+    const el = (elements ?? {}) as Record<string, import("@/types/cms").ElementConfig | undefined>
+    return {
+      ...el,
+      heading: el["heading"] ?? el["contactForm.heading"],
+      text: el["text"] ?? el["contactForm.text"],
+      stackedHeading: el["stackedHeading"] ?? el["heading"] ?? el["contactForm.heading"],
+      formCardStacked: el["formCardStacked"] ?? el["formCard"],
+    }
+  }, [elements])
+
   const formSchema = buildFormSchema(fields, requireConsent)
   type FormData = z.infer<typeof formSchema>
 
@@ -612,6 +624,7 @@ export function ContactFormBlock({
               </span>
 
               {/* Headline */}
+              <ElementAnimated elementId="heading" elements={mergedContactElements}>
               <h2 
                 data-cms-field="heading"
                 data-element-id="heading"
@@ -630,10 +643,13 @@ export function ContactFormBlock({
               >
                 {heading}
               </h2>
+              </ElementAnimated>
 
               {/* Intro Text */}
               {text && (
+                <ElementAnimated elementId="text" elements={mergedContactElements}>
                 <p 
+                  data-element-id="text"
                   data-cms-field="text"
                   className={cn(
                     mergeTypographyClasses(
@@ -647,6 +663,7 @@ export function ContactFormBlock({
                 >
                   {text}
                 </p>
+                </ElementAnimated>
               )}
 
               {/* Contact Info Cards */}
@@ -670,6 +687,7 @@ export function ContactFormBlock({
 
             {/* Right Side - Form Card (3 columns) */}
             <div className="relative lg:col-span-3">
+              <ElementAnimated elementId="formCard" elements={mergedContactElements}>
               <div 
                 data-element-id="formCard"
                 style={formCardShadow as any}
@@ -857,6 +875,7 @@ export function ContactFormBlock({
                   </div>
                 </form>
               </div>
+              </ElementAnimated>
             </div>
           </div>
         </div>
@@ -870,6 +889,7 @@ export function ContactFormBlock({
       <div className="mx-auto max-w-xl">
         {/* Header */}
         <div className="mb-10 text-center">
+          <ElementAnimated elementId="stackedHeading" elements={mergedContactElements}>
           <h2 
             data-element-id="stackedHeading"
             className={cn(
@@ -888,8 +908,11 @@ export function ContactFormBlock({
           >
             {heading}
           </h2>
+          </ElementAnimated>
           {text && (
+            <ElementAnimated elementId="text" elements={mergedContactElements}>
             <p 
+              data-element-id="text"
               data-cms-field="text"
               className={cn(
                 mergeTypographyClasses(
@@ -903,10 +926,12 @@ export function ContactFormBlock({
             >
               {text}
             </p>
+            </ElementAnimated>
           )}
         </div>
 
         {/* Form Card */}
+        <ElementAnimated elementId="formCardStacked" elements={mergedContactElements}>
         <div 
             data-element-id="formCardStacked"
           style={formCardStackedShadow as any}
@@ -1083,6 +1108,7 @@ export function ContactFormBlock({
             </div>
           </form>
         </div>
+        </ElementAnimated>
       </div>
     </section>
   )

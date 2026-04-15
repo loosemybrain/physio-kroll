@@ -1,6 +1,7 @@
 "use client"
 
 import { cn } from "@/lib/utils"
+import { ElementAnimated } from "@/components/blocks/ElementAnimated"
 import { CardSurface } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { ArrowRight } from "lucide-react"
@@ -114,7 +115,9 @@ export function ServicesGridBlock({
         {(headline || subheadline) && (
           <header className="mb-16 text-center">
             {subheadline && (
+              <ElementAnimated elementId="services.subheadline" elements={elements}>
               <p
+                data-element-id="services.subheadline"
                 onClick={(e) => handleInlineEdit(e, "subheadline")}
                 className={cn(
                   mergeTypographyClasses(
@@ -127,9 +130,12 @@ export function ServicesGridBlock({
               >
                 {subheadline}
               </p>
+              </ElementAnimated>
             )}
             {headline && (
+              <ElementAnimated elementId="services.headline" elements={elements}>
               <h2
+                data-element-id="services.headline"
                 onClick={(e) => handleInlineEdit(e, "headline")}
                 className={cn(
                   mergeTypographyClasses(
@@ -142,6 +148,7 @@ export function ServicesGridBlock({
               >
                 {headline}
               </h2>
+              </ElementAnimated>
             )}
           </header>
         )}
@@ -159,8 +166,9 @@ export function ServicesGridBlock({
 
             const isPreviewActive = interactivePreview && activeItemId === card.id
             return (
+              <ElementAnimated key={card.id} elementId={elementId} elements={elements}>
               <CardSurface
-                key={card.id}
+                data-element-id={elementId}
                 data-repeater-field="cards"
                 data-repeater-item-id={card.id}
                 role={interactivePreview && onItemSelect ? "button" : undefined}
@@ -292,6 +300,7 @@ export function ServicesGridBlock({
                   )}
                 </div>
               </CardSurface>
+              </ElementAnimated>
             )
           })}
         </div>

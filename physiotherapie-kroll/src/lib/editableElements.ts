@@ -14,6 +14,8 @@ export interface EditableElementDef {
   supportsTypography?: boolean
   /** Whether this element supports shadow settings */
   supportsShadow?: boolean
+  /** Element-Animation im Inspector (default: an, außer explizit false) */
+  supportsAnimation?: boolean
   /** Whether this element is dynamic (generated per array item) */
   dynamic?: boolean
   /** Template for generating element IDs for array items (e.g. "trustItems.{index}") */
@@ -61,4 +63,25 @@ export function parseDynamicElementId(elementId: string): { template: string; in
     template: match[1],
     index: parseInt(match[2], 10),
   }
+}
+
+/**
+ * Findet die Element-Definition anhand von `data-element-id` / Klick-ID.
+ * Unterstützt Kurz-IDs (z. B. "headline") bei Registry-IDs mit Präfix (z. B. "cta.headline").
+ */
+export function findEditableElementDef(
+  defs: EditableElementDef[] | undefined,
+  selectedElementId: string | null
+): EditableElementDef | null {
+  if (!defs?.length || !selectedElementId) return null
+  const direct = defs.find((e) => e.id === selectedElementId)
+  if (direct) return direct
+  return (
+    defs.find((e) => {
+      if (e.path === selectedElementId) return true
+      if (!e.id.includes(".")) return false
+      const short = e.id.slice(e.id.lastIndexOf(".") + 1)
+      return short === selectedElementId
+    }) ?? null
+  )
 }

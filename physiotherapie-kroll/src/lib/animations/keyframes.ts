@@ -39,7 +39,7 @@ export const ANIMATION_KEYFRAMES = `
 @keyframes fadeLeftAnimation {
   from {
     opacity: 0;
-    transform: translateX(20px);
+    transform: translateX(-20px);
   }
   to {
     opacity: 1;
@@ -50,7 +50,7 @@ export const ANIMATION_KEYFRAMES = `
 @keyframes fadeRightAnimation {
   from {
     opacity: 0;
-    transform: translateX(-20px);
+    transform: translateX(20px);
   }
   to {
     opacity: 1;
@@ -100,7 +100,7 @@ export const ANIMATION_KEYFRAMES = `
 
 @keyframes slideLeftAnimation {
   from {
-    transform: translateX(50vw);
+    transform: translateX(-60px);
   }
   to {
     transform: translateX(0);
@@ -109,7 +109,7 @@ export const ANIMATION_KEYFRAMES = `
 
 @keyframes slideRightAnimation {
   from {
-    transform: translateX(-60px);
+    transform: translateX(60px);
   }
   to {
     transform: translateX(0);
@@ -138,14 +138,11 @@ export const ANIMATION_KEYFRAMES = `
   }
 }
 
-/* Reduced Motion Fallback */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
-}
+/*
+ * Kein globales prefers-reduced-motion-Override für *:
+ * Das würde ALLE Animationen/Transitions auf der Seite praktisch auf 0ms zwingen
+ * und wirkt als „Ruckeln“ / extrem kurze Fades – auch wenn die CMS-Animation
+ * eine normale Dauer hat. Reduzierte Bewegung wird in useBlockAnimation per
+ * getEffectiveDuration() + verkürzter CSS-Dauer umgesetzt.
+ */
 `

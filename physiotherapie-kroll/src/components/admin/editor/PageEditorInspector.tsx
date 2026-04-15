@@ -50,11 +50,15 @@ import { LegalRichTextColorAccordion } from "@/components/cms/inspector/LegalRic
 import { validateEmbedUrlForProvider } from "@/lib/consent/validateExternalEmbedUrl"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import type { TypographySettings } from "@/lib/typography"
 import { ColorField } from "../ColorField"
 import { Slider } from "@/components/ui/slider"
 import { ShadowInspector } from "../ShadowInspector"
 import type { ElementShadow, ElementConfig } from "@/types/cms"
+import { findEditableElementDef } from "@/lib/editableElements"
+import { DEFAULT_ANIMATION_CONFIG } from "@/lib/animations/types"
+import type { BlockAnimationConfig } from "@/lib/animations/types"
 import { UniversalRepeaterInspector } from "./repeater/UniversalRepeaterInspector"
 import { BUTTON_PRESET_OPTIONS } from "@/lib/buttonPresets"
 import { ElementTypographyAccordion } from "../../cms/inspector/ElementTypographyAccordion"
@@ -191,6 +195,60 @@ export function PageEditorInspector({
       setImageSliderShadowSlideId(sliderSlides[0].id)
     }
   }, [selectedBlock, imageSliderShadowSlideId, IMAGE_SLIDER_SHADOW_ALL_VALUE])
+
+  /** Element-Animation: sichtbar bei Element-Auswahl; auch ohne Registry-Treffer (z. B. action-*) */
+  function renderElementAnimationInspector() {
+    if (!selectedBlock || !selectedElementId) return null
+    const elementDef = findEditableElementDef(getBlockDefinition(selectedBlock.type)?.elements, selectedElementId)
+    if (elementDef?.supportsAnimation === false) return null
+
+    const elementsMap = (selectedBlock.props as Record<string, unknown>)?.elements as
+      | Record<string, ElementConfig>
+      | undefined
+    const rawAnim = elementsMap?.[selectedElementId]?.animation
+    const animConfig = {
+      ...DEFAULT_ANIMATION_CONFIG,
+      ...rawAnim,
+      enter: { ...DEFAULT_ANIMATION_CONFIG.enter, ...rawAnim?.enter },
+      exit: { ...DEFAULT_ANIMATION_CONFIG.exit, ...rawAnim?.exit },
+      hover: { ...DEFAULT_ANIMATION_CONFIG.hover, ...rawAnim?.hover },
+    } as BlockAnimationConfig
+
+    return (
+      <>
+        <Separator className="my-4" />
+        <div
+          className="space-y-3"
+          data-inspector-element={selectedElementId}
+          data-inspector-target={`element:${selectedElementId}`}
+        >
+          <h3 className="text-sm font-semibold mb-2">Animation (Element)</h3>
+          <AnimationInspector
+            config={animConfig}
+            onChange={(nextAnimation) => {
+              const currentElements = ((selectedBlock.props as Record<string, unknown>)?.elements ??
+                {}) as Record<string, ElementConfig>
+              const currentElement = currentElements[selectedElementId] ?? { style: {} }
+              const nextElement: ElementConfig = {
+                ...currentElement,
+                animation: nextAnimation,
+              }
+              const nextElements = {
+                ...currentElements,
+                [selectedElementId]: nextElement,
+              }
+              const updatedProps = setByPath(
+                selectedBlock.props as Record<string, unknown>,
+                "elements",
+                nextElements
+              ) as CMSBlock["props"]
+              updateSelectedProps(updatedProps)
+            }}
+          />
+        </div>
+      </>
+    )
+  }
 
   const renderStringArrayControls = (
     block: CMSBlock,
@@ -870,6 +928,2404 @@ export function PageEditorInspector({
   }
 }
 
+  function renderGroupedInspectorFields(): React.ReactNode {
+    if (!selectedBlock) return null
+    const def = getBlockDefinition(selectedBlock.type)
+    const fields = def.inspectorFields ?? []
+
+    const primaryKeys = new Set(["eyebrow", "headline", "subheadline", "title", "subtitle"])
+    // Kursplan: Eyebrow wird im Spezial-Inspector gerendert (bei Anzeige/Wochenende), damit es nicht "verschwindet"
+    // und wir die Reihenfolge konsistent halten.
+    if (selectedBlock.type === "courseSchedule") primaryKeys.delete("eyebrow")
+    // Legacy fallback: some older blocks had these controls historically at the bottom.
+    // For imageSlider we keep grouped ordering from registry (Interaktionen) intact.
+    const lateKeys =
+      selectedBlock.type === "imageSlider"
+        ? new Set<string>()
+        : new Set(["autoplay", "interval", "showArrows", "showDots"])
+
+    const isArrayItemField = (key: string) => {
+      if (selectedBlock.type === "hero" && key.startsWith("trustItems.")) return true
+      if (selectedBlock.type === "hero" && key.startsWith("actions.")) return true
+      if (selectedBlock.type === "featureGrid" && key.startsWith("features.")) return true
+      if (selectedBlock.type === "servicesGrid" && key.startsWith("cards.")) return true
+      if (selectedBlock.type === "faq" && key.startsWith("items.")) return true
+      if (selectedBlock.type === "team" && key.startsWith("members.")) return true
+      if (selectedBlock.type === "contactForm" && key.startsWith("fields.")) return true
+      if (selectedBlock.type === "contactForm" && key.startsWith("contactInfoCards.")) return true
+      if (selectedBlock.type === "testimonials" && key.startsWith("items.")) return true
+      if (selectedBlock.type === "testimonialSlider" && key.startsWith("items.")) return true
+      if (selectedBlock.type === "gallery" && key.startsWith("images.")) return true
+      if (selectedBlock.type === "imageSlider" && key.startsWith("slides.")) return true
+      if (selectedBlock.type === "courseSchedule" && key.startsWith("slots.")) return true
+      if (selectedBlock.type === "openingHours" && key.startsWith("hours.")) return true
+      if (selectedBlock.type === "legalTable" && (key.startsWith("columns.") || key.startsWith("rows."))) return true
+      if (selectedBlock.type === "legalContactCard" && key.startsWith("lines.")) return true
+      if (selectedBlock.type === "legalCookieCategories" && key.startsWith("categories.")) return true
+      return false
+    }
+
+    const isLegacyHeroField = (key: string) => {
+      if (selectedBlock.type !== "hero") return false
+      // Fields handled via Brand Tabs (content)
+      const brandTabFields = [
+        // Media fields
+        "mediaUrl",
+        "mediaType",
+        "showMedia",
+        "image",
+        "imageFit",
+        "containBackground",
+        "imageAlt",
+        "imageVariant",
+        "imageFocus",
+        // Text content
+        "headline",
+        "subheadline",
+        "ctaText",
+        "ctaHref",
+        "badgeText",
+        "playText",
+        "floatingTitle",
+        "floatingValue",
+        "floatingLabel",
+        // Brand/Mood
+        "mood",
+        // Brand-specific color fields
+        "headlineColor",
+        "subheadlineColor",
+        "ctaColor",
+        "ctaBgColor",
+        "ctaHoverBgColor",
+        "ctaBorderColor",
+        "badgeColor",
+        "badgeBgColor",
+        "playTextColor",
+        "playBgColor",
+        "playBorderColor",
+        "playHoverBgColor",
+        "trustItemsColor",
+        "trustDotColor",
+        "floatingTitleColor",
+        "floatingValueColor",
+        "floatingLabelColor",
+        // Secondary CTA fields
+        "secondaryCtaText",
+        "secondaryCtaHref",
+        "secondaryCtaColor",
+        "secondaryCtaBgColor",
+        "secondaryCtaHoverBgColor",
+        "secondaryCtaBorderColor",
+      ]
+      return brandTabFields.includes(key)
+    }
+
+    const normalFields = fields.filter((field) => {
+      if (isArrayItemField(field.key)) return false
+      if (isLegacyHeroField(field.key)) return false
+      // Panel-Felder werden im separaten CONTAINER-Panel gerendert → hier ausblenden, sonst doppelt
+      if (def.enableInnerPanel && field.key.startsWith("container")) return false
+      return true
+    })
+
+    // Sort fields by group (use custom group order if defined on block)
+    const groupOrder = def.inspectorGroupOrder || undefined
+    const sortedFields = sortInspectorFields(normalFields, groupOrder)
+
+    const primaryFields = sortedFields.filter((f) => {
+      if (primaryKeys.has(f.key)) return true
+      // Slider: background soll direkt bei Head/Subline stehen
+      if (selectedBlock.type === "testimonialSlider" && f.key === "background") return true
+      return false
+    })
+
+    const restFields = sortedFields.filter((f) => !primaryFields.some((p) => p.key === f.key))
+    const midFields = restFields.filter((f) => !lateKeys.has(f.key))
+    const lateFields = restFields.filter((f) => lateKeys.has(f.key))
+
+    // Helper to evaluate showWhen condition
+    const shouldShowField = (field: InspectorField): boolean => {
+      if (!field.showWhen) return true
+      const currentProps = selectedBlock?.props as Record<string, unknown>
+      const getByPath = (obj: any, path: string): any => {
+        return path.split(".").reduce((acc, part) => acc?.[part], obj)
+      }
+      const currentValue = getByPath(currentProps, field.showWhen.key)
+      return currentValue === field.showWhen.equals
+    }
+
+    return (
+      <React.Fragment>
+        {/* 1) Head/Subline (und ggf. Background) */}
+        {primaryFields.filter(shouldShowField).map((field) => renderInspectorField(field, selectedBlock))}
+
+        {selectedBlock.type === "externalEmbed" &&
+          (() => {
+            const p = selectedBlock.props as ExternalEmbedBlock["props"]
+            const url = (p.embedUrl ?? "").trim()
+            if (!url) return null
+            const v = validateEmbedUrlForProvider(p.provider, url)
+            if (v.ok) return null
+            return (
+              <Alert variant="destructive" className="mt-2">
+                <AlertDescription>{v.message}</AlertDescription>
+              </Alert>
+            )
+          })()}
+
+        {selectedBlock.type === "legalRichText" && (
+          <>
+            <Separator />
+            <LegalRichTextContentInspector
+              block={selectedBlock as CMSBlock & { type: "legalRichText" }}
+              updateSelectedProps={updateSelectedProps}
+              expandedRepeaterCards={expandedRepeaterCards}
+              setExpandedRepeaterCards={setExpandedRepeaterCards}
+            />
+          </>
+        )}
+
+        {/* Button Preset (one dropdown per block for card, section, imageText, cta, hero, team, contactForm) */}
+        {(() => {
+          const showButtonPreset = selectedBlock.type === "card" ||
+            selectedBlock.type === "section" ||
+            selectedBlock.type === "imageText" ||
+            selectedBlock.type === "cta" ||
+            selectedBlock.type === "hero" ||
+            selectedBlock.type === "team" ||
+            selectedBlock.type === "contactForm"
+          
+          if (!showButtonPreset) {
+            return null
+          }
+          
+          return (
+            <>
+              <Separator />
+              <div className="space-y-1.5">
+                <Label className="text-xs">Button Preset</Label>
+                <Select
+                  value={String((selectedBlock.props as Record<string, unknown>)?.buttonPreset ?? "default")}
+                  onValueChange={(v) => {
+                    if (!selectedBlock) return
+                    const currentProps = selectedBlock.props as Record<string, unknown>
+                    const updatedProps = {
+                      ...currentProps,
+                      buttonPreset: v === "default" ? undefined : v,
+                    } as CMSBlock["props"]
+                    updateSelectedProps(updatedProps)
+                  }}
+                >
+                  <SelectTrigger className="h-8 text-sm">
+                    <SelectValue placeholder="Default" />
+                  </SelectTrigger>
+                  <SelectContent side="bottom" align="start" sideOffset={5}>
+                    {BUTTON_PRESET_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </>
+          )
+        })()}
+
+        {/* 2) Items/Arrays */}
+        {selectedBlock.type === "servicesGrid" && (
+          <>
+            <Separator />
+
+            {/* Block-Level Controls: Variant, Background, Columns, Autoplay, Interval */}
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Variante</Label>
+                <Select
+                  value={selectedBlock.props?.variant || "grid"}
+                  onValueChange={(v) => {
+                    if (!selectedBlock) return
+                    const currentProps = selectedBlock.props as Record<string, unknown>
+                    const updatedProps = { ...currentProps, variant: v } as CMSBlock["props"]
+                    updateSelectedProps(updatedProps)
+                  }}
+                >
+                  <SelectTrigger className="h-8 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="grid">Grid</SelectItem>
+                    <SelectItem value="slider">Slider</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs">Hintergrund</Label>
+                <Select
+                  value={selectedBlock.props?.background || "none"}
+                  onValueChange={(v) => {
+                    if (!selectedBlock) return
+                    const currentProps = selectedBlock.props as Record<string, unknown>
+                    const updatedProps = { ...currentProps, background: v } as CMSBlock["props"]
+                    updateSelectedProps(updatedProps)
+                  }}
+                >
+                  <SelectTrigger className="h-8 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Keine</SelectItem>
+                    <SelectItem value="muted">Muted</SelectItem>
+                    <SelectItem value="gradient">Gradient</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {selectedBlock.props?.variant === "grid" && (
+                <>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Spalten</Label>
+                    <Select
+                      value={String(selectedBlock.props?.columns || 3)}
+                      onValueChange={(v) => {
+                        if (!selectedBlock) return
+                        const currentProps = selectedBlock.props as Record<string, unknown>
+                        const updatedProps = { ...currentProps, columns: Number(v) } as CMSBlock["props"]
+                        updateSelectedProps(updatedProps)
+                      }}
+                    >
+                      <SelectTrigger className="h-8 text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="2">2</SelectItem>
+                        <SelectItem value="3">3</SelectItem>
+                        <SelectItem value="4">4</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Text Ausrichtung</Label>
+                    <Select
+                      value={(selectedBlock.props?.textAlign || "left") as string}
+                      onValueChange={(v) => {
+                        if (!selectedBlock) return
+                        const currentProps = selectedBlock.props as Record<string, unknown>
+                        const updatedProps = { ...currentProps, textAlign: v } as CMSBlock["props"]
+                        updateSelectedProps(updatedProps)
+                      }}
+                    >
+                      <SelectTrigger className="h-8 text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="left">Links</SelectItem>
+                        <SelectItem value="center">Mitte</SelectItem>
+                        <SelectItem value="right">Rechts</SelectItem>
+                        <SelectItem value="justify">Blocksatz</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </>
+              )}
+
+              {selectedBlock.props?.variant === "slider" && (
+                <>
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs">Autoplay</Label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!selectedBlock) return
+                        const currentProps = selectedBlock.props as Record<string, unknown>
+                        const updatedProps = { ...currentProps, autoplay: !currentProps.autoplay } as CMSBlock["props"]
+                        updateSelectedProps(updatedProps)
+                      }}
+                      className={cn(
+                        "h-6 w-11 rounded-full border border-border transition-colors",
+                        selectedBlock.props?.autoplay ? "bg-primary" : "bg-muted"
+                      )}
+                    >
+                      <div
+                        className={cn(
+                          "h-5 w-5 rounded-full bg-white transition-transform",
+                          selectedBlock.props?.autoplay ? "translate-x-5" : "translate-x-0.5"
+                        )}
+                      />
+                    </button>
+                  </div>
+
+                  {selectedBlock.props?.autoplay && (
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Interval (Sekunden)</Label>
+                      <Select
+                        value={String(selectedBlock.props?.interval || 6000)}
+                        onValueChange={(v) => {
+                          if (!selectedBlock) return
+                          const currentProps = selectedBlock.props as Record<string, unknown>
+                          const updatedProps = { ...currentProps, interval: Number(v) } as CMSBlock["props"]
+                          updateSelectedProps(updatedProps)
+                        }}
+                      >
+                        <SelectTrigger className="h-8 text-sm">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="3000">3 Sekunden</SelectItem>
+                          <SelectItem value="4500">4,5 Sekunden</SelectItem>
+                          <SelectItem value="6000">6 Sekunden</SelectItem>
+                          <SelectItem value="8000">8 Sekunden</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Slider Ausrichtung</Label>
+                    <Select
+                      value={selectedBlock.props?.sliderAlign || "center"}
+                      onValueChange={(v) => {
+                        if (!selectedBlock) return
+                        const currentProps = selectedBlock.props as Record<string, unknown>
+                        const updatedProps = { ...currentProps, sliderAlign: v } as CMSBlock["props"]
+                        updateSelectedProps(updatedProps)
+                      }}
+                    >
+                      <SelectTrigger className="h-8 text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="center">Zentriert</SelectItem>
+                        <SelectItem value="left">Links</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs">Steuerelemente</Label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!selectedBlock) return
+                        const currentProps = selectedBlock.props as Record<string, unknown>
+                        const updatedProps = { ...currentProps, showControls: !currentProps.showControls } as CMSBlock["props"]
+                        updateSelectedProps(updatedProps)
+                      }}
+                      className={cn(
+                        "h-6 w-11 rounded-full border border-border transition-colors",
+                        selectedBlock.props?.showControls ? "bg-primary" : "bg-muted"
+                      )}
+                    >
+                      <div
+                        className={cn(
+                          "h-5 w-5 rounded-full bg-white transition-transform",
+                          selectedBlock.props?.showControls ? "translate-x-5" : "translate-x-0.5"
+                        )}
+                      />
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+
+            <Separator />
+
+            {(() => {
+              const props = selectedBlock.props as Record<string, unknown>
+              const cards = ((getByPath(props, "cards") as Array<{ id: string; title?: string }>) || [])
+              const repeaterKey = `${selectedBlock.id}:cards`
+              const expandedId = expandedRepeaterCards[repeaterKey] ?? null
+              const updateCards = (next: typeof cards) => updateSelectedProps({ ...props, cards: next } as CMSBlock["props"])
+              const addItem = () => {
+                const newItem = createServiceCard()
+                updateCards([...cards, newItem])
+                setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: newItem.id }))
+                lastAddedRepeaterRef.current = { key: repeaterKey, itemId: newItem.id }
+              }
+              const serviceCardFields = [
+                { key: "icon", label: "Icon", type: "select" as const, options: getAvailableIconsWithLabels() },
+                { key: "iconColor", label: "Icon Farbe (optional)", type: "color" as const, placeholder: "#111111" },
+                { key: "iconBgColor", label: "Icon Hintergrund (optional)", type: "color" as const, placeholder: "#e5e7eb" },
+                { key: "title", label: "Titel", type: "text" as const },
+                { key: "titleColor", label: "Titel Farbe (optional)", type: "color" as const, placeholder: "#111111" },
+                { key: "text", label: "Text", type: "textarea" as const },
+                { key: "textColor", label: "Text Farbe (optional)", type: "color" as const, placeholder: "#666666" },
+                { key: "textAlign", label: "Text Ausrichtung", type: "select" as const, options: [{ value: "left", label: "Links" }, { value: "center", label: "Mitte" }, { value: "right", label: "Rechts" }, { value: "justify", label: "Blocksatz" }] },
+                { key: "ctaText", label: "CTA Text", type: "text" as const },
+                { key: "ctaColor", label: "CTA Farbe (optional)", type: "color" as const, placeholder: "#111111" },
+                { key: "ctaHref", label: "CTA Link", type: "url" as const },
+                { key: "cardBgColor", label: "Card Hintergrund (optional)", type: "color" as const, placeholder: "#ffffff" },
+                { key: "cardBorderColor", label: "Card Border (optional)", type: "color" as const, placeholder: "#e5e7eb" },
+              ]
+              return (
+                <UniversalRepeaterInspector
+                  items={cards}
+                  getItemId={(c) => c.id}
+                  renderSummary={(card) => <span className="truncate">{card.title || "Card"}</span>}
+                  renderContent={(card, index) => renderOneRepeaterItemFields(selectedBlock, "cards", index, card as Record<string, unknown>, serviceCardFields)}
+                  expandedId={expandedId}
+                  onToggle={(id) => setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: expandedId === id ? null : id }))}
+                  onCollapseAll={() => setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: null }))}
+                  countLabel={`${cards.length} Cards`}
+                  addLabel="Card hinzufügen"
+                  onAdd={addItem}
+                  onMove={(from, to) => editorActions.handleMoveArrayItem(selectedBlock.id, "cards", from, to)}
+                  onRemove={(itemId) => confirmDeleteItem(selectedBlock.id, "cards", cards.findIndex((c) => c.id === itemId))}
+                />
+              )
+            })()}
+          </>
+        )}
+
+        {selectedBlock.type === "testimonials" && (
+          <>
+            <Separator />
+            
+            {/* Block-Level Controls: Autoplay & Interval (nur für Slider-Variante) */}
+            {selectedBlock.props?.variant === "slider" && (
+              <div className="space-y-3 border-b border-border pb-4 mb-4">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs">Autoplay</Label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!selectedBlock) return
+                      const currentProps = selectedBlock.props as Record<string, unknown>
+                      const updatedProps = { ...currentProps, autoplay: !currentProps.autoplay } as CMSBlock["props"]
+                      updateSelectedProps(updatedProps)
+                    }}
+                    className={cn(
+                      "h-6 w-11 rounded-full border border-border transition-colors",
+                      selectedBlock.props?.autoplay ? "bg-primary" : "bg-muted"
+                    )}
+                  >
+                    <div
+                      className={cn(
+                        "h-5 w-5 rounded-full bg-white transition-transform",
+                        selectedBlock.props?.autoplay ? "translate-x-5" : "translate-x-0.5"
+                      )}
+                    />
+                  </button>
+                </div>
+
+                {selectedBlock.props?.autoplay && (
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Interval (Sekunden)</Label>
+                    <Select
+                      value={String(selectedBlock.props?.interval || 6000)}
+                    onValueChange={(v) => {
+                      if (!selectedBlock) return
+                      const currentProps = selectedBlock.props as Record<string, unknown>
+                      const updatedProps = { ...currentProps, interval: Number(v) } as CMSBlock["props"]
+                      updateSelectedProps(updatedProps)
+                    }}
+                    >
+                      <SelectTrigger className="h-8 text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="3000">3 Sekunden</SelectItem>
+                        <SelectItem value="4500">4,5 Sekunden</SelectItem>
+                        <SelectItem value="6000">6 Sekunden</SelectItem>
+                        <SelectItem value="8000">8 Sekunden</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {(() => {
+              const props = selectedBlock.props as Record<string, unknown>
+              const items = ((getByPath(props, "items") as Array<{ id: string; name?: string }>) || [])
+              const repeaterKey = `${selectedBlock.id}:items`
+              const expandedId = expandedRepeaterCards[repeaterKey] ?? null
+              const updateItems = (next: typeof items) => updateSelectedProps({ ...props, items: next } as CMSBlock["props"])
+              const addItem = () => {
+                const newItem = createTestimonialItem()
+                updateItems([...items, newItem])
+                setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: newItem.id }))
+                lastAddedRepeaterRef.current = { key: repeaterKey, itemId: newItem.id }
+              }
+              const testimonialFields = [
+                { key: "quote", label: "Zitat", type: "textarea" as const, required: true },
+                { key: "quoteColor", label: "Zitat Farbe (optional)", type: "color" as const, placeholder: "#111111" },
+                { key: "avatar", label: "Avatar (optional)", type: "image" as const, placeholder: "/avatar.jpg" },
+                { key: "avatarGradient", label: "Avatar Gradient", type: "select" as const, options: [{ value: "auto", label: "Auto" }, { value: "g1", label: "Primary" }, { value: "g2", label: "Accent" }, { value: "g3", label: "Chart 1" }, { value: "g4", label: "Chart 2" }, { value: "g5", label: "Chart 3" }, { value: "g6", label: "Blue" }, { value: "g7", label: "Purple" }, { value: "g8", label: "Green" }, { value: "g9", label: "Rose" }, { value: "g10", label: "Amber" }] },
+                { key: "avatarColor", label: "Avatar Farbe (optional)", type: "color" as const, placeholder: "#111111" },
+                { key: "name", label: "Name", type: "text" as const, required: true },
+                { key: "nameColor", label: "Name Farbe (optional)", type: "color" as const, placeholder: "#111111" },
+                { key: "role", label: "Rolle (optional)", type: "text" as const },
+                { key: "roleColor", label: "Rolle Farbe (optional)", type: "color" as const, placeholder: "#666666" },
+                { key: "rating", label: "Rating (optional)", type: "select" as const, options: [{ value: "none", label: "—" }, { value: "5", label: "★★★★★ (5)" }, { value: "4", label: "★★★★☆ (4)" }, { value: "3", label: "★★★☆☆ (3)" }, { value: "2", label: "★★☆☆☆ (2)" }, { value: "1", label: "★☆☆☆☆ (1)" }] },
+              ]
+              return (
+                <UniversalRepeaterInspector
+                  items={items}
+                  getItemId={(i) => i.id}
+                  renderSummary={(item) => <span className="truncate">{(item as Record<string, unknown>).name as string || "Testimonial"}</span>}
+                  renderContent={(item, index) => renderOneRepeaterItemFields(selectedBlock, "items", index, item as Record<string, unknown>, testimonialFields)}
+                  expandedId={expandedId}
+                  onToggle={(id) => setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: expandedId === id ? null : id }))}
+                  onCollapseAll={() => setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: null }))}
+                  countLabel={`${items.length} Testimonials`}
+                  addLabel="Testimonial hinzufügen"
+                  onAdd={addItem}
+                  onMove={(from, to) => editorActions.handleMoveArrayItem(selectedBlock.id, "items", from, to)}
+                  onRemove={(itemId) => handleRemoveArrayItem(selectedBlock.id, "items", items.findIndex((i) => i.id === itemId))}
+                  minItems={1}
+                  maxItems={12}
+                />
+              )
+            })()}
+          </>
+        )}
+
+        {selectedBlock.type === "testimonialSlider" && (
+          <>
+            <Separator />
+            {renderArrayItemsControls(
+              selectedBlock,
+              "items",
+              "Testimonial",
+              (item, index) => {
+                const it = item as unknown as Record<string, unknown>
+                const name = String(it.name || "")
+                return `${index + 1}. ${name || "Testimonial"}`
+              },
+              createTestimonialItem,
+              [
+                { key: "quote", label: "Zitat", type: "textarea" as const, required: true },
+                { key: "name", label: "Name", type: "text" as const, required: true },
+                { key: "role", label: "Rolle (optional)", type: "text" as const },
+                {
+                  key: "rating",
+                  label: "Rating (optional)",
+                  type: "select" as const,
+                  options: [
+                    { value: "none", label: "—" },
+                    { value: "5", label: "★★★★★ (5)" },
+                    { value: "4", label: "★★★★☆ (4)" },
+                    { value: "3", label: "★★★☆☆ (3)" },
+                    { value: "2", label: "★★☆☆☆ (2)" },
+                    { value: "1", label: "★☆☆☆☆ (1)" },
+                  ],
+                },
+              ],
+              1,
+              12
+            )}
+          </>
+        )}
+
+        {selectedBlock.type === "gallery" && (
+          <>
+            <Separator />
+            {(() => {
+              const props = selectedBlock.props as Record<string, unknown>
+              const images = (getByPath(props, "images") as Array<{ id: string }>) || []
+              const repeaterKey = `${selectedBlock.id}:images`
+              const expandedId = expandedRepeaterCards[repeaterKey] ?? null
+              const addImage = () => {
+                const newItem = createGalleryImage()
+                editorActions.handleAddArrayItem(selectedBlock.id, "images", () => newItem)
+                setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: newItem.id }))
+                lastAddedRepeaterRef.current = { key: repeaterKey, itemId: newItem.id }
+              }
+              const galleryImageFields = [
+                { key: "url", label: "Bild-URL", type: "image" as const, required: true, placeholder: "/placeholder.svg" },
+                { key: "alt", label: "Alt-Text", type: "text" as const, required: true },
+                { key: "caption", label: "Caption (optional)", type: "text" as const },
+                { key: "captionColor", label: "Caption Farbe (optional)", type: "color" as const, placeholder: "#666666" },
+                { key: "link", label: "Link (optional, wenn Lightbox aus)", type: "url" as const },
+              ]
+              return (
+                <UniversalRepeaterInspector
+                  items={images}
+                  getItemId={(img) => img.id}
+                  getItemLabel={(_img, index) => `Bild ${index + 1}`}
+                  renderContent={(item, index) => renderOneRepeaterItemFields(selectedBlock, "images", index, item as Record<string, unknown>, galleryImageFields)}
+                  expandedId={expandedId}
+                  onToggle={(id) => setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: expandedId === id ? null : id }))}
+                  onCollapseAll={() => setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: null }))}
+                  countLabel={`${images.length} Bilder`}
+                  addLabel="Bild hinzufügen"
+                  onAdd={addImage}
+                  onMove={(from, to) => editorActions.handleMoveArrayItem(selectedBlock.id, "images", from, to)}
+                  onRemove={(itemId) => handleRemoveArrayItem(selectedBlock.id, "images", images.findIndex((img) => img.id === itemId))}
+                  minItems={3}
+                  maxItems={18}
+                />
+              )
+            })()}
+          </>
+        )}
+
+        {selectedBlock.type === "imageSlider" && (
+          <>
+            <Separator />
+            {(() => {
+              const props = selectedBlock.props as Record<string, unknown>
+              const slides = ((getByPath(props, "slides") as Array<{ id: string; title?: string }>) || [])
+              const repeaterKey = `${selectedBlock.id}:slides`
+              const expandedId = expandedRepeaterCards[repeaterKey] ?? null
+              const updateSlides = (next: typeof slides) => updateSelectedProps({ ...props, slides: next } as CMSBlock["props"])
+              const addSlide = () => {
+                const newItem = createImageSlide()
+                updateSlides([...slides, newItem])
+                setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: newItem.id }))
+                lastAddedRepeaterRef.current = { key: repeaterKey, itemId: newItem.id }
+              }
+              const removeSlideAt = (index: number) => {
+                const id = slides[index]?.id
+                if (id && expandedId === id) setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: null }))
+                updateSlides(slides.filter((_, i) => i !== index))
+              }
+              const slideFields = [
+                { key: "url", label: "Bild", type: "image" as const, required: true },
+                { key: "alt", label: "Alt-Text", type: "text" as const, required: true },
+                { key: "title", label: "Titel (optional)", type: "text" as const },
+                { key: "text", label: "Text (optional)", type: "textarea" as const },
+                { key: "titleColor", label: "Titel Farbe", type: "color" as const, placeholder: "#111111" },
+                { key: "textColor", label: "Text Farbe", type: "color" as const, placeholder: "#666666" },
+              ]
+              return (
+                <UniversalRepeaterInspector
+                  items={slides}
+                  getItemId={(s) => s.id}
+                  renderSummary={(slide) => <span className="truncate">{(slide as Record<string, unknown>).title as string || "Slide"}</span>}
+                  renderContent={(slide, index) => renderOneRepeaterItemFields(selectedBlock, "slides", index, slide as Record<string, unknown>, slideFields)}
+                  expandedId={expandedId}
+                  onToggle={(id) => setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: expandedId === id ? null : id }))}
+                  onCollapseAll={() => setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: null }))}
+                  countLabel={`${slides.length} Slides`}
+                  addLabel="Slide hinzufügen"
+                  onAdd={addSlide}
+                  onMove={(from, to) => editorActions.handleMoveArrayItem(selectedBlock.id, "slides", from, to)}
+                  onRemove={(itemId) => removeSlideAt(slides.findIndex((s) => s.id === itemId))}
+                  minItems={1}
+                  maxItems={12}
+                />
+              )
+            })()}
+
+            {/* Slide Shadow Inspector (kompakt per Dropdown) */}
+            {(() => {
+              const sliderSlides = (((selectedBlock.props as any)?.slides ?? []) as Array<{ id?: string; title?: string; shadow?: ElementShadow }>)
+                .filter((slide) => typeof slide?.id === "string" && slide.id.length > 0) as Array<{ id: string; title?: string; shadow?: ElementShadow }>
+              if (sliderSlides.length === 0) return null
+              const activeSlideId = sliderSlides.some((slide) => slide.id === imageSliderShadowSlideId)
+                ? imageSliderShadowSlideId
+                : sliderSlides[0].id
+              const applyToAllSlides = imageSliderShadowSlideId === IMAGE_SLIDER_SHADOW_ALL_VALUE
+              const activeSlideIndex = sliderSlides.findIndex((slide) => slide.id === activeSlideId)
+              const activeSlide = sliderSlides[activeSlideIndex] ?? sliderSlides[0]
+              return (
+                <div className="mt-4 border-t border-border/50 pt-4">
+                  <div className="space-y-3">
+                    <div className="space-y-2">
+                      <Label htmlFor={`${selectedBlock.id}-slide-shadow-select`} className="text-xs">
+                        Slide-Shadow bearbeiten
+                      </Label>
+                      <Select value={applyToAllSlides ? IMAGE_SLIDER_SHADOW_ALL_VALUE : activeSlideId} onValueChange={setImageSliderShadowSlideId}>
+                        <SelectTrigger id={`${selectedBlock.id}-slide-shadow-select`} className="w-full">
+                          <SelectValue placeholder="Slide wählen" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={IMAGE_SLIDER_SHADOW_ALL_VALUE}>Alle Slides</SelectItem>
+                          {sliderSlides.map((slide, idx) => (
+                            <SelectItem key={slide.id} value={slide.id}>
+                              {slide.title ? `Slide ${idx + 1}: ${slide.title}` : `Slide ${idx + 1}`}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <ShadowInspector
+                      config={activeSlide.shadow}
+                      onChange={(shadowConfig) => {
+                        if (!selectedBlock) return
+                        const currentProps = selectedBlock.props as Record<string, unknown>
+                        const slides = Array.isArray(currentProps.slides) ? [...(currentProps.slides as any[])] : []
+                        if (slides.length === 0) return
+                        if (applyToAllSlides) {
+                          for (let i = 0; i < slides.length; i += 1) {
+                            slides[i] = { ...slides[i], shadow: shadowConfig }
+                          }
+                        } else {
+                          if (!slides[activeSlideIndex]) return
+                          slides[activeSlideIndex] = { ...slides[activeSlideIndex], shadow: shadowConfig }
+                        }
+                        const updatedProps = { ...currentProps, slides } as CMSBlock["props"]
+                        updateSelectedProps(updatedProps)
+                      }}
+                    />
+                  </div>
+                </div>
+              )
+            })()}
+          </>
+        )}
+
+        {selectedBlock.type === "courseSchedule" && (() => {
+          const props = selectedBlock.props as CourseScheduleBlock["props"]
+          const slots: CourseSlot[] = props.slots ?? []
+          const weekdays: CourseScheduleWeekday[] = ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"]
+          const repeaterKey = `${selectedBlock.id}:slots`
+          const expandedSlotId = expandedRepeaterCards[repeaterKey] ?? null
+          const updateSlots = (nextSlots: CourseSlot[]) => updateSelectedProps({ ...props, slots: nextSlots } as CMSBlock["props"])
+          const updateSlot = (slotId: string, patch: Partial<CourseSlot>) => {
+            const idx = slots.findIndex((s) => s.id === slotId)
+            if (idx === -1) return
+            const next = [...slots]
+            next[idx] = { ...next[idx], ...patch }
+            updateSlots(next)
+          }
+          const removeSlot = (slotId: string) => {
+            const next = slots.filter((s) => s.id !== slotId)
+            if (expandedSlotId === slotId) {
+              setExpandedRepeaterCards((prev) => ({ ...prev, [repeaterKey]: null }))
+            }
+            updateSlots(next)
+          }
+          const addSlot = () => {
+            const newSlot = createCourseSlot()
+            updateSlots([...slots, newSlot])
+            setExpandedRepeaterCards((prev) => ({ ...prev, [repeaterKey]: newSlot.id }))
+            lastAddedRepeaterRef.current = { key: repeaterKey, itemId: newSlot.id }
+          }
+          const toggleSlot = (slotId: string) => {
+            setExpandedRepeaterCards((prev) => ({
+              ...prev,
+              [repeaterKey]: expandedSlotId === slotId ? null : slotId,
+            }))
+          }
+          return (
+            <>
+              <Separator />
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Eyebrow (optional)</Label>
+                  <Input
+                    value={props.eyebrow ?? ""}
+                    onChange={(e) => updateSelectedProps({ ...props, eyebrow: e.target.value } as CMSBlock["props"])}
+                    className="h-8 text-sm"
+                    placeholder="z.B. KURSE"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Anzeige</Label>
+                  <Select
+                    value={props.mode ?? "calendar"}
+                    onValueChange={(v: "calendar" | "timeline") => {
+                      if (!selectedBlock) return
+                      updateSelectedProps({ ...props, mode: v } as CMSBlock["props"])
+                    }}
+                  >
+                    <SelectTrigger className="h-8 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="calendar">Kalender</SelectItem>
+                      <SelectItem value="timeline">Timeline</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs">Wochenende verstecken</Label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!selectedBlock) return
+                      updateSelectedProps({ ...props, hideWeekend: !props.hideWeekend } as CMSBlock["props"])
+                    }}
+                    className={cn(
+                      "h-6 w-11 rounded-full border border-border transition-colors",
+                      props.hideWeekend ? "bg-primary" : "bg-muted"
+                    )}
+                  >
+                    <div
+                      className={cn(
+                        "h-5 w-5 rounded-full bg-white transition-transform",
+                        props.hideWeekend ? "translate-x-5" : "translate-x-0.5"
+                      )}
+                    />
+                  </button>
+                </div>
+              </div>
+              <Separator />
+              <UniversalRepeaterInspector<CourseSlot>
+                items={slots}
+                getItemId={(s) => s.id}
+                renderSummary={(slot) => (
+                  <div className="flex items-center gap-2 min-w-0 w-full">
+                    <span className="truncate text-sm font-medium">{slot.title || "Neuer Kurs"}</span>
+                    <span className="shrink-0 text-xs text-muted-foreground">
+                      {slot.weekday} {slot.startTime}–{slot.endTime}
+                    </span>
+                  </div>
+                )}
+                renderContent={(slot) => (
+                  <>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Wochentag</Label>
+                      <Select
+                        value={slot.weekday}
+                        onValueChange={(v) => updateSlot(slot.id, { weekday: v as CourseScheduleWeekday })}
+                      >
+                        <SelectTrigger className="h-8 text-sm">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {weekdays.map((d) => (
+                            <SelectItem key={d} value={d}>{d}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Start</Label>
+                        <Input
+                          type="time"
+                          value={slot.startTime}
+                          onChange={(e) => updateSlot(slot.id, { startTime: e.target.value })}
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Ende</Label>
+                        <Input
+                          type="time"
+                          value={slot.endTime}
+                          onChange={(e) => updateSlot(slot.id, { endTime: e.target.value })}
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Titel</Label>
+                      <Input
+                        value={slot.title}
+                        onChange={(e) => updateSlot(slot.id, { title: e.target.value })}
+                        className="h-8 text-sm"
+                        placeholder="Kursname"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Referent/in (optional)</Label>
+                      <Input
+                        value={slot.instructor ?? ""}
+                        onChange={(e) => updateSlot(slot.id, { instructor: e.target.value })}
+                        className="h-8 text-sm"
+                        placeholder="Name"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Ort (optional)</Label>
+                      <Input
+                        value={slot.location ?? ""}
+                        onChange={(e) => updateSlot(slot.id, { location: e.target.value })}
+                        className="h-8 text-sm"
+                        placeholder="Raum / Adresse"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id={`slot-highlight-${slot.id}`}
+                        checked={!!slot.highlight}
+                        onCheckedChange={(checked) => updateSlot(slot.id, { highlight: !!checked })}
+                      />
+                      <Label htmlFor={`slot-highlight-${slot.id}`} className="text-xs cursor-pointer">Hervorheben</Label>
+                    </div>
+                  </>
+                )}
+                expandedId={expandedSlotId}
+                onToggle={toggleSlot}
+                onCollapseAll={() => setExpandedRepeaterCards((prev) => ({ ...prev, [repeaterKey]: null }))}
+                countLabel={`${slots.length} Kurse`}
+                addLabel="Slot hinzufügen"
+                onAdd={addSlot}
+                onMove={() => {}}
+                onRemove={(itemId) => removeSlot(itemId)}
+                emptyState={<p className="text-xs text-muted-foreground py-2">Keine Kurse. Slot hinzufügen.</p>}
+                showMoveButtons={false}
+              />
+            </>
+          )
+        })()}
+
+        {selectedBlock.type === "openingHours" && (
+          <>
+            <Separator />
+            
+            {/* Element Shadow Inspector for selected element */}
+            {selectedElementId && (
+              <>
+                <div className="space-y-3">
+                  <h3 className="text-sm font-semibold mb-4">Element Shadow</h3>
+                  <ShadowInspector
+                    config={
+                      ((selectedBlock.props as Record<string, unknown>)?.elements as Record<string, ElementConfig> | undefined)?.[selectedElementId]?.style?.shadow
+                    }
+                    onChange={(shadowConfig) => {
+                      const currentElements = ((selectedBlock.props as Record<string, unknown>)?.elements ?? {}) as Record<string, ElementConfig>
+                      const currentElement = currentElements[selectedElementId] ?? { style: {} }
+                      const nextElement: ElementConfig = {
+                        ...currentElement,
+                        style: {
+                          ...currentElement.style,
+                          shadow: shadowConfig,
+                        },
+                      }
+                      const nextElements = {
+                        ...currentElements,
+                        [selectedElementId]: nextElement,
+                      }
+                      const updatedProps = setByPath(selectedBlock.props as Record<string, unknown>, "elements", nextElements) as CMSBlock["props"]
+                      updateSelectedProps(updatedProps)
+                    }}
+                    onClose={() => deselectElement(selectedBlockId || "")}
+                  />
+                </div>
+                <Separator />
+              </>
+            )}
+            
+            {(() => {
+              const props = selectedBlock.props as Record<string, unknown>
+              const hours = (getByPath(props, "hours") as Array<{ id: string; label?: string }>) || []
+              const repeaterKey = `${selectedBlock.id}:hours`
+              const expandedId = expandedRepeaterCards[repeaterKey] ?? null
+              const openingHourFields = [
+                { key: "label", label: "Label", type: "text" as const, required: true },
+                { key: "labelColor", label: "Label Farbe (optional)", type: "color" as const, placeholder: "#111111" },
+                { key: "value", label: "Wert", type: "text" as const, required: true },
+                { key: "valueColor", label: "Wert Farbe (optional)", type: "color" as const, placeholder: "#666666" },
+              ]
+              const addHour = () => {
+                const newItem = createOpeningHour()
+                editorActions.handleAddArrayItem(selectedBlock.id, "hours", () => newItem)
+                setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: newItem.id }))
+                lastAddedRepeaterRef.current = { key: repeaterKey, itemId: newItem.id }
+              }
+              return (
+                <UniversalRepeaterInspector
+                  items={hours}
+                  getItemId={(h) => h.id}
+                  renderSummary={(row) => <span className="truncate">{(row as Record<string, unknown>).label as string || "Zeile"}</span>}
+                  renderContent={(item, index) => renderOneRepeaterItemFields(selectedBlock, "hours", index, item as Record<string, unknown>, openingHourFields)}
+                  expandedId={expandedId}
+                  onToggle={(id) => setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: expandedId === id ? null : id }))}
+                  onCollapseAll={() => setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: null }))}
+                  countLabel={`${hours.length} Zeilen`}
+                  addLabel="Zeile hinzufügen"
+                  onAdd={addHour}
+                  onMove={(from, to) => editorActions.handleMoveArrayItem(selectedBlock.id, "hours", from, to)}
+                  onRemove={(itemId) => handleRemoveArrayItem(selectedBlock.id, "hours", hours.findIndex((h) => h.id === itemId))}
+                  minItems={1}
+                  maxItems={10}
+                />
+              )
+            })()}
+          </>
+        )}
+
+        {selectedBlock.type === "featureGrid" && (
+          <>
+            <Separator />
+
+            {/* Block-Level Design System Controls */}
+            <div className="space-y-3">
+              {/* Columns */}
+              <div className="space-y-1.5">
+                <Label className="text-xs">Spalten</Label>
+                <Select
+                  value={((selectedBlock.props as any)?.columns || 3).toString()}
+                  onValueChange={(v) => {
+                    if (!selectedBlock) return
+                    const currentProps = selectedBlock.props as Record<string, unknown>
+                    const updatedProps = { ...currentProps, columns: parseInt(v, 10) } as CMSBlock["props"]
+                    updateSelectedProps(updatedProps)
+                  }}
+                >
+                  <SelectTrigger className="h-8 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="2">2</SelectItem>
+                    <SelectItem value="3">3</SelectItem>
+                    <SelectItem value="4">4</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Design Preset */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold text-primary">Design Preset</Label>
+                <Select
+                  value={(selectedBlock.props as any)?.designPreset || "standard"}
+                  onValueChange={(v) => {
+                    if (!selectedBlock) return
+                    const presets: Record<string, any> = {
+                      standard: {
+                        style: { variant: "default", radius: "xl", border: "subtle", shadow: "sm", accent: "none" },
+                        animation: { entrance: "fade", hover: "none", durationMs: 400, delayMs: 0 },
+                      },
+                      softGlow: {
+                        style: { variant: "soft", radius: "lg", border: "none", shadow: "md", accent: "none" },
+                        animation: { entrance: "fade", hover: "glow", durationMs: 400, delayMs: 0 },
+                      },
+                      outlineStrong: {
+                        style: { variant: "outline", radius: "lg", border: "strong", shadow: "none", accent: "none" },
+                        animation: { entrance: "slide-up", hover: "lift", durationMs: 500, delayMs: 0 },
+                      },
+                      elevatedBrand: {
+                        style: { variant: "elevated", radius: "xl", border: "subtle", shadow: "lg", accent: "brand" },
+                        animation: { entrance: "scale", hover: "lift", durationMs: 400, delayMs: 0 },
+                      },
+                      mutedAccentMinimal: {
+                        style: { variant: "soft", radius: "md", border: "none", shadow: "sm", accent: "muted" },
+                        animation: { entrance: "slide-left", hover: "none", durationMs: 300, delayMs: 0 },
+                      },
+                    }
+                    const preset = presets[v]
+                    const currentProps = selectedBlock.props as Record<string, unknown>
+                    const updatedProps = {
+                      ...currentProps,
+                      designPreset: v,
+                      style: preset.style,
+                      animation: preset.animation,
+                    } as CMSBlock["props"]
+                    updateSelectedProps(updatedProps)
+                  }}
+                >
+                  <SelectTrigger className="h-8 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="standard">Standard</SelectItem>
+                    <SelectItem value="softGlow">Soft Glow</SelectItem>
+                    <SelectItem value="outlineStrong">Outline Strong</SelectItem>
+                    <SelectItem value="elevatedBrand">Elevated Brand</SelectItem>
+                    <SelectItem value="mutedAccentMinimal">Muted Accent Minimal</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Style Controls */}
+              <div className="space-y-1.5 rounded-lg bg-muted/30 p-3">
+                <Label className="text-xs font-semibold text-primary">STYLE (nach Preset anpassen)</Label>
+                
+                {/* Variant */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Variante</Label>
+                  <Select
+                    value={(selectedBlock.props as any)?.style?.variant || "default"}
+                    onValueChange={(v) => {
+                      if (!selectedBlock) return
+                      const currentProps = selectedBlock.props as Record<string, unknown>
+                      const style = (currentProps.style as Record<string, unknown>) || {}
+                      const updatedProps = {
+                        ...currentProps,
+                        style: { ...style, variant: v },
+                      } as CMSBlock["props"]
+                      updateSelectedProps(updatedProps)
+                    }}
+                  >
+                    <SelectTrigger className="h-8 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="default">Default</SelectItem>
+                      <SelectItem value="soft">Soft</SelectItem>
+                      <SelectItem value="outline">Outline</SelectItem>
+                      <SelectItem value="elevated">Elevated</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Radius */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Border Radius</Label>
+                  <Select
+                    value={(selectedBlock.props as any)?.style?.radius || "xl"}
+                    onValueChange={(v) => {
+                      if (!selectedBlock) return
+                      const currentProps = selectedBlock.props as Record<string, unknown>
+                      const style = (currentProps.style as Record<string, unknown>) || {}
+                      const updatedProps = {
+                        ...currentProps,
+                        style: { ...style, radius: v },
+                      } as CMSBlock["props"]
+                      updateSelectedProps(updatedProps)
+                    }}
+                  >
+                    <SelectTrigger className="h-8 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="md">Medium</SelectItem>
+                      <SelectItem value="lg">Large</SelectItem>
+                      <SelectItem value="xl">Extra Large</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Border */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Border</Label>
+                  <Select
+                    value={(selectedBlock.props as any)?.style?.border || "subtle"}
+                    onValueChange={(v) => {
+                      if (!selectedBlock) return
+                      const currentProps = selectedBlock.props as Record<string, unknown>
+                      const style = (currentProps.style as Record<string, unknown>) || {}
+                      const updatedProps = {
+                        ...currentProps,
+                        style: { ...style, border: v },
+                      } as CMSBlock["props"]
+                      updateSelectedProps(updatedProps)
+                    }}
+                  >
+                    <SelectTrigger className="h-8 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">None</SelectItem>
+                      <SelectItem value="subtle">Subtle</SelectItem>
+                      <SelectItem value="strong">Strong</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Shadow */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Schatten</Label>
+                  <Select
+                    value={(selectedBlock.props as any)?.style?.shadow || "sm"}
+                    onValueChange={(v) => {
+                      if (!selectedBlock) return
+                      const currentProps = selectedBlock.props as Record<string, unknown>
+                      const style = (currentProps.style as Record<string, unknown>) || {}
+                      const updatedProps = {
+                        ...currentProps,
+                        style: { ...style, shadow: v },
+                      } as CMSBlock["props"]
+                      updateSelectedProps(updatedProps)
+                    }}
+                  >
+                    <SelectTrigger className="h-8 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">None</SelectItem>
+                      <SelectItem value="sm">Small</SelectItem>
+                      <SelectItem value="md">Medium</SelectItem>
+                      <SelectItem value="lg">Large</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Accent */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Akzentfarbe</Label>
+                  <Select
+                    value={(selectedBlock.props as any)?.style?.accent || "none"}
+                    onValueChange={(v) => {
+                      if (!selectedBlock) return
+                      const currentProps = selectedBlock.props as Record<string, unknown>
+                      const style = (currentProps.style as Record<string, unknown>) || {}
+                      const updatedProps = {
+                        ...currentProps,
+                        style: { ...style, accent: v },
+                      } as CMSBlock["props"]
+                      updateSelectedProps(updatedProps)
+                    }}
+                  >
+                    <SelectTrigger className="h-8 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">None</SelectItem>
+                      <SelectItem value="brand">Brand</SelectItem>
+                      <SelectItem value="muted">Muted</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Animation Controls */}
+              <div className="space-y-1.5 rounded-lg bg-muted/30 p-3">
+                <Label className="text-xs font-semibold text-primary">ANIMATION</Label>
+                
+                {/* Entrance */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Eintrittsanimation</Label>
+                  <Select
+                    value={(selectedBlock.props as any)?.animation?.entrance || "fade"}
+                    onValueChange={(v) => {
+                      if (!selectedBlock) return
+                      const currentProps = selectedBlock.props as Record<string, unknown>
+                      const animation = (currentProps.animation as Record<string, unknown>) || {}
+                      const updatedProps = {
+                        ...currentProps,
+                        animation: { ...animation, entrance: v },
+                      } as CMSBlock["props"]
+                      updateSelectedProps(updatedProps)
+                    }}
+                  >
+                    <SelectTrigger className="h-8 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">None</SelectItem>
+                      <SelectItem value="fade">Fade</SelectItem>
+                      <SelectItem value="slide-up">Slide Up</SelectItem>
+                      <SelectItem value="slide-left">Slide Left</SelectItem>
+                      <SelectItem value="scale">Scale</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Hover */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Hover-Animation</Label>
+                  <Select
+                    value={(selectedBlock.props as any)?.animation?.hover || "none"}
+                    onValueChange={(v) => {
+                      if (!selectedBlock) return
+                      const currentProps = selectedBlock.props as Record<string, unknown>
+                      const animation = (currentProps.animation as Record<string, unknown>) || {}
+                      const updatedProps = {
+                        ...currentProps,
+                        animation: { ...animation, hover: v },
+                      } as CMSBlock["props"]
+                      updateSelectedProps(updatedProps)
+                    }}
+                  >
+                    <SelectTrigger className="h-8 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">None</SelectItem>
+                      <SelectItem value="lift">Lift</SelectItem>
+                      <SelectItem value="glow">Glow</SelectItem>
+                      <SelectItem value="tilt">Tilt</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Duration */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Dauer (ms)</Label>
+                  <input
+                    type="number"
+                    min="100"
+                    max="1000"
+                    step="50"
+                    value={(selectedBlock.props as any)?.animation?.durationMs || 400}
+                    onChange={(e) => {
+                      if (!selectedBlock) return
+                      const currentProps = selectedBlock.props as Record<string, unknown>
+                      const animation = (currentProps.animation as Record<string, unknown>) || {}
+                      const updatedProps = {
+                        ...currentProps,
+                        animation: { ...animation, durationMs: parseInt(e.target.value, 10) },
+                      } as CMSBlock["props"]
+                      updateSelectedProps(updatedProps)
+                    }}
+                    className="h-8 w-full rounded border border-border bg-background px-2 text-sm"
+                  />
+                </div>
+
+                {/* Delay */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Verzögerung (ms)</Label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="500"
+                    step="50"
+                    value={(selectedBlock.props as any)?.animation?.delayMs || 0}
+                    onChange={(e) => {
+                      if (!selectedBlock) return
+                      const currentProps = selectedBlock.props as Record<string, unknown>
+                      const animation = (currentProps.animation as Record<string, unknown>) || {}
+                      const updatedProps = {
+                        ...currentProps,
+                        animation: { ...animation, delayMs: parseInt(e.target.value, 10) },
+                      } as CMSBlock["props"]
+                      updateSelectedProps(updatedProps)
+                    }}
+                    className="h-8 w-full rounded border border-border bg-background px-2 text-sm"
+                  />
+                </div>
+              </div>
+
+              {/* Global Colors */}
+              <div className="space-y-1.5 rounded-lg bg-muted/30 p-3">
+                <Label className="text-xs font-semibold text-primary">FARBEN (global)</Label>
+                
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Titel Farbe</Label>
+                  <div className="flex gap-2">
+                    <input
+                      type="color"
+                      value={(selectedBlock.props as any)?.titleColor || "#111111"}
+                      onChange={(e) => {
+                        if (!selectedBlock) return
+                        const currentProps = selectedBlock.props as Record<string, unknown>
+                        const updatedProps = { ...currentProps, titleColor: e.target.value } as CMSBlock["props"]
+                        updateSelectedProps(updatedProps)
+                      }}
+                      className="h-8 w-12 rounded border border-border"
+                    />
+                    <input
+                      type="text"
+                      value={(selectedBlock.props as any)?.titleColor || "#111111"}
+                      onChange={(e) => {
+                        if (!selectedBlock) return
+                        const currentProps = selectedBlock.props as Record<string, unknown>
+                        const updatedProps = { ...currentProps, titleColor: e.target.value } as CMSBlock["props"]
+                        updateSelectedProps(updatedProps)
+                      }}
+                      className="h-8 flex-1 rounded border border-border bg-background px-2 text-xs"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Beschreibung Farbe</Label>
+                  <div className="flex gap-2">
+                    <input
+                      type="color"
+                      value={(selectedBlock.props as any)?.descriptionColor || "#666666"}
+                      onChange={(e) => {
+                        if (!selectedBlock) return
+                        const currentProps = selectedBlock.props as Record<string, unknown>
+                        const updatedProps = { ...currentProps, descriptionColor: e.target.value } as CMSBlock["props"]
+                        updateSelectedProps(updatedProps)
+                      }}
+                      className="h-8 w-12 rounded border border-border"
+                    />
+                    <input
+                      type="text"
+                      value={(selectedBlock.props as any)?.descriptionColor || "#666666"}
+                      onChange={(e) => {
+                        if (!selectedBlock) return
+                        const currentProps = selectedBlock.props as Record<string, unknown>
+                        const updatedProps = { ...currentProps, descriptionColor: e.target.value } as CMSBlock["props"]
+                        updateSelectedProps(updatedProps)
+                      }}
+                      className="h-8 flex-1 rounded border border-border bg-background px-2 text-xs"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Icon Farbe</Label>
+                  <div className="flex gap-2">
+                    <input
+                      type="color"
+                      value={(selectedBlock.props as any)?.iconColor || "#111111"}
+                      onChange={(e) => {
+                        if (!selectedBlock) return
+                        const currentProps = selectedBlock.props as Record<string, unknown>
+                        const updatedProps = { ...currentProps, iconColor: e.target.value } as CMSBlock["props"]
+                        updateSelectedProps(updatedProps)
+                      }}
+                      className="h-8 w-12 rounded border border-border"
+                    />
+                    <input
+                      type="text"
+                      value={(selectedBlock.props as any)?.iconColor || "#111111"}
+                      onChange={(e) => {
+                        if (!selectedBlock) return
+                        const currentProps = selectedBlock.props as Record<string, unknown>
+                        const updatedProps = { ...currentProps, iconColor: e.target.value } as CMSBlock["props"]
+                        updateSelectedProps(updatedProps)
+                      }}
+                      className="h-8 flex-1 rounded border border-border bg-background px-2 text-xs"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Card Hintergrund</Label>
+                  <div className="flex gap-2">
+                    <input
+                      type="color"
+                      value={(selectedBlock.props as any)?.cardBgColor || "#ffffff"}
+                      onChange={(e) => {
+                        if (!selectedBlock) return
+                        const currentProps = selectedBlock.props as Record<string, unknown>
+                        const updatedProps = { ...currentProps, cardBgColor: e.target.value } as CMSBlock["props"]
+                        updateSelectedProps(updatedProps)
+                      }}
+                      className="h-8 w-12 rounded border border-border"
+                    />
+                    <input
+                      type="text"
+                      value={(selectedBlock.props as any)?.cardBgColor || "#ffffff"}
+                      onChange={(e) => {
+                        if (!selectedBlock) return
+                        const currentProps = selectedBlock.props as Record<string, unknown>
+                        const updatedProps = { ...currentProps, cardBgColor: e.target.value } as CMSBlock["props"]
+                        updateSelectedProps(updatedProps)
+                      }}
+                      className="h-8 flex-1 rounded border border-border bg-background px-2 text-xs"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Card Border</Label>
+                  <div className="flex gap-2">
+                    <input
+                      type="color"
+                      value={(selectedBlock.props as any)?.cardBorderColor || "#e5e7eb"}
+                      onChange={(e) => {
+                        if (!selectedBlock) return
+                        const currentProps = selectedBlock.props as Record<string, unknown>
+                        const updatedProps = { ...currentProps, cardBorderColor: e.target.value } as CMSBlock["props"]
+                        updateSelectedProps(updatedProps)
+                      }}
+                      className="h-8 w-12 rounded border border-border"
+                    />
+                    <input
+                      type="text"
+                      value={(selectedBlock.props as any)?.cardBorderColor || "#e5e7eb"}
+                      onChange={(e) => {
+                        if (!selectedBlock) return
+                        const currentProps = selectedBlock.props as Record<string, unknown>
+                        const updatedProps = { ...currentProps, cardBorderColor: e.target.value } as CMSBlock["props"]
+                        updateSelectedProps(updatedProps)
+                      }}
+                      className="h-8 flex-1 rounded border border-border bg-background px-2 text-xs"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <Separator className="my-4" />
+
+            {/* Features repeater */}
+            {(() => {
+              const props = selectedBlock.props as Record<string, unknown>
+              const features = (getByPath(props, "features") as Array<{ id: string; title?: string }>) || []
+              const repeaterKey = `${selectedBlock.id}:features`
+              const expandedId = expandedRepeaterCards[repeaterKey] ?? null
+              const updateFeatures = (next: typeof features) => updateSelectedProps({ ...props, features: next } as CMSBlock["props"])
+              const addFeature = () => {
+                const newItem = createFeatureItem()
+                updateFeatures([...features, newItem])
+                setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: newItem.id }))
+                lastAddedRepeaterRef.current = { key: repeaterKey, itemId: newItem.id }
+              }
+              const featureFields = [
+                { key: "title", label: "Titel", type: "text" as const },
+                { key: "titleColor", label: "Titel Farbe (optional)", type: "color" as const, placeholder: "#111111" },
+                { key: "description", label: "Beschreibung", type: "textarea" as const },
+                { key: "descriptionColor", label: "Beschreibung Farbe (optional)", type: "color" as const, placeholder: "#666666" },
+                { key: "icon", label: "Icon", type: "text" as const },
+                { key: "iconColor", label: "Icon Farbe (optional)", type: "color" as const, placeholder: "#111111" },
+                { key: "cardBgColor", label: "Card Hintergrund (optional)", type: "color" as const, placeholder: "#ffffff" },
+                { key: "cardBorderColor", label: "Card Border (optional)", type: "color" as const, placeholder: "#e5e7eb" },
+              ]
+              return (
+                <UniversalRepeaterInspector
+                  items={features}
+                  getItemId={(f) => f.id}
+                  getItemLabel={(_, index) => `Feature ${index + 1}`}
+                  renderContent={(item, index) => renderOneRepeaterItemFields(selectedBlock, "features", index, item as Record<string, unknown>, featureFields)}
+                  expandedId={expandedId}
+                  onToggle={(id) => setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: expandedId === id ? null : id }))}
+                  onCollapseAll={() => setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: null }))}
+                  countLabel={`${features.length} Features`}
+                  addLabel="Feature hinzufügen"
+                  onAdd={addFeature}
+                  onMove={(from, to) => editorActions.handleMoveArrayItem(selectedBlock.id, "features", from, to)}
+                  onRemove={(itemId) => handleRemoveArrayItem(selectedBlock.id, "features", features.findIndex((f) => f.id === itemId))}
+                />
+              )
+            })()}
+          </>
+        )}
+
+        {selectedBlock.type === "imageText" && (
+          <>
+            <Separator />
+            
+            {/* Block-Level Design System Controls */}
+            <div className="space-y-3">
+              {/* Layout Preset */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold text-primary">Layout Preset</Label>
+                <Select
+                  value={(selectedBlock.props as any)?.designPreset || "standard"}
+                  onValueChange={(v) => {
+                    if (!selectedBlock) return
+                    const presets: Record<string, any> = {
+                      standard: {
+                        style: { variant: "default", verticalAlign: "center", textAlign: "left", maxWidth: "lg" },
+                        background: "none",
+                        imagePosition: "left",
+                      },
+                      soft: {
+                        style: { variant: "soft", verticalAlign: "center", textAlign: "left", maxWidth: "lg" },
+                        background: "muted",
+                        imagePosition: "left",
+                      },
+                      softCentered: {
+                        style: { variant: "soft", verticalAlign: "center", textAlign: "center", maxWidth: "lg" },
+                        background: "muted",
+                        imagePosition: "left",
+                      },
+                      imageRight: {
+                        style: { variant: "default", verticalAlign: "center", textAlign: "left", maxWidth: "lg" },
+                        background: "none",
+                        imagePosition: "right",
+                      },
+                      imageRightCentered: {
+                        style: { variant: "default", verticalAlign: "center", textAlign: "center", maxWidth: "lg" },
+                        background: "none",
+                        imagePosition: "right",
+                      },
+                      topAligned: {
+                        style: { variant: "default", verticalAlign: "top", textAlign: "left", maxWidth: "lg" },
+                        background: "none",
+                        imagePosition: "left",
+                      },
+                    }
+                    const preset = presets[v]
+                    const currentProps = selectedBlock.props as Record<string, unknown>
+                    const updatedProps = {
+                      ...currentProps,
+                      designPreset: v,
+                      style: preset.style,
+                      background: preset.background,
+                      imagePosition: preset.imagePosition,
+                    } as CMSBlock["props"]
+                    updateSelectedProps(updatedProps)
+                  }}
+                >
+                  <SelectTrigger className="h-8 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="standard">Standard</SelectItem>
+                    <SelectItem value="soft">Soft</SelectItem>
+                    <SelectItem value="softCentered">Soft Centered</SelectItem>
+                    <SelectItem value="imageRight">Image Right</SelectItem>
+                    <SelectItem value="imageRightCentered">Image Right Centered</SelectItem>
+                    <SelectItem value="topAligned">Top Aligned</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Style Controls */}
+              <div className="space-y-1.5 rounded-lg bg-muted/30 p-3">
+                <Label className="text-xs font-semibold text-primary">STYLE</Label>
+                
+                {/* Variant */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Variante</Label>
+                  <Select
+                    value={(selectedBlock.props as any)?.style?.variant || "default"}
+                    onValueChange={(v) => {
+                      if (!selectedBlock) return
+                      const currentProps = selectedBlock.props as Record<string, unknown>
+                      const style = (currentProps.style as Record<string, unknown>) || {}
+                      const updatedProps = {
+                        ...currentProps,
+                        style: { ...style, variant: v },
+                      } as CMSBlock["props"]
+                      updateSelectedProps(updatedProps)
+                    }}
+                  >
+                    <SelectTrigger className="h-8 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="default">Default</SelectItem>
+                      <SelectItem value="soft">Soft</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Vertical Align */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Vertikale Ausrichtung</Label>
+                  <Select
+                    value={(selectedBlock.props as any)?.style?.verticalAlign || "center"}
+                    onValueChange={(v) => {
+                      if (!selectedBlock) return
+                      const currentProps = selectedBlock.props as Record<string, unknown>
+                      const style = (currentProps.style as Record<string, unknown>) || {}
+                      const updatedProps = {
+                        ...currentProps,
+                        style: { ...style, verticalAlign: v },
+                      } as CMSBlock["props"]
+                      updateSelectedProps(updatedProps)
+                    }}
+                  >
+                    <SelectTrigger className="h-8 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="top">Oben</SelectItem>
+                      <SelectItem value="center">Zentriert</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Text Align */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Text Ausrichtung</Label>
+                  <Select
+                    value={(selectedBlock.props as any)?.style?.textAlign || "left"}
+                    onValueChange={(v) => {
+                      if (!selectedBlock) return
+                      const currentProps = selectedBlock.props as Record<string, unknown>
+                      const style = (currentProps.style as Record<string, unknown>) || {}
+                      const updatedProps = {
+                        ...currentProps,
+                        style: { ...style, textAlign: v },
+                      } as CMSBlock["props"]
+                      updateSelectedProps(updatedProps)
+                    }}
+                  >
+                    <SelectTrigger className="h-8 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="left">Links</SelectItem>
+                      <SelectItem value="center">Zentriert</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Max Width */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Maximale Breite</Label>
+                  <Select
+                    value={(selectedBlock.props as any)?.style?.maxWidth || "lg"}
+                    onValueChange={(v) => {
+                      if (!selectedBlock) return
+                      const currentProps = selectedBlock.props as Record<string, unknown>
+                      const style = (currentProps.style as Record<string, unknown>) || {}
+                      const updatedProps = {
+                        ...currentProps,
+                        style: { ...style, maxWidth: v },
+                      } as CMSBlock["props"]
+                      updateSelectedProps(updatedProps)
+                    }}
+                  >
+                    <SelectTrigger className="h-8 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="md">Medium</SelectItem>
+                      <SelectItem value="lg">Large</SelectItem>
+                      <SelectItem value="xl">Extra Large</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Image Aspect Ratio */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Bild Seitenverhältnis</Label>
+                  <Select
+                    value={(selectedBlock.props as any)?.style?.imageAspectRatio || "4/3"}
+                    onValueChange={(v) => {
+                      if (!selectedBlock) return
+                      const currentProps = selectedBlock.props as Record<string, unknown>
+                      const style = (currentProps.style as Record<string, unknown>) || {}
+                      const updatedProps = {
+                        ...currentProps,
+                        style: { ...style, imageAspectRatio: v },
+                      } as CMSBlock["props"]
+                      updateSelectedProps(updatedProps)
+                    }}
+                  >
+                    <SelectTrigger className="h-8 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="4/3">4:3 (Standard)</SelectItem>
+                      <SelectItem value="16/9">16:9 (Breitbild)</SelectItem>
+                      <SelectItem value="1/1">1:1 (Quadrat)</SelectItem>
+                      <SelectItem value="3/2">3:2 (Klassisch)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Special-case repeater – not migrated to UniversalRepeaterInspector (columns/rows with cells sync, custom row editor). */}
+        {selectedBlock.type === "legalTable" && (
+          <>
+            <Separator />
+            <div className="space-y-4 p-4">
+              <h4 className="text-sm font-medium text-foreground">Spalten</h4>
+              {(() => {
+                const props = selectedBlock.props as Record<string, unknown>
+                const columns = (getByPath(props, "columns") as Array<{ id: string; label: string; width?: string }>) || []
+                const repeaterKey = `${selectedBlock.id}:columns`
+                const expandedId = expandedRepeaterCards[repeaterKey] ?? null
+                const addColumn = () => editorActions.handleAddArrayItem(selectedBlock.id, "columns", createLegalTableColumn)
+                const columnFields = [{ key: "label", label: "Bezeichnung", type: "text" as const }, { key: "width", label: "Breite (optional)", type: "text" as const, placeholder: "z.B. 25%" }]
+                type ColItem = { id: string; label: string; width?: string }
+                return (
+                  <InspectorCardList<ColItem>
+                    items={columns}
+                    getItemId={(c: ColItem) => c.id}
+                    mode="single"
+                    expandedId={expandedId}
+                    onToggle={(id: string) => setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: expandedId === id ? null : id }))}
+                    onCollapseAll={() => setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: null }))}
+                    countLabel={`${columns.length} Spalten`}
+                    addAction={<Button type="button" variant="outline" size="sm" className="w-full h-8 text-sm" onClick={addColumn}><Plus className="h-4 w-4 mr-1.5" />Spalte hinzufügen</Button>}
+                    renderSummary={(c: ColItem) => <span className="truncate">{c.label || "Spalte"}</span>}
+                    renderHeaderActions={(item: ColItem) => {
+                      const i = columns.findIndex((x) => x.id === item.id)
+                      return (
+                        <div className="flex items-center gap-0.5">
+                          <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); if (i > 0) editorActions.handleMoveArrayItem(selectedBlock.id, "columns", i, i - 1) }} disabled={i === 0} title="Nach oben"><ChevronUp className="h-3 w-3" /></Button>
+                          <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); if (i < columns.length - 1) editorActions.handleMoveArrayItem(selectedBlock.id, "columns", i, i + 1) }} disabled={i === columns.length - 1} title="Nach unten"><ChevronDown className="h-3 w-3" /></Button>
+                          <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={(e) => { e.stopPropagation(); handleRemoveArrayItem(selectedBlock.id, "columns", i) }} title="Löschen"><Trash2 className="h-3.5 w-3.5" /></Button>
+                        </div>
+                      )
+                    }}
+                    renderContent={(item: ColItem) => renderOneRepeaterItemFields(selectedBlock, "columns", columns.findIndex((c) => c.id === item.id), item as Record<string, unknown>, columnFields)}
+                  />
+                )
+              })()}
+              <h4 className="text-sm font-medium text-foreground pt-2">Zeilen</h4>
+              {(() => {
+                const props = selectedBlock.props as Record<string, unknown>
+                const columns = (getByPath(props, "columns") as import("@/types/cms").LegalTableColumn[]) || []
+                const rows = (getByPath(props, "rows") as Array<{ id: string; cells: Record<string, string> }>) || []
+                type RowItem = { id: string; cells: Record<string, string> }
+                const repeaterKey = `${selectedBlock.id}:rows`
+                const expandedId = expandedRepeaterCards[repeaterKey] ?? null
+                const addRow = () => editorActions.handleAddArrayItem(selectedBlock.id, "rows", () => createLegalTableRow(columns))
+                const updateRowCells = (rowIndex: number, columnId: string, value: string) => {
+                  const next = rows.map((r: RowItem, i: number) => i === rowIndex ? { ...r, cells: { ...r.cells, [columnId]: value } } : r)
+                  updateSelectedProps({ ...props, rows: next } as CMSBlock["props"])
+                }
+                return (
+                  <InspectorCardList<RowItem>
+                    items={rows}
+                    getItemId={(r: RowItem) => r.id}
+                    mode="single"
+                    expandedId={expandedId}
+                    onToggle={(id: string) => setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: expandedId === id ? null : id }))}
+                    onCollapseAll={() => setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: null }))}
+                    countLabel={`${rows.length} Zeilen`}
+                    addAction={<Button type="button" variant="outline" size="sm" className="w-full h-8 text-sm" onClick={addRow}><Plus className="h-4 w-4 mr-1.5" />Zeile hinzufügen</Button>}
+                    renderSummary={() => <span className="truncate">Zeile</span>}
+                    renderHeaderActions={(item: RowItem) => {
+                      const i = rows.findIndex((x) => x.id === item.id)
+                      return (
+                        <div className="flex items-center gap-0.5">
+                          <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); if (i > 0) editorActions.handleMoveArrayItem(selectedBlock.id, "rows", i, i - 1) }} disabled={i === 0} title="Nach oben"><ChevronUp className="h-3 w-3" /></Button>
+                          <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); if (i < rows.length - 1) editorActions.handleMoveArrayItem(selectedBlock.id, "rows", i, i + 1) }} disabled={i === rows.length - 1} title="Nach unten"><ChevronDown className="h-3 w-3" /></Button>
+                          <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={(e) => { e.stopPropagation(); handleRemoveArrayItem(selectedBlock.id, "rows", i) }} title="Löschen"><Trash2 className="h-3.5 w-3.5" /></Button>
+                        </div>
+                      )
+                    }}
+                    renderContent={(row: RowItem) => {
+                      const rowIndex = rows.findIndex((r: RowItem) => r.id === row.id)
+                      const r = row
+                      return (
+                        <div className="space-y-3 pt-2 border-t border-border">
+                          {columns.map((col, colIdx) => (
+                            <div key={col.id} className="space-y-1">
+                              <Label className="text-xs">{col.label?.trim() || `Spalte ${colIdx + 1}`}</Label>
+                              <Input
+                                value={r.cells?.[col.id] ?? ""}
+                                onChange={(e) => updateRowCells(rowIndex, col.id, e.target.value)}
+                                className="h-8 text-sm"
+                                placeholder="Wert"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      )
+                    }}
+                  />
+                )
+              })()}
+            </div>
+          </>
+        )}
+
+        {selectedBlock.type === "legalContactCard" && (
+          <>
+            <Separator />
+            {(() => {
+              const props = selectedBlock.props as Record<string, unknown>
+              const lines = (getByPath(props, "lines") as Array<{ id: string; label: string; value: string; href?: string }>) || []
+              const repeaterKey = `${selectedBlock.id}:lines`
+              const expandedId = expandedRepeaterCards[repeaterKey] ?? null
+              const addLine = () => editorActions.handleAddArrayItem(selectedBlock.id, "lines", createLegalContactLine)
+              type LineItem = { id: string; label: string; value: string; href?: string }
+              const lineFields = [
+                { key: "label", label: "Label", type: "text" as const },
+                { key: "value", label: "Wert", type: "text" as const },
+                { key: "href", label: "Link (optional)", type: "url" as const, placeholder: "https://" },
+              ]
+              return (
+                <InspectorCardList<LineItem>
+                  items={lines}
+                  getItemId={(l: LineItem) => l.id}
+                  mode="single"
+                  expandedId={expandedId}
+                  onToggle={(id: string) => setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: expandedId === id ? null : id }))}
+                  onCollapseAll={() => setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: null }))}
+                  countLabel={`${lines.length} Zeilen`}
+                  addAction={<Button type="button" variant="outline" size="sm" className="w-full h-8 text-sm" onClick={addLine}><Plus className="h-4 w-4 mr-1.5" />Zeile hinzufügen</Button>}
+                  renderSummary={(item: LineItem) => <span className="truncate">{item.label || "Zeile"}</span>}
+                  renderHeaderActions={(item: LineItem) => {
+                    const i = lines.findIndex((x) => x.id === item.id)
+                    return (
+                      <div className="flex items-center gap-0.5">
+                        <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); if (i > 0) editorActions.handleMoveArrayItem(selectedBlock.id, "lines", i, i - 1) }} disabled={i === 0} title="Nach oben"><ChevronUp className="h-3 w-3" /></Button>
+                        <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); if (i < lines.length - 1) editorActions.handleMoveArrayItem(selectedBlock.id, "lines", i, i + 1) }} disabled={i === lines.length - 1} title="Nach unten"><ChevronDown className="h-3 w-3" /></Button>
+                        <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={(e) => { e.stopPropagation(); handleRemoveArrayItem(selectedBlock.id, "lines", i) }} title="Löschen"><Trash2 className="h-3.5 w-3.5" /></Button>
+                      </div>
+                    )
+                  }}
+                  renderContent={(item: LineItem) => renderOneRepeaterItemFields(selectedBlock, "lines", lines.findIndex((l: LineItem) => l.id === item.id), item as Record<string, unknown>, lineFields)}
+                />
+              )
+            })()}
+          </>
+        )}
+
+        {/* Special-case repeater – not migrated to UniversalRepeaterInspector (nested cookies per category). */}
+        {selectedBlock.type === "legalCookieCategories" && (
+          <>
+            <Separator />
+            {(() => {
+              const props = selectedBlock.props as Record<string, unknown>
+              type CategoryItem = { id: string; name: string; description: string; required: boolean; cookies: Array<{ id: string; name: string; provider: string; purpose: string; duration: string; type: string }> }
+              const categories = (getByPath(props, "categories") as CategoryItem[]) || []
+              const repeaterKey = `${selectedBlock.id}:categories`
+              const expandedId = expandedRepeaterCards[repeaterKey] ?? null
+              const addCategory = () => editorActions.handleAddArrayItem(selectedBlock.id, "categories", createLegalCookieCategory)
+              const categoryFields = [
+                { key: "name", label: "Name", type: "text" as const },
+                {
+                  key: "description",
+                  label: "Beschreibung",
+                  type: "textarea" as const,
+                  placeholder: "Drücke Enter für neuen Absatz",
+                  helpText: "Zeilenumbrüche werden als Absätze dargestellt.",
+                },
+                { key: "required", label: "Erforderlich", type: "boolean" as const },
+              ]
+              return (
+                <InspectorCardList<CategoryItem>
+                  items={categories}
+                  getItemId={(c: CategoryItem) => c.id}
+                  mode="single"
+                  expandedId={expandedId}
+                  onToggle={(id: string) => setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: expandedId === id ? null : id }))}
+                  onCollapseAll={() => setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: null }))}
+                  countLabel={`${categories.length} Kategorien`}
+                  addAction={<Button type="button" variant="outline" size="sm" className="w-full h-8 text-sm" onClick={addCategory}><Plus className="h-4 w-4 mr-1.5" />Kategorie hinzufügen</Button>}
+                  renderSummary={(item: CategoryItem) => <span className="truncate">{item.name || "Kategorie"}</span>}
+                  renderHeaderActions={(item: CategoryItem) => {
+                    const i = categories.findIndex((x) => x.id === item.id)
+                    return (
+                      <div className="flex items-center gap-0.5">
+                        <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); if (i > 0) editorActions.handleMoveArrayItem(selectedBlock.id, "categories", i, i - 1) }} disabled={i === 0} title="Nach oben"><ChevronUp className="h-3 w-3" /></Button>
+                        <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); if (i < categories.length - 1) editorActions.handleMoveArrayItem(selectedBlock.id, "categories", i, i + 1) }} disabled={i === categories.length - 1} title="Nach unten"><ChevronDown className="h-3 w-3" /></Button>
+                        <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={(e) => { e.stopPropagation(); handleRemoveArrayItem(selectedBlock.id, "categories", i) }} title="Löschen"><Trash2 className="h-3.5 w-3.5" /></Button>
+                      </div>
+                    )
+                  }}
+                  renderContent={(item: CategoryItem) => {
+                    const catIndex = categories.findIndex((c: CategoryItem) => c.id === item.id)
+                    const category = item as { id: string; name: string; description: string; required: boolean; cookies: Array<{ id: string; name: string; provider: string; purpose: string; duration: string; type: string }> }
+                    const cookies = category.cookies ?? []
+                    const updateCookieField = (cookieIndex: number, field: string, value: string) => {
+                      const nextCategories = categories.map((c, i) =>
+                        i === catIndex
+                          ? { ...c, cookies: (c.cookies ?? []).map((ck, j) => (j === cookieIndex ? { ...ck, [field]: value } : ck)) }
+                          : c
+                      )
+                      updateSelectedProps({ ...(selectedBlock.props as Record<string, unknown>), categories: nextCategories } as CMSBlock["props"])
+                    }
+                    const cookiesPath = `categories.${catIndex}.cookies`
+                    return (
+                      <>
+                        {renderOneRepeaterItemFields(selectedBlock, "categories", catIndex, item as Record<string, unknown>, categoryFields)}
+                        <div className="mt-4 pt-4 border-t border-border space-y-3">
+                          <Label className="text-xs font-medium text-foreground">Cookies in dieser Kategorie</Label>
+                          <p className="text-xs text-muted-foreground">Name, Anbieter, Zweck, Dauer und Typ pro Cookie.</p>
+                          {cookies.map((cookie, cookieIndex) => (
+                            <div key={cookie.id} className="rounded-lg border border-border bg-muted/30 p-3 space-y-2">
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="text-xs font-medium text-foreground truncate">{cookie.name?.trim() || `Cookie ${cookieIndex + 1}`}</span>
+                                <Button type="button" variant="ghost" size="icon" className="h-6 w-6 shrink-0 text-destructive hover:text-destructive" onClick={() => handleRemoveArrayItem(selectedBlock.id, cookiesPath, cookieIndex)} title="Cookie entfernen"><Trash2 className="h-3 w-3" /></Button>
+                              </div>
+                              <div className="grid gap-2">
+                                <div><Label className="text-xs">Name</Label><Input value={cookie.name} onChange={(e) => updateCookieField(cookieIndex, "name", e.target.value)} className="h-8 text-sm" placeholder="Cookie-Name" /></div>
+                                <div><Label className="text-xs">Anbieter</Label><Input value={cookie.provider} onChange={(e) => updateCookieField(cookieIndex, "provider", e.target.value)} className="h-8 text-sm" placeholder="Anbieter" /></div>
+                                <div><Label className="text-xs">Zweck</Label><Input value={cookie.purpose} onChange={(e) => updateCookieField(cookieIndex, "purpose", e.target.value)} className="h-8 text-sm" placeholder="Zweck" /></div>
+                                <div><Label className="text-xs">Dauer</Label><Input value={cookie.duration} onChange={(e) => updateCookieField(cookieIndex, "duration", e.target.value)} className="h-8 text-sm" placeholder="z.B. 1 Jahr" /></div>
+                                <div><Label className="text-xs">Typ</Label><Input value={cookie.type} onChange={(e) => updateCookieField(cookieIndex, "type", e.target.value)} className="h-8 text-sm" placeholder="z.B. HTTP" /></div>
+                              </div>
+                            </div>
+                          ))}
+                          <Button type="button" variant="outline" size="sm" className="w-full h-8 text-sm" onClick={() => editorActions.handleAddArrayItem(selectedBlock.id, cookiesPath, createLegalCookieItem)}><Plus className="h-4 w-4 mr-1.5" />Cookie hinzufügen</Button>
+                        </div>
+                      </>
+                    )
+                  }}
+                />
+              )
+            })()}
+          </>
+        )}
+
+        {selectedBlock.type === "faq" && (
+          <>
+            <Separator />
+            {(() => {
+              const props = selectedBlock.props as Record<string, unknown>
+              const items = ((getByPath(props, "items") as Array<{ id: string; question?: string }>) || [])
+              const repeaterKey = `${selectedBlock.id}:items`
+              const expandedId = expandedRepeaterCards[repeaterKey] ?? null
+              const updateItems = (next: typeof items) => updateSelectedProps({ ...props, items: next } as CMSBlock["props"])
+              const addItem = () => {
+                const newItem = createFaqItem()
+                updateItems([...items, newItem])
+                setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: newItem.id }))
+                lastAddedRepeaterRef.current = { key: repeaterKey, itemId: newItem.id }
+              }
+              const removeItem = (itemId: string) => {
+                if (expandedId === itemId) setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: null }))
+                updateItems(items.filter((i) => i.id !== itemId))
+              }
+              const faqFields = [
+                { key: "question", label: "Frage", type: "text" as const },
+                { key: "questionColor", label: "Frage Farbe (optional)", type: "color" as const, placeholder: "#111111" },
+                { key: "answer", label: "Antwort", type: "textarea" as const },
+                { key: "answerColor", label: "Antwort Farbe (optional)", type: "color" as const, placeholder: "#666666" },
+              ]
+              return (
+                <UniversalRepeaterInspector
+                  items={items}
+                  getItemId={(i) => i.id}
+                  renderSummary={(item) => <span className="truncate">{(item as Record<string, unknown>).question as string || "FAQ"}</span>}
+                  renderContent={(item, index) => renderOneRepeaterItemFields(selectedBlock, "items", index, item as Record<string, unknown>, faqFields)}
+                  expandedId={expandedId}
+                  onToggle={(id) => setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: expandedId === id ? null : id }))}
+                  onCollapseAll={() => setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: null }))}
+                  countLabel={`${items.length} FAQs`}
+                  addLabel="FAQ hinzufügen"
+                  onAdd={addItem}
+                  onMove={(from, to) => editorActions.handleMoveArrayItem(selectedBlock.id, "items", from, to)}
+                  onRemove={removeItem}
+                  minItems={1}
+                />
+              )
+            })()}
+          </>
+        )}
+
+        {selectedBlock.type === "team" && (
+          <>
+            <Separator />
+            
+            {/* Block-Level Controls */}
+            <div className="space-y-3">
+              {/* Eyebrow */}
+              <div className="space-y-1.5">
+                <Label className="text-xs">Eyebrow (optional)</Label>
+                <input
+                  type="text"
+                  value={(selectedBlock.props as any)?.eyebrow || ""}
+                  onChange={(e) => {
+                    if (!selectedBlock) return
+                    const currentProps = selectedBlock.props as Record<string, unknown>
+                    const updatedProps = { ...currentProps, eyebrow: e.target.value } as CMSBlock["props"]
+                    updateSelectedProps(updatedProps)
+                  }}
+                  className="h-8 w-full rounded border border-border bg-background px-2 text-sm"
+                  placeholder="z.B. UNSER TEAM"
+                />
+              </div>
+
+              {/* Layout */}
+              <div className="space-y-1.5">
+                <Label className="text-xs">Layout</Label>
+                <Select
+                  value={(selectedBlock.props as any)?.layout || "cards"}
+                  onValueChange={(v) => {
+                    if (!selectedBlock) return
+                    const currentProps = selectedBlock.props as Record<string, unknown>
+                    const updatedProps = { ...currentProps, layout: v } as CMSBlock["props"]
+                    updateSelectedProps(updatedProps)
+                  }}
+                >
+                  <SelectTrigger className="h-8 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="cards">Cards (vertikal)</SelectItem>
+                    <SelectItem value="compact">Compact (horizontal)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Background */}
+              <div className="space-y-1.5">
+                <Label className="text-xs">Hintergrund</Label>
+                <Select
+                  value={(selectedBlock.props as any)?.background || "none"}
+                  onValueChange={(v) => {
+                    if (!selectedBlock) return
+                    const currentProps = selectedBlock.props as Record<string, unknown>
+                    const updatedProps = { ...currentProps, background: v } as CMSBlock["props"]
+                    updateSelectedProps(updatedProps)
+                  }}
+                >
+                  <SelectTrigger className="h-8 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Keine</SelectItem>
+                    <SelectItem value="muted">Muted</SelectItem>
+                    <SelectItem value="gradient">Gradient</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Columns */}
+              <div className="space-y-1.5">
+                <Label className="text-xs">Spalten</Label>
+                <Select
+                  value={String((selectedBlock.props as any)?.columns || 3)}
+                  onValueChange={(v) => {
+                    if (!selectedBlock) return
+                    const currentProps = selectedBlock.props as Record<string, unknown>
+                    const updatedProps = { ...currentProps, columns: Number(v) } as CMSBlock["props"]
+                    updateSelectedProps(updatedProps)
+                  }}
+                >
+                  <SelectTrigger className="h-8 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="2">2</SelectItem>
+                    <SelectItem value="3">3</SelectItem>
+                    <SelectItem value="4">4</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Members Array */}
+            {(() => {
+              const props = selectedBlock.props as Record<string, unknown>
+              const members = ((getByPath(props, "members") as Array<{ id: string; name?: string }>) || [])
+              const repeaterKey = `${selectedBlock.id}:members`
+              const expandedId = expandedRepeaterCards[repeaterKey] ?? null
+              const updateMembers = (next: typeof members) => updateSelectedProps({ ...props, members: next } as CMSBlock["props"])
+              const addMember = () => {
+                const newItem = createTeamMember()
+                updateMembers([...members, newItem])
+                setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: newItem.id }))
+                lastAddedRepeaterRef.current = { key: repeaterKey, itemId: newItem.id }
+              }
+              const memberFields = [
+                { key: "name", label: "Name", type: "text" as const, required: true },
+                { key: "nameColor", label: "Name Farbe (optional)", type: "color" as const, placeholder: "#111111" },
+                { key: "role", label: "Rolle", type: "text" as const },
+                { key: "roleColor", label: "Rolle Farbe (optional)", type: "color" as const, placeholder: "#666666" },
+                { key: "bio", label: "Bio", type: "textarea" as const },
+                { key: "bioColor", label: "Bio Farbe (optional)", type: "color" as const, placeholder: "#666666" },
+                { key: "bioAlign", label: "Bio Ausrichtung", type: "select" as const, options: [{ value: "left", label: "Links" }, { value: "center", label: "Mitte" }, { value: "right", label: "Rechts" }] },
+                { key: "imageUrl", label: "Avatar", type: "image" as const },
+                { key: "imageAlt", label: "Avatar Alt-Text", type: "text" as const },
+                { key: "avatarGradient", label: "Avatar Gradient", type: "select" as const, options: [{ value: "auto", label: "Auto" }, { value: "g1", label: "Emerald" }, { value: "g2", label: "Sky" }, { value: "g3", label: "Amber" }, { value: "g4", label: "Rose" }, { value: "g5", label: "Violet" }, { value: "g6", label: "Cyan" }, { value: "g7", label: "Lime" }, { value: "g8", label: "Fuchsia" }, { value: "g9", label: "Indigo" }, { value: "g10", label: "Red" }] },
+                { key: "avatarFit", label: "Bildanpassung", type: "select" as const, options: [{ value: "cover", label: "Füllen (Cover)" }, { value: "contain", label: "Vollständig (Contain)" }] },
+                { key: "avatarFocus", label: "Bildfokus", type: "select" as const, options: [{ value: "center", label: "Mitte" }, { value: "top", label: "Oben" }, { value: "bottom", label: "Unten" }, { value: "left", label: "Links" }, { value: "right", label: "Rechts" }] },
+                { key: "tags", label: "Tags (komma-getrennt)", type: "text" as const, placeholder: "Tag1, Tag2, Tag3" },
+                { key: "ctaText", label: "CTA Text", type: "text" as const },
+                { key: "ctaColor", label: "CTA Farbe (optional)", type: "color" as const, placeholder: "#111111" },
+                { key: "ctaHref", label: "CTA Link", type: "url" as const },
+                { key: "cardBgColor", label: "Card Hintergrund (optional)", type: "color" as const, placeholder: "#ffffff" },
+                { key: "cardBorderColor", label: "Card Border (optional)", type: "color" as const, placeholder: "#e5e7eb" },
+              ]
+              return (
+                <UniversalRepeaterInspector
+                  items={members}
+                  getItemId={(m) => m.id}
+                  renderSummary={(member) => <span className="truncate">{(member as Record<string, unknown>).name as string || "Mitglied"}</span>}
+                  renderContent={(member, index) => renderOneRepeaterItemFields(selectedBlock, "members", index, member as Record<string, unknown>, memberFields)}
+                  expandedId={expandedId}
+                  onToggle={(id) => setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: expandedId === id ? null : id }))}
+                  onCollapseAll={() => setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: null }))}
+                  countLabel={`${members.length} Mitglieder`}
+                  addLabel="Mitglied hinzufügen"
+                  onAdd={addMember}
+                  onMove={(from, to) => editorActions.handleMoveArrayItem(selectedBlock.id, "members", from, to)}
+                  onRemove={(itemId) => confirmDeleteItem(selectedBlock.id, "members", members.findIndex((m) => m.id === itemId))}
+                  minItems={1}
+                />
+              )
+            })()}
+          </>
+        )}
+
+        {/* Special-case repeater – not migrated to UniversalRepeaterInspector (contactForm fields/contactInfoCards with type select etc.). */}
+        {selectedBlock.type === "contactForm" && (
+          <>
+            <Separator />
+            {renderArrayItemsControls(
+              selectedBlock,
+              "fields",
+              "Feld",
+              (field, index) => {
+                const f = field as unknown as Record<string, unknown>
+                const t = String(f.type || "")
+                const label = String(f.label || "")
+                return `${index + 1}. ${label || t || "Feld"}`
+              },
+              () => createContactFormField("subject"),
+              [
+                { key: "type", label: "Typ", type: "select" as const },
+                { key: "label", label: "Label", type: "text" as const },
+                { key: "placeholder", label: "Placeholder", type: "text" as const },
+                { key: "required", label: "Required", type: "boolean" as const },
+              ]
+            )}
+            
+            {/* Contact Info Cards */}
+            {renderArrayItemsControls(
+              selectedBlock,
+              "contactInfoCards",
+              "Info-Card",
+              (card, index) => {
+                const c = card as unknown as Record<string, unknown>
+                const title = String(c.title || "")
+                return `${index + 1}. ${title || "Card"}`
+              },
+              createContactInfoCard,
+              [
+                { key: "title", label: "Titel", type: "text" as const, required: true },
+                { key: "value", label: "Wert", type: "text" as const, required: true },
+                {
+                  key: "icon",
+                  label: "Icon",
+                  type: "select" as const,
+                  options: [
+                    { value: "clock", label: "Uhr (Schnelle Antwort)" },
+                    { value: "phone", label: "Telefon (Kostenlose Beratung)" },
+                    { value: "mapPin", label: "Map-Pin (Lokale Betreuung)" },
+                    { value: "mail", label: "Mail (E-Mail)" },
+                  ],
+                },
+              ]
+            )}
+          </>
+        )}
+
+        {/* 3) Restliche Felder mit Gruppierung und Headern */}
+        {(() => {
+          const visibleMidFields = midFields.filter(shouldShowField)
+          const visibleLateFields = lateFields.filter(shouldShowField)
+
+          // Get group order for this block
+          const blockDef = getBlockDefinition(selectedBlock.type)
+          const effectiveGroupOrder = blockDef.inspectorGroupOrder || DEFAULT_GROUP_ORDER
+
+          // Get typography elements if block has elements
+          const elements = blockDef.elements || []
+          const typographyElements = elements.filter((el) => el.supportsTypography)
+          
+          // Ohne Felder/Typo nichts rendern – außer Element-Animation bei Auswahl eines UI-Elements
+          if (
+            visibleMidFields.length === 0 &&
+            visibleLateFields.length === 0 &&
+            typographyElements.length === 0 &&
+            !selectedElementId
+          ) {
+            return null
+          }
+
+          // Group visible fields by their group property
+          const groupedFields: Record<string, InspectorField[]> = {}
+          for (const field of visibleMidFields) {
+            const group = field.group ?? "design"
+            if (!groupedFields[group]) groupedFields[group] = []
+            groupedFields[group].push(field)
+          }
+
+          // Helper to render element typography section
+          const renderElementTypography = () => {
+            if (typographyElements.length === 0) return null
+
+            const blockProps = selectedBlock.props as Record<string, unknown>
+            const typographyRecord = (blockProps.typography as Record<string, TypographySettings> | undefined) || {}
+
+            const handleElementTypographyChange = (elementId: string, typography: TypographySettings | null) => {
+              if (!selectedBlock) return
+              isTypingRef.current = true
+              const currentProps = selectedBlock.props as Record<string, unknown>
+              const currentTypography = (currentProps.typography as Record<string, TypographySettings> | undefined) || {}
+              
+              let updatedTypography: Record<string, TypographySettings> | undefined
+              if (typography) {
+                updatedTypography = { ...currentTypography, [elementId]: typography }
+              } else {
+                const { [elementId]: _, ...rest } = currentTypography
+                updatedTypography = Object.keys(rest).length > 0 ? rest : undefined
+              }
+
+              const updatedProps = setByPath(currentProps, "typography", updatedTypography) as CMSBlock["props"]
+              updateSelectedProps(updatedProps)
+              setTimeout(() => {
+                isTypingRef.current = false
+              }, 50)
+            }
+
+            return (
+              <ElementTypographyAccordion
+                blockProps={blockProps}
+                typographyElements={typographyElements}
+                selectedElementId={selectedElementId}
+                accordionValue={accordionValue}
+                onAccordionValueChange={setAccordionValue}
+                onElementTypographyChange={handleElementTypographyChange}
+              />
+            )
+          }
+
+          return (
+            <>
+              {/* Render grouped fields in order, with special handling for "elements" group and legalHero "design" group */}
+              {effectiveGroupOrder.map((group) => {
+                const groupFields = groupedFields[group] || []
+                const hasElementTypography = group === "elements" && typographyElements.length > 0
+                const isLegalHeroDesignGroup = selectedBlock.type === "legalHero" && group === "design"
+                const isLegalRichTextDesignGroup = selectedBlock.type === "legalRichText" && group === "design"
+
+                if (groupFields.length === 0 && !hasElementTypography) {
+                  return null
+                }
+
+                // legalRichText: Design (Ausrichtung, Überschrift-Größe, Variante) + Farben im Akkordeon
+                if (isLegalRichTextDesignGroup) {
+                  return (
+                    <div key={group}>
+                      <Separator />
+                      <div className="mt-3 pt-3 border-t border-border/50">
+                        <Label className="text-xs font-semibold">{INSPECTOR_GROUP_LABELS[group] || group}</Label>
+                        <div className="space-y-3 mt-2">
+                          {groupFields.map((field) => (
+                            <div key={field.key}>{renderInspectorField(field, selectedBlock)}</div>
+                          ))}
+                          <LegalRichTextColorAccordion
+                            block={selectedBlock as CMSBlock & { type: "legalRichText" }}
+                            updateSelectedProps={updateSelectedProps}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )
+                }
+
+                // Special rendering for legalHero design group with Accordions
+                if (isLegalHeroDesignGroup) {
+                  return (
+                    <div key={group}>
+                      <LegalHeroAccordion
+                        block={selectedBlock}
+                        fields={groupFields}
+                        onFieldChange={(key, value) => {
+                          const updatedProps = setByPath(selectedBlock.props as Record<string, unknown>, key, value) as CMSBlock["props"]
+                          updateSelectedProps(updatedProps)
+                        }}
+                        renderInspectorField={renderInspectorField}
+                      />
+                    </div>
+                  )
+                }
+
+                const colorFields = groupFields.filter((f) => f.type === "color")
+                const nonColorFields = groupFields.filter((f) => f.type !== "color")
+
+                return (
+                  <div key={group}>
+                    <Separator />
+                    <div className="mt-3 pt-3 border-t border-border/50">
+                      <Label className="text-xs font-semibold">{INSPECTOR_GROUP_LABELS[group] || group}</Label>
+                      <div className="space-y-3 mt-2">
+                        {nonColorFields.map((field) => (
+                          <div key={field.key}>
+                            {renderInspectorField(field, selectedBlock)}
+                          </div>
+                        ))}
+                        {colorFields.length > 0 && (
+                          <Accordion type="single" collapsible className="w-full border-0">
+                            <AccordionItem value={`inspector-colors-${group}`} className="border-border/50">
+                              <AccordionTrigger className="py-2 text-xs font-medium hover:no-underline">
+                                Farben
+                                <span className="ml-1 text-muted-foreground font-normal">({colorFields.length})</span>
+                              </AccordionTrigger>
+                              <AccordionContent className="space-y-3 pb-2 pt-0">
+                                {colorFields.map((field) => (
+                                  <div key={field.key}>{renderInspectorField(field, selectedBlock)}</div>
+                                ))}
+                              </AccordionContent>
+                            </AccordionItem>
+                          </Accordion>
+                        )}
+                        {hasElementTypography && renderElementTypography()}
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+
+              {renderElementAnimationInspector()}
+
+              {/* Render late fields if any */}
+              {visibleLateFields.length > 0 && (
+                <div>
+                  <Separator />
+                  <div className="mt-3 pt-3">
+                    {visibleLateFields.map((field) => (
+                      <div key={field.key}>
+                        {renderInspectorField(field, selectedBlock)}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          )
+        })()}
+
+      </React.Fragment>
+    )
+  }
+
   return (
     <>
       {isNewPage && (
@@ -1158,7 +3614,7 @@ export function PageEditorInspector({
               {/* Global Element Shadow Inspector (nur wenn Element Shadow unterstützt) */}
               {selectedElementId && selectedBlock.type !== "section" && (() => {
                 const def = getBlockDefinition(selectedBlock.type)
-                const elementDef = def?.elements?.find((e: any) => e?.id === selectedElementId) ?? null
+                const elementDef = findEditableElementDef(def?.elements, selectedElementId)
                 const elementShadowConfig =
                   ((selectedBlock.props as Record<string, unknown>)?.elements as Record<string, ElementConfig> | undefined)?.[
                     selectedElementId
@@ -2704,2382 +5160,10 @@ export function PageEditorInspector({
                   )
                 })()}
 
+              </div>
 
                 {/* Render array items with controls for featureGrid, faq, team, contactForm */}
-                
-{(() => {
-  const def = getBlockDefinition(selectedBlock.type)
-  const fields = def.inspectorFields ?? []
-
-  const primaryKeys = new Set(["eyebrow", "headline", "subheadline", "title", "subtitle"])
-  // Kursplan: Eyebrow wird im Spezial-Inspector gerendert (bei Anzeige/Wochenende), damit es nicht "verschwindet"
-  // und wir die Reihenfolge konsistent halten.
-  if (selectedBlock.type === "courseSchedule") primaryKeys.delete("eyebrow")
-  // Legacy fallback: some older blocks had these controls historically at the bottom.
-  // For imageSlider we keep grouped ordering from registry (Interaktionen) intact.
-  const lateKeys =
-    selectedBlock.type === "imageSlider"
-      ? new Set<string>()
-      : new Set(["autoplay", "interval", "showArrows", "showDots"])
-
-  const isArrayItemField = (key: string) => {
-    if (selectedBlock.type === "hero" && key.startsWith("trustItems.")) return true
-    if (selectedBlock.type === "hero" && key.startsWith("actions.")) return true
-    if (selectedBlock.type === "featureGrid" && key.startsWith("features.")) return true
-    if (selectedBlock.type === "servicesGrid" && key.startsWith("cards.")) return true
-    if (selectedBlock.type === "faq" && key.startsWith("items.")) return true
-    if (selectedBlock.type === "team" && key.startsWith("members.")) return true
-    if (selectedBlock.type === "contactForm" && key.startsWith("fields.")) return true
-    if (selectedBlock.type === "contactForm" && key.startsWith("contactInfoCards.")) return true
-    if (selectedBlock.type === "testimonials" && key.startsWith("items.")) return true
-    if (selectedBlock.type === "testimonialSlider" && key.startsWith("items.")) return true
-    if (selectedBlock.type === "gallery" && key.startsWith("images.")) return true
-    if (selectedBlock.type === "imageSlider" && key.startsWith("slides.")) return true
-    if (selectedBlock.type === "courseSchedule" && key.startsWith("slots.")) return true
-    if (selectedBlock.type === "openingHours" && key.startsWith("hours.")) return true
-    if (selectedBlock.type === "legalTable" && (key.startsWith("columns.") || key.startsWith("rows."))) return true
-    if (selectedBlock.type === "legalContactCard" && key.startsWith("lines.")) return true
-    if (selectedBlock.type === "legalCookieCategories" && key.startsWith("categories.")) return true
-    return false
-  }
-
-  const isLegacyHeroField = (key: string) => {
-    if (selectedBlock.type !== "hero") return false
-    // Fields handled via Brand Tabs (content)
-    const brandTabFields = [
-      // Media fields
-      "mediaUrl",
-      "mediaType",
-      "showMedia",
-      "image",
-      "imageFit",
-      "containBackground",
-      "imageAlt",
-      "imageVariant",
-      "imageFocus",
-      // Text content
-      "headline",
-      "subheadline",
-      "ctaText",
-      "ctaHref",
-      "badgeText",
-      "playText",
-      "floatingTitle",
-      "floatingValue",
-      "floatingLabel",
-      // Brand/Mood
-      "mood",
-      // Brand-specific color fields
-      "headlineColor",
-      "subheadlineColor",
-      "ctaColor",
-      "ctaBgColor",
-      "ctaHoverBgColor",
-      "ctaBorderColor",
-      "badgeColor",
-      "badgeBgColor",
-      "playTextColor",
-      "playBgColor",
-      "playBorderColor",
-      "playHoverBgColor",
-      "trustItemsColor",
-      "trustDotColor",
-      "floatingTitleColor",
-      "floatingValueColor",
-      "floatingLabelColor",
-      // Secondary CTA fields
-      "secondaryCtaText",
-      "secondaryCtaHref",
-      "secondaryCtaColor",
-      "secondaryCtaBgColor",
-      "secondaryCtaHoverBgColor",
-      "secondaryCtaBorderColor",
-    ]
-    return brandTabFields.includes(key)
-  }
-
-  const normalFields = fields.filter((field) => {
-    if (isArrayItemField(field.key)) return false
-    if (isLegacyHeroField(field.key)) return false
-    // Panel-Felder werden im separaten CONTAINER-Panel gerendert → hier ausblenden, sonst doppelt
-    if (def.enableInnerPanel && field.key.startsWith("container")) return false
-    return true
-  })
-
-  // Sort fields by group (use custom group order if defined on block)
-  const groupOrder = def.inspectorGroupOrder || undefined
-  const sortedFields = sortInspectorFields(normalFields, groupOrder)
-
-  const primaryFields = sortedFields.filter((f) => {
-    if (primaryKeys.has(f.key)) return true
-    // Slider: background soll direkt bei Head/Subline stehen
-    if (selectedBlock.type === "testimonialSlider" && f.key === "background") return true
-    return false
-  })
-
-  const restFields = sortedFields.filter((f) => !primaryFields.some((p) => p.key === f.key))
-  const midFields = restFields.filter((f) => !lateKeys.has(f.key))
-  const lateFields = restFields.filter((f) => lateKeys.has(f.key))
-
-  // Helper to evaluate showWhen condition
-  const shouldShowField = (field: InspectorField): boolean => {
-    if (!field.showWhen) return true
-    const currentProps = selectedBlock?.props as Record<string, unknown>
-    const getByPath = (obj: any, path: string): any => {
-      return path.split(".").reduce((acc, part) => acc?.[part], obj)
-    }
-    const currentValue = getByPath(currentProps, field.showWhen.key)
-    return currentValue === field.showWhen.equals
-  }
-
-  return (
-    <>
-      {/* 1) Head/Subline (und ggf. Background) */}
-      {primaryFields.filter(shouldShowField).map((field) => renderInspectorField(field, selectedBlock))}
-
-      {selectedBlock.type === "externalEmbed" &&
-        (() => {
-          const p = selectedBlock.props as ExternalEmbedBlock["props"]
-          const url = (p.embedUrl ?? "").trim()
-          if (!url) return null
-          const v = validateEmbedUrlForProvider(p.provider, url)
-          if (v.ok) return null
-          return (
-            <Alert variant="destructive" className="mt-2">
-              <AlertDescription>{v.message}</AlertDescription>
-            </Alert>
-          )
-        })()}
-
-      {selectedBlock.type === "legalRichText" && (
-        <>
-          <Separator />
-          <LegalRichTextContentInspector
-            block={selectedBlock as CMSBlock & { type: "legalRichText" }}
-            updateSelectedProps={updateSelectedProps}
-            expandedRepeaterCards={expandedRepeaterCards}
-            setExpandedRepeaterCards={setExpandedRepeaterCards}
-          />
-        </>
-      )}
-
-      {/* Button Preset (one dropdown per block for card, section, imageText, cta, hero, team, contactForm) */}
-      {(() => {
-        const showButtonPreset = selectedBlock.type === "card" ||
-          selectedBlock.type === "section" ||
-          selectedBlock.type === "imageText" ||
-          selectedBlock.type === "cta" ||
-          selectedBlock.type === "hero" ||
-          selectedBlock.type === "team" ||
-          selectedBlock.type === "contactForm"
-        
-        if (!showButtonPreset) {
-          return null
-        }
-        
-        return (
-          <>
-            <Separator />
-            <div className="space-y-1.5">
-              <Label className="text-xs">Button Preset</Label>
-              <Select
-                value={String((selectedBlock.props as Record<string, unknown>)?.buttonPreset ?? "default")}
-                onValueChange={(v) => {
-                  if (!selectedBlock) return
-                  const currentProps = selectedBlock.props as Record<string, unknown>
-                  const updatedProps = {
-                    ...currentProps,
-                    buttonPreset: v === "default" ? undefined : v,
-                  } as CMSBlock["props"]
-                  updateSelectedProps(updatedProps)
-                }}
-              >
-                <SelectTrigger className="h-8 text-sm">
-                  <SelectValue placeholder="Default" />
-                </SelectTrigger>
-                <SelectContent side="bottom" align="start" sideOffset={5}>
-                  {BUTTON_PRESET_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </>
-        )
-      })()}
-
-      {/* 2) Items/Arrays */}
-      {selectedBlock.type === "servicesGrid" && (
-        <>
-          <Separator />
-
-          {/* Block-Level Controls: Variant, Background, Columns, Autoplay, Interval */}
-          <div className="space-y-3">
-            <div className="space-y-1.5">
-              <Label className="text-xs">Variante</Label>
-              <Select
-                value={selectedBlock.props?.variant || "grid"}
-                onValueChange={(v) => {
-                  if (!selectedBlock) return
-                  const currentProps = selectedBlock.props as Record<string, unknown>
-                  const updatedProps = { ...currentProps, variant: v } as CMSBlock["props"]
-                  updateSelectedProps(updatedProps)
-                }}
-              >
-                <SelectTrigger className="h-8 text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="grid">Grid</SelectItem>
-                  <SelectItem value="slider">Slider</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-xs">Hintergrund</Label>
-              <Select
-                value={selectedBlock.props?.background || "none"}
-                onValueChange={(v) => {
-                  if (!selectedBlock) return
-                  const currentProps = selectedBlock.props as Record<string, unknown>
-                  const updatedProps = { ...currentProps, background: v } as CMSBlock["props"]
-                  updateSelectedProps(updatedProps)
-                }}
-              >
-                <SelectTrigger className="h-8 text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Keine</SelectItem>
-                  <SelectItem value="muted">Muted</SelectItem>
-                  <SelectItem value="gradient">Gradient</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {selectedBlock.props?.variant === "grid" && (
-              <>
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Spalten</Label>
-                  <Select
-                    value={String(selectedBlock.props?.columns || 3)}
-                    onValueChange={(v) => {
-                      if (!selectedBlock) return
-                      const currentProps = selectedBlock.props as Record<string, unknown>
-                      const updatedProps = { ...currentProps, columns: Number(v) } as CMSBlock["props"]
-                      updateSelectedProps(updatedProps)
-                    }}
-                  >
-                    <SelectTrigger className="h-8 text-sm">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="2">2</SelectItem>
-                      <SelectItem value="3">3</SelectItem>
-                      <SelectItem value="4">4</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Text Ausrichtung</Label>
-                  <Select
-                    value={(selectedBlock.props?.textAlign || "left") as string}
-                    onValueChange={(v) => {
-                      if (!selectedBlock) return
-                      const currentProps = selectedBlock.props as Record<string, unknown>
-                      const updatedProps = { ...currentProps, textAlign: v } as CMSBlock["props"]
-                      updateSelectedProps(updatedProps)
-                    }}
-                  >
-                    <SelectTrigger className="h-8 text-sm">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="left">Links</SelectItem>
-                      <SelectItem value="center">Mitte</SelectItem>
-                      <SelectItem value="right">Rechts</SelectItem>
-                      <SelectItem value="justify">Blocksatz</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </>
-            )}
-
-            {selectedBlock.props?.variant === "slider" && (
-              <>
-                <div className="flex items-center justify-between">
-                  <Label className="text-xs">Autoplay</Label>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (!selectedBlock) return
-                      const currentProps = selectedBlock.props as Record<string, unknown>
-                      const updatedProps = { ...currentProps, autoplay: !currentProps.autoplay } as CMSBlock["props"]
-                      updateSelectedProps(updatedProps)
-                    }}
-                    className={cn(
-                      "h-6 w-11 rounded-full border border-border transition-colors",
-                      selectedBlock.props?.autoplay ? "bg-primary" : "bg-muted"
-                    )}
-                  >
-                    <div
-                      className={cn(
-                        "h-5 w-5 rounded-full bg-white transition-transform",
-                        selectedBlock.props?.autoplay ? "translate-x-5" : "translate-x-0.5"
-                      )}
-                    />
-                  </button>
-                </div>
-
-                {selectedBlock.props?.autoplay && (
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Interval (Sekunden)</Label>
-                    <Select
-                      value={String(selectedBlock.props?.interval || 6000)}
-                      onValueChange={(v) => {
-                        if (!selectedBlock) return
-                        const currentProps = selectedBlock.props as Record<string, unknown>
-                        const updatedProps = { ...currentProps, interval: Number(v) } as CMSBlock["props"]
-                        updateSelectedProps(updatedProps)
-                      }}
-                    >
-                      <SelectTrigger className="h-8 text-sm">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="3000">3 Sekunden</SelectItem>
-                        <SelectItem value="4500">4,5 Sekunden</SelectItem>
-                        <SelectItem value="6000">6 Sekunden</SelectItem>
-                        <SelectItem value="8000">8 Sekunden</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Slider Ausrichtung</Label>
-                  <Select
-                    value={selectedBlock.props?.sliderAlign || "center"}
-                    onValueChange={(v) => {
-                      if (!selectedBlock) return
-                      const currentProps = selectedBlock.props as Record<string, unknown>
-                      const updatedProps = { ...currentProps, sliderAlign: v } as CMSBlock["props"]
-                      updateSelectedProps(updatedProps)
-                    }}
-                  >
-                    <SelectTrigger className="h-8 text-sm">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="center">Zentriert</SelectItem>
-                      <SelectItem value="left">Links</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <Label className="text-xs">Steuerelemente</Label>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (!selectedBlock) return
-                      const currentProps = selectedBlock.props as Record<string, unknown>
-                      const updatedProps = { ...currentProps, showControls: !currentProps.showControls } as CMSBlock["props"]
-                      updateSelectedProps(updatedProps)
-                    }}
-                    className={cn(
-                      "h-6 w-11 rounded-full border border-border transition-colors",
-                      selectedBlock.props?.showControls ? "bg-primary" : "bg-muted"
-                    )}
-                  >
-                    <div
-                      className={cn(
-                        "h-5 w-5 rounded-full bg-white transition-transform",
-                        selectedBlock.props?.showControls ? "translate-x-5" : "translate-x-0.5"
-                      )}
-                    />
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-
-          <Separator />
-
-          {(() => {
-            const props = selectedBlock.props as Record<string, unknown>
-            const cards = ((getByPath(props, "cards") as Array<{ id: string; title?: string }>) || [])
-            const repeaterKey = `${selectedBlock.id}:cards`
-            const expandedId = expandedRepeaterCards[repeaterKey] ?? null
-            const updateCards = (next: typeof cards) => updateSelectedProps({ ...props, cards: next } as CMSBlock["props"])
-            const addItem = () => {
-              const newItem = createServiceCard()
-              updateCards([...cards, newItem])
-              setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: newItem.id }))
-              lastAddedRepeaterRef.current = { key: repeaterKey, itemId: newItem.id }
-            }
-            const serviceCardFields = [
-              { key: "icon", label: "Icon", type: "select" as const, options: getAvailableIconsWithLabels() },
-              { key: "iconColor", label: "Icon Farbe (optional)", type: "color" as const, placeholder: "#111111" },
-              { key: "iconBgColor", label: "Icon Hintergrund (optional)", type: "color" as const, placeholder: "#e5e7eb" },
-              { key: "title", label: "Titel", type: "text" as const },
-              { key: "titleColor", label: "Titel Farbe (optional)", type: "color" as const, placeholder: "#111111" },
-              { key: "text", label: "Text", type: "textarea" as const },
-              { key: "textColor", label: "Text Farbe (optional)", type: "color" as const, placeholder: "#666666" },
-              { key: "textAlign", label: "Text Ausrichtung", type: "select" as const, options: [{ value: "left", label: "Links" }, { value: "center", label: "Mitte" }, { value: "right", label: "Rechts" }, { value: "justify", label: "Blocksatz" }] },
-              { key: "ctaText", label: "CTA Text", type: "text" as const },
-              { key: "ctaColor", label: "CTA Farbe (optional)", type: "color" as const, placeholder: "#111111" },
-              { key: "ctaHref", label: "CTA Link", type: "url" as const },
-              { key: "cardBgColor", label: "Card Hintergrund (optional)", type: "color" as const, placeholder: "#ffffff" },
-              { key: "cardBorderColor", label: "Card Border (optional)", type: "color" as const, placeholder: "#e5e7eb" },
-            ]
-            return (
-              <UniversalRepeaterInspector
-                items={cards}
-                getItemId={(c) => c.id}
-                renderSummary={(card) => <span className="truncate">{card.title || "Card"}</span>}
-                renderContent={(card, index) => renderOneRepeaterItemFields(selectedBlock, "cards", index, card as Record<string, unknown>, serviceCardFields)}
-                expandedId={expandedId}
-                onToggle={(id) => setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: expandedId === id ? null : id }))}
-                onCollapseAll={() => setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: null }))}
-                countLabel={`${cards.length} Cards`}
-                addLabel="Card hinzufügen"
-                onAdd={addItem}
-                onMove={(from, to) => editorActions.handleMoveArrayItem(selectedBlock.id, "cards", from, to)}
-                onRemove={(itemId) => confirmDeleteItem(selectedBlock.id, "cards", cards.findIndex((c) => c.id === itemId))}
-              />
-            )
-          })()}
-        </>
-      )}
-
-      {selectedBlock.type === "testimonials" && (
-        <>
-          <Separator />
-          
-          {/* Block-Level Controls: Autoplay & Interval (nur für Slider-Variante) */}
-          {selectedBlock.props?.variant === "slider" && (
-            <div className="space-y-3 border-b border-border pb-4 mb-4">
-              <div className="flex items-center justify-between">
-                <Label className="text-xs">Autoplay</Label>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (!selectedBlock) return
-                    const currentProps = selectedBlock.props as Record<string, unknown>
-                    const updatedProps = { ...currentProps, autoplay: !currentProps.autoplay } as CMSBlock["props"]
-                    updateSelectedProps(updatedProps)
-                  }}
-                  className={cn(
-                    "h-6 w-11 rounded-full border border-border transition-colors",
-                    selectedBlock.props?.autoplay ? "bg-primary" : "bg-muted"
-                  )}
-                >
-                  <div
-                    className={cn(
-                      "h-5 w-5 rounded-full bg-white transition-transform",
-                      selectedBlock.props?.autoplay ? "translate-x-5" : "translate-x-0.5"
-                    )}
-                  />
-                </button>
-              </div>
-
-              {selectedBlock.props?.autoplay && (
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Interval (Sekunden)</Label>
-                  <Select
-                    value={String(selectedBlock.props?.interval || 6000)}
-                  onValueChange={(v) => {
-                    if (!selectedBlock) return
-                    const currentProps = selectedBlock.props as Record<string, unknown>
-                    const updatedProps = { ...currentProps, interval: Number(v) } as CMSBlock["props"]
-                    updateSelectedProps(updatedProps)
-                  }}
-                  >
-                    <SelectTrigger className="h-8 text-sm">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="3000">3 Sekunden</SelectItem>
-                      <SelectItem value="4500">4,5 Sekunden</SelectItem>
-                      <SelectItem value="6000">6 Sekunden</SelectItem>
-                      <SelectItem value="8000">8 Sekunden</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-            </div>
-          )}
-
-          {(() => {
-            const props = selectedBlock.props as Record<string, unknown>
-            const items = ((getByPath(props, "items") as Array<{ id: string; name?: string }>) || [])
-            const repeaterKey = `${selectedBlock.id}:items`
-            const expandedId = expandedRepeaterCards[repeaterKey] ?? null
-            const updateItems = (next: typeof items) => updateSelectedProps({ ...props, items: next } as CMSBlock["props"])
-            const addItem = () => {
-              const newItem = createTestimonialItem()
-              updateItems([...items, newItem])
-              setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: newItem.id }))
-              lastAddedRepeaterRef.current = { key: repeaterKey, itemId: newItem.id }
-            }
-            const testimonialFields = [
-              { key: "quote", label: "Zitat", type: "textarea" as const, required: true },
-              { key: "quoteColor", label: "Zitat Farbe (optional)", type: "color" as const, placeholder: "#111111" },
-              { key: "avatar", label: "Avatar (optional)", type: "image" as const, placeholder: "/avatar.jpg" },
-              { key: "avatarGradient", label: "Avatar Gradient", type: "select" as const, options: [{ value: "auto", label: "Auto" }, { value: "g1", label: "Primary" }, { value: "g2", label: "Accent" }, { value: "g3", label: "Chart 1" }, { value: "g4", label: "Chart 2" }, { value: "g5", label: "Chart 3" }, { value: "g6", label: "Blue" }, { value: "g7", label: "Purple" }, { value: "g8", label: "Green" }, { value: "g9", label: "Rose" }, { value: "g10", label: "Amber" }] },
-              { key: "avatarColor", label: "Avatar Farbe (optional)", type: "color" as const, placeholder: "#111111" },
-              { key: "name", label: "Name", type: "text" as const, required: true },
-              { key: "nameColor", label: "Name Farbe (optional)", type: "color" as const, placeholder: "#111111" },
-              { key: "role", label: "Rolle (optional)", type: "text" as const },
-              { key: "roleColor", label: "Rolle Farbe (optional)", type: "color" as const, placeholder: "#666666" },
-              { key: "rating", label: "Rating (optional)", type: "select" as const, options: [{ value: "none", label: "—" }, { value: "5", label: "★★★★★ (5)" }, { value: "4", label: "★★★★☆ (4)" }, { value: "3", label: "★★★☆☆ (3)" }, { value: "2", label: "★★☆☆☆ (2)" }, { value: "1", label: "★☆☆☆☆ (1)" }] },
-            ]
-            return (
-              <UniversalRepeaterInspector
-                items={items}
-                getItemId={(i) => i.id}
-                renderSummary={(item) => <span className="truncate">{(item as Record<string, unknown>).name as string || "Testimonial"}</span>}
-                renderContent={(item, index) => renderOneRepeaterItemFields(selectedBlock, "items", index, item as Record<string, unknown>, testimonialFields)}
-                expandedId={expandedId}
-                onToggle={(id) => setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: expandedId === id ? null : id }))}
-                onCollapseAll={() => setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: null }))}
-                countLabel={`${items.length} Testimonials`}
-                addLabel="Testimonial hinzufügen"
-                onAdd={addItem}
-                onMove={(from, to) => editorActions.handleMoveArrayItem(selectedBlock.id, "items", from, to)}
-                onRemove={(itemId) => handleRemoveArrayItem(selectedBlock.id, "items", items.findIndex((i) => i.id === itemId))}
-                minItems={1}
-                maxItems={12}
-              />
-            )
-          })()}
-        </>
-      )}
-
-      {selectedBlock.type === "testimonialSlider" && (
-        <>
-          <Separator />
-          {renderArrayItemsControls(
-            selectedBlock,
-            "items",
-            "Testimonial",
-            (item, index) => {
-              const it = item as unknown as Record<string, unknown>
-              const name = String(it.name || "")
-              return `${index + 1}. ${name || "Testimonial"}`
-            },
-            createTestimonialItem,
-            [
-              { key: "quote", label: "Zitat", type: "textarea" as const, required: true },
-              { key: "name", label: "Name", type: "text" as const, required: true },
-              { key: "role", label: "Rolle (optional)", type: "text" as const },
-              {
-                key: "rating",
-                label: "Rating (optional)",
-                type: "select" as const,
-                options: [
-                  { value: "none", label: "—" },
-                  { value: "5", label: "★★★★★ (5)" },
-                  { value: "4", label: "★★★★☆ (4)" },
-                  { value: "3", label: "★★★☆☆ (3)" },
-                  { value: "2", label: "★★☆☆☆ (2)" },
-                  { value: "1", label: "★☆☆☆☆ (1)" },
-                ],
-              },
-            ],
-            1,
-            12
-          )}
-        </>
-      )}
-
-      {selectedBlock.type === "gallery" && (
-        <>
-          <Separator />
-          {(() => {
-            const props = selectedBlock.props as Record<string, unknown>
-            const images = (getByPath(props, "images") as Array<{ id: string }>) || []
-            const repeaterKey = `${selectedBlock.id}:images`
-            const expandedId = expandedRepeaterCards[repeaterKey] ?? null
-            const addImage = () => {
-              const newItem = createGalleryImage()
-              editorActions.handleAddArrayItem(selectedBlock.id, "images", () => newItem)
-              setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: newItem.id }))
-              lastAddedRepeaterRef.current = { key: repeaterKey, itemId: newItem.id }
-            }
-            const galleryImageFields = [
-              { key: "url", label: "Bild-URL", type: "image" as const, required: true, placeholder: "/placeholder.svg" },
-              { key: "alt", label: "Alt-Text", type: "text" as const, required: true },
-              { key: "caption", label: "Caption (optional)", type: "text" as const },
-              { key: "captionColor", label: "Caption Farbe (optional)", type: "color" as const, placeholder: "#666666" },
-              { key: "link", label: "Link (optional, wenn Lightbox aus)", type: "url" as const },
-            ]
-            return (
-              <UniversalRepeaterInspector
-                items={images}
-                getItemId={(img) => img.id}
-                getItemLabel={(_img, index) => `Bild ${index + 1}`}
-                renderContent={(item, index) => renderOneRepeaterItemFields(selectedBlock, "images", index, item as Record<string, unknown>, galleryImageFields)}
-                expandedId={expandedId}
-                onToggle={(id) => setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: expandedId === id ? null : id }))}
-                onCollapseAll={() => setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: null }))}
-                countLabel={`${images.length} Bilder`}
-                addLabel="Bild hinzufügen"
-                onAdd={addImage}
-                onMove={(from, to) => editorActions.handleMoveArrayItem(selectedBlock.id, "images", from, to)}
-                onRemove={(itemId) => handleRemoveArrayItem(selectedBlock.id, "images", images.findIndex((img) => img.id === itemId))}
-                minItems={3}
-                maxItems={18}
-              />
-            )
-          })()}
-        </>
-      )}
-
-      {selectedBlock.type === "imageSlider" && (
-        <>
-          <Separator />
-          {(() => {
-            const props = selectedBlock.props as Record<string, unknown>
-            const slides = ((getByPath(props, "slides") as Array<{ id: string; title?: string }>) || [])
-            const repeaterKey = `${selectedBlock.id}:slides`
-            const expandedId = expandedRepeaterCards[repeaterKey] ?? null
-            const updateSlides = (next: typeof slides) => updateSelectedProps({ ...props, slides: next } as CMSBlock["props"])
-            const addSlide = () => {
-              const newItem = createImageSlide()
-              updateSlides([...slides, newItem])
-              setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: newItem.id }))
-              lastAddedRepeaterRef.current = { key: repeaterKey, itemId: newItem.id }
-            }
-            const removeSlideAt = (index: number) => {
-              const id = slides[index]?.id
-              if (id && expandedId === id) setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: null }))
-              updateSlides(slides.filter((_, i) => i !== index))
-            }
-            const slideFields = [
-              { key: "url", label: "Bild", type: "image" as const, required: true },
-              { key: "alt", label: "Alt-Text", type: "text" as const, required: true },
-              { key: "title", label: "Titel (optional)", type: "text" as const },
-              { key: "text", label: "Text (optional)", type: "textarea" as const },
-              { key: "titleColor", label: "Titel Farbe", type: "color" as const, placeholder: "#111111" },
-              { key: "textColor", label: "Text Farbe", type: "color" as const, placeholder: "#666666" },
-            ]
-            return (
-              <UniversalRepeaterInspector
-                items={slides}
-                getItemId={(s) => s.id}
-                renderSummary={(slide) => <span className="truncate">{(slide as Record<string, unknown>).title as string || "Slide"}</span>}
-                renderContent={(slide, index) => renderOneRepeaterItemFields(selectedBlock, "slides", index, slide as Record<string, unknown>, slideFields)}
-                expandedId={expandedId}
-                onToggle={(id) => setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: expandedId === id ? null : id }))}
-                onCollapseAll={() => setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: null }))}
-                countLabel={`${slides.length} Slides`}
-                addLabel="Slide hinzufügen"
-                onAdd={addSlide}
-                onMove={(from, to) => editorActions.handleMoveArrayItem(selectedBlock.id, "slides", from, to)}
-                onRemove={(itemId) => removeSlideAt(slides.findIndex((s) => s.id === itemId))}
-                minItems={1}
-                maxItems={12}
-              />
-            )
-          })()}
-
-          {/* Slide Shadow Inspector (kompakt per Dropdown) */}
-          {(() => {
-            const sliderSlides = (((selectedBlock.props as any)?.slides ?? []) as Array<{ id?: string; title?: string; shadow?: ElementShadow }>)
-              .filter((slide) => typeof slide?.id === "string" && slide.id.length > 0) as Array<{ id: string; title?: string; shadow?: ElementShadow }>
-            if (sliderSlides.length === 0) return null
-            const activeSlideId = sliderSlides.some((slide) => slide.id === imageSliderShadowSlideId)
-              ? imageSliderShadowSlideId
-              : sliderSlides[0].id
-            const applyToAllSlides = imageSliderShadowSlideId === IMAGE_SLIDER_SHADOW_ALL_VALUE
-            const activeSlideIndex = sliderSlides.findIndex((slide) => slide.id === activeSlideId)
-            const activeSlide = sliderSlides[activeSlideIndex] ?? sliderSlides[0]
-            return (
-              <div className="mt-4 border-t border-border/50 pt-4">
-                <div className="space-y-3">
-                  <div className="space-y-2">
-                    <Label htmlFor={`${selectedBlock.id}-slide-shadow-select`} className="text-xs">
-                      Slide-Shadow bearbeiten
-                    </Label>
-                    <Select value={applyToAllSlides ? IMAGE_SLIDER_SHADOW_ALL_VALUE : activeSlideId} onValueChange={setImageSliderShadowSlideId}>
-                      <SelectTrigger id={`${selectedBlock.id}-slide-shadow-select`} className="w-full">
-                        <SelectValue placeholder="Slide wählen" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value={IMAGE_SLIDER_SHADOW_ALL_VALUE}>Alle Slides</SelectItem>
-                        {sliderSlides.map((slide, idx) => (
-                          <SelectItem key={slide.id} value={slide.id}>
-                            {slide.title ? `Slide ${idx + 1}: ${slide.title}` : `Slide ${idx + 1}`}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <ShadowInspector
-                    config={activeSlide.shadow}
-                    onChange={(shadowConfig) => {
-                      if (!selectedBlock) return
-                      const currentProps = selectedBlock.props as Record<string, unknown>
-                      const slides = Array.isArray(currentProps.slides) ? [...(currentProps.slides as any[])] : []
-                      if (slides.length === 0) return
-                      if (applyToAllSlides) {
-                        for (let i = 0; i < slides.length; i += 1) {
-                          slides[i] = { ...slides[i], shadow: shadowConfig }
-                        }
-                      } else {
-                        if (!slides[activeSlideIndex]) return
-                        slides[activeSlideIndex] = { ...slides[activeSlideIndex], shadow: shadowConfig }
-                      }
-                      const updatedProps = { ...currentProps, slides } as CMSBlock["props"]
-                      updateSelectedProps(updatedProps)
-                    }}
-                  />
-                </div>
-              </div>
-            )
-          })()}
-        </>
-      )}
-
-      {selectedBlock.type === "courseSchedule" && (() => {
-        const props = selectedBlock.props as CourseScheduleBlock["props"]
-        const slots: CourseSlot[] = props.slots ?? []
-        const weekdays: CourseScheduleWeekday[] = ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"]
-        const repeaterKey = `${selectedBlock.id}:slots`
-        const expandedSlotId = expandedRepeaterCards[repeaterKey] ?? null
-        const updateSlots = (nextSlots: CourseSlot[]) => updateSelectedProps({ ...props, slots: nextSlots } as CMSBlock["props"])
-        const updateSlot = (slotId: string, patch: Partial<CourseSlot>) => {
-          const idx = slots.findIndex((s) => s.id === slotId)
-          if (idx === -1) return
-          const next = [...slots]
-          next[idx] = { ...next[idx], ...patch }
-          updateSlots(next)
-        }
-        const removeSlot = (slotId: string) => {
-          const next = slots.filter((s) => s.id !== slotId)
-          if (expandedSlotId === slotId) {
-            setExpandedRepeaterCards((prev) => ({ ...prev, [repeaterKey]: null }))
-          }
-          updateSlots(next)
-        }
-        const addSlot = () => {
-          const newSlot = createCourseSlot()
-          updateSlots([...slots, newSlot])
-          setExpandedRepeaterCards((prev) => ({ ...prev, [repeaterKey]: newSlot.id }))
-          lastAddedRepeaterRef.current = { key: repeaterKey, itemId: newSlot.id }
-        }
-        const toggleSlot = (slotId: string) => {
-          setExpandedRepeaterCards((prev) => ({
-            ...prev,
-            [repeaterKey]: expandedSlotId === slotId ? null : slotId,
-          }))
-        }
-        return (
-          <>
-            <Separator />
-            <div className="space-y-3">
-              <div className="space-y-1.5">
-                <Label className="text-xs">Eyebrow (optional)</Label>
-                <Input
-                  value={props.eyebrow ?? ""}
-                  onChange={(e) => updateSelectedProps({ ...props, eyebrow: e.target.value } as CMSBlock["props"])}
-                  className="h-8 text-sm"
-                  placeholder="z.B. KURSE"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">Anzeige</Label>
-                <Select
-                  value={props.mode ?? "calendar"}
-                  onValueChange={(v: "calendar" | "timeline") => {
-                    if (!selectedBlock) return
-                    updateSelectedProps({ ...props, mode: v } as CMSBlock["props"])
-                  }}
-                >
-                  <SelectTrigger className="h-8 text-sm">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="calendar">Kalender</SelectItem>
-                    <SelectItem value="timeline">Timeline</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex items-center justify-between">
-                <Label className="text-xs">Wochenende verstecken</Label>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (!selectedBlock) return
-                    updateSelectedProps({ ...props, hideWeekend: !props.hideWeekend } as CMSBlock["props"])
-                  }}
-                  className={cn(
-                    "h-6 w-11 rounded-full border border-border transition-colors",
-                    props.hideWeekend ? "bg-primary" : "bg-muted"
-                  )}
-                >
-                  <div
-                    className={cn(
-                      "h-5 w-5 rounded-full bg-white transition-transform",
-                      props.hideWeekend ? "translate-x-5" : "translate-x-0.5"
-                    )}
-                  />
-                </button>
-              </div>
-            </div>
-            <Separator />
-            <UniversalRepeaterInspector<CourseSlot>
-              items={slots}
-              getItemId={(s) => s.id}
-              renderSummary={(slot) => (
-                <div className="flex items-center gap-2 min-w-0 w-full">
-                  <span className="truncate text-sm font-medium">{slot.title || "Neuer Kurs"}</span>
-                  <span className="shrink-0 text-xs text-muted-foreground">
-                    {slot.weekday} {slot.startTime}–{slot.endTime}
-                  </span>
-                </div>
-              )}
-              renderContent={(slot) => (
-                <>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Wochentag</Label>
-                    <Select
-                      value={slot.weekday}
-                      onValueChange={(v) => updateSlot(slot.id, { weekday: v as CourseScheduleWeekday })}
-                    >
-                      <SelectTrigger className="h-8 text-sm">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {weekdays.map((d) => (
-                          <SelectItem key={d} value={d}>{d}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="space-y-1.5">
-                      <Label className="text-xs">Start</Label>
-                      <Input
-                        type="time"
-                        value={slot.startTime}
-                        onChange={(e) => updateSlot(slot.id, { startTime: e.target.value })}
-                        className="h-8 text-sm"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs">Ende</Label>
-                      <Input
-                        type="time"
-                        value={slot.endTime}
-                        onChange={(e) => updateSlot(slot.id, { endTime: e.target.value })}
-                        className="h-8 text-sm"
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Titel</Label>
-                    <Input
-                      value={slot.title}
-                      onChange={(e) => updateSlot(slot.id, { title: e.target.value })}
-                      className="h-8 text-sm"
-                      placeholder="Kursname"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Referent/in (optional)</Label>
-                    <Input
-                      value={slot.instructor ?? ""}
-                      onChange={(e) => updateSlot(slot.id, { instructor: e.target.value })}
-                      className="h-8 text-sm"
-                      placeholder="Name"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Ort (optional)</Label>
-                    <Input
-                      value={slot.location ?? ""}
-                      onChange={(e) => updateSlot(slot.id, { location: e.target.value })}
-                      className="h-8 text-sm"
-                      placeholder="Raum / Adresse"
-                    />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Checkbox
-                      id={`slot-highlight-${slot.id}`}
-                      checked={!!slot.highlight}
-                      onCheckedChange={(checked) => updateSlot(slot.id, { highlight: !!checked })}
-                    />
-                    <Label htmlFor={`slot-highlight-${slot.id}`} className="text-xs cursor-pointer">Hervorheben</Label>
-                  </div>
-                </>
-              )}
-              expandedId={expandedSlotId}
-              onToggle={toggleSlot}
-              onCollapseAll={() => setExpandedRepeaterCards((prev) => ({ ...prev, [repeaterKey]: null }))}
-              countLabel={`${slots.length} Kurse`}
-              addLabel="Slot hinzufügen"
-              onAdd={addSlot}
-              onMove={() => {}}
-              onRemove={(itemId) => removeSlot(itemId)}
-              emptyState={<p className="text-xs text-muted-foreground py-2">Keine Kurse. Slot hinzufügen.</p>}
-              showMoveButtons={false}
-            />
-          </>
-        )
-      })()}
-
-      {selectedBlock.type === "openingHours" && (
-        <>
-          <Separator />
-          
-          {/* Element Shadow Inspector for selected element */}
-          {selectedElementId && (
-            <>
-              <div className="space-y-3">
-                <h3 className="text-sm font-semibold mb-4">Element Shadow</h3>
-                <ShadowInspector
-                  config={
-                    ((selectedBlock.props as Record<string, unknown>)?.elements as Record<string, ElementConfig> | undefined)?.[selectedElementId]?.style?.shadow
-                  }
-                  onChange={(shadowConfig) => {
-                    const currentElements = ((selectedBlock.props as Record<string, unknown>)?.elements ?? {}) as Record<string, ElementConfig>
-                    const currentElement = currentElements[selectedElementId] ?? { style: {} }
-                    const nextElement: ElementConfig = {
-                      ...currentElement,
-                      style: {
-                        ...currentElement.style,
-                        shadow: shadowConfig,
-                      },
-                    }
-                    const nextElements = {
-                      ...currentElements,
-                      [selectedElementId]: nextElement,
-                    }
-                    const updatedProps = setByPath(selectedBlock.props as Record<string, unknown>, "elements", nextElements) as CMSBlock["props"]
-                    updateSelectedProps(updatedProps)
-                  }}
-                  onClose={() => deselectElement(selectedBlockId || "")}
-                />
-              </div>
-              <Separator />
-            </>
-          )}
-          
-          {(() => {
-            const props = selectedBlock.props as Record<string, unknown>
-            const hours = (getByPath(props, "hours") as Array<{ id: string; label?: string }>) || []
-            const repeaterKey = `${selectedBlock.id}:hours`
-            const expandedId = expandedRepeaterCards[repeaterKey] ?? null
-            const openingHourFields = [
-              { key: "label", label: "Label", type: "text" as const, required: true },
-              { key: "labelColor", label: "Label Farbe (optional)", type: "color" as const, placeholder: "#111111" },
-              { key: "value", label: "Wert", type: "text" as const, required: true },
-              { key: "valueColor", label: "Wert Farbe (optional)", type: "color" as const, placeholder: "#666666" },
-            ]
-            const addHour = () => {
-              const newItem = createOpeningHour()
-              editorActions.handleAddArrayItem(selectedBlock.id, "hours", () => newItem)
-              setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: newItem.id }))
-              lastAddedRepeaterRef.current = { key: repeaterKey, itemId: newItem.id }
-            }
-            return (
-              <UniversalRepeaterInspector
-                items={hours}
-                getItemId={(h) => h.id}
-                renderSummary={(row) => <span className="truncate">{(row as Record<string, unknown>).label as string || "Zeile"}</span>}
-                renderContent={(item, index) => renderOneRepeaterItemFields(selectedBlock, "hours", index, item as Record<string, unknown>, openingHourFields)}
-                expandedId={expandedId}
-                onToggle={(id) => setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: expandedId === id ? null : id }))}
-                onCollapseAll={() => setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: null }))}
-                countLabel={`${hours.length} Zeilen`}
-                addLabel="Zeile hinzufügen"
-                onAdd={addHour}
-                onMove={(from, to) => editorActions.handleMoveArrayItem(selectedBlock.id, "hours", from, to)}
-                onRemove={(itemId) => handleRemoveArrayItem(selectedBlock.id, "hours", hours.findIndex((h) => h.id === itemId))}
-                minItems={1}
-                maxItems={10}
-              />
-            )
-          })()}
-        </>
-      )}
-
-      {selectedBlock.type === "featureGrid" && (
-        <>
-          <Separator />
-
-          {/* Block-Level Design System Controls */}
-          <div className="space-y-3">
-            {/* Columns */}
-            <div className="space-y-1.5">
-              <Label className="text-xs">Spalten</Label>
-              <Select
-                value={((selectedBlock.props as any)?.columns || 3).toString()}
-                onValueChange={(v) => {
-                  if (!selectedBlock) return
-                  const currentProps = selectedBlock.props as Record<string, unknown>
-                  const updatedProps = { ...currentProps, columns: parseInt(v, 10) } as CMSBlock["props"]
-                  updateSelectedProps(updatedProps)
-                }}
-              >
-                <SelectTrigger className="h-8 text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="2">2</SelectItem>
-                  <SelectItem value="3">3</SelectItem>
-                  <SelectItem value="4">4</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Design Preset */}
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold text-primary">Design Preset</Label>
-              <Select
-                value={(selectedBlock.props as any)?.designPreset || "standard"}
-                onValueChange={(v) => {
-                  if (!selectedBlock) return
-                  const presets: Record<string, any> = {
-                    standard: {
-                      style: { variant: "default", radius: "xl", border: "subtle", shadow: "sm", accent: "none" },
-                      animation: { entrance: "fade", hover: "none", durationMs: 400, delayMs: 0 },
-                    },
-                    softGlow: {
-                      style: { variant: "soft", radius: "lg", border: "none", shadow: "md", accent: "none" },
-                      animation: { entrance: "fade", hover: "glow", durationMs: 400, delayMs: 0 },
-                    },
-                    outlineStrong: {
-                      style: { variant: "outline", radius: "lg", border: "strong", shadow: "none", accent: "none" },
-                      animation: { entrance: "slide-up", hover: "lift", durationMs: 500, delayMs: 0 },
-                    },
-                    elevatedBrand: {
-                      style: { variant: "elevated", radius: "xl", border: "subtle", shadow: "lg", accent: "brand" },
-                      animation: { entrance: "scale", hover: "lift", durationMs: 400, delayMs: 0 },
-                    },
-                    mutedAccentMinimal: {
-                      style: { variant: "soft", radius: "md", border: "none", shadow: "sm", accent: "muted" },
-                      animation: { entrance: "slide-left", hover: "none", durationMs: 300, delayMs: 0 },
-                    },
-                  }
-                  const preset = presets[v]
-                  const currentProps = selectedBlock.props as Record<string, unknown>
-                  const updatedProps = {
-                    ...currentProps,
-                    designPreset: v,
-                    style: preset.style,
-                    animation: preset.animation,
-                  } as CMSBlock["props"]
-                  updateSelectedProps(updatedProps)
-                }}
-              >
-                <SelectTrigger className="h-8 text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="standard">Standard</SelectItem>
-                  <SelectItem value="softGlow">Soft Glow</SelectItem>
-                  <SelectItem value="outlineStrong">Outline Strong</SelectItem>
-                  <SelectItem value="elevatedBrand">Elevated Brand</SelectItem>
-                  <SelectItem value="mutedAccentMinimal">Muted Accent Minimal</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Style Controls */}
-            <div className="space-y-1.5 rounded-lg bg-muted/30 p-3">
-              <Label className="text-xs font-semibold text-primary">STYLE (nach Preset anpassen)</Label>
-              
-              {/* Variant */}
-              <div className="space-y-1.5">
-                <Label className="text-xs">Variante</Label>
-                <Select
-                  value={(selectedBlock.props as any)?.style?.variant || "default"}
-                  onValueChange={(v) => {
-                    if (!selectedBlock) return
-                    const currentProps = selectedBlock.props as Record<string, unknown>
-                    const style = (currentProps.style as Record<string, unknown>) || {}
-                    const updatedProps = {
-                      ...currentProps,
-                      style: { ...style, variant: v },
-                    } as CMSBlock["props"]
-                    updateSelectedProps(updatedProps)
-                  }}
-                >
-                  <SelectTrigger className="h-8 text-sm">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="default">Default</SelectItem>
-                    <SelectItem value="soft">Soft</SelectItem>
-                    <SelectItem value="outline">Outline</SelectItem>
-                    <SelectItem value="elevated">Elevated</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Radius */}
-              <div className="space-y-1.5">
-                <Label className="text-xs">Border Radius</Label>
-                <Select
-                  value={(selectedBlock.props as any)?.style?.radius || "xl"}
-                  onValueChange={(v) => {
-                    if (!selectedBlock) return
-                    const currentProps = selectedBlock.props as Record<string, unknown>
-                    const style = (currentProps.style as Record<string, unknown>) || {}
-                    const updatedProps = {
-                      ...currentProps,
-                      style: { ...style, radius: v },
-                    } as CMSBlock["props"]
-                    updateSelectedProps(updatedProps)
-                  }}
-                >
-                  <SelectTrigger className="h-8 text-sm">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="md">Medium</SelectItem>
-                    <SelectItem value="lg">Large</SelectItem>
-                    <SelectItem value="xl">Extra Large</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Border */}
-              <div className="space-y-1.5">
-                <Label className="text-xs">Border</Label>
-                <Select
-                  value={(selectedBlock.props as any)?.style?.border || "subtle"}
-                  onValueChange={(v) => {
-                    if (!selectedBlock) return
-                    const currentProps = selectedBlock.props as Record<string, unknown>
-                    const style = (currentProps.style as Record<string, unknown>) || {}
-                    const updatedProps = {
-                      ...currentProps,
-                      style: { ...style, border: v },
-                    } as CMSBlock["props"]
-                    updateSelectedProps(updatedProps)
-                  }}
-                >
-                  <SelectTrigger className="h-8 text-sm">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">None</SelectItem>
-                    <SelectItem value="subtle">Subtle</SelectItem>
-                    <SelectItem value="strong">Strong</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Shadow */}
-              <div className="space-y-1.5">
-                <Label className="text-xs">Schatten</Label>
-                <Select
-                  value={(selectedBlock.props as any)?.style?.shadow || "sm"}
-                  onValueChange={(v) => {
-                    if (!selectedBlock) return
-                    const currentProps = selectedBlock.props as Record<string, unknown>
-                    const style = (currentProps.style as Record<string, unknown>) || {}
-                    const updatedProps = {
-                      ...currentProps,
-                      style: { ...style, shadow: v },
-                    } as CMSBlock["props"]
-                    updateSelectedProps(updatedProps)
-                  }}
-                >
-                  <SelectTrigger className="h-8 text-sm">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">None</SelectItem>
-                    <SelectItem value="sm">Small</SelectItem>
-                    <SelectItem value="md">Medium</SelectItem>
-                    <SelectItem value="lg">Large</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Accent */}
-              <div className="space-y-1.5">
-                <Label className="text-xs">Akzentfarbe</Label>
-                <Select
-                  value={(selectedBlock.props as any)?.style?.accent || "none"}
-                  onValueChange={(v) => {
-                    if (!selectedBlock) return
-                    const currentProps = selectedBlock.props as Record<string, unknown>
-                    const style = (currentProps.style as Record<string, unknown>) || {}
-                    const updatedProps = {
-                      ...currentProps,
-                      style: { ...style, accent: v },
-                    } as CMSBlock["props"]
-                    updateSelectedProps(updatedProps)
-                  }}
-                >
-                  <SelectTrigger className="h-8 text-sm">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">None</SelectItem>
-                    <SelectItem value="brand">Brand</SelectItem>
-                    <SelectItem value="muted">Muted</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {/* Animation Controls */}
-            <div className="space-y-1.5 rounded-lg bg-muted/30 p-3">
-              <Label className="text-xs font-semibold text-primary">ANIMATION</Label>
-              
-              {/* Entrance */}
-              <div className="space-y-1.5">
-                <Label className="text-xs">Eintrittsanimation</Label>
-                <Select
-                  value={(selectedBlock.props as any)?.animation?.entrance || "fade"}
-                  onValueChange={(v) => {
-                    if (!selectedBlock) return
-                    const currentProps = selectedBlock.props as Record<string, unknown>
-                    const animation = (currentProps.animation as Record<string, unknown>) || {}
-                    const updatedProps = {
-                      ...currentProps,
-                      animation: { ...animation, entrance: v },
-                    } as CMSBlock["props"]
-                    updateSelectedProps(updatedProps)
-                  }}
-                >
-                  <SelectTrigger className="h-8 text-sm">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">None</SelectItem>
-                    <SelectItem value="fade">Fade</SelectItem>
-                    <SelectItem value="slide-up">Slide Up</SelectItem>
-                    <SelectItem value="slide-left">Slide Left</SelectItem>
-                    <SelectItem value="scale">Scale</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Hover */}
-              <div className="space-y-1.5">
-                <Label className="text-xs">Hover-Animation</Label>
-                <Select
-                  value={(selectedBlock.props as any)?.animation?.hover || "none"}
-                  onValueChange={(v) => {
-                    if (!selectedBlock) return
-                    const currentProps = selectedBlock.props as Record<string, unknown>
-                    const animation = (currentProps.animation as Record<string, unknown>) || {}
-                    const updatedProps = {
-                      ...currentProps,
-                      animation: { ...animation, hover: v },
-                    } as CMSBlock["props"]
-                    updateSelectedProps(updatedProps)
-                  }}
-                >
-                  <SelectTrigger className="h-8 text-sm">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">None</SelectItem>
-                    <SelectItem value="lift">Lift</SelectItem>
-                    <SelectItem value="glow">Glow</SelectItem>
-                    <SelectItem value="tilt">Tilt</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Duration */}
-              <div className="space-y-1.5">
-                <Label className="text-xs">Dauer (ms)</Label>
-                <input
-                  type="number"
-                  min="100"
-                  max="1000"
-                  step="50"
-                  value={(selectedBlock.props as any)?.animation?.durationMs || 400}
-                  onChange={(e) => {
-                    if (!selectedBlock) return
-                    const currentProps = selectedBlock.props as Record<string, unknown>
-                    const animation = (currentProps.animation as Record<string, unknown>) || {}
-                    const updatedProps = {
-                      ...currentProps,
-                      animation: { ...animation, durationMs: parseInt(e.target.value, 10) },
-                    } as CMSBlock["props"]
-                    updateSelectedProps(updatedProps)
-                  }}
-                  className="h-8 w-full rounded border border-border bg-background px-2 text-sm"
-                />
-              </div>
-
-              {/* Delay */}
-              <div className="space-y-1.5">
-                <Label className="text-xs">Verzögerung (ms)</Label>
-                <input
-                  type="number"
-                  min="0"
-                  max="500"
-                  step="50"
-                  value={(selectedBlock.props as any)?.animation?.delayMs || 0}
-                  onChange={(e) => {
-                    if (!selectedBlock) return
-                    const currentProps = selectedBlock.props as Record<string, unknown>
-                    const animation = (currentProps.animation as Record<string, unknown>) || {}
-                    const updatedProps = {
-                      ...currentProps,
-                      animation: { ...animation, delayMs: parseInt(e.target.value, 10) },
-                    } as CMSBlock["props"]
-                    updateSelectedProps(updatedProps)
-                  }}
-                  className="h-8 w-full rounded border border-border bg-background px-2 text-sm"
-                />
-              </div>
-            </div>
-
-            {/* Global Colors */}
-            <div className="space-y-1.5 rounded-lg bg-muted/30 p-3">
-              <Label className="text-xs font-semibold text-primary">FARBEN (global)</Label>
-              
-              <div className="space-y-1.5">
-                <Label className="text-xs">Titel Farbe</Label>
-                <div className="flex gap-2">
-                  <input
-                    type="color"
-                    value={(selectedBlock.props as any)?.titleColor || "#111111"}
-                    onChange={(e) => {
-                      if (!selectedBlock) return
-                      const currentProps = selectedBlock.props as Record<string, unknown>
-                      const updatedProps = { ...currentProps, titleColor: e.target.value } as CMSBlock["props"]
-                      updateSelectedProps(updatedProps)
-                    }}
-                    className="h-8 w-12 rounded border border-border"
-                  />
-                  <input
-                    type="text"
-                    value={(selectedBlock.props as any)?.titleColor || "#111111"}
-                    onChange={(e) => {
-                      if (!selectedBlock) return
-                      const currentProps = selectedBlock.props as Record<string, unknown>
-                      const updatedProps = { ...currentProps, titleColor: e.target.value } as CMSBlock["props"]
-                      updateSelectedProps(updatedProps)
-                    }}
-                    className="h-8 flex-1 rounded border border-border bg-background px-2 text-xs"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-xs">Beschreibung Farbe</Label>
-                <div className="flex gap-2">
-                  <input
-                    type="color"
-                    value={(selectedBlock.props as any)?.descriptionColor || "#666666"}
-                    onChange={(e) => {
-                      if (!selectedBlock) return
-                      const currentProps = selectedBlock.props as Record<string, unknown>
-                      const updatedProps = { ...currentProps, descriptionColor: e.target.value } as CMSBlock["props"]
-                      updateSelectedProps(updatedProps)
-                    }}
-                    className="h-8 w-12 rounded border border-border"
-                  />
-                  <input
-                    type="text"
-                    value={(selectedBlock.props as any)?.descriptionColor || "#666666"}
-                    onChange={(e) => {
-                      if (!selectedBlock) return
-                      const currentProps = selectedBlock.props as Record<string, unknown>
-                      const updatedProps = { ...currentProps, descriptionColor: e.target.value } as CMSBlock["props"]
-                      updateSelectedProps(updatedProps)
-                    }}
-                    className="h-8 flex-1 rounded border border-border bg-background px-2 text-xs"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-xs">Icon Farbe</Label>
-                <div className="flex gap-2">
-                  <input
-                    type="color"
-                    value={(selectedBlock.props as any)?.iconColor || "#111111"}
-                    onChange={(e) => {
-                      if (!selectedBlock) return
-                      const currentProps = selectedBlock.props as Record<string, unknown>
-                      const updatedProps = { ...currentProps, iconColor: e.target.value } as CMSBlock["props"]
-                      updateSelectedProps(updatedProps)
-                    }}
-                    className="h-8 w-12 rounded border border-border"
-                  />
-                  <input
-                    type="text"
-                    value={(selectedBlock.props as any)?.iconColor || "#111111"}
-                    onChange={(e) => {
-                      if (!selectedBlock) return
-                      const currentProps = selectedBlock.props as Record<string, unknown>
-                      const updatedProps = { ...currentProps, iconColor: e.target.value } as CMSBlock["props"]
-                      updateSelectedProps(updatedProps)
-                    }}
-                    className="h-8 flex-1 rounded border border-border bg-background px-2 text-xs"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-xs">Card Hintergrund</Label>
-                <div className="flex gap-2">
-                  <input
-                    type="color"
-                    value={(selectedBlock.props as any)?.cardBgColor || "#ffffff"}
-                    onChange={(e) => {
-                      if (!selectedBlock) return
-                      const currentProps = selectedBlock.props as Record<string, unknown>
-                      const updatedProps = { ...currentProps, cardBgColor: e.target.value } as CMSBlock["props"]
-                      updateSelectedProps(updatedProps)
-                    }}
-                    className="h-8 w-12 rounded border border-border"
-                  />
-                  <input
-                    type="text"
-                    value={(selectedBlock.props as any)?.cardBgColor || "#ffffff"}
-                    onChange={(e) => {
-                      if (!selectedBlock) return
-                      const currentProps = selectedBlock.props as Record<string, unknown>
-                      const updatedProps = { ...currentProps, cardBgColor: e.target.value } as CMSBlock["props"]
-                      updateSelectedProps(updatedProps)
-                    }}
-                    className="h-8 flex-1 rounded border border-border bg-background px-2 text-xs"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-xs">Card Border</Label>
-                <div className="flex gap-2">
-                  <input
-                    type="color"
-                    value={(selectedBlock.props as any)?.cardBorderColor || "#e5e7eb"}
-                    onChange={(e) => {
-                      if (!selectedBlock) return
-                      const currentProps = selectedBlock.props as Record<string, unknown>
-                      const updatedProps = { ...currentProps, cardBorderColor: e.target.value } as CMSBlock["props"]
-                      updateSelectedProps(updatedProps)
-                    }}
-                    className="h-8 w-12 rounded border border-border"
-                  />
-                  <input
-                    type="text"
-                    value={(selectedBlock.props as any)?.cardBorderColor || "#e5e7eb"}
-                    onChange={(e) => {
-                      if (!selectedBlock) return
-                      const currentProps = selectedBlock.props as Record<string, unknown>
-                      const updatedProps = { ...currentProps, cardBorderColor: e.target.value } as CMSBlock["props"]
-                      updateSelectedProps(updatedProps)
-                    }}
-                    className="h-8 flex-1 rounded border border-border bg-background px-2 text-xs"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <Separator className="my-4" />
-
-          {/* Features repeater */}
-          {(() => {
-            const props = selectedBlock.props as Record<string, unknown>
-            const features = (getByPath(props, "features") as Array<{ id: string; title?: string }>) || []
-            const repeaterKey = `${selectedBlock.id}:features`
-            const expandedId = expandedRepeaterCards[repeaterKey] ?? null
-            const updateFeatures = (next: typeof features) => updateSelectedProps({ ...props, features: next } as CMSBlock["props"])
-            const addFeature = () => {
-              const newItem = createFeatureItem()
-              updateFeatures([...features, newItem])
-              setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: newItem.id }))
-              lastAddedRepeaterRef.current = { key: repeaterKey, itemId: newItem.id }
-            }
-            const featureFields = [
-              { key: "title", label: "Titel", type: "text" as const },
-              { key: "titleColor", label: "Titel Farbe (optional)", type: "color" as const, placeholder: "#111111" },
-              { key: "description", label: "Beschreibung", type: "textarea" as const },
-              { key: "descriptionColor", label: "Beschreibung Farbe (optional)", type: "color" as const, placeholder: "#666666" },
-              { key: "icon", label: "Icon", type: "text" as const },
-              { key: "iconColor", label: "Icon Farbe (optional)", type: "color" as const, placeholder: "#111111" },
-              { key: "cardBgColor", label: "Card Hintergrund (optional)", type: "color" as const, placeholder: "#ffffff" },
-              { key: "cardBorderColor", label: "Card Border (optional)", type: "color" as const, placeholder: "#e5e7eb" },
-            ]
-            return (
-              <UniversalRepeaterInspector
-                items={features}
-                getItemId={(f) => f.id}
-                getItemLabel={(_, index) => `Feature ${index + 1}`}
-                renderContent={(item, index) => renderOneRepeaterItemFields(selectedBlock, "features", index, item as Record<string, unknown>, featureFields)}
-                expandedId={expandedId}
-                onToggle={(id) => setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: expandedId === id ? null : id }))}
-                onCollapseAll={() => setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: null }))}
-                countLabel={`${features.length} Features`}
-                addLabel="Feature hinzufügen"
-                onAdd={addFeature}
-                onMove={(from, to) => editorActions.handleMoveArrayItem(selectedBlock.id, "features", from, to)}
-                onRemove={(itemId) => handleRemoveArrayItem(selectedBlock.id, "features", features.findIndex((f) => f.id === itemId))}
-              />
-            )
-          })()}
-        </>
-      )}
-
-      {selectedBlock.type === "imageText" && (
-        <>
-          <Separator />
-          
-          {/* Block-Level Design System Controls */}
-          <div className="space-y-3">
-            {/* Layout Preset */}
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold text-primary">Layout Preset</Label>
-              <Select
-                value={(selectedBlock.props as any)?.designPreset || "standard"}
-                onValueChange={(v) => {
-                  if (!selectedBlock) return
-                  const presets: Record<string, any> = {
-                    standard: {
-                      style: { variant: "default", verticalAlign: "center", textAlign: "left", maxWidth: "lg" },
-                      background: "none",
-                      imagePosition: "left",
-                    },
-                    soft: {
-                      style: { variant: "soft", verticalAlign: "center", textAlign: "left", maxWidth: "lg" },
-                      background: "muted",
-                      imagePosition: "left",
-                    },
-                    softCentered: {
-                      style: { variant: "soft", verticalAlign: "center", textAlign: "center", maxWidth: "lg" },
-                      background: "muted",
-                      imagePosition: "left",
-                    },
-                    imageRight: {
-                      style: { variant: "default", verticalAlign: "center", textAlign: "left", maxWidth: "lg" },
-                      background: "none",
-                      imagePosition: "right",
-                    },
-                    imageRightCentered: {
-                      style: { variant: "default", verticalAlign: "center", textAlign: "center", maxWidth: "lg" },
-                      background: "none",
-                      imagePosition: "right",
-                    },
-                    topAligned: {
-                      style: { variant: "default", verticalAlign: "top", textAlign: "left", maxWidth: "lg" },
-                      background: "none",
-                      imagePosition: "left",
-                    },
-                  }
-                  const preset = presets[v]
-                  const currentProps = selectedBlock.props as Record<string, unknown>
-                  const updatedProps = {
-                    ...currentProps,
-                    designPreset: v,
-                    style: preset.style,
-                    background: preset.background,
-                    imagePosition: preset.imagePosition,
-                  } as CMSBlock["props"]
-                  updateSelectedProps(updatedProps)
-                }}
-              >
-                <SelectTrigger className="h-8 text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="standard">Standard</SelectItem>
-                  <SelectItem value="soft">Soft</SelectItem>
-                  <SelectItem value="softCentered">Soft Centered</SelectItem>
-                  <SelectItem value="imageRight">Image Right</SelectItem>
-                  <SelectItem value="imageRightCentered">Image Right Centered</SelectItem>
-                  <SelectItem value="topAligned">Top Aligned</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Style Controls */}
-            <div className="space-y-1.5 rounded-lg bg-muted/30 p-3">
-              <Label className="text-xs font-semibold text-primary">STYLE</Label>
-              
-              {/* Variant */}
-              <div className="space-y-1.5">
-                <Label className="text-xs">Variante</Label>
-                <Select
-                  value={(selectedBlock.props as any)?.style?.variant || "default"}
-                  onValueChange={(v) => {
-                    if (!selectedBlock) return
-                    const currentProps = selectedBlock.props as Record<string, unknown>
-                    const style = (currentProps.style as Record<string, unknown>) || {}
-                    const updatedProps = {
-                      ...currentProps,
-                      style: { ...style, variant: v },
-                    } as CMSBlock["props"]
-                    updateSelectedProps(updatedProps)
-                  }}
-                >
-                  <SelectTrigger className="h-8 text-sm">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="default">Default</SelectItem>
-                    <SelectItem value="soft">Soft</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Vertical Align */}
-              <div className="space-y-1.5">
-                <Label className="text-xs">Vertikale Ausrichtung</Label>
-                <Select
-                  value={(selectedBlock.props as any)?.style?.verticalAlign || "center"}
-                  onValueChange={(v) => {
-                    if (!selectedBlock) return
-                    const currentProps = selectedBlock.props as Record<string, unknown>
-                    const style = (currentProps.style as Record<string, unknown>) || {}
-                    const updatedProps = {
-                      ...currentProps,
-                      style: { ...style, verticalAlign: v },
-                    } as CMSBlock["props"]
-                    updateSelectedProps(updatedProps)
-                  }}
-                >
-                  <SelectTrigger className="h-8 text-sm">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="top">Oben</SelectItem>
-                    <SelectItem value="center">Zentriert</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Text Align */}
-              <div className="space-y-1.5">
-                <Label className="text-xs">Text Ausrichtung</Label>
-                <Select
-                  value={(selectedBlock.props as any)?.style?.textAlign || "left"}
-                  onValueChange={(v) => {
-                    if (!selectedBlock) return
-                    const currentProps = selectedBlock.props as Record<string, unknown>
-                    const style = (currentProps.style as Record<string, unknown>) || {}
-                    const updatedProps = {
-                      ...currentProps,
-                      style: { ...style, textAlign: v },
-                    } as CMSBlock["props"]
-                    updateSelectedProps(updatedProps)
-                  }}
-                >
-                  <SelectTrigger className="h-8 text-sm">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="left">Links</SelectItem>
-                    <SelectItem value="center">Zentriert</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Max Width */}
-              <div className="space-y-1.5">
-                <Label className="text-xs">Maximale Breite</Label>
-                <Select
-                  value={(selectedBlock.props as any)?.style?.maxWidth || "lg"}
-                  onValueChange={(v) => {
-                    if (!selectedBlock) return
-                    const currentProps = selectedBlock.props as Record<string, unknown>
-                    const style = (currentProps.style as Record<string, unknown>) || {}
-                    const updatedProps = {
-                      ...currentProps,
-                      style: { ...style, maxWidth: v },
-                    } as CMSBlock["props"]
-                    updateSelectedProps(updatedProps)
-                  }}
-                >
-                  <SelectTrigger className="h-8 text-sm">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="md">Medium</SelectItem>
-                    <SelectItem value="lg">Large</SelectItem>
-                    <SelectItem value="xl">Extra Large</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Image Aspect Ratio */}
-              <div className="space-y-1.5">
-                <Label className="text-xs">Bild Seitenverhältnis</Label>
-                <Select
-                  value={(selectedBlock.props as any)?.style?.imageAspectRatio || "4/3"}
-                  onValueChange={(v) => {
-                    if (!selectedBlock) return
-                    const currentProps = selectedBlock.props as Record<string, unknown>
-                    const style = (currentProps.style as Record<string, unknown>) || {}
-                    const updatedProps = {
-                      ...currentProps,
-                      style: { ...style, imageAspectRatio: v },
-                    } as CMSBlock["props"]
-                    updateSelectedProps(updatedProps)
-                  }}
-                >
-                  <SelectTrigger className="h-8 text-sm">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="4/3">4:3 (Standard)</SelectItem>
-                    <SelectItem value="16/9">16:9 (Breitbild)</SelectItem>
-                    <SelectItem value="1/1">1:1 (Quadrat)</SelectItem>
-                    <SelectItem value="3/2">3:2 (Klassisch)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </div>
-        </>
-      )}
-
-      {/* Special-case repeater – not migrated to UniversalRepeaterInspector (columns/rows with cells sync, custom row editor). */}
-      {selectedBlock.type === "legalTable" && (
-        <>
-          <Separator />
-          <div className="space-y-4 p-4">
-            <h4 className="text-sm font-medium text-foreground">Spalten</h4>
-            {(() => {
-              const props = selectedBlock.props as Record<string, unknown>
-              const columns = (getByPath(props, "columns") as Array<{ id: string; label: string; width?: string }>) || []
-              const repeaterKey = `${selectedBlock.id}:columns`
-              const expandedId = expandedRepeaterCards[repeaterKey] ?? null
-              const addColumn = () => editorActions.handleAddArrayItem(selectedBlock.id, "columns", createLegalTableColumn)
-              const columnFields = [{ key: "label", label: "Bezeichnung", type: "text" as const }, { key: "width", label: "Breite (optional)", type: "text" as const, placeholder: "z.B. 25%" }]
-              type ColItem = { id: string; label: string; width?: string }
-              return (
-                <InspectorCardList<ColItem>
-                  items={columns}
-                  getItemId={(c: ColItem) => c.id}
-                  mode="single"
-                  expandedId={expandedId}
-                  onToggle={(id: string) => setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: expandedId === id ? null : id }))}
-                  onCollapseAll={() => setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: null }))}
-                  countLabel={`${columns.length} Spalten`}
-                  addAction={<Button type="button" variant="outline" size="sm" className="w-full h-8 text-sm" onClick={addColumn}><Plus className="h-4 w-4 mr-1.5" />Spalte hinzufügen</Button>}
-                  renderSummary={(c: ColItem) => <span className="truncate">{c.label || "Spalte"}</span>}
-                  renderHeaderActions={(item: ColItem) => {
-                    const i = columns.findIndex((x) => x.id === item.id)
-                    return (
-                      <div className="flex items-center gap-0.5">
-                        <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); if (i > 0) editorActions.handleMoveArrayItem(selectedBlock.id, "columns", i, i - 1) }} disabled={i === 0} title="Nach oben"><ChevronUp className="h-3 w-3" /></Button>
-                        <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); if (i < columns.length - 1) editorActions.handleMoveArrayItem(selectedBlock.id, "columns", i, i + 1) }} disabled={i === columns.length - 1} title="Nach unten"><ChevronDown className="h-3 w-3" /></Button>
-                        <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={(e) => { e.stopPropagation(); handleRemoveArrayItem(selectedBlock.id, "columns", i) }} title="Löschen"><Trash2 className="h-3.5 w-3.5" /></Button>
-                      </div>
-                    )
-                  }}
-                  renderContent={(item: ColItem) => renderOneRepeaterItemFields(selectedBlock, "columns", columns.findIndex((c) => c.id === item.id), item as Record<string, unknown>, columnFields)}
-                />
-              )
-            })()}
-            <h4 className="text-sm font-medium text-foreground pt-2">Zeilen</h4>
-            {(() => {
-              const props = selectedBlock.props as Record<string, unknown>
-              const columns = (getByPath(props, "columns") as import("@/types/cms").LegalTableColumn[]) || []
-              const rows = (getByPath(props, "rows") as Array<{ id: string; cells: Record<string, string> }>) || []
-              type RowItem = { id: string; cells: Record<string, string> }
-              const repeaterKey = `${selectedBlock.id}:rows`
-              const expandedId = expandedRepeaterCards[repeaterKey] ?? null
-              const addRow = () => editorActions.handleAddArrayItem(selectedBlock.id, "rows", () => createLegalTableRow(columns))
-              const updateRowCells = (rowIndex: number, columnId: string, value: string) => {
-                const next = rows.map((r: RowItem, i: number) => i === rowIndex ? { ...r, cells: { ...r.cells, [columnId]: value } } : r)
-                updateSelectedProps({ ...props, rows: next } as CMSBlock["props"])
-              }
-              return (
-                <InspectorCardList<RowItem>
-                  items={rows}
-                  getItemId={(r: RowItem) => r.id}
-                  mode="single"
-                  expandedId={expandedId}
-                  onToggle={(id: string) => setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: expandedId === id ? null : id }))}
-                  onCollapseAll={() => setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: null }))}
-                  countLabel={`${rows.length} Zeilen`}
-                  addAction={<Button type="button" variant="outline" size="sm" className="w-full h-8 text-sm" onClick={addRow}><Plus className="h-4 w-4 mr-1.5" />Zeile hinzufügen</Button>}
-                  renderSummary={() => <span className="truncate">Zeile</span>}
-                  renderHeaderActions={(item: RowItem) => {
-                    const i = rows.findIndex((x) => x.id === item.id)
-                    return (
-                      <div className="flex items-center gap-0.5">
-                        <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); if (i > 0) editorActions.handleMoveArrayItem(selectedBlock.id, "rows", i, i - 1) }} disabled={i === 0} title="Nach oben"><ChevronUp className="h-3 w-3" /></Button>
-                        <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); if (i < rows.length - 1) editorActions.handleMoveArrayItem(selectedBlock.id, "rows", i, i + 1) }} disabled={i === rows.length - 1} title="Nach unten"><ChevronDown className="h-3 w-3" /></Button>
-                        <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={(e) => { e.stopPropagation(); handleRemoveArrayItem(selectedBlock.id, "rows", i) }} title="Löschen"><Trash2 className="h-3.5 w-3.5" /></Button>
-                      </div>
-                    )
-                  }}
-                  renderContent={(row: RowItem) => {
-                    const rowIndex = rows.findIndex((r: RowItem) => r.id === row.id)
-                    const r = row
-                    return (
-                      <div className="space-y-3 pt-2 border-t border-border">
-                        {columns.map((col, colIdx) => (
-                          <div key={col.id} className="space-y-1">
-                            <Label className="text-xs">{col.label?.trim() || `Spalte ${colIdx + 1}`}</Label>
-                            <Input
-                              value={r.cells?.[col.id] ?? ""}
-                              onChange={(e) => updateRowCells(rowIndex, col.id, e.target.value)}
-                              className="h-8 text-sm"
-                              placeholder="Wert"
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    )
-                  }}
-                />
-              )
-            })()}
-          </div>
-        </>
-      )}
-
-      {selectedBlock.type === "legalContactCard" && (
-        <>
-          <Separator />
-          {(() => {
-            const props = selectedBlock.props as Record<string, unknown>
-            const lines = (getByPath(props, "lines") as Array<{ id: string; label: string; value: string; href?: string }>) || []
-            const repeaterKey = `${selectedBlock.id}:lines`
-            const expandedId = expandedRepeaterCards[repeaterKey] ?? null
-            const addLine = () => editorActions.handleAddArrayItem(selectedBlock.id, "lines", createLegalContactLine)
-            type LineItem = { id: string; label: string; value: string; href?: string }
-            const lineFields = [
-              { key: "label", label: "Label", type: "text" as const },
-              { key: "value", label: "Wert", type: "text" as const },
-              { key: "href", label: "Link (optional)", type: "url" as const, placeholder: "https://" },
-            ]
-            return (
-              <InspectorCardList<LineItem>
-                items={lines}
-                getItemId={(l: LineItem) => l.id}
-                mode="single"
-                expandedId={expandedId}
-                onToggle={(id: string) => setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: expandedId === id ? null : id }))}
-                onCollapseAll={() => setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: null }))}
-                countLabel={`${lines.length} Zeilen`}
-                addAction={<Button type="button" variant="outline" size="sm" className="w-full h-8 text-sm" onClick={addLine}><Plus className="h-4 w-4 mr-1.5" />Zeile hinzufügen</Button>}
-                renderSummary={(item: LineItem) => <span className="truncate">{item.label || "Zeile"}</span>}
-                renderHeaderActions={(item: LineItem) => {
-                  const i = lines.findIndex((x) => x.id === item.id)
-                  return (
-                    <div className="flex items-center gap-0.5">
-                      <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); if (i > 0) editorActions.handleMoveArrayItem(selectedBlock.id, "lines", i, i - 1) }} disabled={i === 0} title="Nach oben"><ChevronUp className="h-3 w-3" /></Button>
-                      <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); if (i < lines.length - 1) editorActions.handleMoveArrayItem(selectedBlock.id, "lines", i, i + 1) }} disabled={i === lines.length - 1} title="Nach unten"><ChevronDown className="h-3 w-3" /></Button>
-                      <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={(e) => { e.stopPropagation(); handleRemoveArrayItem(selectedBlock.id, "lines", i) }} title="Löschen"><Trash2 className="h-3.5 w-3.5" /></Button>
-                    </div>
-                  )
-                }}
-                renderContent={(item: LineItem) => renderOneRepeaterItemFields(selectedBlock, "lines", lines.findIndex((l: LineItem) => l.id === item.id), item as Record<string, unknown>, lineFields)}
-              />
-            )
-          })()}
-        </>
-      )}
-
-      {/* Special-case repeater – not migrated to UniversalRepeaterInspector (nested cookies per category). */}
-      {selectedBlock.type === "legalCookieCategories" && (
-        <>
-          <Separator />
-          {(() => {
-            const props = selectedBlock.props as Record<string, unknown>
-            type CategoryItem = { id: string; name: string; description: string; required: boolean; cookies: Array<{ id: string; name: string; provider: string; purpose: string; duration: string; type: string }> }
-            const categories = (getByPath(props, "categories") as CategoryItem[]) || []
-            const repeaterKey = `${selectedBlock.id}:categories`
-            const expandedId = expandedRepeaterCards[repeaterKey] ?? null
-            const addCategory = () => editorActions.handleAddArrayItem(selectedBlock.id, "categories", createLegalCookieCategory)
-            const categoryFields = [
-              { key: "name", label: "Name", type: "text" as const },
-              {
-                key: "description",
-                label: "Beschreibung",
-                type: "textarea" as const,
-                placeholder: "Drücke Enter für neuen Absatz",
-                helpText: "Zeilenumbrüche werden als Absätze dargestellt.",
-              },
-              { key: "required", label: "Erforderlich", type: "boolean" as const },
-            ]
-            return (
-              <InspectorCardList<CategoryItem>
-                items={categories}
-                getItemId={(c: CategoryItem) => c.id}
-                mode="single"
-                expandedId={expandedId}
-                onToggle={(id: string) => setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: expandedId === id ? null : id }))}
-                onCollapseAll={() => setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: null }))}
-                countLabel={`${categories.length} Kategorien`}
-                addAction={<Button type="button" variant="outline" size="sm" className="w-full h-8 text-sm" onClick={addCategory}><Plus className="h-4 w-4 mr-1.5" />Kategorie hinzufügen</Button>}
-                renderSummary={(item: CategoryItem) => <span className="truncate">{item.name || "Kategorie"}</span>}
-                renderHeaderActions={(item: CategoryItem) => {
-                  const i = categories.findIndex((x) => x.id === item.id)
-                  return (
-                    <div className="flex items-center gap-0.5">
-                      <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); if (i > 0) editorActions.handleMoveArrayItem(selectedBlock.id, "categories", i, i - 1) }} disabled={i === 0} title="Nach oben"><ChevronUp className="h-3 w-3" /></Button>
-                      <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); if (i < categories.length - 1) editorActions.handleMoveArrayItem(selectedBlock.id, "categories", i, i + 1) }} disabled={i === categories.length - 1} title="Nach unten"><ChevronDown className="h-3 w-3" /></Button>
-                      <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={(e) => { e.stopPropagation(); handleRemoveArrayItem(selectedBlock.id, "categories", i) }} title="Löschen"><Trash2 className="h-3.5 w-3.5" /></Button>
-                    </div>
-                  )
-                }}
-                renderContent={(item: CategoryItem) => {
-                  const catIndex = categories.findIndex((c: CategoryItem) => c.id === item.id)
-                  const category = item as { id: string; name: string; description: string; required: boolean; cookies: Array<{ id: string; name: string; provider: string; purpose: string; duration: string; type: string }> }
-                  const cookies = category.cookies ?? []
-                  const updateCookieField = (cookieIndex: number, field: string, value: string) => {
-                    const nextCategories = categories.map((c, i) =>
-                      i === catIndex
-                        ? { ...c, cookies: (c.cookies ?? []).map((ck, j) => (j === cookieIndex ? { ...ck, [field]: value } : ck)) }
-                        : c
-                    )
-                    updateSelectedProps({ ...(selectedBlock.props as Record<string, unknown>), categories: nextCategories } as CMSBlock["props"])
-                  }
-                  const cookiesPath = `categories.${catIndex}.cookies`
-                  return (
-                    <>
-                      {renderOneRepeaterItemFields(selectedBlock, "categories", catIndex, item as Record<string, unknown>, categoryFields)}
-                      <div className="mt-4 pt-4 border-t border-border space-y-3">
-                        <Label className="text-xs font-medium text-foreground">Cookies in dieser Kategorie</Label>
-                        <p className="text-xs text-muted-foreground">Name, Anbieter, Zweck, Dauer und Typ pro Cookie.</p>
-                        {cookies.map((cookie, cookieIndex) => (
-                          <div key={cookie.id} className="rounded-lg border border-border bg-muted/30 p-3 space-y-2">
-                            <div className="flex items-center justify-between gap-2">
-                              <span className="text-xs font-medium text-foreground truncate">{cookie.name?.trim() || `Cookie ${cookieIndex + 1}`}</span>
-                              <Button type="button" variant="ghost" size="icon" className="h-6 w-6 shrink-0 text-destructive hover:text-destructive" onClick={() => handleRemoveArrayItem(selectedBlock.id, cookiesPath, cookieIndex)} title="Cookie entfernen"><Trash2 className="h-3 w-3" /></Button>
-                            </div>
-                            <div className="grid gap-2">
-                              <div><Label className="text-xs">Name</Label><Input value={cookie.name} onChange={(e) => updateCookieField(cookieIndex, "name", e.target.value)} className="h-8 text-sm" placeholder="Cookie-Name" /></div>
-                              <div><Label className="text-xs">Anbieter</Label><Input value={cookie.provider} onChange={(e) => updateCookieField(cookieIndex, "provider", e.target.value)} className="h-8 text-sm" placeholder="Anbieter" /></div>
-                              <div><Label className="text-xs">Zweck</Label><Input value={cookie.purpose} onChange={(e) => updateCookieField(cookieIndex, "purpose", e.target.value)} className="h-8 text-sm" placeholder="Zweck" /></div>
-                              <div><Label className="text-xs">Dauer</Label><Input value={cookie.duration} onChange={(e) => updateCookieField(cookieIndex, "duration", e.target.value)} className="h-8 text-sm" placeholder="z.B. 1 Jahr" /></div>
-                              <div><Label className="text-xs">Typ</Label><Input value={cookie.type} onChange={(e) => updateCookieField(cookieIndex, "type", e.target.value)} className="h-8 text-sm" placeholder="z.B. HTTP" /></div>
-                            </div>
-                          </div>
-                        ))}
-                        <Button type="button" variant="outline" size="sm" className="w-full h-8 text-sm" onClick={() => editorActions.handleAddArrayItem(selectedBlock.id, cookiesPath, createLegalCookieItem)}><Plus className="h-4 w-4 mr-1.5" />Cookie hinzufügen</Button>
-                      </div>
-                    </>
-                  )
-                }}
-              />
-            )
-          })()}
-        </>
-      )}
-
-      {selectedBlock.type === "faq" && (
-        <>
-          <Separator />
-          {(() => {
-            const props = selectedBlock.props as Record<string, unknown>
-            const items = ((getByPath(props, "items") as Array<{ id: string; question?: string }>) || [])
-            const repeaterKey = `${selectedBlock.id}:items`
-            const expandedId = expandedRepeaterCards[repeaterKey] ?? null
-            const updateItems = (next: typeof items) => updateSelectedProps({ ...props, items: next } as CMSBlock["props"])
-            const addItem = () => {
-              const newItem = createFaqItem()
-              updateItems([...items, newItem])
-              setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: newItem.id }))
-              lastAddedRepeaterRef.current = { key: repeaterKey, itemId: newItem.id }
-            }
-            const removeItem = (itemId: string) => {
-              if (expandedId === itemId) setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: null }))
-              updateItems(items.filter((i) => i.id !== itemId))
-            }
-            const faqFields = [
-              { key: "question", label: "Frage", type: "text" as const },
-              { key: "questionColor", label: "Frage Farbe (optional)", type: "color" as const, placeholder: "#111111" },
-              { key: "answer", label: "Antwort", type: "textarea" as const },
-              { key: "answerColor", label: "Antwort Farbe (optional)", type: "color" as const, placeholder: "#666666" },
-            ]
-            return (
-              <UniversalRepeaterInspector
-                items={items}
-                getItemId={(i) => i.id}
-                renderSummary={(item) => <span className="truncate">{(item as Record<string, unknown>).question as string || "FAQ"}</span>}
-                renderContent={(item, index) => renderOneRepeaterItemFields(selectedBlock, "items", index, item as Record<string, unknown>, faqFields)}
-                expandedId={expandedId}
-                onToggle={(id) => setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: expandedId === id ? null : id }))}
-                onCollapseAll={() => setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: null }))}
-                countLabel={`${items.length} FAQs`}
-                addLabel="FAQ hinzufügen"
-                onAdd={addItem}
-                onMove={(from, to) => editorActions.handleMoveArrayItem(selectedBlock.id, "items", from, to)}
-                onRemove={removeItem}
-                minItems={1}
-              />
-            )
-          })()}
-        </>
-      )}
-
-      {selectedBlock.type === "team" && (
-        <>
-          <Separator />
-          
-          {/* Block-Level Controls */}
-          <div className="space-y-3">
-            {/* Eyebrow */}
-            <div className="space-y-1.5">
-              <Label className="text-xs">Eyebrow (optional)</Label>
-              <input
-                type="text"
-                value={(selectedBlock.props as any)?.eyebrow || ""}
-                onChange={(e) => {
-                  if (!selectedBlock) return
-                  const currentProps = selectedBlock.props as Record<string, unknown>
-                  const updatedProps = { ...currentProps, eyebrow: e.target.value } as CMSBlock["props"]
-                  updateSelectedProps(updatedProps)
-                }}
-                className="h-8 w-full rounded border border-border bg-background px-2 text-sm"
-                placeholder="z.B. UNSER TEAM"
-              />
-            </div>
-
-            {/* Layout */}
-            <div className="space-y-1.5">
-              <Label className="text-xs">Layout</Label>
-              <Select
-                value={(selectedBlock.props as any)?.layout || "cards"}
-                onValueChange={(v) => {
-                  if (!selectedBlock) return
-                  const currentProps = selectedBlock.props as Record<string, unknown>
-                  const updatedProps = { ...currentProps, layout: v } as CMSBlock["props"]
-                  updateSelectedProps(updatedProps)
-                }}
-              >
-                <SelectTrigger className="h-8 text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="cards">Cards (vertikal)</SelectItem>
-                  <SelectItem value="compact">Compact (horizontal)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Background */}
-            <div className="space-y-1.5">
-              <Label className="text-xs">Hintergrund</Label>
-              <Select
-                value={(selectedBlock.props as any)?.background || "none"}
-                onValueChange={(v) => {
-                  if (!selectedBlock) return
-                  const currentProps = selectedBlock.props as Record<string, unknown>
-                  const updatedProps = { ...currentProps, background: v } as CMSBlock["props"]
-                  updateSelectedProps(updatedProps)
-                }}
-              >
-                <SelectTrigger className="h-8 text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Keine</SelectItem>
-                  <SelectItem value="muted">Muted</SelectItem>
-                  <SelectItem value="gradient">Gradient</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Columns */}
-            <div className="space-y-1.5">
-              <Label className="text-xs">Spalten</Label>
-              <Select
-                value={String((selectedBlock.props as any)?.columns || 3)}
-                onValueChange={(v) => {
-                  if (!selectedBlock) return
-                  const currentProps = selectedBlock.props as Record<string, unknown>
-                  const updatedProps = { ...currentProps, columns: Number(v) } as CMSBlock["props"]
-                  updateSelectedProps(updatedProps)
-                }}
-              >
-                <SelectTrigger className="h-8 text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="2">2</SelectItem>
-                  <SelectItem value="3">3</SelectItem>
-                  <SelectItem value="4">4</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <Separator />
-
-          {/* Members Array */}
-          {(() => {
-            const props = selectedBlock.props as Record<string, unknown>
-            const members = ((getByPath(props, "members") as Array<{ id: string; name?: string }>) || [])
-            const repeaterKey = `${selectedBlock.id}:members`
-            const expandedId = expandedRepeaterCards[repeaterKey] ?? null
-            const updateMembers = (next: typeof members) => updateSelectedProps({ ...props, members: next } as CMSBlock["props"])
-            const addMember = () => {
-              const newItem = createTeamMember()
-              updateMembers([...members, newItem])
-              setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: newItem.id }))
-              lastAddedRepeaterRef.current = { key: repeaterKey, itemId: newItem.id }
-            }
-            const memberFields = [
-              { key: "name", label: "Name", type: "text" as const, required: true },
-              { key: "nameColor", label: "Name Farbe (optional)", type: "color" as const, placeholder: "#111111" },
-              { key: "role", label: "Rolle", type: "text" as const },
-              { key: "roleColor", label: "Rolle Farbe (optional)", type: "color" as const, placeholder: "#666666" },
-              { key: "bio", label: "Bio", type: "textarea" as const },
-              { key: "bioColor", label: "Bio Farbe (optional)", type: "color" as const, placeholder: "#666666" },
-              { key: "bioAlign", label: "Bio Ausrichtung", type: "select" as const, options: [{ value: "left", label: "Links" }, { value: "center", label: "Mitte" }, { value: "right", label: "Rechts" }] },
-              { key: "imageUrl", label: "Avatar", type: "image" as const },
-              { key: "imageAlt", label: "Avatar Alt-Text", type: "text" as const },
-              { key: "avatarGradient", label: "Avatar Gradient", type: "select" as const, options: [{ value: "auto", label: "Auto" }, { value: "g1", label: "Emerald" }, { value: "g2", label: "Sky" }, { value: "g3", label: "Amber" }, { value: "g4", label: "Rose" }, { value: "g5", label: "Violet" }, { value: "g6", label: "Cyan" }, { value: "g7", label: "Lime" }, { value: "g8", label: "Fuchsia" }, { value: "g9", label: "Indigo" }, { value: "g10", label: "Red" }] },
-              { key: "avatarFit", label: "Bildanpassung", type: "select" as const, options: [{ value: "cover", label: "Füllen (Cover)" }, { value: "contain", label: "Vollständig (Contain)" }] },
-              { key: "avatarFocus", label: "Bildfokus", type: "select" as const, options: [{ value: "center", label: "Mitte" }, { value: "top", label: "Oben" }, { value: "bottom", label: "Unten" }, { value: "left", label: "Links" }, { value: "right", label: "Rechts" }] },
-              { key: "tags", label: "Tags (komma-getrennt)", type: "text" as const, placeholder: "Tag1, Tag2, Tag3" },
-              { key: "ctaText", label: "CTA Text", type: "text" as const },
-              { key: "ctaColor", label: "CTA Farbe (optional)", type: "color" as const, placeholder: "#111111" },
-              { key: "ctaHref", label: "CTA Link", type: "url" as const },
-              { key: "cardBgColor", label: "Card Hintergrund (optional)", type: "color" as const, placeholder: "#ffffff" },
-              { key: "cardBorderColor", label: "Card Border (optional)", type: "color" as const, placeholder: "#e5e7eb" },
-            ]
-            return (
-              <UniversalRepeaterInspector
-                items={members}
-                getItemId={(m) => m.id}
-                renderSummary={(member) => <span className="truncate">{(member as Record<string, unknown>).name as string || "Mitglied"}</span>}
-                renderContent={(member, index) => renderOneRepeaterItemFields(selectedBlock, "members", index, member as Record<string, unknown>, memberFields)}
-                expandedId={expandedId}
-                onToggle={(id) => setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: expandedId === id ? null : id }))}
-                onCollapseAll={() => setExpandedRepeaterCards((p) => ({ ...p, [repeaterKey]: null }))}
-                countLabel={`${members.length} Mitglieder`}
-                addLabel="Mitglied hinzufügen"
-                onAdd={addMember}
-                onMove={(from, to) => editorActions.handleMoveArrayItem(selectedBlock.id, "members", from, to)}
-                onRemove={(itemId) => confirmDeleteItem(selectedBlock.id, "members", members.findIndex((m) => m.id === itemId))}
-                minItems={1}
-              />
-            )
-          })()}
-        </>
-      )}
-
-      {/* Special-case repeater – not migrated to UniversalRepeaterInspector (contactForm fields/contactInfoCards with type select etc.). */}
-      {selectedBlock.type === "contactForm" && (
-        <>
-          <Separator />
-          {renderArrayItemsControls(
-            selectedBlock,
-            "fields",
-            "Feld",
-            (field, index) => {
-              const f = field as unknown as Record<string, unknown>
-              const t = String(f.type || "")
-              const label = String(f.label || "")
-              return `${index + 1}. ${label || t || "Feld"}`
-            },
-            () => createContactFormField("subject"),
-            [
-              { key: "type", label: "Typ", type: "select" as const },
-              { key: "label", label: "Label", type: "text" as const },
-              { key: "placeholder", label: "Placeholder", type: "text" as const },
-              { key: "required", label: "Required", type: "boolean" as const },
-            ]
-          )}
-          
-          {/* Contact Info Cards */}
-          {renderArrayItemsControls(
-            selectedBlock,
-            "contactInfoCards",
-            "Info-Card",
-            (card, index) => {
-              const c = card as unknown as Record<string, unknown>
-              const title = String(c.title || "")
-              return `${index + 1}. ${title || "Card"}`
-            },
-            createContactInfoCard,
-            [
-              { key: "title", label: "Titel", type: "text" as const, required: true },
-              { key: "value", label: "Wert", type: "text" as const, required: true },
-              {
-                key: "icon",
-                label: "Icon",
-                type: "select" as const,
-                options: [
-                  { value: "clock", label: "Uhr (Schnelle Antwort)" },
-                  { value: "phone", label: "Telefon (Kostenlose Beratung)" },
-                  { value: "mapPin", label: "Map-Pin (Lokale Betreuung)" },
-                  { value: "mail", label: "Mail (E-Mail)" },
-                ],
-              },
-            ]
-          )}
-        </>
-      )}
-
-      {/* 3) Restliche Felder mit Gruppierung und Headern */}
-      {(() => {
-        const visibleMidFields = midFields.filter(shouldShowField)
-        const visibleLateFields = lateFields.filter(shouldShowField)
-
-        // Get group order for this block
-        const blockDef = getBlockDefinition(selectedBlock.type)
-        const effectiveGroupOrder = blockDef.inspectorGroupOrder || DEFAULT_GROUP_ORDER
-
-        // Get typography elements if block has elements
-        const elements = blockDef.elements || []
-        const typographyElements = elements.filter((el) => el.supportsTypography)
-        
-        // Check if there are any fields or typography elements to render
-        if (visibleMidFields.length === 0 && visibleLateFields.length === 0 && typographyElements.length === 0) {
-          return null
-        }
-
-        // Group visible fields by their group property
-        const groupedFields: Record<string, InspectorField[]> = {}
-        for (const field of visibleMidFields) {
-          const group = field.group ?? "design"
-          if (!groupedFields[group]) groupedFields[group] = []
-          groupedFields[group].push(field)
-        }
-
-        // Helper to render element typography section
-        const renderElementTypography = () => {
-          if (typographyElements.length === 0) return null
-
-          const blockProps = selectedBlock.props as Record<string, unknown>
-          const typographyRecord = (blockProps.typography as Record<string, TypographySettings> | undefined) || {}
-
-          const handleElementTypographyChange = (elementId: string, typography: TypographySettings | null) => {
-            if (!selectedBlock) return
-            isTypingRef.current = true
-            const currentProps = selectedBlock.props as Record<string, unknown>
-            const currentTypography = (currentProps.typography as Record<string, TypographySettings> | undefined) || {}
-            
-            let updatedTypography: Record<string, TypographySettings> | undefined
-            if (typography) {
-              updatedTypography = { ...currentTypography, [elementId]: typography }
-            } else {
-              const { [elementId]: _, ...rest } = currentTypography
-              updatedTypography = Object.keys(rest).length > 0 ? rest : undefined
-            }
-
-            const updatedProps = setByPath(currentProps, "typography", updatedTypography) as CMSBlock["props"]
-            updateSelectedProps(updatedProps)
-            setTimeout(() => {
-              isTypingRef.current = false
-            }, 50)
-          }
-
-          return (
-            <ElementTypographyAccordion
-              blockProps={blockProps}
-              typographyElements={typographyElements}
-              selectedElementId={selectedElementId}
-              accordionValue={accordionValue}
-              onAccordionValueChange={setAccordionValue}
-              onElementTypographyChange={handleElementTypographyChange}
-            />
-          )
-        }
-
-        return (
-          <>
-            {/* Render grouped fields in order, with special handling for "elements" group and legalHero "design" group */}
-            {effectiveGroupOrder.map((group) => {
-              const groupFields = groupedFields[group] || []
-              const hasElementTypography = group === "elements" && typographyElements.length > 0
-              const isLegalHeroDesignGroup = selectedBlock.type === "legalHero" && group === "design"
-              const isLegalRichTextDesignGroup = selectedBlock.type === "legalRichText" && group === "design"
-
-              if (groupFields.length === 0 && !hasElementTypography) {
-                return null
-              }
-
-              // legalRichText: Design (Ausrichtung, Überschrift-Größe, Variante) + Farben im Akkordeon
-              if (isLegalRichTextDesignGroup) {
-                return (
-                  <div key={group}>
-                    <Separator />
-                    <div className="mt-3 pt-3 border-t border-border/50">
-                      <Label className="text-xs font-semibold">{INSPECTOR_GROUP_LABELS[group] || group}</Label>
-                      <div className="space-y-3 mt-2">
-                        {groupFields.map((field) => (
-                          <div key={field.key}>{renderInspectorField(field, selectedBlock)}</div>
-                        ))}
-                        <LegalRichTextColorAccordion
-                          block={selectedBlock as CMSBlock & { type: "legalRichText" }}
-                          updateSelectedProps={updateSelectedProps}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )
-              }
-
-              // Special rendering for legalHero design group with Accordions
-              if (isLegalHeroDesignGroup) {
-                return (
-                  <div key={group}>
-                    <LegalHeroAccordion
-                      block={selectedBlock}
-                      fields={groupFields}
-                      onFieldChange={(key, value) => {
-                        const updatedProps = setByPath(selectedBlock.props as Record<string, unknown>, key, value) as CMSBlock["props"]
-                        updateSelectedProps(updatedProps)
-                      }}
-                      renderInspectorField={renderInspectorField}
-                    />
-                  </div>
-                )
-              }
-
-              return (
-                <div key={group}>
-                  <Separator />
-                  <div className="mt-3 pt-3 border-t border-border/50">
-                    <Label className="text-xs font-semibold">{INSPECTOR_GROUP_LABELS[group] || group}</Label>
-                    <div className="space-y-3 mt-2">
-                      {groupFields.map((field) => (
-                        <div key={field.key}>
-                          {renderInspectorField(field, selectedBlock)}
-                        </div>
-                      ))}
-                      {hasElementTypography && renderElementTypography()}
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
-
-            {/* Render late fields if any */}
-            {visibleLateFields.length > 0 && (
-              <div>
-                <Separator />
-                <div className="mt-3 pt-3">
-                  {visibleLateFields.map((field) => (
-                    <div key={field.key}>
-                      {renderInspectorField(field, selectedBlock)}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </>
-        )
-      })()}
-
-    </>
-  )
-})()}
-
-              </div>
+                {renderGroupedInspectorFields()}
 
         </div>
       )}
@@ -5087,3 +5171,4 @@ export function PageEditorInspector({
     </>
   )
 }
+

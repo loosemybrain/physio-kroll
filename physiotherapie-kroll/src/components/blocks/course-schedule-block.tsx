@@ -10,6 +10,7 @@ import { mergeTypographyClasses } from "@/lib/typography"
 import type { BlockSectionProps, ElementShadow, CourseSlot, ElementConfig } from "@/types/cms"
 import type { GradientPresetValue } from "@/lib/theme/gradientPresets"
 import { AnimatedBlock } from "@/components/blocks/AnimatedBlock"
+import { ElementAnimated } from "@/components/blocks/ElementAnimated"
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -518,6 +519,7 @@ export function CourseScheduleBlock({
 
         {/* Content panel */}
         <AnimatedBlock config={section?.animation}>
+          <ElementAnimated elementId={CONTAINER_ELEMENT_ID} elements={elements}>
           <div
             data-element-id={CONTAINER_ELEMENT_ID}
             role={editable && onElementClick ? "button" : undefined}
@@ -558,6 +560,7 @@ export function CourseScheduleBlock({
             />
           )}
           </div>
+          </ElementAnimated>
         </AnimatedBlock>
       </div>
     </section>

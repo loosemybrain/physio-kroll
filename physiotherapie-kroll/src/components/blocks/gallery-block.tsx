@@ -12,6 +12,7 @@ import { resolveBoxShadow } from "@/lib/shadow/resolveBoxShadow"
 import { mergeTypographyClasses } from "@/lib/typography"
 import { useMotionPreference, getAnimationInitial, getViewportTrigger } from "@/lib/motion/useMotionPreference"
 import { AnimatedBlock } from "@/components/blocks/AnimatedBlock"
+import { ElementAnimated } from "@/components/blocks/ElementAnimated"
 import type { BlockSectionProps, ElementShadow } from "@/types/cms"
 import type { GradientPresetValue } from "@/lib/theme/gradientPresets"
 
@@ -611,6 +612,7 @@ export function GalleryBlock({
   blockId,
   editable = false,
   onEditField,
+  elements,
   section,
   headline,
   subheadline,
@@ -722,7 +724,9 @@ export function GalleryBlock({
               {subheadline && (
                 <div className="mb-5 flex items-center justify-center gap-4">
                   <div className="h-px w-12 bg-linear-to-r from-transparent to-primary/40" aria-hidden="true" />
+                  <ElementAnimated elementId="gallery.subheadline" elements={elements as Record<string, any>}>
                   <span
+                    data-element-id={blockId ? "gallery.subheadline" : undefined}
                     data-cms-field={blockId ? "subheadline" : undefined}
                     onClick={(e) => handleEdit(e, "subheadline")}
                     className={cn(
@@ -736,11 +740,14 @@ export function GalleryBlock({
                   >
                     {subheadline}
                   </span>
+                  </ElementAnimated>
                   <div className="h-px w-12 bg-linear-to-l from-transparent to-primary/40" aria-hidden="true" />
                 </div>
               )}
               {headline && (
+                <ElementAnimated elementId="gallery.headline" elements={elements as Record<string, any>}>
                 <h2
+                  data-element-id={blockId ? "gallery.headline" : undefined}
                   data-cms-field={blockId ? "headline" : undefined}
                   onClick={(e) => handleEdit(e, "headline")}
                   className={cn(
@@ -754,6 +761,7 @@ export function GalleryBlock({
                 >
                   {headline}
                 </h2>
+                </ElementAnimated>
               )}
               <div className="mx-auto mt-6 flex justify-center" aria-hidden="true">
                 <div className="h-px w-24 bg-linear-to-r from-primary/10 via-primary/40 to-primary/10" />
@@ -762,6 +770,7 @@ export function GalleryBlock({
           )}
 
           <AnimatedBlock config={section?.animation}>
+            <ElementAnimated elementId="gallery.container" elements={elements as Record<string, any>}>
             <div
               className={cn(
                 usesContainerPanel && "rounded-3xl p-6 md:p-10 m-4 md:m-6",
@@ -794,6 +803,7 @@ export function GalleryBlock({
                 )}
               </motion.div>
             </div>
+            </ElementAnimated>
           </AnimatedBlock>
         </div>
       </section>

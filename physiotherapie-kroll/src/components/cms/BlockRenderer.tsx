@@ -28,7 +28,7 @@ import { LegalTable } from "@/components/legal/LegalTable"
 import { LegalInfoBox } from "@/components/legal/LegalInfoBox"
 import { LegalCookieCategories } from "@/components/legal/LegalCookieCategories"
 import { LegalContactCard } from "@/components/legal/LegalContactCard"
-import type { BlockSectionProps, HeroBlock, LegalHeroBlock } from "@/types/cms"
+import type { BlockSectionProps, ElementConfig, HeroBlock, LegalHeroBlock } from "@/types/cms"
 import { blockRegistry } from "@/cms/blocks/registry"
 import { mergeBlockSectionWithDefaults } from "@/lib/cms/mergeBlockSection"
 import { CMS_BLOCK_GLOBAL_WIDTH_WRAP_CLASS } from "@/lib/cms/cmsContentWidthClasses"
@@ -129,8 +129,20 @@ export function BlockRenderer({
 
       case "text": {
         const props = block.props
-        // Text block uses dangerouslySetInnerHTML, so we wrap the container
-        return <TextBlock {...props} />
+        const extras = (block.props ?? {}) as Record<string, unknown>
+        const elementsValue = extras.elements
+        const elements = elementsValue as Record<string, ElementConfig | undefined> | undefined
+        return (
+          <TextBlock
+            {...props}
+            elements={elements}
+            editable={editable}
+            blockId={block.id}
+            onEditField={onEditField}
+            onElementClick={onElementClick}
+            selectedElementId={selectedElementId}
+          />
+        )
       }
 
       case "imageText": {

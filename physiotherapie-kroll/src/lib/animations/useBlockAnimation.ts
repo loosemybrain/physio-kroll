@@ -7,7 +7,6 @@ import {
   usePrefersReducedMotion,
   getCSSAnimationString,
   createIntersectionObserver,
-  getEffectiveDuration,
 } from "./utils"
 
 interface UseBlockAnimationProps {
@@ -15,6 +14,9 @@ interface UseBlockAnimationProps {
   containerRef: React.RefObject<HTMLElement | null>
   onAnimationComplete?: (stage: "enter" | "exit" | "hover") => void
 }
+
+/** Verhindert „Blitz“-Fades bei fehlerhaft 0ms in der Config (nur Eingang). */
+const MIN_ENTER_DURATION_MS = 200
 
 interface AnimationState {
   enterTriggered: boolean
@@ -52,8 +54,15 @@ export function useBlockAnimation({
       if (!animation || animation.type === "none" || !containerRef.current) return
 
       const el = containerRef.current
-      const duration = getEffectiveDuration(animation, prefersReduced)
-      const cssAnimation = getCSSAnimationString(animation)
+      const durationMs = (() => {
+        if (prefersReduced) return 1
+        const raw = typeof animation.duration === "number" && !Number.isNaN(animation.duration) ? animation.duration : 400
+        if (stage === "enter") {
+          return Math.max(raw, MIN_ENTER_DURATION_MS)
+        }
+        return Math.max(raw, 16)
+      })()
+      const cssAnimation = getCSSAnimationString({ ...animation, duration: durationMs })
 
       // Cleanup any previous scheduled restores for this element
       cleanupRef.current?.()
@@ -63,23 +72,26 @@ export function useBlockAnimation({
       // IMPORTANT: Do not set scroll-/touch-relevant styles (overflow/position/touchAction/contain/etc.).
       const prevAnimation = el.style.animation
       const prevOpacity = el.style.opacity
+      const prevWillChange = el.style.willChange
 
       // Apply inline styles (visual-only)
       // NOTE: we intentionally do NOT set opacity directly here; opacity/transform should be handled by keyframes,
       // to avoid leaving the element in a "forced layer" state on mobile browsers.
+      el.style.willChange = "opacity, transform"
       el.style.animation = cssAnimation
 
       // Callback nach Animation
       const timeout = setTimeout(() => {
         onAnimationComplete?.(stage)
-      }, duration + animation.delay)
+      }, durationMs + animation.delay)
 
       // Restore after the animation should have finished, so we don't leave persistent inline styles.
       const restore = window.setTimeout(() => {
         // Restore only what we changed
         el.style.animation = prevAnimation
         el.style.opacity = prevOpacity
-      }, duration + animation.delay + 50)
+        el.style.willChange = prevWillChange
+      }, durationMs + animation.delay + 50)
 
       const cleanup = () => {
         clearTimeout(timeout)
@@ -120,8 +132,10 @@ export function useBlockAnimation({
           }
         }
       }, {
-        threshold: config.enter.threshold,
-        rootMargin: config.enter.rootMargin,
+        // Etwas höherer Default: Animation startet nicht bei minimalem Sichtanteil
+        // (wirkt beim Scrollen oft „ruckelig“).
+        threshold: config.enter.threshold ?? 0.22,
+        rootMargin: config.enter.rootMargin ?? "0px",
       })
 
       observerRef.current.observe(containerRef.current)

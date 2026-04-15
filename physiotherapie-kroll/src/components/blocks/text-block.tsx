@@ -1,8 +1,11 @@
+"use client"
+
 import * as React from "react"
 import { cn } from "@/lib/utils"
 import { AnimatedBlock } from "@/components/blocks/AnimatedBlock"
+import { ElementAnimated } from "@/components/blocks/ElementAnimated"
 import { RevealOnScroll } from "@/components/ui/RevealOnScroll"
-import type { BlockSectionProps } from "@/types/cms"
+import type { BlockSectionProps, ElementConfig } from "@/types/cms"
 import { sanitizeCmsHtml } from "@/lib/security/sanitizeCmsHtml"
 
 interface TextBlockProps {
@@ -15,6 +18,12 @@ interface TextBlockProps {
   contentColor?: string
   headingColor?: string
   linkColor?: string
+  elements?: Record<string, ElementConfig | undefined>
+  editable?: boolean
+  blockId?: string
+  onEditField?: (blockId: string, fieldPath: string, anchorRect?: DOMRect) => void
+  onElementClick?: (blockId: string, elementId: string) => void
+  selectedElementId?: string | null
 }
 
 const maxWidthMap = {
@@ -48,6 +57,12 @@ export function TextBlock({
   contentColor,
   headingColor,
   linkColor,
+  elements,
+  editable = false,
+  blockId,
+  onEditField,
+  onElementClick,
+  selectedElementId,
 }: TextBlockProps) {
   const proseStyle = {
     ...(contentColor ? ({ ["--tw-prose-body" as unknown as string]: contentColor, color: contentColor } as React.CSSProperties) : {}),
@@ -55,22 +70,38 @@ export function TextBlock({
     ...(linkColor ? ({ ["--tw-prose-links" as unknown as string]: linkColor } as React.CSSProperties) : {}),
   } as React.CSSProperties
 
+  const canInlineEdit = Boolean(editable && blockId && onEditField)
+
   return (
     <AnimatedBlock config={section?.animation}>
       <RevealOnScroll>
         <section>
           <div className={cn("mx-auto px-4", maxWidthMap[maxWidth])}>
-            <div
-              className={cn(
-                alignmentMap[alignment],
-                textSizeMap[textSize],
-                // Keep typography styles, but don't force a max-width here.
-                // Width is controlled by the outer wrapper via maxWidthMap.
-                "prose prose-neutral dark:prose-invert max-w-none"
-              )}
-              style={proseStyle}
-              dangerouslySetInnerHTML={{ __html: sanitizeCmsHtml(content, "richText") }}
-            />
+            <ElementAnimated elementId="text.content" elements={elements}>
+              <div
+                data-element-id="text.content"
+                data-cms-field={canInlineEdit ? "content" : undefined}
+                className={cn(
+                  alignmentMap[alignment],
+                  textSizeMap[textSize],
+                  "prose prose-neutral dark:prose-invert max-w-none",
+                  canInlineEdit && "cursor-pointer rounded-md",
+                  selectedElementId === "text.content" && "ring-2 ring-primary/30 ring-offset-2"
+                )}
+                style={proseStyle}
+                dangerouslySetInnerHTML={{ __html: sanitizeCmsHtml(content, "richText") }}
+                onClick={
+                  canInlineEdit
+                    ? (e) => {
+                        e.stopPropagation()
+                        onElementClick?.(blockId ?? "", "text.content")
+                        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+                        onEditField?.(blockId ?? "", "content", rect)
+                      }
+                    : undefined
+                }
+              />
+            </ElementAnimated>
           </div>
         </section>
       </RevealOnScroll>

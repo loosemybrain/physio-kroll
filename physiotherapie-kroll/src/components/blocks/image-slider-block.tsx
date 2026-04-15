@@ -16,10 +16,11 @@ import {
 import { ChevronLeft, ChevronRight, Pause, Play, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion"
-import type { BlockSectionProps, ElementShadow } from "@/types/cms"
+import type { BlockSectionProps, ElementConfig, ElementShadow } from "@/types/cms"
 import { resolveBoxShadow } from "@/lib/shadow/resolveBoxShadow"
 import type { GradientPresetValue } from "@/lib/theme/gradientPresets"
 import { AnimatedBlock } from "@/components/blocks/AnimatedBlock"
+import { ElementAnimated } from "@/components/blocks/ElementAnimated"
 
 /* ================================================================ */
 /*  Types                                                            */
@@ -1092,6 +1093,17 @@ export function ImageSliderBlock({
     )
   }
 
+  const mergedElements = React.useMemo((): Record<string, ElementConfig | undefined> | undefined => {
+    if (!elements) return undefined
+    const el = elements as Record<string, ElementConfig | undefined>
+    return {
+      ...el,
+      "imageSlider.eyebrow": el["imageSlider.eyebrow"] ?? el["eyebrow"],
+      "imageSlider.headline": el["imageSlider.headline"] ?? el["headline"],
+      "imageSlider.subheadline": el["imageSlider.subheadline"] ?? el["subheadline"],
+    }
+  }, [elements])
+
   const aspectClass = aspectMap[aspect] || ""
   
   // Resolve container background styles
@@ -1143,31 +1155,40 @@ export function ImageSliderBlock({
             }
           >
             {eyebrow && (
+              <ElementAnimated elementId="imageSlider.eyebrow" elements={mergedElements}>
               <p
+                data-element-id="imageSlider.eyebrow"
                 onClick={(e) => handleInlineEdit(e, "eyebrow")}
                 className="text-sm font-medium tracking-wide text-primary mb-3 cursor-pointer"
                 style={{ color: eyebrowColor || undefined }}
               >
                 {eyebrow}
               </p>
+              </ElementAnimated>
             )}
             {headline && (
+              <ElementAnimated elementId="imageSlider.headline" elements={mergedElements}>
               <h2
+                data-element-id="imageSlider.headline"
                 onClick={(e) => handleInlineEdit(e, "headline")}
                 className="text-3xl font-bold tracking-tight text-foreground md:text-4xl cursor-pointer"
                 style={{ color: headlineColor || undefined }}
               >
                 {headline}
               </h2>
+              </ElementAnimated>
             )}
             {subheadline && (
+              <ElementAnimated elementId="imageSlider.subheadline" elements={mergedElements}>
               <p
+                data-element-id="imageSlider.subheadline"
                 onClick={(e) => handleInlineEdit(e, "subheadline")}
                 className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto cursor-pointer"
                 style={{ color: subheadlineColor || undefined }}
               >
                 {subheadline}
               </p>
+              </ElementAnimated>
             )}
           </header>
         )}

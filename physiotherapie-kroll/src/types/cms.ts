@@ -28,6 +28,8 @@ export interface ElementStyle {
  */
 export interface ElementConfig {
   style?: ElementStyle
+  /** Scroll-/Hover-Animation wie beim Block (section.animation), pro UI-Element */
+  animation?: Partial<BlockAnimationConfig>
 }
 
 /**
@@ -286,6 +288,8 @@ export interface TextBlock extends BaseBlock {
     contentColor?: string
     headingColor?: string
     linkColor?: string
+    /** Per-Element (z. B. Element-Animation), Key = data-element-id */
+    elements?: Record<string, ElementConfig>
   }
 }
 

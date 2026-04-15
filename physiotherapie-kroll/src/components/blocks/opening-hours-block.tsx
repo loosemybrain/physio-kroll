@@ -1,10 +1,12 @@
 "use client"
 
-import { CSSProperties, MouseEvent } from "react"
+import * as React from "react"
+import type { CSSProperties, MouseEvent } from "react"
 import { Clock } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { mergeTypographyClasses } from "@/lib/typography"
 import { useElementShadowStyle } from "@/lib/shadow"
+import { ElementAnimated } from "@/components/blocks/ElementAnimated"
 
 export interface OpeningHoursBlockProps {
   section?: unknown
@@ -67,6 +69,19 @@ export function OpeningHoursBlock({
   selectedElementId,
 }: OpeningHoursBlockProps) {
   const typo = (typography as Record<string, any> | undefined) ?? {}
+
+  const mergedElements = React.useMemo(() => {
+    if (!elements) return undefined
+    return {
+      ...elements,
+      "openingHours.headline": elements["openingHours.headline"] ?? elements["headline"],
+      "openingHours.subheadline": elements["openingHours.subheadline"] ?? elements["subheadline"],
+      "openingHours.label": elements["openingHours.label"] ?? elements["label"],
+      "openingHours.value": elements["openingHours.value"] ?? elements["value"],
+      "openingHours.note": elements["openingHours.note"] ?? elements["note"],
+      "openingHours.surface": elements["openingHours.surface"] ?? elements["surface"],
+    }
+  }, [elements])
   
   const canEdit = editable && !!blockId && !!onEditField
   const canSelect = !!blockId && !!onElementClick
@@ -113,7 +128,9 @@ export function OpeningHoursBlock({
               />
             </div>
             {headline && (
+              <ElementAnimated elementId="openingHours.headline" elements={mergedElements}>
               <h2
+                data-element-id="headline"
                 onClick={(e) => {
                   handleInlineEdit(e, "headline")
                   handleElementClick(e, "headline")
@@ -132,9 +149,12 @@ export function OpeningHoursBlock({
               >
                 {headline}
               </h2>
+              </ElementAnimated>
             )}
             {subheadline && (
+              <ElementAnimated elementId="openingHours.subheadline" elements={mergedElements}>
               <p
+                data-element-id="subheadline"
                 onClick={(e) => {
                   handleInlineEdit(e, "subheadline")
                   handleElementClick(e, "subheadline")
@@ -153,10 +173,12 @@ export function OpeningHoursBlock({
               >
                 {subheadline}
               </p>
+              </ElementAnimated>
             )}
           </header>
         )}
 
+        <ElementAnimated elementId="openingHours.surface" elements={mergedElements}>
         <dl
           data-element-id="openingHours.surface"
           onClick={(e) => {
@@ -190,7 +212,9 @@ export function OpeningHoursBlock({
                   layout === "stack" && index < hours.length - 1 && "border-b border-border/30"
                 )}
               >
+                <ElementAnimated elementId="openingHours.label" elements={mergedElements}>
                 <dt
+                  data-element-id={`hours.${index}.label`}
                   onClick={(e) => {
                     handleInlineEdit(e, `hours.${index}.label`)
                     handleElementClick(e, `hours.${index}.label`)
@@ -209,7 +233,10 @@ export function OpeningHoursBlock({
                 >
                   {row.label || "Tag…"}
                 </dt>
+                </ElementAnimated>
+                <ElementAnimated elementId="openingHours.value" elements={mergedElements}>
                 <dd
+                  data-element-id={`hours.${index}.value`}
                   onClick={(e) => {
                     handleInlineEdit(e, `hours.${index}.value`)
                     handleElementClick(e, `hours.${index}.value`)
@@ -229,13 +256,16 @@ export function OpeningHoursBlock({
                 >
                   {row.value || "Uhrzeit…"}
                 </dd>
+                </ElementAnimated>
               </div>
             ))}
           </div>
 
           {typeof note !== "undefined" && note && (
             <div className="mt-6 border-t border-border/30 pt-6">
+              <ElementAnimated elementId="openingHours.note" elements={mergedElements}>
               <p
+                data-element-id="note"
                 onClick={(e) => {
                   handleInlineEdit(e, "note")
                   handleElementClick(e, "note")
@@ -254,9 +284,11 @@ export function OpeningHoursBlock({
               >
                 {note}
               </p>
+              </ElementAnimated>
             </div>
           )}
         </dl>
+        </ElementAnimated>
       </div>
     </section>
   )

@@ -1,18 +1,16 @@
 "use client"
 
-import { useRef } from "react"
+import { useRef, type HTMLAttributes, type ReactNode } from "react"
 import type { BlockAnimationConfig } from "@/lib/animations/types"
 import { DEFAULT_ANIMATION_CONFIG } from "@/lib/animations/types"
 import { useBlockAnimation } from "@/lib/animations/useBlockAnimation"
 import { ANIMATION_KEYFRAMES } from "@/lib/animations/keyframes"
 
-interface AnimatedBlockProps {
-  children: React.ReactNode
+export type AnimatedBlockProps = {
+  children: ReactNode
   config?: Partial<BlockAnimationConfig>
-  className?: string
-  id?: string
   onAnimationComplete?: (stage: "enter" | "exit" | "hover") => void
-}
+} & Omit<HTMLAttributes<HTMLDivElement>, "children">
 
 /**
  * Wrapper-Komponente: Wendet Animation Config auf Kinder an
@@ -28,6 +26,7 @@ export function AnimatedBlock({
   className,
   id,
   onAnimationComplete,
+  ...rest
 }: AnimatedBlockProps) {
   const containerRef = useRef<HTMLDivElement>(null)
 
@@ -44,7 +43,7 @@ export function AnimatedBlock({
 
   if (!config.enabled) {
     return (
-      <div ref={containerRef} className={className} id={id}>
+      <div ref={containerRef} className={className} id={id} {...rest}>
         {children}
       </div>
     )
@@ -58,6 +57,7 @@ export function AnimatedBlock({
         ref={containerRef}
         className={className}
         id={id}
+        {...rest}
       >
         {children}
       </div>
@@ -69,7 +69,7 @@ export function AnimatedBlock({
  * HOC: Wrapping einer Komponente mit Animationen
  */
 export function withAnimation<P extends object>(
-  Component: React.ComponentType<P>,
+  Component: import("react").ComponentType<P>,
   animationConfig?: Partial<BlockAnimationConfig>
 ) {
   return function AnimatedComponent(props: P & { animationConfig?: Partial<BlockAnimationConfig> }) {

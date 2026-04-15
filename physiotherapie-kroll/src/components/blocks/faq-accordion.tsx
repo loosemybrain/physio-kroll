@@ -17,6 +17,7 @@ import type { BlockSectionProps } from "@/types/cms"
 import type { GradientPresetValue } from "@/lib/theme/gradientPresets"
 import { sanitizeCmsHtml } from "@/lib/security/sanitizeCmsHtml"
 import { AnimatedBlock } from "@/components/blocks/AnimatedBlock"
+import { ElementAnimated } from "@/components/blocks/ElementAnimated"
 
 /* ================================================================ */
 /*  Props                                                            */
@@ -173,6 +174,7 @@ function FaqItemComponent({
           "[&>svg]:size-5 [&>svg]:text-muted-foreground/60",
         )}
       >
+        <ElementAnimated elementId="faq.question" elements={elements}>
         <span
           data-element-id="faq.question"
           onClick={(e) => {
@@ -197,9 +199,11 @@ function FaqItemComponent({
         >
           {item.question || "Frage eingeben..."}
         </span>
+        </ElementAnimated>
       </AccordionTrigger>
 
       <AccordionContent className="pb-5">
+        <ElementAnimated elementId="faq.answer" elements={elements}>
         <div
           data-element-id="faq.answer"
           onClick={(e) => {
@@ -225,6 +229,7 @@ function FaqItemComponent({
             __html: sanitizeCmsHtml(item.answer || "Antwort eingeben...", "richText"),
           }}
         />
+        </ElementAnimated>
       </AccordionContent>
     </AccordionItem>
   )
@@ -325,6 +330,7 @@ export function FaqAccordion({
       <div className="mx-auto max-w-4xl px-4 sm:px-6">
         {/* Inner Container Panel (EIN Panel - nicht doppelt!) */}
         <AnimatedBlock config={section?.animation}>
+          <ElementAnimated elementId="faq.surface" elements={elements}>
           <div
             data-element-id="faq.surface"
             onClick={(e) => {
@@ -350,6 +356,7 @@ export function FaqAccordion({
           {/* Headline */}
           {headline && (
             <div className="mb-10">
+              <ElementAnimated elementId="faq.headline" elements={elements}>
               <h2
                 data-element-id="faq.headline"
                 onClick={(e) => {
@@ -374,6 +381,7 @@ export function FaqAccordion({
               >
                 {headline}
               </h2>
+              </ElementAnimated>
 
               {/* Gradient divider */}
               <div
@@ -416,6 +424,7 @@ export function FaqAccordion({
             ))}
           </Accordion>
           </div>
+          </ElementAnimated>
         </AnimatedBlock>
       </div>
     </section>

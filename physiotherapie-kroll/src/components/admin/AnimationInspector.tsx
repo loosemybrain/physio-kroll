@@ -39,7 +39,7 @@ export function AnimationInspector({ config: configProp, onChange }: AnimationIn
     enabled: configProp?.enabled ?? false,
     enter: configProp?.enter ?? {
       type: "none",
-      duration: 300,
+      duration: 450,
       delay: 0,
       easing: "ease-out",
       trigger: "onLoad",
@@ -47,7 +47,7 @@ export function AnimationInspector({ config: configProp, onChange }: AnimationIn
     },
     exit: configProp?.exit ?? {
       type: "none",
-      duration: 300,
+      duration: 450,
       delay: 0,
       easing: "ease-out",
       trigger: "onLoad",
@@ -55,7 +55,7 @@ export function AnimationInspector({ config: configProp, onChange }: AnimationIn
     },
     hover: configProp?.hover ?? {
       type: "none",
-      duration: 300,
+      duration: 350,
       delay: 0,
       easing: "ease-out",
       trigger: "onHover",
@@ -79,7 +79,7 @@ export function AnimationInspector({ config: configProp, onChange }: AnimationIn
 
   return (
     <Card className="border border-border bg-card">
-      <CardContent className="pt-6">
+      <CardContent className="pt-6 pb-6">
         <div className="space-y-4">
           {/* Enable/Disable */}
           <div className="flex items-center gap-3 p-3 rounded-md bg-background border border-input hover:border-primary/50 transition-colors">

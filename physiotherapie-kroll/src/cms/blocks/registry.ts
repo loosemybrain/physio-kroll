@@ -219,6 +219,8 @@ const textPropsSchema = z.object({
   headingColor: z.string().optional(),
   linkColor: z.string().optional(),
   typography: elementTypographySchema,
+  section: z.any().optional(),
+  elements: z.record(z.string(), z.any()).optional(),
 })
 
 const imageTextPropsSchema = z.object({
@@ -330,6 +332,7 @@ const ctaPropsSchema = z.object({
   secondaryCtaBorderRadius: z.string().optional(),
   buttonPreset: z.string().optional(),
   typography: elementTypographySchema,
+  elements: z.record(z.string(), z.any()).optional(),
 })
 
 const sectionPropsSchema = z.object({
@@ -2049,6 +2052,13 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
         group: "Inhalt",
       },
       {
+        id: "trust",
+        label: "Vertrauenszeile",
+        path: "trustItems",
+        supportsShadow: true,
+        group: "Inhalt",
+      },
+      {
         id: "trustItem",
         label: "Vertrauens-Item",
         path: "trustItems",
@@ -2360,6 +2370,9 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
     defaults: textDefaults,
     zodSchema: textPropsSchema,
     allowInlineEdit: true,
+    elements: [
+      { id: "text.content", label: "Inhalt", path: "content", supportsTypography: true },
+    ],
     inspectorFields: [
       {
         key: "content",
@@ -2989,6 +3002,8 @@ export const blockRegistry: Record<BlockType, BlockDefinition> = {
     elements: [
       { id: "cta.headline", label: "Headline", path: "headline", supportsTypography: true },
       { id: "cta.subheadline", label: "Subheadline", path: "subheadline", supportsTypography: true },
+      { id: "primaryCta", label: "Primärer CTA", path: "primaryCtaText" },
+      { id: "secondaryCta", label: "Sekundärer CTA", path: "secondaryCtaText" },
     ],
     inspectorFields: [
       { key: "headline", label: "Headline", type: "text", placeholder: "Überschrift", required: true },

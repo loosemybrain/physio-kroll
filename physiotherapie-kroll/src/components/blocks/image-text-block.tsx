@@ -10,6 +10,7 @@ import { CardSurface } from "@/components/ui/card"
 import { useElementShadowStyle } from "@/lib/shadow"
 import { resolveButtonPresetStyles } from "@/lib/buttonPresets"
 import { Editable } from "@/components/editor/Editable"
+import { ElementAnimated } from "@/components/blocks/ElementAnimated"
 import { useMotionPreference, getAnimationInitial, getViewportTrigger } from "@/lib/motion/useMotionPreference"
 import type { ImageTextStyle } from "@/types/cms"
 
@@ -213,6 +214,19 @@ export function ImageTextBlock(props: ImageTextBlockProps) {
 
   const ctaPreset = resolveButtonPresetStyles(buttonPreset, undefined, undefined)
 
+  const mergedElements = React.useMemo(() => {
+    if (!elements) return undefined
+    return {
+      ...elements,
+      "imageText.surface": elements["imageText.surface"] ?? elements["surface"],
+      "imageText.image": elements["imageText.image"] ?? elements["image"],
+      "imageText.eyebrow": elements["imageText.eyebrow"] ?? elements["eyebrow"],
+      "imageText.headline": elements["imageText.headline"] ?? elements["headline"],
+      "imageText.content": elements["imageText.content"] ?? elements["content"],
+      "imageText.cta": elements["imageText.cta"] ?? elements["cta"],
+    }
+  }, [elements])
+
   // Resolve effective design from preset or overrides
   const preset = (designPreset && designPresets[designPreset]) || designPresets.standard
   const effectiveStyle: ImageTextStyle = styleOverride || preset.style
@@ -308,6 +322,7 @@ export function ImageTextBlock(props: ImageTextBlockProps) {
           // bgClass removed; always transparent
         )}
       >
+        <ElementAnimated elementId="imageText.surface" elements={mergedElements}>
         <div
           className={cn(
             "rounded-3xl border border-border/50 overflow-hidden",
@@ -337,6 +352,7 @@ export function ImageTextBlock(props: ImageTextBlockProps) {
               )}
             >
             {/* Image Column */}
+            <ElementAnimated elementId="imageText.image" elements={mergedElements}>
             <motion.figure
               variants={shouldDisableViewAnimations ? undefined : imageVariants}
               className={cn(
@@ -373,6 +389,7 @@ export function ImageTextBlock(props: ImageTextBlockProps) {
                 />
               </div>
             </motion.figure>
+            </ElementAnimated>
 
             {/* Text Column */}
             <div
@@ -385,6 +402,7 @@ export function ImageTextBlock(props: ImageTextBlockProps) {
               {/* Eyebrow */}
               {eyebrow && (
                 <motion.div variants={shouldDisableViewAnimations ? undefined : itemVariants}>
+                  <ElementAnimated elementId="imageText.eyebrow" elements={mergedElements}>
                   <Editable
                     blockId={blockId || ""}
                     elementId="imageText.eyebrow"
@@ -405,12 +423,14 @@ export function ImageTextBlock(props: ImageTextBlockProps) {
                       {eyebrow}
                     </span>
                   </Editable>
+                  </ElementAnimated>
                 </motion.div>
               )}
 
               {/* Headline */}
               {headline && (
                 <motion.div variants={shouldDisableViewAnimations ? undefined : itemVariants}>
+                  <ElementAnimated elementId="imageText.headline" elements={mergedElements}>
                   <Editable
                     blockId={blockId || ""}
                     elementId="imageText.headline"
@@ -434,11 +454,13 @@ export function ImageTextBlock(props: ImageTextBlockProps) {
                       {headline}
                     </span>
                   </Editable>
+                  </ElementAnimated>
                 </motion.div>
               )}
 
               {/* Content */}
               <motion.div variants={shouldDisableViewAnimations ? undefined : itemVariants}>
+                <ElementAnimated elementId="imageText.content" elements={mergedElements}>
                 <Editable
                   blockId={blockId || ""}
                   elementId="imageText.content"
@@ -462,6 +484,7 @@ export function ImageTextBlock(props: ImageTextBlockProps) {
                     {content}
                   </span>
                 </Editable>
+                </ElementAnimated>
               </motion.div>
 
               {/* CTA */}
@@ -473,6 +496,7 @@ export function ImageTextBlock(props: ImageTextBlockProps) {
                     effectiveStyle.textAlign === "center" && "flex justify-center"
                   )}
                 >
+                  <ElementAnimated elementId="imageText.cta" elements={mergedElements}>
                   <Editable
                     blockId={blockId || ""}
                     elementId="imageText.cta"
@@ -534,12 +558,14 @@ export function ImageTextBlock(props: ImageTextBlockProps) {
                       )}
                     </Button>
                   </Editable>
+                  </ElementAnimated>
                 </motion.div>
               )}
             </div>
           </div>
           </motion.div>
         </div>
+        </ElementAnimated>
       </CardSurface>
     </Editable>
   )

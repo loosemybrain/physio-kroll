@@ -87,8 +87,8 @@ export function getEffectiveDuration(
   prefersReduced: boolean
 ): number {
   if (prefersReduced) {
-    // Bei reduced motion: nur sehr kurz animieren oder sofort
-    return 0
+    // Kurz, aber nicht 0ms (0 kann in manchen Browsern zu Layout-Sprüngen führen)
+    return 1
   }
   return config.duration
 }

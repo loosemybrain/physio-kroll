@@ -11,6 +11,7 @@ import type { TypographySettings } from "@/lib/typography"
 import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { AnimatedBlock } from "@/components/blocks/AnimatedBlock"
+import { ElementAnimated } from "@/components/blocks/ElementAnimated"
 
 import type { HeroBlock, MediaValue, CommonBlockProps } from "@/types/cms"
 import type { BrandKey } from "@/components/brand/brandAssets"
@@ -381,39 +382,40 @@ export function HeroSection({
           )}
         >
           {/* Badge */}
-          <Editable
-            blockId={blockId || ""}
-            elementId="badge"
-            editable={editable}
-            onElementClick={onElementClick}
-            isSelected={selectedElementId === "badge"}
-            as="div"
-            className={cn(
-              "hero-badge inline-flex items-center gap-2",
-              "rounded-full px-4 py-2 text-sm font-medium",
-              "bg-primary/10 text-primary cursor-pointer",
-              shouldAnimateIn && "animate-fade-in-up"
-            )}
-            data-element-id="badge"
-            style={{
-              ...heroBadgeShadow,
-              ...(resolvedBadgeBgColor
-                ? ({ backgroundColor: resolvedBadgeBgColor } as React.CSSProperties)
-                : {}),
-              ...(resolvedBadgeBorderColor
-                ? ({
-                    borderWidth: 1,
-                    borderStyle: "solid",
-                    borderColor: resolvedBadgeBorderColor,
-                  } as React.CSSProperties)
-                : {}),
-              ...(resolvedBadgeBorderRadius
-                ? ({ borderRadius: resolvedBadgeBorderRadius } as React.CSSProperties)
-                : badgeRadiusFromPreset
-                  ? ({ borderRadius: badgeRadiusFromPreset } as React.CSSProperties)
+          <ElementAnimated elementId="badge" elements={elements}>
+            <Editable
+              blockId={blockId || ""}
+              elementId="badge"
+              editable={editable}
+              onElementClick={onElementClick}
+              isSelected={selectedElementId === "badge"}
+              as="div"
+              className={cn(
+                "hero-badge inline-flex items-center gap-2",
+                "rounded-full px-4 py-2 text-sm font-medium",
+                "bg-primary/10 text-primary cursor-pointer",
+                shouldAnimateIn && "animate-fade-in-up"
+              )}
+              data-element-id="badge"
+              style={{
+                ...heroBadgeShadow,
+                ...(resolvedBadgeBgColor
+                  ? ({ backgroundColor: resolvedBadgeBgColor } as React.CSSProperties)
                   : {}),
-            }}
-          >
+                ...(resolvedBadgeBorderColor
+                  ? ({
+                      borderWidth: 1,
+                      borderStyle: "solid",
+                      borderColor: resolvedBadgeBorderColor,
+                    } as React.CSSProperties)
+                  : {}),
+                ...(resolvedBadgeBorderRadius
+                  ? ({ borderRadius: resolvedBadgeBorderRadius } as React.CSSProperties)
+                  : badgeRadiusFromPreset
+                    ? ({ borderRadius: badgeRadiusFromPreset } as React.CSSProperties)
+                    : {}),
+              }}
+            >
             <div className="inline-flex items-center gap-2">
               {isCalm ? (
                 <>
@@ -452,56 +454,61 @@ export function HeroSection({
               )}
             </div>
           </Editable>
+          </ElementAnimated>
 
           {/* Headline */}
-          <Editable
-            blockId={blockId || ""}
-            elementId="headline"
-            typography={headlineTypography}
-            editable={editable}
-            onElementClick={onElementClick}
-            isSelected={selectedElementId === "headline"}
-            as="h1"
-            className={cn(
-              "hero-headline text-balance text-foreground",
-              isCalm
-                ? "font-serif text-4xl font-semibold tracking-tight md:text-5xl lg:text-6xl"
-                : "font-sans text-4xl font-bold uppercase tracking-tight md:text-5xl lg:text-7xl"
-            )}
-            style={{
-              ...heroHeadlineShadow,
-              ...(resolvedHeadlineColor ? { color: resolvedHeadlineColor } : {}),
-            }}
-            data-element-id="headline"
-          >
-            <span className={shouldAnimateIn ? "animate-fade-in-up animate-delay-200 inline-block" : "inline-block"} onClick={(e) => handleInlineEdit(e, "headline", "headline")}>
-              {resolvedHeadline}
-            </span>
-          </Editable>
+          <ElementAnimated elementId="headline" elements={elements}>
+            <Editable
+              blockId={blockId || ""}
+              elementId="headline"
+              typography={headlineTypography}
+              editable={editable}
+              onElementClick={onElementClick}
+              isSelected={selectedElementId === "headline"}
+              as="h1"
+              className={cn(
+                "hero-headline text-balance text-foreground",
+                isCalm
+                  ? "font-serif text-4xl font-semibold tracking-tight md:text-5xl lg:text-6xl"
+                  : "font-sans text-4xl font-bold uppercase tracking-tight md:text-5xl lg:text-7xl"
+              )}
+              style={{
+                ...heroHeadlineShadow,
+                ...(resolvedHeadlineColor ? { color: resolvedHeadlineColor } : {}),
+              }}
+              data-element-id="headline"
+            >
+              <span className={shouldAnimateIn ? "animate-fade-in-up animate-delay-200 inline-block" : "inline-block"} onClick={(e) => handleInlineEdit(e, "headline", "headline")}>
+                {resolvedHeadline}
+              </span>
+            </Editable>
+          </ElementAnimated>
 
           {/* Subheadline */}
-          <Editable
-            blockId={blockId || ""}
-            elementId="subheadline"
-            typography={subheadlineTypography}
-            editable={editable}
-            onElementClick={onElementClick}
-            isSelected={selectedElementId === "subheadline"}
-            as="p"
-            className={cn(
-              "hero-subheadline max-w-xl text-pretty leading-relaxed",
-              "text-lg md:text-xl text-muted-foreground"
-            )}
-            style={{
-              ...heroSubheadlineShadow,
-              ...(resolvedSubheadlineColor ? { color: resolvedSubheadlineColor } : {}),
-            }}
-            data-element-id="subheadline"
-          >
-            <span className={shouldAnimateIn ? "animate-fade-in-up animate-delay-300 inline-block" : "inline-block"} onClick={(e) => handleInlineEdit(e, "subheadline", "subheadline")}>
-              {resolvedSubheadline}
-            </span>
-          </Editable>
+          <ElementAnimated elementId="subheadline" elements={elements}>
+            <Editable
+              blockId={blockId || ""}
+              elementId="subheadline"
+              typography={subheadlineTypography}
+              editable={editable}
+              onElementClick={onElementClick}
+              isSelected={selectedElementId === "subheadline"}
+              as="p"
+              className={cn(
+                "hero-subheadline max-w-xl text-pretty leading-relaxed",
+                "text-lg md:text-xl text-muted-foreground"
+              )}
+              style={{
+                ...heroSubheadlineShadow,
+                ...(resolvedSubheadlineColor ? { color: resolvedSubheadlineColor } : {}),
+              }}
+              data-element-id="subheadline"
+            >
+              <span className={shouldAnimateIn ? "animate-fade-in-up animate-delay-300 inline-block" : "inline-block"} onClick={(e) => handleInlineEdit(e, "subheadline", "subheadline")}>
+                {resolvedSubheadline}
+              </span>
+            </Editable>
+          </ElementAnimated>
 
           {/* CTA Actions */}
           <div className={cn("hero-cta mt-4 flex flex-wrap items-center gap-4", shouldAnimateIn && "animate-fade-in-up animate-delay-400")}>
@@ -628,24 +635,26 @@ export function HeroSection({
 
           {/* Trust indicators for calm mood */}
           {isCalm && resolvedTrustItems.length > 0 && (
-            <div 
-              className={cn("hero-trust mt-6 flex flex-wrap items-center gap-6 text-sm text-muted-foreground", shouldAnimateIn && "animate-fade-in-up animate-delay-500")}
-              data-element-id="trust"
-              style={heroTrustShadow}
-              onClick={() => onElementClick?.(blockId || "", "trust")}
-            >
-              {resolvedTrustItems.map((item, index) => (
-                <HeroTrustItem
-                  key={item}
-                  item={item}
-                  index={index}
-                  elements={elements}
-                  blockId={blockId}
-                  onElementClick={onElementClick}
-                  resolvedTrustItemsColor={resolvedTrustItemsColor}
-                />
-              ))}
-            </div>
+            <ElementAnimated elementId="trust" elements={elements}>
+              <div
+                className={cn("hero-trust mt-6 flex flex-wrap items-center gap-6 text-sm text-muted-foreground", shouldAnimateIn && "animate-fade-in-up animate-delay-500")}
+                data-element-id="trust"
+                style={heroTrustShadow}
+                onClick={() => onElementClick?.(blockId || "", "trust")}
+              >
+                {resolvedTrustItems.map((item, index) => (
+                  <HeroTrustItem
+                    key={item}
+                    item={item}
+                    index={index}
+                    elements={elements}
+                    blockId={blockId}
+                    onElementClick={onElementClick}
+                    resolvedTrustItemsColor={resolvedTrustItemsColor}
+                  />
+                ))}
+              </div>
+            </ElementAnimated>
           )}
         </header>
 
@@ -659,6 +668,7 @@ export function HeroSection({
             )}
           >
             {mediaType === "video" && mediaUrl ? (
+              <ElementAnimated elementId="media" elements={elements}>
               <div
                 className={cn(
                   "relative w-full shadow-2xl",
@@ -768,7 +778,9 @@ export function HeroSection({
                   )}
                 </div>
               </div>
+              </ElementAnimated>
             ) : (
+              <ElementAnimated elementId="media" elements={elements}>
               <div
                 className={cn(
                   "relative w-full shadow-nonel overflow-x-hidden",
@@ -881,6 +893,7 @@ export function HeroSection({
                   )}
                 </div>
               </div>
+              </ElementAnimated>
             )}
 
             {/* Decorative floating element for calm mood */}

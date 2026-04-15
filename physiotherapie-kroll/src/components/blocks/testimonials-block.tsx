@@ -16,6 +16,7 @@ import {
 import type { MediaValue } from "@/types/cms"
 import { resolveMediaClient } from "@/lib/cms/resolveMediaClient"
 import { mergeTypographyClasses } from "@/lib/typography"
+import { ElementAnimated } from "@/components/blocks/ElementAnimated"
 
 export interface TestimonialsBlockProps {
   headline?: string
@@ -186,6 +187,7 @@ function TestimonialCard({
   roleColor,
   onInlineEdit,
   typography,
+  elements,
   interactivePreview,
   activeItemId,
   onItemSelect,
@@ -197,6 +199,7 @@ function TestimonialCard({
   nameColor?: string
   roleColor?: string
   typography?: Record<string, unknown>
+  elements?: Record<string, unknown>
   onInlineEdit: (e: React.MouseEvent, fieldPath: string) => void
   interactivePreview?: boolean
   activeItemId?: string | null
@@ -236,7 +239,9 @@ function TestimonialCard({
           {rating && <RatingStars rating={rating} />}
         </div>
 
+        <ElementAnimated elementId="testimonials.quote" elements={elements as Record<string, any>}>
         <blockquote
+          data-element-id="testimonials.quote"
           onClick={(e) => onInlineEdit(e, `items.${index}.quote`)}
           className={cn(
             mergeTypographyClasses(
@@ -249,13 +254,16 @@ function TestimonialCard({
         >
           {item.quote}
         </blockquote>
+        </ElementAnimated>
 
         <div className="my-6 h-px bg-linear-to-r from-border via-border/50 to-transparent" />
 
         <footer className="flex items-center gap-4">
           <Avatar name={item.name} avatar={item.avatar} gradient={item.avatarGradient} />
           <div className="min-w-0">
+            <ElementAnimated elementId="testimonials.name" elements={elements as Record<string, any>}>
             <div
+              data-element-id="testimonials.name"
               onClick={(e) => onInlineEdit(e, `items.${index}.name`)}
               className={cn(
                 mergeTypographyClasses(
@@ -267,9 +275,12 @@ function TestimonialCard({
             >
               {item.name}
             </div>
+            </ElementAnimated>
 
             {item.role && (
+              <ElementAnimated elementId="testimonials.role" elements={elements as Record<string, any>}>
               <div
+                data-element-id="testimonials.role"
                 onClick={(e) => onInlineEdit(e, `items.${index}.role`)}
                 className={cn(
                   mergeTypographyClasses(
@@ -281,6 +292,7 @@ function TestimonialCard({
               >
                 {item.role}
               </div>
+              </ElementAnimated>
             )}
           </div>
         </footer>
@@ -298,6 +310,7 @@ export function TestimonialsBlock({
   nameColor,
   roleColor,
   typography,
+  elements,
   items,
   columns = 3,
   variant = "grid",
@@ -343,7 +356,9 @@ export function TestimonialsBlock({
             {subheadline && (
               <div className="mb-5 flex items-center justify-center gap-4">
                 <div className="h-px w-12 bg-linear-to-r from-transparent to-primary/40" />
+                <ElementAnimated elementId="testimonials.subheadline" elements={elements as Record<string, any>}>
                 <span
+                  data-element-id="testimonials.subheadline"
                   onClick={(e) => handleInlineEdit(e, "subheadline")}
                   className={cn(
                     mergeTypographyClasses(
@@ -355,12 +370,15 @@ export function TestimonialsBlock({
                 >
                   {subheadline}
                 </span>
+                </ElementAnimated>
                 <div className="h-px w-12 bg-linear-to-l from-transparent to-primary/40" />
               </div>
             )}
 
             {headline && (
+              <ElementAnimated elementId="testimonials.headline" elements={elements as Record<string, any>}>
               <h2
+                data-element-id="testimonials.headline"
                 onClick={(e) => handleInlineEdit(e, "headline")}
                 className={cn(
                   mergeTypographyClasses(
@@ -372,6 +390,7 @@ export function TestimonialsBlock({
               >
                 {headline}
               </h2>
+              </ElementAnimated>
             )}
           </header>
         )}
@@ -389,6 +408,7 @@ export function TestimonialsBlock({
                     nameColor={nameColor}
                     roleColor={roleColor}
                     typography={typography}
+                    elements={elements}
                     onInlineEdit={handleInlineEdit}
                     interactivePreview={interactivePreview}
                     activeItemId={activeItemId}
@@ -434,6 +454,7 @@ export function TestimonialsBlock({
                 nameColor={nameColor}
                 roleColor={roleColor}
                 typography={typography}
+                elements={elements}
                 onInlineEdit={handleInlineEdit}
                 interactivePreview={interactivePreview}
                 activeItemId={activeItemId}
