@@ -11,6 +11,7 @@ import { resolveContainerBg } from "@/lib/theme/resolveContainerBg"
 import { resolveBoxShadow } from "@/lib/shadow/resolveBoxShadow"
 import { mergeTypographyClasses } from "@/lib/typography"
 import { useMotionPreference, getAnimationInitial, getViewportTrigger } from "@/lib/motion/useMotionPreference"
+import { preloadImage } from "@/lib/media/preloadImage"
 import { AnimatedBlock } from "@/components/blocks/AnimatedBlock"
 import { ElementAnimated } from "@/components/blocks/ElementAnimated"
 import type { BlockSectionProps, ElementShadow } from "@/types/cms"
@@ -151,6 +152,7 @@ function Lightbox({
   onClose: () => void
 }) {
   const [idx, setIdx] = useState(initialIndex)
+  const [imageReady, setImageReady] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   const prev = useCallback(() => setIdx((i) => (i <= 0 ? images.length - 1 : i - 1)), [images.length])
   const next = useCallback(() => setIdx((i) => (i >= images.length - 1 ? 0 : i + 1)), [images.length])
@@ -177,7 +179,35 @@ function Lightbox({
     }
   }, [])
 
-  const cur = images[idx]
+  const cur = images[idx] ?? null
+  const currentSrc = cur ? resolveImageSrc(cur) : ""
+
+  useEffect(() => {
+    if (!cur) return
+    let cancelled = false
+    setImageReady(false)
+
+    void preloadImage(currentSrc, 1400)
+      .catch(() => {
+        // keep lightbox usable even if preload fails
+      })
+      .finally(() => {
+        if (!cancelled) setImageReady(true)
+      })
+
+    if (images.length > 1) {
+      const nextIdx = idx >= images.length - 1 ? 0 : idx + 1
+      const nextSrc = resolveImageSrc(images[nextIdx]!)
+      void preloadImage(nextSrc, 1200).catch(() => {
+        // optional warmup, safe to ignore failures
+      })
+    }
+
+    return () => {
+      cancelled = true
+    }
+  }, [cur, currentSrc, idx, images])
+
   if (!cur) return null
 
   return (
@@ -243,11 +273,19 @@ function Lightbox({
           className="relative max-h-[85vh] max-w-[90vw]"
           onClick={(e) => e.stopPropagation()}
         >
+          {!imageReady && (
+            <div className="absolute inset-0 rounded-lg bg-muted/60 animate-pulse" aria-hidden="true" />
+          )}
           <img
-            src={resolveImageSrc(cur)}
+            src={currentSrc}
             alt={resolveAlt(cur)}
-            className="max-h-[85vh] max-w-[90vw] rounded-lg object-contain"
+            className={cn(
+              "max-h-[85vh] max-w-[90vw] rounded-lg object-contain transition-opacity duration-200",
+              imageReady ? "opacity-100" : "opacity-0"
+            )}
             draggable={false}
+            loading="eager"
+            decoding="async"
           />
           {cur.caption && (
             <div className="absolute bottom-0 left-0 right-0 rounded-b-lg bg-foreground/60 px-4 py-3 text-sm text-card backdrop-blur-sm">

@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button"
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion"
 import type { BlockSectionProps, ElementConfig, ElementShadow } from "@/types/cms"
 import { resolveBoxShadow } from "@/lib/shadow/resolveBoxShadow"
+import { preloadImage } from "@/lib/media/preloadImage"
 import type { GradientPresetValue } from "@/lib/theme/gradientPresets"
 import { AnimatedBlock } from "@/components/blocks/AnimatedBlock"
 import { ElementAnimated } from "@/components/blocks/ElementAnimated"
@@ -125,6 +126,7 @@ function SliderLightbox({
   onClose: () => void
 }) {
   const [idx, setIdx] = React.useState(initialIndex)
+  const [imageReady, setImageReady] = React.useState(false)
   const prev = React.useCallback(() => setIdx((i) => (i <= 0 ? slides.length - 1 : i - 1)), [slides.length])
   const next = React.useCallback(() => setIdx((i) => (i >= slides.length - 1 ? 0 : i + 1)), [slides.length])
 
@@ -146,7 +148,37 @@ function SliderLightbox({
     }
   }, [])
 
-  const slide = slides[idx]
+  const slide = slides[idx] ?? null
+  const currentSrc = slide?.url || ""
+
+  React.useEffect(() => {
+    if (!slide || !currentSrc) return
+    let cancelled = false
+    setImageReady(false)
+
+    void preloadImage(currentSrc, 1400)
+      .catch(() => {
+        // keep lightbox usable even when preload fails
+      })
+      .finally(() => {
+        if (!cancelled) setImageReady(true)
+      })
+
+    if (slides.length > 1) {
+      const nextIdx = idx >= slides.length - 1 ? 0 : idx + 1
+      const nextSrc = slides[nextIdx]?.url || ""
+      if (nextSrc) {
+        void preloadImage(nextSrc, 1200).catch(() => {
+          // optional warmup
+        })
+      }
+    }
+
+    return () => {
+      cancelled = true
+    }
+  }, [slide, currentSrc, idx, slides])
+
   if (!slide) return null
 
   const overlayStyle = backdropColor?.trim()
@@ -210,11 +242,19 @@ function SliderLightbox({
           exit={{ opacity: 0, scale: 0.97, y: 6 }}
           transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
         >
+          {!imageReady && (
+            <div className="absolute inset-0 rounded-lg bg-white/10 animate-pulse" aria-hidden="true" />
+          )}
           <img
-            src={slide.url}
+            src={currentSrc}
             alt={slide.alt || ""}
-            className="max-h-[88vh] max-w-[92vw] rounded-lg object-contain"
+            className={cn(
+              "max-h-[88vh] max-w-[92vw] rounded-lg object-contain transition-opacity duration-200",
+              imageReady ? "opacity-100" : "opacity-0"
+            )}
             draggable={false}
+            loading="eager"
+            decoding="async"
           />
         </motion.div>
       </motion.div>

@@ -377,7 +377,9 @@ function PromotionPopupContent({
                 src={popup.imageUrl!}
                 alt=""
                 className="absolute inset-0 h-full w-full object-cover"
-                loading="lazy"
+                loading="eager"
+                decoding="async"
+                fetchPriority="high"
               />
             </div>
           ) : null}
@@ -411,7 +413,14 @@ function PromotionPopupContent({
       {layout === "image_top" && hasImage ? (
         <div className="overflow-hidden bg-muted">
           <div className="relative h-56 w-full sm:h-80">
-            <img src={popup.imageUrl!} alt="" className="absolute inset-0 h-full w-full object-cover" loading="lazy" />
+            <img
+              src={popup.imageUrl!}
+              alt=""
+              className="absolute inset-0 h-full w-full object-cover"
+              loading="eager"
+              decoding="async"
+              fetchPriority="high"
+            />
             <div className="absolute inset-0 bg-linear-to-b from-transparent via-transparent to-card/50" />
           </div>
         </div>
@@ -516,7 +525,9 @@ function AnnouncementPopupContent({
               src={popup.imageUrl!}
               alt=""
               className="absolute inset-0 h-full w-full object-cover"
-              loading="lazy"
+              loading="eager"
+              decoding="async"
+              fetchPriority="high"
             />
           </div>
           <div className="flex flex-1 flex-col p-6 sm:p-8">
@@ -545,7 +556,14 @@ function AnnouncementPopupContent({
     <div className={cn("p-6 sm:p-7")} style={textStyle}>
       {layout === "image_top" && hasImage ? (
         <div className="mb-4 overflow-hidden rounded-xl border border-border/50 bg-muted">
-          <img src={popup.imageUrl!} alt="" className="h-40 w-full object-cover" loading="lazy" />
+          <img
+            src={popup.imageUrl!}
+            alt=""
+            className="h-40 w-full object-cover"
+            loading="eager"
+            decoding="async"
+            fetchPriority="high"
+          />
         </div>
       ) : null}
 
