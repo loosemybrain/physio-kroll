@@ -1,39 +1,41 @@
-# Admin-Autorisierung: DB als Source of Truth
+# Admin-Autorisierung: DB Source of Truth
 
-## Ist-Zustand (vor Phase 3.2 Cleanup, zur Nachverfolgung)
+## Aktueller Zustand
 
-Admin wurde u. a. geprüft über:
+Die produktive Berechtigungsquelle ist:
 
-| Mechanismus | Ort |
-|-------------|-----|
-| `requireAdminGuard()` | `src/lib/auth/adminGuard.ts` |
-| `isAdminUser()` (sync) | `src/lib/auth/adminAccess.ts` — `app_metadata.role === "admin"` und `ADMIN_EMAILS` |
-| `getAdminMfaState()` | `src/lib/auth/adminAccess.ts` — nutzte `isAdminUser` |
-| `ADMIN_EMAILS` / `process.env` | `adminAccess.ts`, `.env.example` |
-| API-Routen | Alle `requireAdminGuard`-Aufrufe unter `src/app/api/admin/**`, `src/app/admin/api/**` |
+- `public.user_roles` (Rollen-Zuordnungen je User)
+- `public.roles` (Rollenkatalog)
+- `public.is_admin(uuid)` als Kompatibilitätsfunktion, abgeleitet aus `user_roles` (`admin` oder `owner`)
 
-## Ziel-Zustand
+`public.admin_users` bleibt vorerst als Legacy-Bestand erhalten, ist aber **nicht** mehr die fachliche Quelle für Admin-Checks.
 
-- **Eine** Quelle: `public.admin_users` + `public.is_admin(uuid)`.
-- `requireAdminGuard()` ruft nach `getUser()` die RPC `is_admin` mit der User-UUID auf (Session-/Anon-Client mit Cookies).
-- Privilegierte Tabellen-Operationen in den Block-Template-Routen: `getSupabaseAdmin()` nach bestandenem Guard (`src/lib/api/adminServiceRoute.ts`).
-- `global_block_templates`: RLS nur mit `public.is_admin(auth.uid())` (Migration `20260402120100_...`).
+## Rollenmodell (RBAC-Light)
 
-## Bootstrap: ersten Admin anlegen
+- Rollen: `user`, `editor`, `admin`, `owner`
+- Neue Auth-User erhalten automatisch:
+  - `public.user_profiles`-Eintrag
+  - Rolle `user` in `public.user_roles`
+- Bestehende Einträge in `public.admin_users` werden in `public.user_roles` auf `admin` migriert (idempotent).
 
-Nach Migration, z. B. im Supabase SQL Editor (mit ausreichenden Rechten):
+## Guard-/Server-Flow (kompatibel)
 
-```sql
-insert into public.admin_users (user_id)
-values ('<auth.users.id des Admins>'::uuid)
-on conflict (user_id) do nothing;
-```
+- `requireAdminGuard()` prüft weiter via RPC `is_admin`.
+- `isUserAdminInDatabase()` prüft weiter via RPC `is_admin`.
+- MFA-Flow bleibt unverändert und greift weiter nur für echte Admins.
+- Service-Role-Zugriffe bleiben hinter bestandenem Admin-Guard (`src/lib/api/adminServiceRoute.ts`).
+- Admin-Benutzerverwaltung (`/admin/users`) nutzt ausschließlich serverseitig geschützte Admin-API-Routen.
 
-## Manuelle Tests (Kurz-Checkliste)
+## Sicherheit
 
-1. Migrationen anwenden (`admin_users`, `is_admin`, `global_block_templates`-RLS).
-2. Admin-Zeile einfügen, als dieser User einloggen → `GET /api/admin/block-templates` → 200.
-3. Nicht-Admin einloggen → dieselbe Route → 403.
-4. Ohne Session → 401.
-5. `POST` Template als Admin → 201; als Nicht-Admin → 403.
-6. `PATCH` / `DELETE` mit unbekannter UUID → 404.
+- Keine produktive Rollenlogik aus `app_metadata.role`
+- Keine ENV-E-Mail-Bypass-Logik
+- Keine zweite dauerhafte Wahrheit neben `public.user_roles`
+- `disabled` in `user_profiles` sperrt fachlich den Adminzugang (403-Pfad).
+
+## Kurze Verifikation
+
+1. Neuer User: hat `user_profiles` + Rolle `user`, kein Adminzugriff.
+2. Legacy-Admin (`admin_users`): nach Migration Rolle `admin` in `user_roles`, `is_admin(uuid)=true`.
+3. User mit nur `user`: Admin-Guard liefert 403.
+4. Admin ohne AAL2: landet weiterhin im bestehenden MFA-Flow.

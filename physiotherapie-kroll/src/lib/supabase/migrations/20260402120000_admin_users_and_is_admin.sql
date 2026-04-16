@@ -1,4 +1,4 @@
--- Admin Source of Truth: public.admin_users + public.is_admin(uuid)
+-- LEGACY bootstrap (replaced as source of truth by user_roles in 20260415_120000_rbac_roles_user_profiles_user_roles.sql)
 -- Idempotent / safe to re-run where DROP/CREATE allows
 
 -- ---------------------------------------------------------------------------

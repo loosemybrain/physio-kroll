@@ -13,17 +13,25 @@ type FactorLike = {
 }
 
 /**
- * Einzige produktive Admin-Quelle: `public.admin_users` (Abfrage via RPC `public.is_admin`).
+ * Einzige produktive Admin-Quelle: `public.user_roles` (Abfrage via RPC `public.is_admin`).
+ * `public.is_admin` bleibt als Kompatibilitätsfunktion erhalten.
  * Kein ENV-E-Mail-Fallback, kein app_metadata.role.
  */
 export async function isUserAdminInDatabase(supabase: SupabaseClient, userId: string): Promise<boolean> {
   if (!userId) return false
-  const { data, error } = await supabase.rpc("is_admin", { _user_id: userId })
-  if (error) {
-    console.error("is_admin RPC error:", error.message)
+  const [{ data: isAdmin, error: adminError }, { data: isActive, error: activeError }] = await Promise.all([
+    supabase.rpc("is_admin", { _user_id: userId }),
+    supabase.rpc("is_user_active", { _user_id: userId }),
+  ])
+  if (adminError) {
+    console.error("is_admin RPC error:", adminError.message)
     return false
   }
-  return data === true
+  if (activeError) {
+    console.error("is_user_active RPC error:", activeError.message)
+    return false
+  }
+  return isAdmin === true && isActive === true
 }
 
 function isTotpFactor(f: FactorLike): boolean {

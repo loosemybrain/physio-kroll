@@ -2,7 +2,7 @@ import "server-only"
 
 /**
  * Zentraler Admin-Guard für serverseitige Routen.
- * Source of Truth: `public.admin_users`, geprüft via RPC `public.is_admin(_user_id)`.
+ * Source of Truth: `public.user_roles`, geprüft via RPC `public.is_admin(_user_id)`.
  *
  * Verwendung:
  *   const supabase = await createSupabaseServerClient()
@@ -20,7 +20,7 @@ export type AdminGuardResult =
   | { ok: false; status: 401 | 403; message: string }
 
 /**
- * 401 = nicht eingeloggt, 403 = eingeloggt aber nicht in admin_users.
+ * 401 = nicht eingeloggt, 403 = eingeloggt aber ohne Admin-Rolle.
  */
 export async function requireAdminGuard(supabase: SupabaseClient): Promise<AdminGuardResult> {
   const {

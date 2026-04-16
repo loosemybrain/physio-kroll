@@ -15,10 +15,11 @@ export const metadata: Metadata = {
 
 /**
  * Admin Layout - Server-side auth gating
- * 
+ *
  * Redirects unauthenticated users to /auth/login.
  * This is the only place where /admin auth is enforced.
  * Middleware does NOT redirect to avoid loops.
+ * Autorisierung läuft über getAdminMfaState() -> RPC public.is_admin (rollenbasiert).
  */
 export default async function Layout({ children }: { children: React.ReactNode }) {
   const supabase = await createSupabaseServerClient()

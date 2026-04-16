@@ -14,7 +14,7 @@ Dieses Projekt nutzt folgende Strategie:
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY` (nur serverseitig)
-- Admin-Berechtigung für API/Server: siehe `public.admin_users` und RPC `public.is_admin` (Migrationen im Repo); kein `ADMIN_EMAILS` / kein `app_metadata.role` mehr als Quelle
+- Admin-Berechtigung für API/Server: siehe Rollenmodell mit `public.roles` + `public.user_roles`; Admin-Check weiterhin über RPC `public.is_admin` (kein `ADMIN_EMAILS`, kein `app_metadata.role` als Quelle)
 
 ## Supabase Dashboard (Auth)
 

@@ -22,7 +22,8 @@ export type RequireAdminWithServiceRoleResult =
   | { ok: false; response: NextResponse }
 
 /**
- * Session-Client: Auth-Identität. Service-Role-Client: privilegierte DB-Ops nach bestandenem Guard.
+ * Session-Client: Auth-Identität.
+ * Service-Role-Client: privilegierte DB-Ops erst nach bestandenem Admin-Guard (RBAC via public.is_admin).
  */
 export async function requireAdminWithServiceRole(): Promise<RequireAdminWithServiceRoleResult> {
   const sessionClient = await createSupabaseServerClient()
