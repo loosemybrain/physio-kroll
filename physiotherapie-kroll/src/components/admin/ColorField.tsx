@@ -162,7 +162,20 @@ export function ColorField(props: {
             max="100"
             value={Math.round(parsed.alpha * 100)}
             onChange={(e) => handleAlphaChange(parseInt(e.target.value) / 100)}
-            className="flex-1 h-2 rounded-lg appearance-none cursor-pointer accent-primary"
+            className={cn(
+              "flex-1 h-2 rounded-lg appearance-none cursor-pointer",
+              "bg-muted/80 border border-border",
+              "accent-primary",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+              // WebKit thumb
+              "[&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full",
+              "[&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-primary/50 [&::-webkit-slider-thumb]:shadow-sm",
+              // Firefox thumb
+              "[&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:rounded-full",
+              "[&::-moz-range-thumb]:bg-primary [&::-moz-range-thumb]:border [&::-moz-range-thumb]:border-primary/50",
+              // Firefox track
+              "[&::-moz-range-track]:h-2 [&::-moz-range-track]:rounded-lg [&::-moz-range-track]:bg-muted/80 [&::-moz-range-track]:border [&::-moz-range-track]:border-border"
+            )}
           />
           <span className="text-xs text-muted-foreground w-12 text-right">{Math.round(parsed.alpha * 100)}%</span>
         </div>

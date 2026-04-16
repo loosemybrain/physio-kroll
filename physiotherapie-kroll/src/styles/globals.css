@@ -437,6 +437,29 @@ a,
   border: 1px solid var(--primary); /* Direktes Binding an aktiven --primary Token */
   filter: blur(var(--cursor-ring-blur));
   background: transparent;
+  color: var(--primary);
+}
+
+.cursor-ring::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 18px;
+  height: 18px;
+  transform: translate(-50%, -50%);
+  opacity: 0;
+  transition: opacity 160ms ease, transform 160ms ease;
+  background-color: currentColor;
+  /* Magnifier icon (mask) */
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M10 2a8 8 0 1 0 4.9 14.3l4.4 4.4a1 1 0 0 0 1.4-1.4l-4.4-4.4A8 8 0 0 0 10 2Zm0 2a6 6 0 1 1 0 12a6 6 0 0 1 0-12Z'/%3E%3C/svg%3E");
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  -webkit-mask-size: 18px 18px;
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M10 2a8 8 0 1 0 4.9 14.3l4.4 4.4a1 1 0 0 0 1.4-1.4l-4.4-4.4A8 8 0 0 0 10 2Zm0 2a6 6 0 1 1 0 12a6 6 0 0 1 0-12Z'/%3E%3C/svg%3E");
+  mask-repeat: no-repeat;
+  mask-position: center;
+  mask-size: 18px 18px;
 }
 
 .cursor-dot,
@@ -445,18 +468,34 @@ a,
     opacity 150ms ease,
     transform var(--cursor-ease) ease,
     width 180ms ease,
-    height 180ms ease;
+    height 180ms ease,
+    border-radius 180ms ease,
+    box-shadow 180ms ease,
+    background-color 180ms ease;
 }
 
 html.cursor-hover .cursor-ring {
-  width: 48px;
-  height: 48px;
-  transform: translate3d(var(--cx, -100px), var(--cy, -100px), 0) scale(1.05);
-  opacity: 0.9;
+  width: 60px;
+  height: 60px;
+  /* Morph circle -> rounded-squircle for clear hover affordance */
+  border-radius: 16px;
+  transform: translate3d(var(--cx, -100px), var(--cy, -100px), 0) scale(1.08) rotate(8deg);
+  opacity: 1;
+  border-width: 2px;
+  background: color-mix(in oklch, var(--primary) 18%, transparent);
+  box-shadow:
+    0 10px 30px color-mix(in oklch, var(--primary) 20%, transparent),
+    0 0 0 6px color-mix(in oklch, var(--primary) 10%, transparent);
+}
+
+html.cursor-input .cursor-ring::after {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1.03);
 }
 
 html.cursor-hover .cursor-dot {
   opacity: 1;
+  transform: translate3d(var(--dx, -100px), var(--dy, -100px), 0) scale(1.15);
 }
 
 html.cursor-down .cursor-ring {

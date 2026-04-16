@@ -19,6 +19,11 @@ function isInteractive(el: Element | null) {
   )
 }
 
+function isTextInputLike(el: Element | null) {
+  if (!el) return false
+  return Boolean(el.closest(["input", "select", "textarea", "[contenteditable='true']", "[data-cursor='input']"].join(",")))
+}
+
 export default function CustomCursor() {
   const dotRef = React.useRef<HTMLDivElement | null>(null)
   const ringRef = React.useRef<HTMLDivElement | null>(null)
@@ -53,22 +58,38 @@ export default function CustomCursor() {
     const onMove = (e: MouseEvent) => {
       x = e.clientX
       y = e.clientY
+      const target = document.elementFromPoint(x, y)
+      root.classList.toggle("cursor-hover", isInteractive(target))
+      root.classList.toggle("cursor-input", isTextInputLike(target))
       show()
     }
 
     const onLeave = () => hide()
 
     const onDown = () => root.classList.add("cursor-down")
-    const onUp = () => root.classList.remove("cursor-down")
+    const onUp = () => {
+      root.classList.remove("cursor-down")
+      // DOM can change on click handlers (e.g. cookie consent). Re-evaluate hover/input state.
+      const target = document.elementFromPoint(x, y)
+      root.classList.toggle("cursor-hover", isInteractive(target))
+      root.classList.toggle("cursor-input", isTextInputLike(target))
+    }
 
     const onOver = (e: MouseEvent) => {
       const target = e.target as Element | null
       if (isInteractive(target)) root.classList.add("cursor-hover")
+      if (isTextInputLike(target)) root.classList.add("cursor-input")
     }
 
     const onOut = (e: MouseEvent) => {
       const target = e.target as Element | null
       if (isInteractive(target)) root.classList.remove("cursor-hover")
+      if (isTextInputLike(target)) root.classList.remove("cursor-input")
+    }
+
+    const onWindowBlur = () => {
+      root.classList.remove("cursor-hover", "cursor-down", "cursor-input")
+      hide()
     }
 
     const tick = () => {
@@ -98,6 +119,7 @@ export default function CustomCursor() {
     window.addEventListener("mouseup", onUp)
     window.addEventListener("mouseover", onOver)
     window.addEventListener("mouseout", onOut)
+    window.addEventListener("blur", onWindowBlur)
 
     raf = requestAnimationFrame(tick)
 
@@ -109,7 +131,8 @@ export default function CustomCursor() {
       window.removeEventListener("mouseup", onUp)
       window.removeEventListener("mouseover", onOver)
       window.removeEventListener("mouseout", onOut)
-      root.classList.remove("has-custom-cursor", "cursor-hover", "cursor-down")
+      window.removeEventListener("blur", onWindowBlur)
+      root.classList.remove("has-custom-cursor", "cursor-hover", "cursor-down", "cursor-input")
       root.style.removeProperty("--dx")
       root.style.removeProperty("--dy")
       root.style.removeProperty("--cx")

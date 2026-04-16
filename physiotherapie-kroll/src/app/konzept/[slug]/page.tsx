@@ -5,6 +5,7 @@ import { getSupabasePublic } from "@/lib/supabase/serverPublic";
 import { splitLeadingLegalHeroes } from "@/lib/cms/splitLeadingLegalHeroes";
 import { migrateLegalBlocksForPageType } from "@/lib/cms/migrations/legalSections";
 import type { CMSBlock } from "@/types/cms";
+import { PopupRuntime } from "@/components/popups/PopupRuntime";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -194,6 +195,7 @@ export default async function KonzeptCMSPageRoute({ params }: { params: Promise<
   const { prefix: legalHeroPrefix, rest: legalBodyBlocks } = splitLeadingLegalHeroes(cmsBlocks, isLegalPage);
 
   return (
+    <>
     <article>
       {legalHeroPrefix.length > 0 ? (
         <div className="w-full min-w-0">
@@ -224,5 +226,7 @@ export default async function KonzeptCMSPageRoute({ params }: { params: Promise<
         </aside>
       </div>
     </article>
+    <PopupRuntime pageId={page.id} />
+    </>
   );
 }

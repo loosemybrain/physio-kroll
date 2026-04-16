@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getSupabasePublic } from "@/lib/supabase/serverPublic";
 import type { CMSBlock } from "@/types/cms";
 import { HomePageClient } from "@/components/home-page-client";
+import { PopupRuntime } from "@/components/popups/PopupRuntime";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -78,5 +79,10 @@ export default async function HomePage() {
     props: (b.props ?? {}) as any,
   }));
 
-  return <HomePageClient blocks={cmsBlocks} initialBrand="physiotherapy" showBrandToggle={true} />;
+  return (
+    <>
+      <HomePageClient blocks={cmsBlocks} initialBrand="physiotherapy" showBrandToggle={true} />
+      <PopupRuntime pageId={homePage.id} />
+    </>
+  );
 }

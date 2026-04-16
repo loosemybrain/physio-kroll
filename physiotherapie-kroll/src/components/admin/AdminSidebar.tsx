@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { usePathname, useRouter } from "next/navigation"
-import { FileText, ImageIcon, Settings, ChevronLeft, ChevronRight, Layers, Navigation, Layout, Cookie, Shield, User, Users } from "lucide-react"
+import { FileText, ImageIcon, Settings, ChevronLeft, ChevronRight, Layers, Navigation, Layout, Cookie, Shield, User, Users, MessageSquare } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
@@ -10,6 +10,7 @@ import { useLeaveGuard } from "./AdminLeaveGuardContext"
 
 const navItems = [
   { icon: FileText, label: "Pages", href: "/admin/pages" },
+  { icon: MessageSquare, label: "Popups", href: "/admin/popups" },
   { icon: ImageIcon, label: "Media", href: "/admin/media" },
   { icon: Navigation, label: "Navigation", href: "/admin/navigation" },
   { icon: Layout, label: "Footer", href: "/admin/footer" },
