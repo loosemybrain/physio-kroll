@@ -6,6 +6,7 @@ import { XIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { PublicPopup } from "@/types/popups"
 import { Button } from "@/components/ui/button"
+import { isImagePreloaded } from "@/lib/media/preloadImage"
 
 type Props = {
   popup: PublicPopup
@@ -62,7 +63,14 @@ function PopupCoverImage({
   containerClassName: string
   imageClassName: string
 }) {
-  const [visible, setVisible] = React.useState(false)
+  const [visible, setVisible] = React.useState(() => isImagePreloaded(src))
+  React.useEffect(() => {
+    if (isImagePreloaded(src)) {
+      setVisible(true)
+      return
+    }
+    setVisible(false)
+  }, [src])
   return (
     <div className={cn("relative overflow-hidden bg-muted", containerClassName)}>
       {!visible ? (

@@ -102,6 +102,9 @@ export function PopupRuntime({ pageId }: Props) {
   const rafRef = useRef<number | null>(null)
   const scrollHandlerRef = useRef<((ev?: Event) => void) | null>(null)
   const openingRef = useRef(false)
+  /** Nach manuellem Schließen: kein erneutes Auto-Öffnen auf derselben Route (sonst feuert der Trigger-Effect bei open=false erneut). */
+  const userClosedPopupRef = useRef(false)
+  const lastRouteKeyRef = useRef("")
 
   useEffect(() => {
     setMounted(true)
@@ -111,6 +114,12 @@ export function PopupRuntime({ pageId }: Props) {
   useEffect(() => {
     if (!mounted) return
     let cancelled = false
+
+    const routeKey = `${pageId}:${pathname}`
+    if (lastRouteKeyRef.current !== routeKey) {
+      lastRouteKeyRef.current = routeKey
+      userClosedPopupRef.current = false
+    }
 
     setReady(false)
     setOpen(false)
@@ -143,6 +152,7 @@ export function PopupRuntime({ pageId }: Props) {
     if (!popup) return
     if (!shouldShow) return
     if (open) return
+    if (userClosedPopupRef.current) return
 
     const clear = () => {
       if (timerRef.current) {
@@ -251,8 +261,9 @@ export function PopupRuntime({ pageId }: Props) {
 
   const handleOpenChange = (next: boolean) => {
     setOpen(next)
-    if (!next && popup) {
-      markDismissed(popup)
+    if (!next) {
+      userClosedPopupRef.current = true
+      if (popup) markDismissed(popup)
     }
   }
 
