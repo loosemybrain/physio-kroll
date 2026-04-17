@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import { usePathname } from "next/navigation"
 import type { PublicPopup } from "@/types/popups"
 import { fetchActivePopupsForPage, pickTopPopup } from "@/lib/popups/publicPopups"
-import { preloadImage } from "@/lib/media/preloadImage"
+import { POPUP_IMAGE_PRELOAD_MAX_MS, preloadImage } from "@/lib/media/preloadImage"
 import { PopupModal } from "./PopupModal"
 
 type Props = {
@@ -136,17 +136,6 @@ export function PopupRuntime({ pageId }: Props) {
     return true
   }, [popup])
 
-  useEffect(() => {
-    if (!mounted) return
-    if (!popup) return
-    if (!shouldShow) return
-    const imageUrl = popup.imageUrl?.trim()
-    if (!imageUrl) return
-    void preloadImage(imageUrl, 1200).catch(() => {
-      // fallback: popup flow should continue even if preload fails
-    })
-  }, [mounted, popup, shouldShow])
-
   // Trigger engine (cleanup-safe).
   useEffect(() => {
     if (!mounted) return
@@ -177,20 +166,22 @@ export function PopupRuntime({ pageId }: Props) {
       if (openingRef.current) return
       openingRef.current = true
       clear()
+
       const imageUrl = popup.imageUrl?.trim()
       if (!imageUrl) {
         if (!disposed) setOpen(true)
         openingRef.current = false
         return
       }
-      void preloadImage(imageUrl, 1200)
-        .catch(() => {
-          // fallback: never block opening on image errors/timeouts
-        })
-        .finally(() => {
+
+      void (async () => {
+        try {
+          await preloadImage(imageUrl, POPUP_IMAGE_PRELOAD_MAX_MS)
+        } finally {
           if (!disposed) setOpen(true)
           openingRef.current = false
-        })
+        }
+      })()
     }
 
     if (popup.triggerType === "immediate") {
@@ -216,7 +207,11 @@ export function PopupRuntime({ pageId }: Props) {
       const threshold = clampPercent(popup.triggerScrollPercent ?? 50)
       if (threshold <= 0) {
         openNow()
-        return () => clear()
+        return () => {
+          disposed = true
+          openingRef.current = false
+          clear()
+        }
       }
 
       const check = (eventTarget?: EventTarget | null) => {

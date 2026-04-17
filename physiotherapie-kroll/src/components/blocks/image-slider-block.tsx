@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { createPortal } from "react-dom"
 import Image from "next/image"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
@@ -18,7 +19,7 @@ import { Button } from "@/components/ui/button"
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion"
 import type { BlockSectionProps, ElementConfig, ElementShadow } from "@/types/cms"
 import { resolveBoxShadow } from "@/lib/shadow/resolveBoxShadow"
-import { preloadImage } from "@/lib/media/preloadImage"
+import { scheduleWarmupImage } from "@/lib/media/preloadImage"
 import type { GradientPresetValue } from "@/lib/theme/gradientPresets"
 import { AnimatedBlock } from "@/components/blocks/AnimatedBlock"
 import { ElementAnimated } from "@/components/blocks/ElementAnimated"
@@ -126,7 +127,7 @@ function SliderLightbox({
   onClose: () => void
 }) {
   const [idx, setIdx] = React.useState(initialIndex)
-  const [imageReady, setImageReady] = React.useState(false)
+  const [imgDecoded, setImgDecoded] = React.useState(false)
   const prev = React.useCallback(() => setIdx((i) => (i <= 0 ? slides.length - 1 : i - 1)), [slides.length])
   const next = React.useCallback(() => setIdx((i) => (i >= slides.length - 1 ? 0 : i + 1)), [slides.length])
 
@@ -153,29 +154,19 @@ function SliderLightbox({
 
   React.useEffect(() => {
     if (!slide || !currentSrc) return
-    let cancelled = false
-    setImageReady(false)
+    setImgDecoded(false)
 
-    void preloadImage(currentSrc, 1400)
-      .catch(() => {
-        // keep lightbox usable even when preload fails
-      })
-      .finally(() => {
-        if (!cancelled) setImageReady(true)
-      })
-
+    let clearNextWarmup: (() => void) | undefined
     if (slides.length > 1) {
       const nextIdx = idx >= slides.length - 1 ? 0 : idx + 1
       const nextSrc = slides[nextIdx]?.url || ""
-      if (nextSrc) {
-        void preloadImage(nextSrc, 1200).catch(() => {
-          // optional warmup
-        })
+      if (nextSrc && nextSrc !== currentSrc) {
+        clearNextWarmup = scheduleWarmupImage(nextSrc)
       }
     }
 
     return () => {
-      cancelled = true
+      clearNextWarmup?.()
     }
   }, [slide, currentSrc, idx, slides])
 
@@ -185,10 +176,10 @@ function SliderLightbox({
     ? { backgroundColor: backdropColor }
     : undefined
 
-  return (
+  const layer = (
     <AnimatePresence>
       <motion.div
-        className="fixed inset-0 z-100 flex items-center justify-center p-4 backdrop-blur-sm"
+        className="fixed inset-0 z-10000 flex items-center justify-center p-4 backdrop-blur-sm"
         style={overlayStyle}
         role="dialog"
         aria-modal="true"
@@ -242,24 +233,26 @@ function SliderLightbox({
           exit={{ opacity: 0, scale: 0.97, y: 6 }}
           transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
         >
-          {!imageReady && (
+          {!imgDecoded && (
             <div className="absolute inset-0 rounded-lg bg-white/10 animate-pulse" aria-hidden="true" />
           )}
           <img
             src={currentSrc}
             alt={slide.alt || ""}
-            className={cn(
-              "max-h-[88vh] max-w-[92vw] rounded-lg object-contain transition-opacity duration-200",
-              imageReady ? "opacity-100" : "opacity-0"
-            )}
+            className="relative z-1 max-h-[88vh] max-w-[92vw] rounded-lg object-contain"
             draggable={false}
-            loading="eager"
+            loading="lazy"
             decoding="async"
+            onLoad={() => setImgDecoded(true)}
+            onError={() => setImgDecoded(true)}
           />
         </motion.div>
       </motion.div>
     </AnimatePresence>
   )
+
+  if (typeof document === "undefined") return null
+  return createPortal(layer, document.body)
 }
 
 /* ================================================================ */

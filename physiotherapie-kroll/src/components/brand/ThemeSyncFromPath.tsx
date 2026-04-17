@@ -58,8 +58,10 @@ export function ThemeSyncFromPath() {
 
     if (appliedBrandRef.current === brand) return
 
+    const ac = new AbortController()
     let cancelled = false
-    fetch(`/api/theme?brand=${encodeURIComponent(brand)}`)
+
+    fetch(`/api/theme?brand=${encodeURIComponent(brand)}`, { signal: ac.signal })
       .then((res) => {
         if (!res.ok || cancelled) return null
         return res.json()
@@ -67,10 +69,13 @@ export function ThemeSyncFromPath() {
       .then((data: { brand: BrandKey; vars: Record<string, string> } | null) => {
         if (!cancelled && data?.vars) apply(data.vars, data.brand)
       })
-      .catch(() => {})
+      .catch(() => {
+        // aborted or network error — ignore
+      })
 
     return () => {
       cancelled = true
+      ac.abort()
     }
   }, [brand])
 

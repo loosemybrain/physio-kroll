@@ -493,6 +493,93 @@ html.cursor-input .cursor-ring::after {
   transform: translate(-50%, -50%) scale(1.03);
 }
 
+/* ===== Popup Motion (runtime-safe, independent from tailwind animation utilities) ===== */
+@keyframes popup-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes popup-fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes popup-slide-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 18px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes popup-slide-out {
+  from {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    opacity: 0;
+    transform: translate3d(0, 10px, 0);
+  }
+}
+
+@keyframes popup-scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes popup-scale-out {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+}
+
+.popup-overlay-motion[data-state="open"] {
+  animation: popup-fade-in var(--popup-fade-in-ms, 620ms) cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.popup-overlay-motion[data-state="closed"] {
+  animation: popup-fade-out var(--popup-fade-out-ms, 220ms) cubic-bezier(0.4, 0, 1, 1) both;
+}
+
+.popup-content-motion[data-state="open"].popup-content-anim-fade {
+  animation: popup-fade-in var(--popup-fade-in-ms, 620ms) cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.popup-content-motion[data-state="closed"].popup-content-anim-fade {
+  animation: popup-fade-out var(--popup-fade-out-ms, 220ms) cubic-bezier(0.4, 0, 1, 1) both;
+}
+
+.popup-content-motion[data-state="open"].popup-content-anim-slide {
+  animation: popup-slide-in var(--popup-fade-in-ms, 620ms) cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.popup-content-motion[data-state="closed"].popup-content-anim-slide {
+  animation: popup-slide-out var(--popup-fade-out-ms, 220ms) cubic-bezier(0.4, 0, 1, 1) both;
+}
+
+.popup-content-motion[data-state="open"].popup-content-anim-scale {
+  animation: popup-scale-in var(--popup-fade-in-ms, 620ms) cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.popup-content-motion[data-state="closed"].popup-content-anim-scale {
+  animation: popup-scale-out var(--popup-fade-out-ms, 220ms) cubic-bezier(0.4, 0, 1, 1) both;
+}
+
 html.cursor-hover .cursor-dot {
   opacity: 1;
   transform: translate3d(var(--dx, -100px), var(--dy, -100px), 0) scale(1.15);

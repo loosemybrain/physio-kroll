@@ -38,13 +38,6 @@ function contentClasses(p: PublicPopup) {
         ? "sm:bottom-10 sm:top-auto sm:translate-y-0"
         : "sm:top-1/2 sm:-translate-y-1/2"
 
-  const animation =
-    p.animationVariant === "slide_up"
-      ? "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 data-[state=open]:slide-in-from-bottom-4 data-[state=closed]:slide-out-to-bottom-2 data-[state=open]:duration-(--popup-fade-in-ms) data-[state=closed]:duration-(--popup-fade-out-ms) data-[state=open]:ease-out data-[state=closed]:ease-in"
-      : p.animationVariant === "scale"
-        ? "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 data-[state=open]:zoom-in-95 data-[state=closed]:zoom-out-95 data-[state=open]:duration-(--popup-fade-in-ms) data-[state=closed]:duration-(--popup-fade-out-ms) data-[state=open]:ease-out data-[state=closed]:ease-in"
-        : "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 data-[state=open]:duration-(--popup-fade-in-ms) data-[state=closed]:duration-(--popup-fade-out-ms) data-[state=open]:ease-out data-[state=closed]:ease-in"
-
   // Mobile: bottom sheet (v0 direction), Desktop: respect position/size
   return cn(
     "fixed z-50 outline-none",
@@ -55,8 +48,36 @@ function contentClasses(p: PublicPopup) {
     "sm:left-1/2 sm:right-auto sm:bottom-auto sm:w-[92vw] sm:-translate-x-1/2",
     "sm:rounded-2xl sm:border sm:border-border/50 sm:bg-card",
     position,
-    size,
-    animation
+    size
+  )
+}
+
+/** Stabiler Bildbereich: feste Container-Fläche, kein Layout-Sprung; Skeleton bis Pixel da sind. */
+function PopupCoverImage({
+  src,
+  containerClassName,
+  imageClassName,
+}: {
+  src: string
+  containerClassName: string
+  imageClassName: string
+}) {
+  const [visible, setVisible] = React.useState(false)
+  return (
+    <div className={cn("relative overflow-hidden bg-muted", containerClassName)}>
+      {!visible ? (
+        <div className="absolute inset-0 z-0 animate-pulse bg-muted" aria-hidden />
+      ) : null}
+      <img
+        src={src}
+        alt=""
+        className={cn(imageClassName, "relative z-1", visible ? "opacity-100" : "opacity-0")}
+        loading="lazy"
+        decoding="async"
+        onLoad={() => setVisible(true)}
+        onError={() => setVisible(true)}
+      />
+    </div>
   )
 }
 
@@ -83,6 +104,38 @@ export function PopupModal({ popup, open, onOpenChange }: Props) {
   const radiusStyle: React.CSSProperties = popup.borderRadius ? { borderRadius: popup.borderRadius } : {}
   const fadeInMs = clampDuration(popup.animationFadeInMs, 620, 100, 4000)
   const fadeOutMs = clampDuration(popup.animationFadeOutMs, 220, 80, 3000)
+  const [contentVisible, setContentVisible] = React.useState(false)
+
+  React.useEffect(() => {
+    if (!open) {
+      setContentVisible(false)
+      return
+    }
+    const raf = window.requestAnimationFrame(() => setContentVisible(true))
+    return () => window.cancelAnimationFrame(raf)
+  }, [open, popup.id, popup.animationVariant, fadeInMs])
+
+  const innerTransition = `${fadeInMs}ms cubic-bezier(0.16, 1, 0.3, 1)`
+  const innerStyle: React.CSSProperties =
+    popup.animationVariant === "slide_up"
+      ? {
+          opacity: contentVisible ? 1 : 0,
+          transform: contentVisible ? "translate3d(0,0,0)" : "translate3d(0,18px,0)",
+          transition: `opacity ${innerTransition}, transform ${innerTransition}`,
+          willChange: "opacity, transform",
+        }
+      : popup.animationVariant === "scale"
+        ? {
+            opacity: contentVisible ? 1 : 0,
+            transform: contentVisible ? "scale(1)" : "scale(0.96)",
+            transition: `opacity ${innerTransition}, transform ${innerTransition}`,
+            willChange: "opacity, transform",
+          }
+        : {
+            opacity: contentVisible ? 1 : 0,
+            transition: `opacity ${innerTransition}`,
+            willChange: "opacity",
+          }
 
   const resolveAnchorTarget = React.useCallback((rawHash: string): HTMLElement | null => {
     const hash = rawHash.replace(/^#/, "").trim()
@@ -147,8 +200,7 @@ export function PopupModal({ popup, open, onOpenChange }: Props) {
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay
           className={cn(
-            "fixed inset-0 z-50 bg-black/60 backdrop-blur-sm",
-            "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 data-[state=open]:duration-(--popup-fade-in-ms) data-[state=closed]:duration-(--popup-fade-out-ms) data-[state=open]:ease-out data-[state=closed]:ease-in"
+            "fixed inset-0 z-50 bg-black/60 backdrop-blur-sm popup-overlay-motion"
           )}
           style={{
             ...overlayStyle(popup.overlayOpacity),
@@ -171,49 +223,51 @@ export function PopupModal({ popup, open, onOpenChange }: Props) {
             if (!popup.closeOnEscape) e.preventDefault()
           }}
         >
-          {/* Mobile handle */}
-          <div className="flex justify-center pt-3 sm:hidden">
-            <div className="h-1 w-12 rounded-full bg-muted-foreground/30" />
+          <div style={innerStyle}>
+            {/* Mobile handle */}
+            <div className="flex justify-center pt-3 sm:hidden">
+              <div className="h-1 w-12 rounded-full bg-muted-foreground/30" />
+            </div>
+
+            {popup.showCloseIcon && popup.designVariant !== "promotion" && popup.designVariant !== "announcement" && (
+              <DialogPrimitive.Close
+                className={cn(
+                  "absolute right-4 top-4 inline-flex h-9 w-9 items-center justify-center rounded-lg",
+                  "opacity-80 transition-opacity hover:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
+                  "hover:bg-muted"
+                )}
+              >
+                <XIcon className="h-4 w-4 text-muted-foreground" />
+                <span className="sr-only">Schließen</span>
+              </DialogPrimitive.Close>
+            )}
+
+            {popup.designVariant === "announcement" ? (
+              <AnnouncementPopupContent
+                popup={popup}
+                hasImage={hasImage}
+                layout={layout}
+                textStyle={textStyle}
+                showCloseIcon={popup.showCloseIcon}
+                closeLabel={closeLabel}
+                ctaLabel={ctaLabel}
+                ctaUrl={ctaUrl}
+                onCtaAction={handleCtaAction}
+              />
+            ) : (
+              <PromotionPopupContent
+                popup={popup}
+                hasImage={hasImage}
+                layout={layout}
+                textStyle={textStyle}
+                showCloseIcon={popup.showCloseIcon}
+                closeLabel={closeLabel}
+                ctaLabel={ctaLabel}
+                ctaUrl={ctaUrl}
+                onCtaAction={handleCtaAction}
+              />
+            )}
           </div>
-
-          {popup.showCloseIcon && popup.designVariant !== "promotion" && popup.designVariant !== "announcement" && (
-            <DialogPrimitive.Close
-              className={cn(
-                "absolute right-4 top-4 inline-flex h-9 w-9 items-center justify-center rounded-lg",
-                "opacity-80 transition-opacity hover:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
-                "hover:bg-muted"
-              )}
-            >
-              <XIcon className="h-4 w-4 text-muted-foreground" />
-              <span className="sr-only">Schließen</span>
-            </DialogPrimitive.Close>
-          )}
-
-          {popup.designVariant === "announcement" ? (
-            <AnnouncementPopupContent
-              popup={popup}
-              hasImage={hasImage}
-              layout={layout}
-              textStyle={textStyle}
-              showCloseIcon={popup.showCloseIcon}
-              closeLabel={closeLabel}
-              ctaLabel={ctaLabel}
-              ctaUrl={ctaUrl}
-              onCtaAction={handleCtaAction}
-            />
-          ) : (
-            <PromotionPopupContent
-              popup={popup}
-              hasImage={hasImage}
-              layout={layout}
-              textStyle={textStyle}
-              showCloseIcon={popup.showCloseIcon}
-              closeLabel={closeLabel}
-              ctaLabel={ctaLabel}
-              ctaUrl={ctaUrl}
-              onCtaAction={handleCtaAction}
-            />
-          )}
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>
@@ -372,16 +426,11 @@ function PromotionPopupContent({
       <div className={cn("p-0")} style={textStyle}>
         <div className="flex flex-col overflow-hidden sm:max-h-96 sm:flex-row">
           {hasImage ? (
-            <div className="relative h-56 w-full overflow-hidden bg-muted sm:h-96 sm:w-64 sm:shrink-0">
-              <img
-                src={popup.imageUrl!}
-                alt=""
-                className="absolute inset-0 h-full w-full object-cover"
-                loading="eager"
-                decoding="async"
-                fetchPriority="high"
-              />
-            </div>
+            <PopupCoverImage
+              src={popup.imageUrl!}
+              containerClassName="h-56 w-full sm:h-96 sm:w-64 sm:shrink-0"
+              imageClassName="absolute inset-0 h-full w-full object-cover"
+            />
           ) : null}
           <div className={cn("flex flex-col justify-between p-6 sm:p-8", !hasImage && "sm:w-full")}>
             <div className="flex items-start justify-between gap-4">
@@ -413,15 +462,12 @@ function PromotionPopupContent({
       {layout === "image_top" && hasImage ? (
         <div className="overflow-hidden bg-muted">
           <div className="relative h-56 w-full sm:h-80">
-            <img
+            <PopupCoverImage
               src={popup.imageUrl!}
-              alt=""
-              className="absolute inset-0 h-full w-full object-cover"
-              loading="eager"
-              decoding="async"
-              fetchPriority="high"
+              containerClassName="absolute inset-0"
+              imageClassName="absolute inset-0 h-full w-full object-cover"
             />
-            <div className="absolute inset-0 bg-linear-to-b from-transparent via-transparent to-card/50" />
+            <div className="absolute inset-0 z-2 bg-linear-to-b from-transparent via-transparent to-card/50 pointer-events-none" />
           </div>
         </div>
       ) : null}
@@ -520,16 +566,11 @@ function AnnouncementPopupContent({
     return (
       <div className="p-0" style={textStyle}>
         <div className="flex flex-col overflow-hidden sm:max-h-96 sm:flex-row">
-          <div className="relative h-56 w-full overflow-hidden bg-muted sm:h-96 sm:w-64 sm:shrink-0">
-            <img
-              src={popup.imageUrl!}
-              alt=""
-              className="absolute inset-0 h-full w-full object-cover"
-              loading="eager"
-              decoding="async"
-              fetchPriority="high"
-            />
-          </div>
+          <PopupCoverImage
+            src={popup.imageUrl!}
+            containerClassName="h-56 w-full sm:h-96 sm:w-64 sm:shrink-0"
+            imageClassName="absolute inset-0 h-full w-full object-cover"
+          />
           <div className="flex flex-1 flex-col p-6 sm:p-8">
             {/* v0 structure: header row (headline + close) -> body -> actions bottom */}
             <div className="flex items-start justify-between gap-4">
@@ -555,14 +596,11 @@ function AnnouncementPopupContent({
   return (
     <div className={cn("p-6 sm:p-7")} style={textStyle}>
       {layout === "image_top" && hasImage ? (
-        <div className="mb-4 overflow-hidden rounded-xl border border-border/50 bg-muted">
-          <img
+        <div className="mb-4 overflow-hidden rounded-xl border border-border/50">
+          <PopupCoverImage
             src={popup.imageUrl!}
-            alt=""
-            className="h-40 w-full object-cover"
-            loading="eager"
-            decoding="async"
-            fetchPriority="high"
+            containerClassName="h-40 w-full"
+            imageClassName="block h-full w-full object-cover"
           />
         </div>
       ) : null}

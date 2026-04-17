@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState, useCallback, useRef, useEffect } from "react"
+import { createPortal } from "react-dom"
 import Image from "next/image"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
@@ -11,7 +12,7 @@ import { resolveContainerBg } from "@/lib/theme/resolveContainerBg"
 import { resolveBoxShadow } from "@/lib/shadow/resolveBoxShadow"
 import { mergeTypographyClasses } from "@/lib/typography"
 import { useMotionPreference, getAnimationInitial, getViewportTrigger } from "@/lib/motion/useMotionPreference"
-import { preloadImage } from "@/lib/media/preloadImage"
+import { scheduleWarmupImage } from "@/lib/media/preloadImage"
 import { AnimatedBlock } from "@/components/blocks/AnimatedBlock"
 import { ElementAnimated } from "@/components/blocks/ElementAnimated"
 import type { BlockSectionProps, ElementShadow } from "@/types/cms"
@@ -152,7 +153,7 @@ function Lightbox({
   onClose: () => void
 }) {
   const [idx, setIdx] = useState(initialIndex)
-  const [imageReady, setImageReady] = useState(false)
+  const [imgDecoded, setImgDecoded] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   const prev = useCallback(() => setIdx((i) => (i <= 0 ? images.length - 1 : i - 1)), [images.length])
   const next = useCallback(() => setIdx((i) => (i >= images.length - 1 ? 0 : i + 1)), [images.length])
@@ -183,34 +184,26 @@ function Lightbox({
   const currentSrc = cur ? resolveImageSrc(cur) : ""
 
   useEffect(() => {
-    if (!cur) return
-    let cancelled = false
-    setImageReady(false)
+    if (!cur || !currentSrc) return
+    setImgDecoded(false)
 
-    void preloadImage(currentSrc, 1400)
-      .catch(() => {
-        // keep lightbox usable even if preload fails
-      })
-      .finally(() => {
-        if (!cancelled) setImageReady(true)
-      })
-
+    let clearNextWarmup: (() => void) | undefined
     if (images.length > 1) {
       const nextIdx = idx >= images.length - 1 ? 0 : idx + 1
       const nextSrc = resolveImageSrc(images[nextIdx]!)
-      void preloadImage(nextSrc, 1200).catch(() => {
-        // optional warmup, safe to ignore failures
-      })
+      if (nextSrc && nextSrc !== currentSrc) {
+        clearNextWarmup = scheduleWarmupImage(nextSrc)
+      }
     }
 
     return () => {
-      cancelled = true
+      clearNextWarmup?.()
     }
   }, [cur, currentSrc, idx, images])
 
   if (!cur) return null
 
-  return (
+  const layer = (
     <AnimatePresence>
       <motion.div
         ref={ref}
@@ -222,7 +215,7 @@ function Lightbox({
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         transition={{ duration: 0.25 }}
-        className="fixed inset-0 z-100 flex items-center justify-center bg-foreground/90 backdrop-blur-md outline-none"
+        className="fixed inset-0 z-10000 flex items-center justify-center bg-foreground/90 backdrop-blur-md outline-none"
         onClick={onClose}
       >
         <button
@@ -273,19 +266,18 @@ function Lightbox({
           className="relative max-h-[85vh] max-w-[90vw]"
           onClick={(e) => e.stopPropagation()}
         >
-          {!imageReady && (
+          {!imgDecoded && (
             <div className="absolute inset-0 rounded-lg bg-muted/60 animate-pulse" aria-hidden="true" />
           )}
           <img
             src={currentSrc}
             alt={resolveAlt(cur)}
-            className={cn(
-              "max-h-[85vh] max-w-[90vw] rounded-lg object-contain transition-opacity duration-200",
-              imageReady ? "opacity-100" : "opacity-0"
-            )}
+            className="relative z-1 max-h-[85vh] max-w-[90vw] rounded-lg object-contain"
             draggable={false}
-            loading="eager"
+            loading="lazy"
             decoding="async"
+            onLoad={() => setImgDecoded(true)}
+            onError={() => setImgDecoded(true)}
           />
           {cur.caption && (
             <div className="absolute bottom-0 left-0 right-0 rounded-b-lg bg-foreground/60 px-4 py-3 text-sm text-card backdrop-blur-sm">
@@ -296,6 +288,9 @@ function Lightbox({
       </motion.div>
     </AnimatePresence>
   )
+
+  if (typeof document === "undefined") return null
+  return createPortal(layer, document.body)
 }
 
 /* ------------------------------------------------------------------ */

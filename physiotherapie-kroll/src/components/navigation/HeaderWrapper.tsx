@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation"
 import { HeaderClient } from "./HeaderClient"
 import { useBrand } from "@/components/brand/BrandProvider"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import type { NavConfig } from "@/types/navigation"
 import { DEFAULT_NAV_CONFIG } from "@/lib/consent/navigation-defaults"
 
@@ -21,6 +21,7 @@ export function HeaderWrapper({ children }: { children: React.ReactNode }) {
   } | null>(null)
   const [loading, setLoading] = useState(true)
   const [isLegalPage, setIsLegalPage] = useState(false)
+  const legalPageCacheRef = useRef<Map<string, boolean>>(new Map())
 
   // Load both navigation configs once
   useEffect(() => {
@@ -37,13 +38,6 @@ export function HeaderWrapper({ children }: { children: React.ReactNode }) {
         const konzeptConfig = konzeptResponse.ok
           ? await konzeptResponse.json()
           : DEFAULT_NAV_CONFIG
-
-        if (process.env.NODE_ENV === "development") {
-          console.log("[HeaderWrapper] Loaded configs:", {
-            physio: { logo: physioConfig.logo, logoSize: physioConfig.logoSize },
-            konzept: { logo: konzeptConfig.logo, logoSize: konzeptConfig.logoSize },
-          })
-        }
 
         setNavConfigs({
           physiotherapy: physioConfig,
@@ -63,7 +57,7 @@ export function HeaderWrapper({ children }: { children: React.ReactNode }) {
     loadNavConfigs()
   }, []) // Only load once on mount
 
-  // Check if current page is a legal page
+  // Check if current page is a legal page (cached — avoids a DB round-trip on every navigation)
   useEffect(() => {
     const checkIfLegalPage = async () => {
       if (!pathname) return
@@ -74,37 +68,42 @@ export function HeaderWrapper({ children }: { children: React.ReactNode }) {
         return
       }
 
-      // Extract slug from pathname (e.g., "/imprint" => "imprint", "/konzept/impressum" => "konzept")
       const segments = pathname.split("/").filter(Boolean)
       if (segments.length === 0) {
         setIsLegalPage(false)
         return
       }
 
-      // Handle /konzept/* pages (physio-konzept brand)
       const isKonzeptPage = segments[0] === "konzept"
       const slug = isKonzeptPage ? segments[1] : segments[0]
       const checkBrand = isKonzeptPage ? "physio-konzept" : "physiotherapy"
 
-      try {
-        const response = await fetch(`/api/is-legal-page?slug=${slug}&brand=${checkBrand}`)
-        const data = await response.json()
-        setIsLegalPage(data.isLegalPage || false)
+      // /konzept (Index) or / (handled above) — no page slug, no API call
+      if (!slug) {
+        setIsLegalPage(false)
+        return
+      }
 
-        if (process.env.NODE_ENV === "development") {
-          console.log("[HeaderWrapper] Legal page check:", {
-            pathname,
-            slug,
-            brand: checkBrand,
-            isLegalPage: data.isLegalPage,
-          })
-        }
+      const cacheKey = `${checkBrand}:${slug}`
+      const cached = legalPageCacheRef.current.get(cacheKey)
+      if (cached !== undefined) {
+        setIsLegalPage(cached)
+        return
+      }
+
+      try {
+        const response = await fetch(`/api/is-legal-page?slug=${encodeURIComponent(slug)}&brand=${encodeURIComponent(checkBrand)}`)
+        const data = await response.json()
+        const next = Boolean(data.isLegalPage)
+        legalPageCacheRef.current.set(cacheKey, next)
+        setIsLegalPage(next)
       } catch (error) {
         console.error("[HeaderWrapper] Error checking if legal page:", error)
+        legalPageCacheRef.current.set(cacheKey, false)
         setIsLegalPage(false)
       }
     }
-    checkIfLegalPage()
+    void checkIfLegalPage()
   }, [pathname])
 
   // Don't show header on admin/auth pages
@@ -123,10 +122,6 @@ export function HeaderWrapper({ children }: { children: React.ReactNode }) {
 
   // Get the config for the current brand
   const navConfig = navConfigs[brand]
-
-  if (process.env.NODE_ENV === "development") {
-    console.log("[HeaderWrapper] Rendering with brand:", brand, "Logo:", navConfig.logo)
-  }
 
   return (
     <>

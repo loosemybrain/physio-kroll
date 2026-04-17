@@ -40,10 +40,6 @@ export default async function RootLayout({
   const isPreview = hdrs.get("x-preview") === "1"
   const brand: BrandKey = brandHeader === "physio-konzept" ? "physio-konzept" : "physiotherapy"
 
-  if (process.env.NODE_ENV === "development") {
-    console.log("[layout] x-brand", brandHeader, "x-theme-scope", themeScope)
-  }
-
   const preset =
     themeScope === "public"
       ? await getThemePresetInlineVars(brand).catch(() => ({
