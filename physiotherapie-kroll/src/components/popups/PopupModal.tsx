@@ -107,8 +107,10 @@ export function PopupModal({ popup, open, onOpenChange }: Props) {
   const hasImage = popup.layoutVariant !== "no_image" && !!popup.imageUrl
   const layout = popup.layoutVariant
 
-  const bgStyle: React.CSSProperties = popup.bgColor ? { backgroundColor: popup.bgColor } : {}
-  const textStyle: React.CSSProperties = popup.textColor ? { color: popup.textColor } : {}
+  const hasCustomBgColor = !!popup.bgColor?.trim()
+  const hasCustomTextColor = !!popup.textColor?.trim()
+  const bgStyle: React.CSSProperties = hasCustomBgColor ? { backgroundColor: popup.bgColor! } : {}
+  const textStyle: React.CSSProperties = hasCustomTextColor ? { color: popup.textColor! } : {}
   const radiusStyle: React.CSSProperties = popup.borderRadius ? { borderRadius: popup.borderRadius } : {}
   const fadeInMs = clampDuration(popup.animationFadeInMs, 620, 100, 4000)
   const fadeOutMs = clampDuration(popup.animationFadeOutMs, 220, 80, 3000)
@@ -217,7 +219,7 @@ export function PopupModal({ popup, open, onOpenChange }: Props) {
           }}
         />
         <DialogPrimitive.Content
-          className={cn(contentClasses(popup), shadowClass(popup.shadowPreset))}
+          className={cn(contentClasses(popup), shadowClass(popup.shadowPreset), !hasCustomTextColor && "text-foreground")}
           style={{
             ...bgStyle,
             ...radiusStyle,
@@ -256,6 +258,7 @@ export function PopupModal({ popup, open, onOpenChange }: Props) {
                 hasImage={hasImage}
                 layout={layout}
                 textStyle={textStyle}
+                hasCustomTextColor={hasCustomTextColor}
                 showCloseIcon={popup.showCloseIcon}
                 closeLabel={closeLabel}
                 ctaLabel={ctaLabel}
@@ -268,6 +271,7 @@ export function PopupModal({ popup, open, onOpenChange }: Props) {
                 hasImage={hasImage}
                 layout={layout}
                 textStyle={textStyle}
+                hasCustomTextColor={hasCustomTextColor}
                 showCloseIcon={popup.showCloseIcon}
                 closeLabel={closeLabel}
                 ctaLabel={ctaLabel}
@@ -395,6 +399,7 @@ function PromotionPopupContent({
   hasImage,
   layout,
   textStyle,
+  hasCustomTextColor,
   showCloseIcon,
   closeLabel,
   ctaLabel,
@@ -405,6 +410,7 @@ function PromotionPopupContent({
   hasImage: boolean
   layout: PublicPopup["layoutVariant"]
   textStyle: React.CSSProperties
+  hasCustomTextColor: boolean
   showCloseIcon: boolean
   closeLabel: string
   ctaLabel: string
@@ -446,7 +452,10 @@ function PromotionPopupContent({
                 <PopupBody
                   popup={popup}
                   headlineClassName="text-2xl font-bold sm:text-3xl"
-                  bodyClassName="text-sm sm:text-base text-muted-foreground leading-relaxed"
+                  bodyClassName={cn(
+                    "text-sm sm:text-base leading-relaxed",
+                    hasCustomTextColor ? "opacity-90" : "text-muted-foreground"
+                  )}
                 />
               </div>
               {InlineClose}
@@ -485,7 +494,10 @@ function PromotionPopupContent({
             <PopupBody
               popup={popup}
               headlineClassName="text-2xl font-bold sm:text-3xl"
-              bodyClassName="text-sm sm:text-base text-muted-foreground leading-relaxed"
+              bodyClassName={cn(
+                "text-sm sm:text-base leading-relaxed",
+                hasCustomTextColor ? "opacity-90" : "text-muted-foreground"
+              )}
             />
           </div>
           {InlineClose}
@@ -509,6 +521,7 @@ function AnnouncementPopupContent({
   hasImage,
   layout,
   textStyle,
+  hasCustomTextColor,
   showCloseIcon,
   closeLabel,
   ctaLabel,
@@ -519,6 +532,7 @@ function AnnouncementPopupContent({
   hasImage: boolean
   layout: PublicPopup["layoutVariant"]
   textStyle: React.CSSProperties
+  hasCustomTextColor: boolean
   showCloseIcon: boolean
   closeLabel: string
   ctaLabel: string
@@ -586,7 +600,10 @@ function AnnouncementPopupContent({
                 <PopupBody
                   popup={popup}
                   headlineClassName="text-xl font-bold sm:text-2xl"
-                  bodyClassName="text-sm text-muted-foreground leading-relaxed"
+                  bodyClassName={cn(
+                    "text-sm leading-relaxed",
+                    hasCustomTextColor ? "opacity-90" : "text-muted-foreground"
+                  )}
                 />
               </div>
               {InlineClose}
@@ -618,7 +635,10 @@ function AnnouncementPopupContent({
           <PopupBody
             popup={popup}
             headlineClassName="text-lg font-semibold sm:text-xl"
-            bodyClassName="text-sm text-muted-foreground leading-relaxed"
+            bodyClassName={cn(
+              "text-sm leading-relaxed",
+              hasCustomTextColor ? "opacity-90" : "text-muted-foreground"
+            )}
           />
         </div>
         {InlineClose}
