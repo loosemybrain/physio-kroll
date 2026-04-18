@@ -54,6 +54,10 @@ export function ThemeSyncFromPath() {
         root.classList.remove("physio-konzept")
       }
       appliedBrandRef.current = targetBrand
+      // End global transition overlay after theme vars are painted on target route.
+      window.requestAnimationFrame(() => {
+        root.removeAttribute("data-brand-switching")
+      })
     }
 
     if (appliedBrandRef.current === brand) return

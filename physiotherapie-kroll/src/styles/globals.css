@@ -99,6 +99,43 @@ body {
   }
 }
 
+/* Global Brand switch overlay: shown while data-brand-switching=1 */
+html[data-brand-switching="1"] body {
+  overflow: hidden;
+}
+
+html[data-brand-switching="1"] body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 1000000;
+  background: color-mix(in oklch, var(--background) 70%, black 30%);
+  backdrop-filter: blur(8px);
+}
+
+html[data-brand-switching="1"] body::after {
+  content: "";
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  width: 52px;
+  height: 52px;
+  margin-left: -26px;
+  margin-top: -26px;
+  border-radius: 999px;
+  border: 3px solid color-mix(in oklch, var(--foreground) 22%, transparent);
+  border-top-color: var(--primary);
+  animation: brand-switch-spin 0.8s linear infinite;
+  z-index: 1000001;
+  box-shadow: 0 0 0 10px color-mix(in oklch, var(--background) 78%, transparent);
+}
+
+@keyframes brand-switch-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 /* Scrollbar-Farben nur außerhalb des Admin-Bereichs (data-admin-shell setzt AdminClientShell am <html>) */
 html:not([data-admin-shell]) {
   /* Firefox */

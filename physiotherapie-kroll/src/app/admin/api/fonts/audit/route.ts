@@ -29,6 +29,17 @@ interface Finding {
   severity: "high"
 }
 
+function toRelativeProjectPath(filePath: string): string {
+  return filePath.replace(process.cwd(), "").replace(/\\/g, "/")
+}
+
+function shouldSkipFile(filePath: string): boolean {
+  const rel = toRelativeProjectPath(filePath)
+  // Avoid self-scan false positives from the audit implementation itself.
+  if (rel === "/src/app/admin/api/fonts/audit/route.ts") return true
+  return false
+}
+
 function scanDirectory(dir: string, findings: Finding[] = [], depth = 0): Finding[] {
   if (depth > 5 || findings.length > 200) return findings
 
@@ -52,6 +63,7 @@ function scanDirectory(dir: string, findings: Finding[] = [], depth = 0): Findin
         file.endsWith(".jsx") ||
         file.endsWith(".css")
       ) {
+        if (shouldSkipFile(filePath)) continue
         try {
           const content = readFileSync(filePath, "utf-8")
           const lines = content.split("\n")
@@ -60,7 +72,7 @@ function scanDirectory(dir: string, findings: Finding[] = [], depth = 0): Findin
             for (const pattern of BLOCKED_PATTERNS) {
               if (line.includes(pattern)) {
                 findings.push({
-                  file: filePath.replace(process.cwd(), ""),
+                  file: toRelativeProjectPath(filePath),
                   snippet: `Line ${idx + 1}: ${line.trim().substring(0, 100)}...`,
                   severity: "high",
                 })
