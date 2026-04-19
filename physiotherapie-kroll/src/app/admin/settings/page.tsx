@@ -41,7 +41,7 @@ export default async function AdminSettings() {
             className="flex items-center gap-2 pb-4 border-b-2 border-transparent text-muted-foreground hover:text-foreground transition-colors"
           >
             <SlidersHorizontal className="h-4 w-4" />
-            System
+            Spinner
           </Link>
         </div>
       </div>

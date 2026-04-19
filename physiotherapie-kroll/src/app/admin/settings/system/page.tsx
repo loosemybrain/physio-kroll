@@ -26,7 +26,7 @@ export default function AdminSystemSettingsPage() {
             className="flex items-center gap-2 pb-4 border-b-2 border-primary text-primary font-medium"
           >
             <SlidersHorizontal className="h-4 w-4" />
-            System
+            Spinner
           </Link>
         </div>
       </div>

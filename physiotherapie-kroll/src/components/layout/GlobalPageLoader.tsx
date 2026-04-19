@@ -4,21 +4,34 @@ import * as React from "react"
 import { createPortal } from "react-dom"
 import { usePathname, useSearchParams } from "next/navigation"
 import { SpinnerIndicator } from "@/components/ui/SpinnerIndicator"
-import { readSpinnerPreset, type SpinnerPresetKey } from "@/lib/ui/spinnerPresets"
+import {
+  readSpinnerConfigForBrand,
+  spinnerBrandFromPath,
+  type SpinnerConfig,
+} from "@/lib/ui/spinnerPresets"
 
 const MIN_VISIBLE_MS = 420
 const FALLBACK_HIDE_MS = 7000
+const FIRST_VISIT_SESSION_KEY = "pk:first-visit-ready:v1"
+const FIRST_VISIT_SETTLE_MS = 450
+const FIRST_VISIT_MAX_WAIT_MS = 12000
 
 export function GlobalPageLoader() {
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const [mounted, setMounted] = React.useState(false)
   const [visible, setVisible] = React.useState(true)
-  const [spinnerPreset, setSpinnerPreset] = React.useState<SpinnerPresetKey>("modern")
+  const [spinnerConfig, setSpinnerConfig] = React.useState<SpinnerConfig>({
+    preset: "modern",
+    speed: "normal",
+    overlayStrength: "medium",
+  })
   const startedAtRef = React.useRef<number>(Date.now())
   const hideTimerRef = React.useRef<number | null>(null)
   const fallbackTimerRef = React.useRef<number | null>(null)
   const bootstrappedRef = React.useRef(false)
+  const firstVisitPendingRef = React.useRef(false)
+  const initialReadyRef = React.useRef(false)
 
   const clearTimers = React.useCallback(() => {
     if (hideTimerRef.current) {
@@ -53,11 +66,51 @@ export function GlobalPageLoader() {
     }, FALLBACK_HIDE_MS)
   }, [])
 
+  const waitForInitialPageReady = React.useCallback(async () => {
+    if (typeof window === "undefined") return
+
+    await new Promise<void>((resolve) => {
+      let done = false
+      const finish = () => {
+        if (done) return
+        done = true
+        resolve()
+      }
+
+      const timeoutId = window.setTimeout(finish, FIRST_VISIT_MAX_WAIT_MS)
+
+      const onLoaded = async () => {
+        window.clearTimeout(timeoutId)
+        // Let hydration/client fetches settle briefly to avoid visible header/nav popping.
+        window.setTimeout(() => {
+          window.requestAnimationFrame(() => {
+            window.requestAnimationFrame(finish)
+          })
+        }, FIRST_VISIT_SETTLE_MS)
+      }
+
+      if (document.readyState === "complete") {
+        void onLoaded()
+        return
+      }
+
+      window.addEventListener("load", onLoaded, { once: true })
+    })
+  }, [])
+
   React.useEffect(() => {
     setMounted(true)
-    setSpinnerPreset(readSpinnerPreset())
+    const brand = spinnerBrandFromPath(window.location.pathname)
+    setSpinnerConfig(readSpinnerConfigForBrand(brand))
+    firstVisitPendingRef.current = window.sessionStorage.getItem(FIRST_VISIT_SESSION_KEY) !== "1"
     return () => clearTimers()
   }, [clearTimers])
+
+  React.useEffect(() => {
+    if (!mounted) return
+    const brand = spinnerBrandFromPath(pathname ?? "/")
+    setSpinnerConfig(readSpinnerConfigForBrand(brand))
+  }, [mounted, pathname])
 
   // Initial page load: show once briefly after hydration.
   React.useEffect(() => {
@@ -65,8 +118,26 @@ export function GlobalPageLoader() {
     if (bootstrappedRef.current) return
     bootstrappedRef.current = true
     showLoader()
-    hideWithMinDuration()
-  }, [mounted, showLoader, hideWithMinDuration])
+
+    if (!firstVisitPendingRef.current) {
+      initialReadyRef.current = true
+      hideWithMinDuration()
+      return
+    }
+
+    let cancelled = false
+    void waitForInitialPageReady().then(() => {
+      if (cancelled) return
+      initialReadyRef.current = true
+      firstVisitPendingRef.current = false
+      window.sessionStorage.setItem(FIRST_VISIT_SESSION_KEY, "1")
+      hideWithMinDuration()
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [mounted, showLoader, hideWithMinDuration, waitForInitialPageReady])
 
   // Before internal navigation starts (link click / back-forward), show loader.
   React.useEffect(() => {
@@ -108,14 +179,22 @@ export function GlobalPageLoader() {
   // Route is ready -> hide loader with minimum duration.
   React.useEffect(() => {
     if (!mounted) return
+    if (!initialReadyRef.current) return
     hideWithMinDuration()
   }, [mounted, pathname, searchParams, hideWithMinDuration])
 
   if (!mounted || !visible) return null
 
+  const overlayClass =
+    spinnerConfig.overlayStrength === "light"
+      ? "bg-background/55"
+      : spinnerConfig.overlayStrength === "strong"
+        ? "bg-background/88"
+        : "bg-background/78"
+
   return createPortal(
-    <div className="fixed inset-0 z-1000001 flex items-center justify-center bg-background/78 backdrop-blur-sm" aria-hidden>
-      <SpinnerIndicator preset={spinnerPreset} size="lg" />
+    <div className={`fixed inset-0 z-1000001 flex items-center justify-center ${overlayClass} backdrop-blur-sm`} aria-hidden>
+      <SpinnerIndicator preset={spinnerConfig.preset} speed={spinnerConfig.speed} size="lg" />
     </div>,
     document.body
   )

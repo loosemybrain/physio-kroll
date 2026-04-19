@@ -6,7 +6,11 @@ import { useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
 import type { BrandKey } from "@/components/brand/brandAssets"
 import { SpinnerIndicator } from "@/components/ui/SpinnerIndicator"
-import { readSpinnerPreset, type SpinnerPresetKey } from "@/lib/ui/spinnerPresets"
+import {
+  readSpinnerConfigForBrand,
+  type SpinnerConfig,
+  type SpinnerBrandKey,
+} from "@/lib/ui/spinnerPresets"
 
 interface BrandToggleProps {
   value: BrandKey
@@ -37,11 +41,23 @@ export function BrandToggle({
   const router = useRouter()
   const [switching, setSwitching] = React.useState(false)
   const [mounted, setMounted] = React.useState(false)
-  const [spinnerPreset, setSpinnerPreset] = React.useState<SpinnerPresetKey>("modern")
+  const [spinnerConfig, setSpinnerConfig] = React.useState<SpinnerConfig>({
+    preset: "modern",
+    speed: "normal",
+    overlayStrength: "medium",
+  })
+  const overlayClass =
+    spinnerConfig.overlayStrength === "light"
+      ? "bg-background/55"
+      : spinnerConfig.overlayStrength === "strong"
+        ? "bg-background/88"
+        : "bg-background/75"
+
 
   React.useEffect(() => {
     setMounted(true)
-    setSpinnerPreset(readSpinnerPreset())
+    const brand = value === "physio-konzept" ? "physio-konzept" : "physiotherapy"
+    setSpinnerConfig(readSpinnerConfigForBrand(brand as SpinnerBrandKey))
   }, [])
 
   const applyThemeBeforeNavigation = React.useCallback(async (brand: BrandKey) => {
@@ -172,8 +188,8 @@ export function BrandToggle({
       </nav>
       {mounted && switching
         ? createPortal(
-            <div className="fixed inset-0 z-1000001 flex items-center justify-center bg-background/75 backdrop-blur-sm" aria-hidden>
-              <SpinnerIndicator preset={spinnerPreset} size="lg" />
+            <div className={`fixed inset-0 z-1000001 flex items-center justify-center ${overlayClass} backdrop-blur-sm`} aria-hidden>
+              <SpinnerIndicator preset={spinnerConfig.preset} speed={spinnerConfig.speed} size="lg" />
             </div>,
             document.body
           )

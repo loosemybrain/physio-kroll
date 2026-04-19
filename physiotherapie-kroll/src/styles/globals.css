@@ -136,6 +136,180 @@ html[data-brand-switching="1"] body::after {
   }
 }
 
+/* Wave Bubble spinner preset */
+.spinner-wave {
+  width: 84px;
+  height: 84px;
+  background-color: var(--primary);
+  border-radius: 50%;
+  position: relative;
+  box-shadow:
+    0 0 30px 4px color-mix(in oklch, black 45%, transparent) inset,
+    0 5px 12px color-mix(in oklch, black 18%, transparent);
+  overflow: hidden;
+}
+
+.spinner-wave-layer {
+  content: "";
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: -40%;
+  border-radius: 45%;
+}
+
+.spinner-wave-layer-1 {
+  background: color-mix(in oklch, white 42%, transparent);
+  animation: spinner-wave-rotate 5s linear infinite;
+}
+
+.spinner-wave-layer-2 {
+  background: white;
+  opacity: 0.9;
+  animation: spinner-wave-rotate 5s linear infinite;
+}
+
+@keyframes spinner-wave-rotate {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Yin-Yang spinner preset */
+.spinner-yin-yang {
+  width: 96px;
+  height: 48px;
+  box-sizing: content-box;
+  background: white;
+  border-color: var(--primary);
+  border-style: solid;
+  border-width: 2px 2px 50px 2px;
+  border-radius: 100%;
+  position: relative;
+  animation: spinner-yin-yang-rotate 3s linear infinite;
+}
+
+.spinner-yin-yang-dot {
+  position: absolute;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  box-sizing: content-box;
+  border-radius: 100%;
+}
+
+.spinner-yin-yang-dot-left {
+  left: 0;
+  background: white;
+  border: 18px solid var(--primary);
+}
+
+.spinner-yin-yang-dot-right {
+  left: 50%;
+  background: var(--primary);
+  border: 18px solid white;
+}
+
+@keyframes spinner-yin-yang-rotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Progress bar spinner preset */
+.spinner-progress {
+  display: block;
+  position: relative;
+  width: min(320px, 70vw);
+  height: 12px;
+  border: 1px solid white;
+  border-radius: 10px;
+  overflow: hidden;
+  box-sizing: content-box;
+  background: color-mix(in oklch, var(--background) 82%, transparent);
+}
+
+.spinner-progress-bar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  width: 0;
+  background: var(--primary);
+  animation: spinner-progress-fill var(--spinner-progress-duration, 6s) ease-in infinite;
+}
+
+@keyframes spinner-progress-fill {
+  to {
+    width: 100%;
+  }
+}
+
+/* Orbital ring spinner preset */
+.spinner-orbital {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  transform: rotateZ(45deg);
+  perspective: 1000px;
+  border-radius: 50%;
+  color: white;
+}
+
+.spinner-orbital-ring {
+  content: "";
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: inherit;
+  height: inherit;
+  border-radius: 50%;
+  animation: spinner-orbital-spin 1s linear infinite;
+}
+
+.spinner-orbital-ring-x {
+  transform: rotateX(70deg);
+  color: white;
+}
+
+.spinner-orbital-ring-y {
+  transform: rotateY(70deg);
+  color: var(--primary);
+  animation-delay: 0.4s;
+}
+
+@keyframes spinner-orbital-spin {
+  0%,
+  100% {
+    box-shadow: 0.2em 0 0 0 currentColor;
+  }
+  12% {
+    box-shadow: 0.2em 0.2em 0 0 currentColor;
+  }
+  25% {
+    box-shadow: 0 0.2em 0 0 currentColor;
+  }
+  37% {
+    box-shadow: -0.2em 0.2em 0 0 currentColor;
+  }
+  50% {
+    box-shadow: -0.2em 0 0 0 currentColor;
+  }
+  62% {
+    box-shadow: -0.2em -0.2em 0 0 currentColor;
+  }
+  75% {
+    box-shadow: 0 -0.2em 0 0 currentColor;
+  }
+  87% {
+    box-shadow: 0.2em -0.2em 0 0 currentColor;
+  }
+}
+
 /* Scrollbar-Farben nur außerhalb des Admin-Bereichs (data-admin-shell setzt AdminClientShell am <html>) */
 html:not([data-admin-shell]) {
   /* Firefox */
