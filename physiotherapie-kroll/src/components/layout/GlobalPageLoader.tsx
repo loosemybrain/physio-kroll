@@ -3,6 +3,8 @@
 import * as React from "react"
 import { createPortal } from "react-dom"
 import { usePathname, useSearchParams } from "next/navigation"
+import { SpinnerIndicator } from "@/components/ui/SpinnerIndicator"
+import { readSpinnerPreset, type SpinnerPresetKey } from "@/lib/ui/spinnerPresets"
 
 const MIN_VISIBLE_MS = 420
 const FALLBACK_HIDE_MS = 7000
@@ -12,6 +14,7 @@ export function GlobalPageLoader() {
   const searchParams = useSearchParams()
   const [mounted, setMounted] = React.useState(false)
   const [visible, setVisible] = React.useState(true)
+  const [spinnerPreset, setSpinnerPreset] = React.useState<SpinnerPresetKey>("modern")
   const startedAtRef = React.useRef<number>(Date.now())
   const hideTimerRef = React.useRef<number | null>(null)
   const fallbackTimerRef = React.useRef<number | null>(null)
@@ -52,6 +55,7 @@ export function GlobalPageLoader() {
 
   React.useEffect(() => {
     setMounted(true)
+    setSpinnerPreset(readSpinnerPreset())
     return () => clearTimers()
   }, [clearTimers])
 
@@ -111,7 +115,7 @@ export function GlobalPageLoader() {
 
   return createPortal(
     <div className="fixed inset-0 z-1000001 flex items-center justify-center bg-background/78 backdrop-blur-sm" aria-hidden>
-      <div className="h-12 w-12 rounded-full border-3 border-foreground/20 border-t-primary animate-spin" />
+      <SpinnerIndicator preset={spinnerPreset} size="lg" />
     </div>,
     document.body
   )

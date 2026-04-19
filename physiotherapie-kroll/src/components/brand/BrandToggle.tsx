@@ -5,6 +5,8 @@ import { createPortal } from "react-dom"
 import { useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
 import type { BrandKey } from "@/components/brand/brandAssets"
+import { SpinnerIndicator } from "@/components/ui/SpinnerIndicator"
+import { readSpinnerPreset, type SpinnerPresetKey } from "@/lib/ui/spinnerPresets"
 
 interface BrandToggleProps {
   value: BrandKey
@@ -35,9 +37,11 @@ export function BrandToggle({
   const router = useRouter()
   const [switching, setSwitching] = React.useState(false)
   const [mounted, setMounted] = React.useState(false)
+  const [spinnerPreset, setSpinnerPreset] = React.useState<SpinnerPresetKey>("modern")
 
   React.useEffect(() => {
     setMounted(true)
+    setSpinnerPreset(readSpinnerPreset())
   }, [])
 
   const applyThemeBeforeNavigation = React.useCallback(async (brand: BrandKey) => {
@@ -169,7 +173,7 @@ export function BrandToggle({
       {mounted && switching
         ? createPortal(
             <div className="fixed inset-0 z-1000001 flex items-center justify-center bg-background/75 backdrop-blur-sm" aria-hidden>
-              <div className="h-12 w-12 rounded-full border-3 border-foreground/20 border-t-primary animate-spin" />
+              <SpinnerIndicator preset={spinnerPreset} size="lg" />
             </div>,
             document.body
           )

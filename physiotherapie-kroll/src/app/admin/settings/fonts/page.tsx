@@ -19,7 +19,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ALL_FONT_PRESETS } from "@/lib/fonts/presets"
 import { useToast } from "@/hooks/use-toast"
-import { AlertCircle, Check, Loader2, Search, Palette, Type } from "lucide-react"
+import { AlertCircle, Check, Loader2, Search, Palette, SlidersHorizontal, Type } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { UploadFontComponent } from "@/components/admin/UploadFontComponent"
 import { CustomFontsList } from "@/components/admin/CustomFontsList"
@@ -135,6 +135,13 @@ export default function FontSettingsPage() {
           >
             <Type className="h-4 w-4" />
             Fonts
+          </Link>
+          <Link
+            href="/admin/settings/system"
+            className="flex items-center gap-2 pb-4 border-b-2 border-transparent text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <SlidersHorizontal className="h-4 w-4" />
+            System
           </Link>
         </div>
       </div>

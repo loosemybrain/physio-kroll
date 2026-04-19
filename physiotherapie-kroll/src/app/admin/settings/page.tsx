@@ -2,7 +2,7 @@ import { ThemePresetSettings } from "@/components/admin/ThemePresetSettings"
 import type { BrandKey } from "@/components/brand/brandAssets"
 import { getBrandSettingsAuthed, getThemePresetsAuthed, type ThemePreset, type BrandSettings } from "@/lib/supabase/themePresets"
 import Link from "next/link"
-import { Palette, Type } from "lucide-react"
+import { Palette, SlidersHorizontal, Type } from "lucide-react"
 
 export const dynamic = "force-dynamic"
 export const runtime = "nodejs"
@@ -35,6 +35,13 @@ export default async function AdminSettings() {
           >
             <Type className="h-4 w-4" />
             Fonts
+          </Link>
+          <Link
+            href="/admin/settings/system"
+            className="flex items-center gap-2 pb-4 border-b-2 border-transparent text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <SlidersHorizontal className="h-4 w-4" />
+            System
           </Link>
         </div>
       </div>
