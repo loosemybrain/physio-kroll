@@ -7,6 +7,7 @@ import type { Metadata } from "next";
 import { Toaster } from "@/components/ui/toaster"
 import { HeaderWrapper } from "@/components/navigation/HeaderWrapper"
 import { FooterWrapper } from "@/components/layout/FooterWrapper"
+import { GlobalPageLoader } from "@/components/layout/GlobalPageLoader"
 import { CookieProvider } from "@/components/consent/CookieProvider"
 import { CookieBanner } from "@/components/consent/CookieBanner"
 import { CookieFloatingButton } from "@/components/consent/CookieFloatingButton"
@@ -86,6 +87,7 @@ export default async function RootLayout({
           <CookieProvider>
             <BrandShell>
               <ThemeSyncFromPath />
+              {isPreview ? null : <GlobalPageLoader />}
               <AnchorHashScroll />
               <ScrollSpyProvider>
                 <BrandProvider>
