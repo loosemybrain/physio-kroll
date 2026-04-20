@@ -187,3 +187,9 @@ export function writeSpinnerConfigsAllBrands(configs: Record<SpinnerBrandKey, Sp
   writeSpinnerConfigForBrand("physio-konzept", configs["physio-konzept"])
 }
 
+export function spinnerOverlayClass(strength: SpinnerOverlayStrength): string {
+  if (strength === "light") return "bg-background/55"
+  if (strength === "strong") return "bg-background/88"
+  return "bg-background/78"
+}
+

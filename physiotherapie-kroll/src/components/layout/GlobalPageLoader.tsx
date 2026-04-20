@@ -6,6 +6,7 @@ import { usePathname, useSearchParams } from "next/navigation"
 import { SpinnerIndicator } from "@/components/ui/SpinnerIndicator"
 import {
   readSpinnerConfigForBrand,
+  spinnerOverlayClass,
   spinnerBrandFromPath,
   type SpinnerConfig,
 } from "@/lib/ui/spinnerPresets"
@@ -185,12 +186,7 @@ export function GlobalPageLoader() {
 
   if (!mounted || !visible) return null
 
-  const overlayClass =
-    spinnerConfig.overlayStrength === "light"
-      ? "bg-background/55"
-      : spinnerConfig.overlayStrength === "strong"
-        ? "bg-background/88"
-        : "bg-background/78"
+  const overlayClass = spinnerOverlayClass(spinnerConfig.overlayStrength)
 
   return createPortal(
     <div className={`fixed inset-0 z-1000001 flex items-center justify-center ${overlayClass} backdrop-blur-sm`} aria-hidden>

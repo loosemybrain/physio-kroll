@@ -8,6 +8,7 @@ import type { BrandKey } from "@/components/brand/brandAssets"
 import { SpinnerIndicator } from "@/components/ui/SpinnerIndicator"
 import {
   readSpinnerConfigForBrand,
+  spinnerOverlayClass,
   type SpinnerConfig,
   type SpinnerBrandKey,
 } from "@/lib/ui/spinnerPresets"
@@ -46,19 +47,14 @@ export function BrandToggle({
     speed: "normal",
     overlayStrength: "medium",
   })
-  const overlayClass =
-    spinnerConfig.overlayStrength === "light"
-      ? "bg-background/55"
-      : spinnerConfig.overlayStrength === "strong"
-        ? "bg-background/88"
-        : "bg-background/75"
+  const overlayClass = spinnerOverlayClass(spinnerConfig.overlayStrength)
 
 
   React.useEffect(() => {
     setMounted(true)
     const brand = value === "physio-konzept" ? "physio-konzept" : "physiotherapy"
     setSpinnerConfig(readSpinnerConfigForBrand(brand as SpinnerBrandKey))
-  }, [])
+  }, [value])
 
   const applyThemeBeforeNavigation = React.useCallback(async (brand: BrandKey) => {
     if (typeof document === "undefined") return
@@ -108,12 +104,6 @@ export function BrandToggle({
 
       setSwitching(true)
       const startedAt = Date.now()
-      if (typeof document !== "undefined") {
-        document.documentElement.setAttribute("data-brand-switching", "1")
-        window.setTimeout(() => {
-          document.documentElement.removeAttribute("data-brand-switching")
-        }, 4000)
-      }
       try {
         router.prefetch(targetPath)
         await applyThemeBeforeNavigation(brand)
