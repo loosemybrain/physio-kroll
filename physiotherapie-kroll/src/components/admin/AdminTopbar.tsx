@@ -2,8 +2,8 @@
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
-import { Bell, LogOut, Home, ChevronDown } from "lucide-react"
-import type { User } from "@supabase/supabase-js"
+import { Bell, LogOut, Home, ChevronDown, User, Shield } from "lucide-react"
+import type { User as SupabaseUser } from "@supabase/supabase-js"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
@@ -23,7 +23,7 @@ type AdminTopbarProps = {
    * Server-provided user. Auth/session lifecycle is owned by middleware + server.
    * The client must NOT call supabase.auth.getSession() (HttpOnly cookies).
    */
-  user: User | null
+  user: SupabaseUser | null
 }
 
 export function AdminTopbar({ user }: AdminTopbarProps) {
@@ -109,10 +109,13 @@ export function AdminTopbar({ user }: AdminTopbarProps) {
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+            <Button
+              variant="ghost"
+              className="relative h-8 w-8 rounded-full text-foreground transition-all hover:bg-accent/70 hover:text-foreground hover:ring-2 hover:ring-primary/35 focus-visible:ring-2 focus-visible:ring-primary/45"
+            >
               <Avatar className="h-8 w-8">
                 <AvatarImage src={user?.user_metadata?.avatar_url} alt="User" />
-                <AvatarFallback>{userInitials}</AvatarFallback>
+                <AvatarFallback className="text-foreground">{userInitials}</AvatarFallback>
               </Avatar>
             </Button>
           </DropdownMenuTrigger>
@@ -131,7 +134,26 @@ export function AdminTopbar({ user }: AdminTopbarProps) {
 
             <DropdownMenuSeparator />
 
-            <DropdownMenuItem onClick={handleLogout}>
+            <DropdownMenuItem
+              onClick={() => router.push("/admin/security/account")}
+              className="data-highlighted:bg-muted data-highlighted:text-foreground"
+            >
+              <User className="mr-2 h-4 w-4" />
+              <span>Konto</span>
+            </DropdownMenuItem>
+
+            <DropdownMenuItem
+              onClick={() => router.push("/admin/security/mfa")}
+              className="data-highlighted:bg-muted data-highlighted:text-foreground"
+            >
+              <Shield className="mr-2 h-4 w-4" />
+              <span>MFA</span>
+            </DropdownMenuItem>
+
+            <DropdownMenuItem
+              onClick={handleLogout}
+              className="data-highlighted:bg-muted data-highlighted:text-foreground"
+            >
               <LogOut className="mr-2 h-4 w-4" />
               <span>Abmelden</span>
             </DropdownMenuItem>

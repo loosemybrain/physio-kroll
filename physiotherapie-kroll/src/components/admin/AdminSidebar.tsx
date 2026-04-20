@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { usePathname, useRouter } from "next/navigation"
-import { FileText, ImageIcon, Settings, ChevronLeft, ChevronRight, Layers, Navigation, Layout, Cookie, Shield, User, Users, MessageSquare } from "lucide-react"
+import { FileText, ImageIcon, Settings, ChevronLeft, ChevronRight, Layers, Navigation, Layout, Cookie, Users, MessageSquare } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
@@ -16,8 +16,6 @@ const navItems = [
   { icon: Layout, label: "Footer", href: "/admin/footer" },
   { icon: Cookie, label: "Cookie-Scan", href: "/admin/cookie-scan" },
   { icon: Users, label: "Benutzer", href: "/admin/users" },
-  { icon: Shield, label: "MFA", href: "/admin/security/mfa" },
-  { icon: User, label: "Konto", href: "/admin/security/account" },
   { icon: Settings, label: "Settings", href: "/admin/settings" },
 ]
 
