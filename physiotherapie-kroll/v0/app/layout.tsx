@@ -15,7 +15,6 @@ const _playfair = Playfair_Display({ subsets: ["latin"] })
 export const metadata: Metadata = {
   title: "Physiotherapie & PhysioKonzept",
   description: "Professional physiotherapy services for your health and performance",
-    generator: 'v0.app'
 }
 
 export default function RootLayout({

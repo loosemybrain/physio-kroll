@@ -3,7 +3,7 @@
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { ArrowRight, Play, Heart, Zap } from "lucide-react"
-import { motion, useReducedMotion, type Variants } from "framer-motion"
+import { motion, useReducedMotion } from "framer-motion"
 
 export type HeroMood = "physiotherapy" | "physio-konzept"
 
@@ -51,9 +51,9 @@ export function HeroSection({
   const content = defaultContent[mood]
   const isCalm = mood === "physiotherapy"
   const prefersReducedMotion = useReducedMotion()
-  const smoothEase: [number, number, number, number] = [0.22, 1, 0.36, 1]
+  const standardEase: [number, number, number, number] = [0.22, 1, 0.36, 1]
 
-  const container: Variants = {
+  const container = {
     hidden: { opacity: 0 },
     show: {
       opacity: 1,
@@ -64,25 +64,26 @@ export function HeroSection({
     },
   }
 
-  const fadeUp: Variants = {
-    hidden: prefersReducedMotion
-      ? { opacity: 1 }
-      : { opacity: 0, y: 24 },
+  const fadeUp = {
+    hidden: {
+      opacity: prefersReducedMotion ? 1 : 0,
+      y: prefersReducedMotion ? 0 : 24,
+    },
     show: {
       opacity: 1,
       y: 0,
-      transition: { duration: 0.6, ease: smoothEase },
+      transition: { duration: 0.6, ease: standardEase },
     },
   }
 
-  const fadeScale: Variants = {
+  const fadeScale = {
     hidden: prefersReducedMotion
       ? { opacity: 1 }
       : { opacity: 0, scale: 0.96 },
     show: {
       opacity: 1,
       scale: 1,
-      transition: { duration: 0.7, ease: smoothEase },
+      transition: { duration: 0.7, ease: standardEase },
     },
   }
 
@@ -101,14 +102,14 @@ export function HeroSection({
       >
         {isCalm ? (
           <>
-            <div className="absolute -top-32 right-0 h-[700px] w-[700px] rounded-full bg-primary/6 blur-[120px]" />
-            <div className="absolute -bottom-40 -left-20 h-[500px] w-[500px] rounded-full bg-accent/5 blur-[100px]" />
+            <div className="absolute -top-32 right-0 h-[700px] w-[700px] rounded-full bg-primary/[0.06] blur-[120px]" />
+            <div className="absolute -bottom-40 -left-20 h-[500px] w-[500px] rounded-full bg-accent/[0.05] blur-[100px]" />
             <div className="absolute left-1/2 top-1/3 h-[300px] w-[300px] -translate-x-1/2 rounded-full bg-hero-highlight/50 blur-[80px]" />
           </>
         ) : (
           <>
-            <div className="absolute -right-32 top-16 h-[600px] w-[600px] rounded-full bg-primary/12 blur-[120px]" />
-            <div className="absolute bottom-0 left-1/4 h-[400px] w-[700px] rounded-full bg-primary/6 blur-[100px]" />
+            <div className="absolute -right-32 top-16 h-[600px] w-[600px] rounded-full bg-primary/[0.12] blur-[120px]" />
+            <div className="absolute bottom-0 left-1/4 h-[400px] w-[700px] rounded-full bg-primary/[0.06] blur-[100px]" />
           </>
         )}
       </div>
@@ -132,8 +133,8 @@ export function HeroSection({
               className={cn(
                 "inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium backdrop-blur-sm",
                 isCalm
-                  ? "border-primary/15 bg-primary/6 text-primary"
-                  : "border-primary/20 bg-primary/8 text-primary",
+                  ? "border-primary/15 bg-primary/[0.06] text-primary"
+                  : "border-primary/20 bg-primary/[0.08] text-primary",
               )}
             >
               {isCalm ? (
@@ -270,8 +271,8 @@ export function HeroSection({
                 className={cn(
                   "relative overflow-hidden",
                   isCalm
-                    ? "aspect-4/5 rounded-4xl shadow-[0_8px_60px_-12px_rgba(0,0,0,0.15)]"
-                    : "aspect-3/4 rounded-3xl shadow-[0_8px_60px_-12px_rgba(0,0,0,0.25)]",
+                    ? "aspect-[4/5] rounded-[2rem] shadow-[0_8px_60px_-12px_rgba(0,0,0,0.15)]"
+                    : "aspect-[3/4] rounded-3xl shadow-[0_8px_60px_-12px_rgba(0,0,0,0.25)]",
                 )}
               >
                 <img
@@ -292,9 +293,9 @@ export function HeroSection({
 
                 {/* Overlay */}
                 {isCalm ? (
-                  <div className="absolute inset-0 bg-linear-to-t from-primary/10 to-transparent" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-primary/10 to-transparent" />
                 ) : (
-                  <div className="absolute inset-0 bg-linear-to-t from-background/70 via-transparent to-transparent" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-background/70 via-transparent to-transparent" />
                 )}
 
                 {/* Floating card */}
@@ -316,7 +317,7 @@ export function HeroSection({
               <motion.div
                 initial={prefersReducedMotion ? false : { opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.5, duration: 0.4, ease: smoothEase }}
+                transition={{ delay: 0.5, duration: 0.4, ease: standardEase }}
                 className="absolute -bottom-5 -right-5 rounded-2xl border border-border/50 bg-card/95 p-6 shadow-xl backdrop-blur-sm md:-bottom-6 md:-right-6"
               >
                 <p className="text-3xl font-bold text-primary">98%</p>

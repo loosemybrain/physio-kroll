@@ -86,14 +86,18 @@ function CardFooter({ className, ...props }: React.ComponentProps<"div">) {
   )
 }
 
-function CardSurface({ className, ...props }: React.ComponentProps<"div">) {
+function CardSurface({ className, style, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="card-surface"
       className={cn(
-        "bg-card text-card-foreground flex flex-col gap-6 rounded-xl border border-border/50 py-6 shadow-sm",
+        "bg-card text-foreground flex flex-col gap-6 rounded-xl border py-6 shadow-sm transition-all duration-200 ease-out hover:shadow-md",
         className
       )}
+      style={{
+        borderColor: "color-mix(in oklab, var(--border) 35%, white)",
+        ...style,
+      }}
       {...props}
     />
   )

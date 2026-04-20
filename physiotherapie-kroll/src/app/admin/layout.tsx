@@ -26,9 +26,9 @@ export default async function Layout({ children }: { children: React.ReactNode }
   const { data: userData } = await supabase.auth.getUser()
 
   if (!userData.user) {
-    console.log("[ADMIN GATE] redirect:login", { next: "/admin/pages" })
-    // Redirect to login; user will be sent back to /admin/pages after auth
-    redirect(toLoginRedirect("/admin/pages"))
+    console.log("[ADMIN GATE] redirect:login", { next: "/admin" })
+    // Redirect to login; user will be sent back to /admin after auth
+    redirect(toLoginRedirect("/admin"))
   }
 
   const mfaState = await getAdminMfaState(supabase, userData.user)
@@ -37,12 +37,12 @@ export default async function Layout({ children }: { children: React.ReactNode }
     redirect("/auth/login?error=admin-required")
   }
   if (!mfaState.hasTotpFactor || !mfaState.hasVerifiedTotpFactor) {
-    console.log("[ADMIN GATE] redirect:setup", { next: "/admin/pages" })
-    redirect("/auth/mfa/setup?next=/admin/pages")
+    console.log("[ADMIN GATE] redirect:setup", { next: "/admin" })
+    redirect("/auth/mfa/setup?next=/admin")
   }
   if (mfaState.currentAal !== "aal2") {
-    console.log("[ADMIN GATE] redirect:verify", { next: "/admin/pages" })
-    redirect("/auth/mfa/verify?next=/admin/pages")
+    console.log("[ADMIN GATE] redirect:verify", { next: "/admin" })
+    redirect("/auth/mfa/verify?next=/admin")
   }
 
   console.log("[ADMIN GATE] allow:admin")

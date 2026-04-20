@@ -9,6 +9,12 @@ DSGVO/ePrivacy-konformes Cookie-Consent ohne LocalStorage für die Zustimmung (C
 
 Es gibt **keine** produktiven Kategorien `functional`, `analytics` oder `marketing`. Alte Cookies mit `functional` werden beim Lesen auf `externalMedia` gemappt; beim nächsten Speichern wird nur noch das schlanke Modell geschrieben.
 
+### Abgrenzung Social-Link vs. Social-Embed
+
+- **Footer Social-Links** (z. B. `https://facebook.com/...`) sind reine ausgehende Links und brauchen **kein** Consent-Gating.
+- Dafür dürfen vor dem Klick keine externen Ressourcen geladen werden (kein SDK, kein iFrame, kein Pixel, kein Preconnect/dns-prefetch).
+- **Social-Embeds** (Facebook-/Instagram-Plugin, iFrame o. a.) bleiben unter `externalMedia` und laufen über `ExternalMediaGate`.
+
 ## External Media Gate
 
 Einbettungen, die externe `iframe`- oder Script-URLs nutzen, sollten über **`ExternalMediaGate`** bzw. die Hilfskomponenten **`GoogleMapsEmbed`** / **`FacebookEmbed`** laufen.

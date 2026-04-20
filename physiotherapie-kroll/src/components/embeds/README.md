@@ -18,6 +18,13 @@
 
 Vor Cookie-Zustimmung zu `externalMedia`: keine externe `iframe`-`src`, keine externen Script-URLs, keine Provider-Preview-Bilder von Drittanbietern.
 
+## Social Links im Footer
+
+- Footer-Social-Icons (Facebook/Instagram) sind reine Links und **keine Embeds**.
+- Deshalb kein Gate und keine zusätzliche Consent-Kategorie.
+- Wichtig: Vor dem Klick keine externen Requests auf Meta-Domains auslösen (kein SDK/Pixel/preconnect/dns-prefetch).
+- Wenn Facebook/Instagram-Inhalte eingebettet werden sollen, weiterhin `ExternalMediaGate` mit `externalMedia` verwenden.
+
 ## URL-Validierung
 
 - `src/lib/consent/validateExternalEmbedUrl.ts`: Google nur `https`, Host exakt `www.google.com` oder `google.com`, Pfad beginnt mit `/maps/embed`; Facebook nur `https`, Host `facebook.com` / `www` / `m`, Pfad `/plugins/…`.

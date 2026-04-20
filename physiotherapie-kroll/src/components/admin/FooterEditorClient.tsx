@@ -27,7 +27,19 @@ import { Plus, Trash2, ChevronUp, ChevronDown, Save, AlertCircle, RotateCcw } fr
 import { arrayMove, arrayRemove, uuid } from "@/lib/cms/arrayOps"
 import type { BrandKey } from "@/components/brand/brandAssets"
 import type { FooterConfig, FooterSection, FooterBlock } from "@/types/footer"
-import { DEFAULT_FOOTER_CONFIG, DEFAULT_LEGAL_LINKS_CONFIG, ensureLegalLinks, getDefaultSpansForSectionCount, DESIGN_PRESETS, SPACING_OPTIONS, DIVIDER_CLASS_OPTIONS, COLOR_PRESETS, FONT_FAMILIES } from "@/lib/supabase/footer.shared"
+import {
+  DEFAULT_FOOTER_CONFIG,
+  DEFAULT_LEGAL_LINKS_CONFIG,
+  DEFAULT_SOCIAL_LINKS_CONFIG,
+  ensureLegalLinks,
+  ensureSocialLinks,
+  getDefaultSpansForSectionCount,
+  DESIGN_PRESETS,
+  SPACING_OPTIONS,
+  DIVIDER_CLASS_OPTIONS,
+  COLOR_PRESETS,
+  FONT_FAMILIES,
+} from "@/lib/supabase/footer.shared"
 import type { PageForNavigation } from "@/lib/supabase/pages.server"
 import { cn } from "@/lib/utils"
 import { FooterClient } from "@/components/layout/FooterClient"
@@ -46,10 +58,10 @@ export function FooterEditorClient({
   const { toast } = useToast()
   const [activeBrand, setActiveBrand] = useState<BrandKey>("physiotherapy")
   const [physioConfig, setPhysioConfig] = useState<FooterConfig>(() =>
-    ensureLegalLinks(initialPhysio || DEFAULT_FOOTER_CONFIG)
+    ensureSocialLinks(ensureLegalLinks(initialPhysio || DEFAULT_FOOTER_CONFIG))
   )
   const [konzeptConfig, setKonzeptConfig] = useState<FooterConfig>(() =>
-    ensureLegalLinks(initialKonzept || DEFAULT_FOOTER_CONFIG)
+    ensureSocialLinks(ensureLegalLinks(initialKonzept || DEFAULT_FOOTER_CONFIG))
   )
   const [pages] = useState<PageForNavigation[]>(initialPages || [])
   const [saving, setSaving] = useState(false)
@@ -57,7 +69,8 @@ export function FooterEditorClient({
   const [pendingBlockType, setPendingBlockType] = useState<Record<string, string>>({})
 
   const footerConfig = useMemo(() => {
-    return activeBrand === "physiotherapy" ? physioConfig : konzeptConfig
+    const selected = activeBrand === "physiotherapy" ? physioConfig : konzeptConfig
+    return ensureSocialLinks(ensureLegalLinks(selected))
   }, [activeBrand, physioConfig, konzeptConfig])
 
   const pagesMap = useMemo(() => {
@@ -339,6 +352,25 @@ export function FooterEditorClient({
   if (!footerConfig) {
     return <div className="flex h-full items-center justify-center">Laden...</div>
   }
+
+  const isPreviewableSocialUrl = (value?: string) => {
+    if (!value?.trim()) return false
+    const candidate = /^https?:\/\//i.test(value.trim()) ? value.trim() : `https://${value.trim()}`
+    try {
+      const url = new URL(candidate)
+      return url.protocol === "http:" || url.protocol === "https:"
+    } catch {
+      return false
+    }
+  }
+
+  const facebookPreviewReady =
+    !!footerConfig.socialLinks?.items?.facebook?.enabled &&
+    isPreviewableSocialUrl(footerConfig.socialLinks?.items?.facebook?.url)
+  const instagramPreviewReady =
+    !!footerConfig.socialLinks?.items?.instagram?.enabled &&
+    isPreviewableSocialUrl(footerConfig.socialLinks?.items?.instagram?.url)
+  const hasPreviewableSocialLink = facebookPreviewReady || instagramPreviewReady
 
   return (
     <div className="grid h-full min-h-0 overflow-hidden gap-8 lg:grid-cols-[minmax(0,1fr)_420px]">
@@ -906,6 +938,586 @@ export function FooterEditorClient({
                         </div>
                       </>
                     )}
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+
+                    <AccordionItem value="social-links">
+                      <AccordionTrigger>Social Media</AccordionTrigger>
+                      <AccordionContent>
+                        <div className="space-y-4 rounded-lg border border-border p-4 pt-2">
+                          <Label className="text-base font-semibold">Social Links</Label>
+                          <p className="text-xs text-muted-foreground">
+                            Reine ausgehende Links (ohne SDK/iFrame/Skripte). Keine Consent-Kategorie erforderlich.
+                          </p>
+
+                          <div className="flex items-center space-x-2">
+                            <Switch
+                              id="social-enabled"
+                              checked={footerConfig.socialLinks?.enabled ?? DEFAULT_SOCIAL_LINKS_CONFIG.enabled}
+                              onCheckedChange={(enabled) =>
+                                updateConfig({
+                                  socialLinks: {
+                                    ...DEFAULT_SOCIAL_LINKS_CONFIG,
+                                    ...footerConfig.socialLinks,
+                                    enabled,
+                                  },
+                                })
+                              }
+                            />
+                            <Label htmlFor="social-enabled" className="text-sm font-medium">Social Links aktivieren</Label>
+                          </div>
+
+                          {footerConfig.socialLinks?.enabled && (
+                            <>
+                              {!hasPreviewableSocialLink && (
+                                <div className="rounded-md border border-amber-300/60 bg-amber-50/70 px-3 py-2 text-xs text-amber-900">
+                                  In der Live-Preview erscheinen Social-Icons erst, wenn mindestens eine Plattform auf
+                                  <span className="font-semibold"> aktiv</span> steht und eine gueltige URL hat
+                                  (z. B. <span className="font-semibold">https://instagram.com/deinprofil</span>).
+                                </div>
+                              )}
+                              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                <div className="space-y-2">
+                                  <Label className="text-sm font-medium">Titel</Label>
+                                  <Input
+                                    value={footerConfig.socialLinks?.title ?? ""}
+                                    onChange={(e) =>
+                                      updateConfig({
+                                        socialLinks: {
+                                          ...DEFAULT_SOCIAL_LINKS_CONFIG,
+                                          ...footerConfig.socialLinks,
+                                          title: e.target.value,
+                                        },
+                                      })
+                                    }
+                                    placeholder="Social Media"
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label className="text-sm font-medium">Platzierung</Label>
+                                  <Select
+                                    value={footerConfig.socialLinks?.placement ?? DEFAULT_SOCIAL_LINKS_CONFIG.placement}
+                                    onValueChange={(placement) =>
+                                      updateConfig({
+                                        socialLinks: {
+                                          ...DEFAULT_SOCIAL_LINKS_CONFIG,
+                                          ...footerConfig.socialLinks,
+                                          placement: placement as NonNullable<FooterConfig["socialLinks"]>["placement"],
+                                        },
+                                      })
+                                    }
+                                  >
+                                    <SelectTrigger><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="top">Oben im Footer</SelectItem>
+                                      <SelectItem value="section">Eigene Footer-Sektion</SelectItem>
+                                      <SelectItem value="bottom">Unten im Footer</SelectItem>
+                                      <SelectItem value="bottomBar">Bottom-Bar (inline)</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              </div>
+
+                              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                                <div className="space-y-2">
+                                  <Label className="text-xs">Ausrichtung</Label>
+                                  <Select
+                                    value={footerConfig.socialLinks?.align ?? DEFAULT_SOCIAL_LINKS_CONFIG.align}
+                                    onValueChange={(align) =>
+                                      updateConfig({
+                                        socialLinks: {
+                                          ...DEFAULT_SOCIAL_LINKS_CONFIG,
+                                          ...footerConfig.socialLinks,
+                                          align: align as NonNullable<FooterConfig["socialLinks"]>["align"],
+                                        },
+                                      })
+                                    }
+                                  >
+                                    <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="left">Links</SelectItem>
+                                      <SelectItem value="center">Mitte</SelectItem>
+                                      <SelectItem value="right">Rechts</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <div className="space-y-2">
+                                  <Label className="text-xs">Icon-Stil</Label>
+                                  <Select
+                                    value={footerConfig.socialLinks?.iconStyle ?? DEFAULT_SOCIAL_LINKS_CONFIG.iconStyle}
+                                    onValueChange={(iconStyle) =>
+                                      updateConfig({
+                                        socialLinks: {
+                                          ...DEFAULT_SOCIAL_LINKS_CONFIG,
+                                          ...footerConfig.socialLinks,
+                                          iconStyle: iconStyle as NonNullable<FooterConfig["socialLinks"]>["iconStyle"],
+                                        },
+                                      })
+                                    }
+                                  >
+                                    <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="default">Default</SelectItem>
+                                      <SelectItem value="round">Round</SelectItem>
+                                      <SelectItem value="square">Square</SelectItem>
+                                      <SelectItem value="outline">Outline</SelectItem>
+                                      <SelectItem value="minimal">Minimal</SelectItem>
+                                      <SelectItem value="soft">Soft</SelectItem>
+                                      <SelectItem value="pill">Pill</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <div className="space-y-2">
+                                  <Label className="text-xs">Icon-Set</Label>
+                                  <Select
+                                    value={footerConfig.socialLinks?.iconSet ?? DEFAULT_SOCIAL_LINKS_CONFIG.iconSet}
+                                    onValueChange={(iconSet) =>
+                                      updateConfig({
+                                        socialLinks: {
+                                          ...DEFAULT_SOCIAL_LINKS_CONFIG,
+                                          ...footerConfig.socialLinks,
+                                          iconSet: iconSet as NonNullable<FooterConfig["socialLinks"]>["iconSet"],
+                                        },
+                                      })
+                                    }
+                                  >
+                                    <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="brand">Brand</SelectItem>
+                                      <SelectItem value="simple">Simple</SelectItem>
+                                      <SelectItem value="monochrome">Monochrome</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <div className="space-y-2">
+                                  <Label className="text-xs">Hover-Effekt</Label>
+                                  <Select
+                                    value={footerConfig.socialLinks?.hoverEffect ?? DEFAULT_SOCIAL_LINKS_CONFIG.hoverEffect ?? "none"}
+                                    onValueChange={(hoverEffect) =>
+                                      updateConfig({
+                                        socialLinks: {
+                                          ...DEFAULT_SOCIAL_LINKS_CONFIG,
+                                          ...footerConfig.socialLinks,
+                                          hoverEffect: hoverEffect as NonNullable<FooterConfig["socialLinks"]>["hoverEffect"],
+                                        },
+                                      })
+                                    }
+                                  >
+                                    <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="none">Kein Effekt</SelectItem>
+                                      <SelectItem value="lift">Lift</SelectItem>
+                                      <SelectItem value="shrink">Shrink</SelectItem>
+                                      <SelectItem value="flip">Flip</SelectItem>
+                                      <SelectItem value="draw">Draw</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <div className="space-y-2">
+                                  <Label className="text-xs">Icon-Größe</Label>
+                                  <Select
+                                    value={footerConfig.socialLinks?.iconSize ?? DEFAULT_SOCIAL_LINKS_CONFIG.iconSize}
+                                    onValueChange={(iconSize) =>
+                                      updateConfig({
+                                        socialLinks: {
+                                          ...DEFAULT_SOCIAL_LINKS_CONFIG,
+                                          ...footerConfig.socialLinks,
+                                          iconSize: iconSize as NonNullable<FooterConfig["socialLinks"]>["iconSize"],
+                                        },
+                                      })
+                                    }
+                                  >
+                                    <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="xs">XS</SelectItem>
+                                      <SelectItem value="sm">SM</SelectItem>
+                                      <SelectItem value="md">MD</SelectItem>
+                                      <SelectItem value="lg">LG</SelectItem>
+                                      <SelectItem value="xl">XL</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              </div>
+
+                              <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+                                <div className="space-y-2">
+                                  <Label className="text-xs">Abstand</Label>
+                                  <Select
+                                    value={footerConfig.socialLinks?.gap ?? DEFAULT_SOCIAL_LINKS_CONFIG.gap}
+                                    onValueChange={(gap) =>
+                                      updateConfig({
+                                        socialLinks: {
+                                          ...DEFAULT_SOCIAL_LINKS_CONFIG,
+                                          ...footerConfig.socialLinks,
+                                          gap: gap as NonNullable<FooterConfig["socialLinks"]>["gap"],
+                                        },
+                                      })
+                                    }
+                                  >
+                                    <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="xs">XS</SelectItem>
+                                      <SelectItem value="sm">SM</SelectItem>
+                                      <SelectItem value="md">MD</SelectItem>
+                                      <SelectItem value="lg">LG</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <div className="grid grid-cols-1 gap-3 pt-1 sm:grid-cols-2 xl:pt-5">
+                                  <div className="flex items-start space-x-2 rounded-md border border-border/60 px-3 py-2">
+                                    <Switch
+                                      id="social-new-tab"
+                                      checked={footerConfig.socialLinks?.openInNewTab ?? DEFAULT_SOCIAL_LINKS_CONFIG.openInNewTab}
+                                      onCheckedChange={(openInNewTab) =>
+                                        updateConfig({
+                                          socialLinks: {
+                                            ...DEFAULT_SOCIAL_LINKS_CONFIG,
+                                            ...footerConfig.socialLinks,
+                                            openInNewTab,
+                                          },
+                                        })
+                                      }
+                                    />
+                                    <Label htmlFor="social-new-tab" className="text-sm leading-tight">In neuem Tab öffnen</Label>
+                                  </div>
+                                  <div className="flex items-start space-x-2 rounded-md border border-border/60 px-3 py-2">
+                                    <Switch
+                                      id="social-show-labels"
+                                      checked={footerConfig.socialLinks?.showLabels ?? DEFAULT_SOCIAL_LINKS_CONFIG.showLabels}
+                                      onCheckedChange={(showLabels) =>
+                                        updateConfig({
+                                          socialLinks: {
+                                            ...DEFAULT_SOCIAL_LINKS_CONFIG,
+                                            ...footerConfig.socialLinks,
+                                            showLabels,
+                                          },
+                                        })
+                                      }
+                                    />
+                                    <Label htmlFor="social-show-labels" className="text-sm leading-tight">Labels anzeigen</Label>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <Separator />
+
+                              <Accordion type="single" collapsible className="w-full">
+                                <AccordionItem value="social-colors" className="border-border/50">
+                                  <AccordionTrigger className="py-2 text-sm font-semibold hover:no-underline">
+                                    <div className="flex w-full items-center justify-between pr-2">
+                                      <span>Farben (Social)</span>
+                                      <div className="flex items-center gap-1.5">
+                                        {[
+                                          footerConfig.socialLinks?.color ?? "#1f2937",
+                                          footerConfig.socialLinks?.hoverColor ?? "#111827",
+                                          footerConfig.socialLinks?.backgroundColor ?? "#f3f4f6",
+                                          footerConfig.socialLinks?.borderColor ?? "#d1d5db",
+                                          footerConfig.socialLinks?.labelColor ?? "#1f2937",
+                                        ].map((color, idx) => (
+                                          <span
+                                            key={`${color}-${idx}`}
+                                            className="h-4 w-4 rounded-sm border border-border/60"
+                                            style={{ backgroundColor: color }}
+                                            aria-hidden
+                                          />
+                                        ))}
+                                      </div>
+                                    </div>
+                                  </AccordionTrigger>
+                                  <AccordionContent>
+                                    <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+                                      <div className="space-y-1">
+                                        <Label className="text-xs">Standardfarbe</Label>
+                                        <ColorField
+                                          value={footerConfig.socialLinks?.color ?? "#1f2937"}
+                                          onChange={(v) =>
+                                            updateConfig({
+                                              socialLinks: {
+                                                ...DEFAULT_SOCIAL_LINKS_CONFIG,
+                                                ...footerConfig.socialLinks,
+                                                color: v.trim() || undefined,
+                                              },
+                                            })
+                                          }
+                                        />
+                                      </div>
+                                      <div className="space-y-1">
+                                        <Label className="text-xs">Hover-Farbe</Label>
+                                        <ColorField
+                                          value={footerConfig.socialLinks?.hoverColor ?? "#111827"}
+                                          onChange={(v) =>
+                                            updateConfig({
+                                              socialLinks: {
+                                                ...DEFAULT_SOCIAL_LINKS_CONFIG,
+                                                ...footerConfig.socialLinks,
+                                                hoverColor: v.trim() || undefined,
+                                              },
+                                            })
+                                          }
+                                        />
+                                      </div>
+                                      <div className="space-y-1">
+                                        <Label className="text-xs">Hintergrundfarbe (optional)</Label>
+                                        <ColorField
+                                          value={footerConfig.socialLinks?.backgroundColor ?? "#f3f4f6"}
+                                          onChange={(v) =>
+                                            updateConfig({
+                                              socialLinks: {
+                                                ...DEFAULT_SOCIAL_LINKS_CONFIG,
+                                                ...footerConfig.socialLinks,
+                                                backgroundColor: v.trim() || undefined,
+                                              },
+                                            })
+                                          }
+                                        />
+                                      </div>
+                                      <div className="space-y-1">
+                                        <Label className="text-xs">Randfarbe (optional)</Label>
+                                        <ColorField
+                                          value={footerConfig.socialLinks?.borderColor ?? "#d1d5db"}
+                                          onChange={(v) =>
+                                            updateConfig({
+                                              socialLinks: {
+                                                ...DEFAULT_SOCIAL_LINKS_CONFIG,
+                                                ...footerConfig.socialLinks,
+                                                borderColor: v.trim() || undefined,
+                                              },
+                                            })
+                                          }
+                                        />
+                                      </div>
+                                      <div className="space-y-1">
+                                        <Label className="text-xs">Label-Farbe</Label>
+                                        <ColorField
+                                          value={footerConfig.socialLinks?.labelColor ?? "#1f2937"}
+                                          onChange={(v) =>
+                                            updateConfig({
+                                              socialLinks: {
+                                                ...DEFAULT_SOCIAL_LINKS_CONFIG,
+                                                ...footerConfig.socialLinks,
+                                                labelColor: v.trim() || undefined,
+                                              },
+                                            })
+                                          }
+                                        />
+                                      </div>
+                                    </div>
+                                  </AccordionContent>
+                                </AccordionItem>
+                              </Accordion>
+
+                              <Separator />
+
+                              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                <div className="space-y-3 rounded-md border border-border p-3">
+                                  <Label className="text-sm font-semibold">Facebook</Label>
+                                  <div className="flex items-center space-x-2">
+                                    <Switch
+                                      id="social-facebook-enabled"
+                                      checked={footerConfig.socialLinks?.items?.facebook?.enabled ?? false}
+                                      onCheckedChange={(enabled) =>
+                                        updateConfig({
+                                          socialLinks: {
+                                            ...DEFAULT_SOCIAL_LINKS_CONFIG,
+                                            ...footerConfig.socialLinks,
+                                            items: {
+                                              ...DEFAULT_SOCIAL_LINKS_CONFIG.items,
+                                              ...footerConfig.socialLinks?.items,
+                                              facebook: {
+                                                ...DEFAULT_SOCIAL_LINKS_CONFIG.items.facebook,
+                                                ...footerConfig.socialLinks?.items?.facebook,
+                                                enabled,
+                                              },
+                                            },
+                                          },
+                                        })
+                                      }
+                                    />
+                                    <Label htmlFor="social-facebook-enabled" className="text-sm">Aktiv</Label>
+                                  </div>
+                                  <Input
+                                    placeholder="https://facebook.com/deinprofil"
+                                    value={footerConfig.socialLinks?.items?.facebook?.url ?? ""}
+                                    onChange={(e) =>
+                                      updateConfig({
+                                        socialLinks: {
+                                          ...DEFAULT_SOCIAL_LINKS_CONFIG,
+                                          ...footerConfig.socialLinks,
+                                          items: {
+                                            ...DEFAULT_SOCIAL_LINKS_CONFIG.items,
+                                            ...footerConfig.socialLinks?.items,
+                                            facebook: {
+                                              ...DEFAULT_SOCIAL_LINKS_CONFIG.items.facebook,
+                                              ...footerConfig.socialLinks?.items?.facebook,
+                                              url: e.target.value || undefined,
+                                            },
+                                          },
+                                        },
+                                      })
+                                    }
+                                  />
+                                  {footerConfig.socialLinks?.items?.facebook?.enabled &&
+                                    !isPreviewableSocialUrl(footerConfig.socialLinks?.items?.facebook?.url) && (
+                                      <p className="text-xs text-amber-700">
+                                        Bitte eine gueltige URL eingeben (http(s)://...).
+                                      </p>
+                                    )}
+                                  <Select
+                                    value={footerConfig.socialLinks?.items?.facebook?.iconVariant ?? "facebook"}
+                                    onValueChange={(iconVariant) =>
+                                      updateConfig({
+                                        socialLinks: {
+                                          ...DEFAULT_SOCIAL_LINKS_CONFIG,
+                                          ...footerConfig.socialLinks,
+                                          items: {
+                                            ...DEFAULT_SOCIAL_LINKS_CONFIG.items,
+                                            ...footerConfig.socialLinks?.items,
+                                            facebook: {
+                                              ...DEFAULT_SOCIAL_LINKS_CONFIG.items.facebook,
+                                              ...footerConfig.socialLinks?.items?.facebook,
+                                              iconVariant: iconVariant as "facebook" | "facebook-f" | "facebook-round",
+                                            },
+                                          },
+                                        },
+                                      })
+                                    }
+                                  >
+                                    <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="facebook">Facebook</SelectItem>
+                                      <SelectItem value="facebook-f">Facebook f</SelectItem>
+                                      <SelectItem value="facebook-round">Facebook round</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                  <Input
+                                    placeholder="Label (optional)"
+                                    value={footerConfig.socialLinks?.items?.facebook?.label ?? ""}
+                                    onChange={(e) =>
+                                      updateConfig({
+                                        socialLinks: {
+                                          ...DEFAULT_SOCIAL_LINKS_CONFIG,
+                                          ...footerConfig.socialLinks,
+                                          items: {
+                                            ...DEFAULT_SOCIAL_LINKS_CONFIG.items,
+                                            ...footerConfig.socialLinks?.items,
+                                            facebook: {
+                                              ...DEFAULT_SOCIAL_LINKS_CONFIG.items.facebook,
+                                              ...footerConfig.socialLinks?.items?.facebook,
+                                              label: e.target.value || undefined,
+                                            },
+                                          },
+                                        },
+                                      })
+                                    }
+                                  />
+                                </div>
+
+                                <div className="space-y-3 rounded-md border border-border p-3">
+                                  <Label className="text-sm font-semibold">Instagram</Label>
+                                  <div className="flex items-center space-x-2">
+                                    <Switch
+                                      id="social-instagram-enabled"
+                                      checked={footerConfig.socialLinks?.items?.instagram?.enabled ?? false}
+                                      onCheckedChange={(enabled) =>
+                                        updateConfig({
+                                          socialLinks: {
+                                            ...DEFAULT_SOCIAL_LINKS_CONFIG,
+                                            ...footerConfig.socialLinks,
+                                            items: {
+                                              ...DEFAULT_SOCIAL_LINKS_CONFIG.items,
+                                              ...footerConfig.socialLinks?.items,
+                                              instagram: {
+                                                ...DEFAULT_SOCIAL_LINKS_CONFIG.items.instagram,
+                                                ...footerConfig.socialLinks?.items?.instagram,
+                                                enabled,
+                                              },
+                                            },
+                                          },
+                                        })
+                                      }
+                                    />
+                                    <Label htmlFor="social-instagram-enabled" className="text-sm">Aktiv</Label>
+                                  </div>
+                                  <Input
+                                    placeholder="https://instagram.com/deinprofil"
+                                    value={footerConfig.socialLinks?.items?.instagram?.url ?? ""}
+                                    onChange={(e) =>
+                                      updateConfig({
+                                        socialLinks: {
+                                          ...DEFAULT_SOCIAL_LINKS_CONFIG,
+                                          ...footerConfig.socialLinks,
+                                          items: {
+                                            ...DEFAULT_SOCIAL_LINKS_CONFIG.items,
+                                            ...footerConfig.socialLinks?.items,
+                                            instagram: {
+                                              ...DEFAULT_SOCIAL_LINKS_CONFIG.items.instagram,
+                                              ...footerConfig.socialLinks?.items?.instagram,
+                                              url: e.target.value || undefined,
+                                            },
+                                          },
+                                        },
+                                      })
+                                    }
+                                  />
+                                  {footerConfig.socialLinks?.items?.instagram?.enabled &&
+                                    !isPreviewableSocialUrl(footerConfig.socialLinks?.items?.instagram?.url) && (
+                                      <p className="text-xs text-amber-700">
+                                        Bitte eine gueltige URL eingeben (http(s)://...).
+                                      </p>
+                                    )}
+                                  <Select
+                                    value={footerConfig.socialLinks?.items?.instagram?.iconVariant ?? "instagram"}
+                                    onValueChange={(iconVariant) =>
+                                      updateConfig({
+                                        socialLinks: {
+                                          ...DEFAULT_SOCIAL_LINKS_CONFIG,
+                                          ...footerConfig.socialLinks,
+                                          items: {
+                                            ...DEFAULT_SOCIAL_LINKS_CONFIG.items,
+                                            ...footerConfig.socialLinks?.items,
+                                            instagram: {
+                                              ...DEFAULT_SOCIAL_LINKS_CONFIG.items.instagram,
+                                              ...footerConfig.socialLinks?.items?.instagram,
+                                              iconVariant: iconVariant as "instagram" | "instagram-outline" | "instagram-round",
+                                            },
+                                          },
+                                        },
+                                      })
+                                    }
+                                  >
+                                    <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="instagram">Instagram</SelectItem>
+                                      <SelectItem value="instagram-outline">Instagram outline</SelectItem>
+                                      <SelectItem value="instagram-round">Instagram round</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                  <Input
+                                    placeholder="Label (optional)"
+                                    value={footerConfig.socialLinks?.items?.instagram?.label ?? ""}
+                                    onChange={(e) =>
+                                      updateConfig({
+                                        socialLinks: {
+                                          ...DEFAULT_SOCIAL_LINKS_CONFIG,
+                                          ...footerConfig.socialLinks,
+                                          items: {
+                                            ...DEFAULT_SOCIAL_LINKS_CONFIG.items,
+                                            ...footerConfig.socialLinks?.items,
+                                            instagram: {
+                                              ...DEFAULT_SOCIAL_LINKS_CONFIG.items.instagram,
+                                              ...footerConfig.socialLinks?.items?.instagram,
+                                              label: e.target.value || undefined,
+                                            },
+                                          },
+                                        },
+                                      })
+                                    }
+                                  />
+                                </div>
+                              </div>
+                            </>
+                          )}
                         </div>
                       </AccordionContent>
                     </AccordionItem>
@@ -2130,6 +2742,16 @@ export function FooterEditorClient({
                           <SelectItem value="right">Rechts</SelectItem>
                         </SelectContent>
                       </Select>
+                      <p className="text-xs text-muted-foreground">
+                        Hinweis: Diese globale Bottom-Bar-Ausrichtung wirkt am deutlichsten, wenn Social Media nicht in
+                        der Bottom-Bar platziert ist.
+                      </p>
+                      {footerConfig.socialLinks?.placement?.startsWith("bottomBar") && (
+                        <p className="text-xs text-amber-700">
+                          Aktuell sind Social-Icons in der Bottom-Bar aktiv. Deren eigene Ausrichtung kann die
+                          Gesamtwirkung beeinflussen.
+                        </p>
+                      )}
                     </div>
 
                     <div className="flex items-center space-x-2">

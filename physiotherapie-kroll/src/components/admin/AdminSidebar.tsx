@@ -2,13 +2,27 @@
 
 import { useState } from "react"
 import { usePathname, useRouter } from "next/navigation"
-import { FileText, ImageIcon, Settings, ChevronLeft, ChevronRight, Layers, Navigation, Layout, Cookie, Users, MessageSquare } from "lucide-react"
+import {
+  FileText,
+  ImageIcon,
+  Settings,
+  ChevronLeft,
+  ChevronRight,
+  Layers,
+  Navigation,
+  Layout,
+  Cookie,
+  Users,
+  MessageSquare,
+  LayoutDashboard,
+} from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { useLeaveGuard } from "./AdminLeaveGuardContext"
 
 const navItems = [
+  { icon: LayoutDashboard, label: "Dashboard", href: "/admin" },
   { icon: FileText, label: "Pages", href: "/admin/pages" },
   { icon: MessageSquare, label: "Popups", href: "/admin/popups" },
   { icon: ImageIcon, label: "Media", href: "/admin/media" },
@@ -45,7 +59,10 @@ export function AdminSidebar() {
         <nav className="flex-1 space-y-1 p-2">
           {navItems.map((item) => {
             const Icon = item.icon
-            const isActive = pathname?.startsWith(item.href) || false
+            const isActive =
+              item.href === "/admin"
+                ? pathname === "/admin"
+                : pathname?.startsWith(item.href) || false
 
             const handleNavClick = () => {
               if (leaveGuard?.isDirty()) {

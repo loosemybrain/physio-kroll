@@ -199,6 +199,63 @@ export type FooterLegalLinksConfig = {
   items: LegalLinksItems
 }
 
+export type FooterSocialPlacement =
+  | "top"
+  | "section"
+  | "bottom"
+  | "bottomBar"
+  | "bottomBarLeft"
+  | "bottomBarCenter"
+  | "bottomBarRight"
+
+export type FooterSocialAlign = "left" | "center" | "right"
+export type FooterSocialIconStyle =
+  | "default"
+  | "round"
+  | "square"
+  | "outline"
+  | "minimal"
+  | "soft"
+  | "pill"
+export type FooterSocialIconSet = "brand" | "simple" | "monochrome"
+export type FooterSocialIconSize = "xs" | "sm" | "md" | "lg" | "xl"
+export type FooterSocialGap = "xs" | "sm" | "md" | "lg"
+export type FooterSocialHoverEffect = "none" | "lift" | "shrink" | "flip" | "draw"
+
+export type FooterSocialPlatformItem = {
+  enabled: boolean
+  url?: string
+  iconVariant?: string
+  label?: string
+}
+
+export type FooterSocialLinksConfig = {
+  enabled: boolean
+  title?: string
+  placement: FooterSocialPlacement
+  align: FooterSocialAlign
+  iconStyle: FooterSocialIconStyle
+  iconSet: FooterSocialIconSet
+  hoverEffect?: FooterSocialHoverEffect
+  iconSize: FooterSocialIconSize
+  gap: FooterSocialGap
+  color?: string
+  hoverColor?: string
+  backgroundColor?: string
+  borderColor?: string
+  openInNewTab: boolean
+  showLabels: boolean
+  labelColor?: string
+  items: {
+    facebook: FooterSocialPlatformItem & {
+      iconVariant?: "facebook" | "facebook-f" | "facebook-round"
+    }
+    instagram: FooterSocialPlatformItem & {
+      iconVariant?: "instagram" | "instagram-outline" | "instagram-round"
+    }
+  }
+}
+
 /**
  * Footer configuration for a brand
  */
@@ -212,6 +269,8 @@ export type FooterConfig = {
   glassmorphism?: FooterGlassmorphism // inner panel glass effect
   /** Dedizierter Legal-Bereich (Datenschutz, Cookies, Impressum). Optional für Rückwärtskompatibilität. */
   legalLinks?: FooterLegalLinksConfig
+  /** Reine ausgehende Social-Links (ohne externe Embeds/Skripte). */
+  socialLinks?: FooterSocialLinksConfig
 }
 
 /**

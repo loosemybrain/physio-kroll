@@ -154,8 +154,8 @@ export function ColorField(props: {
       </div>
 
       {!props.disableAlpha && (
-        <div className="flex items-center gap-2">
-          <label className="text-xs text-muted-foreground min-w-fit">Alpha:</label>
+        <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2">
+          <label className="text-xs text-muted-foreground">Alpha:</label>
           <input
             type="range"
             min="0"
@@ -177,7 +177,7 @@ export function ColorField(props: {
               "[&::-moz-range-track]:h-2 [&::-moz-range-track]:rounded-lg [&::-moz-range-track]:bg-muted/80 [&::-moz-range-track]:border [&::-moz-range-track]:border-border"
             )}
           />
-          <span className="text-xs text-muted-foreground w-12 text-right">{Math.round(parsed.alpha * 100)}%</span>
+          <span className="w-12 text-right text-xs text-muted-foreground">{Math.round(parsed.alpha * 100)}%</span>
         </div>
       )}
     </div>

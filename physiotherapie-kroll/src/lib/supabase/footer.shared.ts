@@ -8,6 +8,7 @@ import type {
   FooterSpacing,
   FooterLegalLinksConfig,
   LegalLinksItems,
+  FooterSocialLinksConfig,
 } from "@/types/footer"
 import type { SectionAlign, TypographySize, TypographyWeight } from "@/types/footer"
 
@@ -315,6 +316,41 @@ const footerLegalLinksSchema: z.ZodType<FooterLegalLinksConfig> = z.object({
   items: legalLinksItemsSchema,
 })
 
+const footerSocialLinksSchema: z.ZodType<FooterSocialLinksConfig> = z.object({
+  enabled: z.boolean(),
+  title: z.string().optional(),
+  placement: z
+    .enum(["top", "section", "bottom", "bottomBar", "bottomBarLeft", "bottomBarCenter", "bottomBarRight"])
+    .optional(),
+  align: z.enum(["left", "center", "right"]).optional(),
+  iconStyle: z.enum(["default", "round", "square", "outline", "minimal", "soft", "pill"]).optional(),
+  iconSet: z.enum(["brand", "simple", "monochrome"]).optional(),
+  hoverEffect: z.enum(["none", "lift", "shrink", "flip", "draw"]).optional(),
+  iconSize: z.enum(["xs", "sm", "md", "lg", "xl"]).optional(),
+  gap: z.enum(["xs", "sm", "md", "lg"]).optional(),
+  color: z.string().optional(),
+  hoverColor: z.string().optional(),
+  backgroundColor: z.string().optional(),
+  borderColor: z.string().optional(),
+  openInNewTab: z.boolean().optional(),
+  showLabels: z.boolean().optional(),
+  labelColor: z.string().optional(),
+  items: z.object({
+    facebook: z.object({
+      enabled: z.boolean().optional(),
+      url: z.string().optional(),
+      iconVariant: z.enum(["facebook", "facebook-f", "facebook-round"]).optional(),
+      label: z.string().optional(),
+    }),
+    instagram: z.object({
+      enabled: z.boolean().optional(),
+      url: z.string().optional(),
+      iconVariant: z.enum(["instagram", "instagram-outline", "instagram-round"]).optional(),
+      label: z.string().optional(),
+    }),
+  }),
+})
+
 /**
  * Footer config schema with validation
  */
@@ -325,6 +361,7 @@ export const footerConfigSchema = z
     bottomBar: footerBottomBarSchema.optional(),
     design: footerDesignSchema.optional(),
     legalLinks: footerLegalLinksSchema.optional(),
+    socialLinks: footerSocialLinksSchema.optional(),
   })
   .refine(
     (data) => {
@@ -354,6 +391,32 @@ export const DEFAULT_LEGAL_LINKS_CONFIG: FooterLegalLinksConfig = {
     imprint: true,
     privacy: true,
     cookies: true,
+  },
+}
+
+export const DEFAULT_SOCIAL_LINKS_CONFIG: FooterSocialLinksConfig = {
+  enabled: false,
+  title: "Social Media",
+  placement: "bottom",
+  align: "left",
+  iconStyle: "default",
+  iconSet: "brand",
+  hoverEffect: "none",
+  iconSize: "md",
+  gap: "md",
+  openInNewTab: true,
+  showLabels: false,
+  items: {
+    facebook: {
+      enabled: false,
+      iconVariant: "facebook",
+      label: "Facebook",
+    },
+    instagram: {
+      enabled: false,
+      iconVariant: "instagram",
+      label: "Instagram",
+    },
   },
 }
 
@@ -424,6 +487,7 @@ export const DEFAULT_FOOTER_CONFIG: FooterConfig = {
     },
   },
   legalLinks: DEFAULT_LEGAL_LINKS_CONFIG,
+  socialLinks: DEFAULT_SOCIAL_LINKS_CONFIG,
 }
 
 /**
@@ -491,4 +555,62 @@ export function ensureLegalLinks(config: FooterConfig): FooterConfig {
     },
   }
   return { ...config, legalLinks: merged }
+}
+
+function normalizeUrl(value?: string): string | undefined {
+  const trimmed = value?.trim()
+  return trimmed ? trimmed : undefined
+}
+
+/**
+ * Ensure socialLinks exists with safe defaults (backward compatibility).
+ * Alte Footer-Datensätze ohne socialLinks bleiben gültig; beim Laden wird ergänzt.
+ */
+export function ensureSocialLinks(config: FooterConfig): FooterConfig {
+  if (config.socialLinks === undefined || config.socialLinks === null) {
+    return { ...config, socialLinks: DEFAULT_SOCIAL_LINKS_CONFIG }
+  }
+
+  const sl = config.socialLinks
+  const merged: FooterSocialLinksConfig = {
+    enabled: typeof sl.enabled === "boolean" ? sl.enabled : DEFAULT_SOCIAL_LINKS_CONFIG.enabled,
+    title: typeof sl.title === "string" ? sl.title : DEFAULT_SOCIAL_LINKS_CONFIG.title,
+    placement:
+      sl.placement === "bottomBarLeft" ||
+      sl.placement === "bottomBarCenter" ||
+      sl.placement === "bottomBarRight"
+        ? "bottomBar"
+        : (sl.placement ?? DEFAULT_SOCIAL_LINKS_CONFIG.placement),
+    align: sl.align ?? DEFAULT_SOCIAL_LINKS_CONFIG.align,
+    iconStyle: sl.iconStyle ?? DEFAULT_SOCIAL_LINKS_CONFIG.iconStyle,
+    iconSet: sl.iconSet ?? DEFAULT_SOCIAL_LINKS_CONFIG.iconSet,
+    hoverEffect: sl.hoverEffect ?? DEFAULT_SOCIAL_LINKS_CONFIG.hoverEffect,
+    iconSize: sl.iconSize ?? DEFAULT_SOCIAL_LINKS_CONFIG.iconSize,
+    gap: sl.gap ?? DEFAULT_SOCIAL_LINKS_CONFIG.gap,
+    color: normalizeUrl(sl.color),
+    hoverColor: normalizeUrl(sl.hoverColor),
+    backgroundColor: normalizeUrl(sl.backgroundColor),
+    borderColor: normalizeUrl(sl.borderColor),
+    openInNewTab: sl.openInNewTab ?? DEFAULT_SOCIAL_LINKS_CONFIG.openInNewTab,
+    showLabels: sl.showLabels ?? DEFAULT_SOCIAL_LINKS_CONFIG.showLabels,
+    labelColor: normalizeUrl(sl.labelColor),
+    items: {
+      facebook: {
+        enabled: sl.items?.facebook?.enabled ?? DEFAULT_SOCIAL_LINKS_CONFIG.items.facebook.enabled,
+        url: normalizeUrl(sl.items?.facebook?.url),
+        iconVariant:
+          sl.items?.facebook?.iconVariant ?? DEFAULT_SOCIAL_LINKS_CONFIG.items.facebook.iconVariant,
+        label: sl.items?.facebook?.label ?? DEFAULT_SOCIAL_LINKS_CONFIG.items.facebook.label,
+      },
+      instagram: {
+        enabled: sl.items?.instagram?.enabled ?? DEFAULT_SOCIAL_LINKS_CONFIG.items.instagram.enabled,
+        url: normalizeUrl(sl.items?.instagram?.url),
+        iconVariant:
+          sl.items?.instagram?.iconVariant ?? DEFAULT_SOCIAL_LINKS_CONFIG.items.instagram.iconVariant,
+        label: sl.items?.instagram?.label ?? DEFAULT_SOCIAL_LINKS_CONFIG.items.instagram.label,
+      },
+    },
+  }
+
+  return { ...config, socialLinks: merged }
 }

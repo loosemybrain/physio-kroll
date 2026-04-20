@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { useRouter } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { Bell, LogOut, Home, ChevronDown, User, Shield } from "lucide-react"
 import type { User as SupabaseUser } from "@supabase/supabase-js"
 
@@ -28,7 +28,14 @@ type AdminTopbarProps = {
 
 export function AdminTopbar({ user }: AdminTopbarProps) {
   const router = useRouter()
+  const pathname = usePathname()
   const [websiteHome, setWebsiteHome] = React.useState<PublicHomePath>("/")
+
+  const currentTitle = React.useMemo(() => {
+    if (pathname === "/admin") return "Dashboard"
+    if (pathname?.startsWith("/admin/pages")) return "Seiten"
+    return "Admin"
+  }, [pathname])
 
   React.useEffect(() => {
     setWebsiteHome(readLastPublicHome())
@@ -60,7 +67,7 @@ export function AdminTopbar({ user }: AdminTopbarProps) {
   return (
     <header className="flex h-14 items-center justify-between border-b border-border bg-background px-6">
       <div className="flex items-center gap-2">
-        <h1 className="text-lg font-medium text-foreground">Dashboard</h1>
+        <h1 className="text-lg font-medium text-foreground">{currentTitle}</h1>
       </div>
 
       <div className="flex items-center gap-2">

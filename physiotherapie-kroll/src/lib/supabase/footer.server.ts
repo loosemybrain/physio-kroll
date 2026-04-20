@@ -2,7 +2,13 @@ import "server-only"
 
 import type { BrandKey } from "@/components/brand/brandAssets"
 import type { FooterConfig } from "@/types/footer"
-import { DEFAULT_FOOTER_CONFIG, ensureSectionSpans, ensureLegalLinks, footerConfigSchema } from "./footer.shared"
+import {
+  DEFAULT_FOOTER_CONFIG,
+  ensureSectionSpans,
+  ensureLegalLinks,
+  ensureSocialLinks,
+  footerConfigSchema,
+} from "./footer.shared"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
 
 /**
@@ -50,8 +56,8 @@ export async function getFooterServer(brand: BrandKey): Promise<FooterConfig> {
     }
 
     const config = (data?.config as FooterConfig) || DEFAULT_FOOTER_CONFIG
-    // Ensure backward compatibility: add spans and legalLinks defaults if missing
-    return ensureLegalLinks(ensureSectionSpans(config))
+    // Ensure backward compatibility: add spans and optional configs if missing
+    return ensureSocialLinks(ensureLegalLinks(ensureSectionSpans(config)))
   } catch (error) {
     console.error("Error in getFooterServer:", error)
     return DEFAULT_FOOTER_CONFIG
@@ -84,7 +90,7 @@ export async function saveFooterServer(
     }
 
     const normalizedBrand = normalizeBrandKey(brand)
-    const nextConfig = ensureLegalLinks(ensureSectionSpans(config))
+    const nextConfig = ensureSocialLinks(ensureLegalLinks(ensureSectionSpans(config)))
 
     const { error } = await supabase
       .from("footer")

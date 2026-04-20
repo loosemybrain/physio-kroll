@@ -45,6 +45,6 @@ export const consentCategoryLabels: Record<
   externalMedia: {
     label: "Externe Medien",
     description:
-      "Ermöglicht das Einbetten von Inhalten Dritter (z. B. Google Maps, Facebook). Ohne Zustimmung werden keine externen Ressourcen geladen.",
+      "Ermöglicht das Einbetten von Inhalten Dritter (z. B. Google Maps, Facebook/Instagram-Embeds). Reine Footer-Links zu Social-Profilen fallen nicht darunter. Ohne Zustimmung werden keine externen Embed-Ressourcen geladen.",
   },
 }
