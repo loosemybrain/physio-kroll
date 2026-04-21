@@ -155,7 +155,7 @@ function parseListLines(lines: string[]): {
 export function legalPlainTextToContentBlocks(content: string): LegalRichContentBlock[] {
   const paras = legalPlainTextToParagraphs(content)
   if (paras.length === 0) return [createLegalRichParagraphBlock()]
-  return paras.flatMap((paragraph) => {
+  return paras.flatMap<LegalRichContentBlock>((paragraph) => {
     const lines = paragraph
       .split(/\n+/)
       .map((line) => line.trim())
