@@ -1,5 +1,6 @@
 export { loadDashboardViewModel } from "./loadDashboardViewModel"
 export type {
+  DashboardActivityItem,
   DashboardMetric,
   DashboardMetricUnavailable,
   DashboardMetricValue,

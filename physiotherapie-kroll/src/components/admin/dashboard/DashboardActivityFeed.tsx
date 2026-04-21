@@ -1,4 +1,4 @@
-import type { DashboardActivityItem } from "@/lib/admin/dashboard"
+import type { DashboardActivityItem } from "@/lib/admin/dashboard/types"
 import { BellRing, FileText, Image, ScanSearch, UserRound } from "lucide-react"
 import { CardSurface } from "@/components/ui/card"
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
