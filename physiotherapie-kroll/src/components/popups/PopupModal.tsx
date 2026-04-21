@@ -44,7 +44,7 @@ function contentClasses(p: PublicPopup) {
     "fixed z-50 outline-none",
     // bottom sheet base
     "inset-x-0 bottom-0 w-full rounded-t-3xl border border-border/50 bg-card shadow-2xl",
-    "max-h-[85vh] overflow-y-auto",
+    "max-h-[85vh] overflow-hidden",
     // Desktop centering: avoid inset-x-auto overriding left
     "sm:left-1/2 sm:right-auto sm:bottom-auto sm:w-[92vw] sm:-translate-x-1/2",
     "sm:rounded-2xl sm:border sm:border-border/50 sm:bg-card",
@@ -233,7 +233,7 @@ export function PopupModal({ popup, open, onOpenChange }: Props) {
             if (!popup.closeOnEscape) e.preventDefault()
           }}
         >
-          <div style={innerStyle}>
+          <div className="max-h-[85vh] overflow-y-auto sm:max-h-[80vh]" style={innerStyle}>
             {/* Mobile handle */}
             <div className="flex justify-center pt-3 sm:hidden">
               <div className="h-1 w-12 rounded-full bg-muted-foreground/30" />
@@ -438,7 +438,7 @@ function PromotionPopupContent({
   if (layout === "image_left") {
     return (
       <div className={cn("p-0")} style={textStyle}>
-        <div className="flex flex-col overflow-hidden sm:max-h-96 sm:flex-row">
+        <div className="flex flex-col overflow-hidden sm:flex-row">
           {hasImage ? (
             <PopupCoverImage
               src={popup.imageUrl!}
@@ -587,7 +587,7 @@ function AnnouncementPopupContent({
   if (layout === "image_left" && hasImage) {
     return (
       <div className="p-0" style={textStyle}>
-        <div className="flex flex-col overflow-hidden sm:max-h-96 sm:flex-row">
+        <div className="flex flex-col overflow-hidden sm:flex-row">
           <PopupCoverImage
             src={popup.imageUrl!}
             containerClassName="h-56 w-full sm:h-96 sm:w-64 sm:shrink-0"

@@ -48,7 +48,9 @@ function coerceBlockToType(block: LegalRichContentBlock, nextType: LegalRichCont
   const id = block.id
   const extractRuns = (): LegalRichTextRun[] => {
     if (block.type === "paragraph" || block.type === "heading") {
-      return block.runs.length ? block.runs.map((r) => ({ ...r, link: r.link ? { ...r.link } : undefined })) : [createLegalRichRun()]
+      return block.runs.length
+        ? block.runs.map((r) => ({ ...r, link: r.link ? { ...r.link } : undefined }))
+        : [createLegalRichRun()]
     }
     if (block.type === "bulletList" || block.type === "orderedList") {
       const first = block.items[0]
@@ -81,6 +83,9 @@ function LegalTextRunsEditor({
   /** `block` = Absatz/Zwischenüberschrift (ausführliche Hinweise). */
   context?: "block" | "list"
 }) {
+  const [cursorPosByRunId, setCursorPosByRunId] = React.useState<Record<string, number>>({})
+  const [selectionByRunId, setSelectionByRunId] = React.useState<Record<string, { start: number; end: number }>>({})
+
   const patchRun = (index: number, patch: Partial<LegalRichTextRun>) => {
     onChange(runs.map((r, i) => (i === index ? { ...r, ...patch } : r)))
   }
@@ -96,6 +101,94 @@ function LegalTextRunsEditor({
     })
   }
 
+  const splitRunAtCursor = (index: number, runSelectionId: string) => {
+    const run = runs[index]
+    const cursor = cursorPosByRunId[runSelectionId] ?? run.text.length
+    if (cursor <= 0 || cursor >= run.text.length) return
+    const left = run.text.slice(0, cursor)
+    const right = run.text.slice(cursor)
+    const nextRun: LegalRichTextRun = createLegalRichRun({
+      text: right,
+      bold: run.bold,
+      italic: run.italic,
+      underline: run.underline,
+      color: run.color,
+      link: run.link ? { ...run.link } : undefined,
+    })
+    onChange(runs.flatMap((r, i) => (i === index ? [{ ...r, text: left }, nextRun] : [r])))
+  }
+
+  const applySelectionFormat = (
+    index: number,
+    runSelectionId: string,
+    patch: Partial<Pick<LegalRichTextRun, "bold" | "italic" | "underline" | "color">>,
+  ) => {
+    const run = runs[index]
+    const sel = selectionByRunId[runSelectionId]
+    if (!sel || sel.end <= sel.start) return
+    const start = Math.max(0, Math.min(sel.start, run.text.length))
+    const end = Math.max(0, Math.min(sel.end, run.text.length))
+    if (end <= start) return
+
+    const before = run.text.slice(0, start)
+    const selected = run.text.slice(start, end)
+    const after = run.text.slice(end)
+
+    const nextRuns: LegalRichTextRun[] = []
+    for (let i = 0; i < runs.length; i++) {
+      const current = runs[i]
+      if (i !== index) {
+        nextRuns.push(current)
+        continue
+      }
+      if (before.length > 0) {
+        nextRuns.push({ ...current, text: before })
+      }
+      nextRuns.push(
+        createLegalRichRun({
+          text: selected,
+          bold: patch.bold ?? current.bold,
+          italic: patch.italic ?? current.italic,
+          underline: patch.underline ?? current.underline,
+          color: patch.color !== undefined ? patch.color : current.color,
+          link: current.link ? { ...current.link } : undefined,
+        }),
+      )
+      if (after.length > 0) {
+        nextRuns.push(
+          createLegalRichRun({
+            text: after,
+            bold: current.bold,
+            italic: current.italic,
+            underline: current.underline,
+            color: current.color,
+            link: current.link ? { ...current.link } : undefined,
+          }),
+        )
+      }
+    }
+    onChange(nextRuns)
+  }
+
+  const captureSelectionState = (runId: string, el: HTMLTextAreaElement) => {
+    const apply = () => {
+      const start = el.selectionStart ?? 0
+      const end = el.selectionEnd ?? start
+      setCursorPosByRunId((prev) => (prev[runId] === end ? prev : { ...prev, [runId]: end }))
+      setSelectionByRunId((prev) => {
+        const current = prev[runId]
+        if (current?.start === start && current?.end === end) return prev
+        return { ...prev, [runId]: { start, end } }
+      })
+    }
+    // Nach MouseUp/Touch ist die Selektion manchmal erst im naechsten Frame gesetzt.
+    if (typeof window !== "undefined" && "requestAnimationFrame" in window) {
+      window.requestAnimationFrame(apply)
+      return
+    }
+    apply()
+  }
+
   return (
     <div className="space-y-2">
       {context === "block" ? (
@@ -106,19 +199,87 @@ function LegalTextRunsEditor({
       ) : (
         <p className="text-[11px] text-muted-foreground">Pro Punkt: ein oder mehrere Textteile mit optional Fett, Kursiv, Link.</p>
       )}
-      {runs.map((run, i) => (
+      {runs.map((run, i) => {
+        const runSelectionId = getLegalRichRunDomId(contentBlockId, run, i)
+        return (
         <div
-          key={getLegalRichRunDomId(contentBlockId, run, i)}
-          data-inspector-legal-rich-run={getLegalRichRunDomId(contentBlockId, run, i)}
+          key={runSelectionId}
+          data-inspector-legal-rich-run={runSelectionId}
           className="rounded-md border border-border bg-muted/20 p-2 space-y-2"
         >
           <Textarea
             value={run.text}
             onChange={(e) => patchRun(i, { text: e.target.value })}
+            onMouseUp={(e) => captureSelectionState(runSelectionId, e.currentTarget)}
+            onKeyUp={(e) => captureSelectionState(runSelectionId, e.currentTarget)}
             placeholder="Text"
             rows={2}
             className="text-sm min-h-[52px]"
           />
+          {(selectionByRunId[runSelectionId]?.end ?? 0) > (selectionByRunId[runSelectionId]?.start ?? 0) ? (
+            <div className="rounded-md border border-border bg-background p-2 space-y-2">
+              <p className="text-[11px] text-muted-foreground">Auswahl-Formatierung</p>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={() => applySelectionFormat(i, runSelectionId, { bold: !Boolean(run.bold) })}
+                >
+                  Fett
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={() => applySelectionFormat(i, runSelectionId, { italic: !Boolean(run.italic) })}
+                >
+                  Kursiv
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={() => applySelectionFormat(i, runSelectionId, { underline: !Boolean(run.underline) })}
+                >
+                  Unterstrichen
+                </Button>
+                <Input
+                  type="color"
+                  value={run.color?.trim() ? run.color : "#1f2937"}
+                  onChange={(e) => applySelectionFormat(i, runSelectionId, { color: e.target.value })}
+                  className="h-7 w-10 p-1"
+                  title="Textfarbe"
+                />
+                <Input
+                  value={run.color?.trim() ? run.color : ""}
+                  onChange={(e) => {
+                    const raw = e.target.value
+                    if (!raw.trim()) {
+                      applySelectionFormat(i, runSelectionId, { color: "" })
+                      return
+                    }
+                    const parsed = normalizeHexColorInput(raw)
+                    if (parsed) applySelectionFormat(i, runSelectionId, { color: parsed })
+                  }}
+                  placeholder="#1f2937"
+                  className="h-7 w-24 text-xs"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={() => applySelectionFormat(i, { color: "" })}
+                >
+                  Farbe reset
+                </Button>
+              </div>
+            </div>
+          ) : null}
           <div className="flex flex-wrap items-center gap-3">
             <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer">
               <Checkbox checked={Boolean(run.bold)} onCheckedChange={(v) => patchRun(i, { bold: Boolean(v) })} />
@@ -128,6 +289,38 @@ function LegalTextRunsEditor({
               <Checkbox checked={Boolean(run.italic)} onCheckedChange={(v) => patchRun(i, { italic: Boolean(v) })} />
               Kursiv
             </label>
+            <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer">
+              <Checkbox checked={Boolean(run.underline)} onCheckedChange={(v) => patchRun(i, { underline: Boolean(v) })} />
+              Unterstrichen
+            </label>
+          </div>
+          <div className="space-y-1">
+            <Label className="text-[11px] text-muted-foreground">Textfarbe (optional)</Label>
+            <div className="flex items-center gap-2">
+              <Input
+                type="color"
+                value={run.color?.trim() ? run.color : "#1f2937"}
+                onChange={(e) => patchRun(i, { color: e.target.value })}
+                className="h-8 w-11 p-1"
+              />
+              <Input
+                value={run.color?.trim() ? run.color : ""}
+                onChange={(e) => {
+                  const raw = e.target.value
+                  if (!raw.trim()) {
+                    patchRun(i, { color: undefined })
+                    return
+                  }
+                  const parsed = normalizeHexColorInput(raw)
+                  if (parsed) patchRun(i, { color: parsed })
+                }}
+                placeholder="#1f2937"
+                className="h-8 w-24 text-xs"
+              />
+              <Button type="button" variant="ghost" size="sm" className="h-7 text-xs" onClick={() => patchRun(i, { color: undefined })}>
+                Zuruecksetzen
+              </Button>
+            </div>
           </div>
           <div className="space-y-1">
             <Label className="text-[11px] text-muted-foreground">Link-URL (optional)</Label>
@@ -147,13 +340,31 @@ function LegalTextRunsEditor({
               className="h-8 text-sm"
             />
           </div>
-          {runs.length > 1 ? (
-            <Button type="button" variant="ghost" size="sm" className="h-7 text-xs text-destructive" onClick={() => onChange(runs.filter((_, j) => j !== i))}>
-              Textteil entfernen
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-7 text-xs"
+              disabled={run.text.length < 2}
+              onClick={() => splitRunAtCursor(i, runSelectionId)}
+            >
+              An Cursor teilen
             </Button>
-          ) : null}
+            {runs.length > 1 ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-7 text-xs text-destructive"
+                onClick={() => onChange(runs.filter((_, j) => j !== i))}
+              >
+                Textteil entfernen
+              </Button>
+            ) : null}
+          </div>
         </div>
-      ))}
+      )})}
       <Button type="button" variant="outline" size="sm" className="h-7 text-xs w-full" onClick={() => onChange([...runs, createLegalRichRun()])}>
         Textteil hinzufügen
       </Button>
@@ -174,6 +385,13 @@ function blockTypeLabel(t: LegalRichContentBlock["type"]): string {
     default:
       return t
   }
+}
+
+function normalizeHexColorInput(value: string): string | null {
+  const v = value.trim()
+  if (!v) return null
+  const withHash = v.startsWith("#") ? v : `#${v}`
+  return /^#[0-9a-fA-F]{6}$/.test(withHash) ? withHash.toLowerCase() : null
 }
 
 function getBlockPreviewText(block: LegalRichContentBlock): string {
@@ -269,14 +487,21 @@ function BlockContentEditor({
           <Label className="text-xs">Ebene</Label>
           <Select
             value={String(block.level)}
-            onValueChange={(v) => onChange({ ...block, level: v === "4" ? 4 : 3 })}
+            onValueChange={(v) => {
+              const parsed = Number(v)
+              const level = parsed >= 2 && parsed <= 6 ? (parsed as 2 | 3 | 4 | 5 | 6) : 3
+              onChange({ ...block, level })
+            }}
           >
             <SelectTrigger className="h-8 text-sm">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="2">Überschrift H2</SelectItem>
               <SelectItem value="3">Überschrift H3</SelectItem>
               <SelectItem value="4">Überschrift H4</SelectItem>
+              <SelectItem value="5">Überschrift H5</SelectItem>
+              <SelectItem value="6">Überschrift H6</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -427,7 +652,10 @@ export function LegalRichTextContentInspector({
             rows={8}
             className="text-sm"
           />
-          <p className="text-[11px] text-muted-foreground">Wird als Klartext mit Absätzen angezeigt, solange kein strukturierter Inhalt aktiv ist.</p>
+          <p className="text-[11px] text-muted-foreground">
+            Struktur-Marker bleiben erhalten: <code>###</code>/<code>####</code> fuer Ueberschriften, <code>-</code> fuer Listen
+            und <code>1.</code> fuer nummerierte Listen.
+          </p>
           <Button
             type="button"
             variant="secondary"
@@ -604,7 +832,8 @@ export function LegalRichTextContentInspector({
             Zurück zu einfachem Text
           </Button>
           <p className="text-[11px] text-muted-foreground">
-            Struktur wird in Klartext umgewandelt (Überschriften/Listen nur grob als Textzeilen). Fett/Kursiv/Links gehen dabei verloren.
+            Struktur wird als Klartext-Marker gespeichert (<code>###</code>, <code>-</code>, <code>1.</code>). Beim Zurueckwechseln
+            wird daraus wieder ein strukturierter Inhalt aufgebaut. Fett/Kursiv/Links gehen weiterhin verloren.
           </p>
         </div>
       )}

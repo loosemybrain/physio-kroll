@@ -97,7 +97,7 @@ export function createLegalRichParagraphBlock(): LegalRichContentBlock {
   return { id: uuid(), type: "paragraph", runs: [createLegalRichRun()] }
 }
 
-export function createLegalRichHeadingBlock(level: 3 | 4 = 3): LegalRichContentBlock {
+export function createLegalRichHeadingBlock(level: 2 | 3 | 4 | 5 | 6 = 3): LegalRichContentBlock {
   return { id: uuid(), type: "heading", level, runs: [createLegalRichRun()] }
 }
 
@@ -109,22 +109,122 @@ export function createLegalRichOrderedListBlock(): LegalRichContentBlock {
   return { id: uuid(), type: "orderedList", items: [createLegalRichListItem()] }
 }
 
-/** Legacy `content` → strukturierte Absatz-Blöcke (ein Run pro Absatz). */
+function parseHeading(text: string): { level: 2 | 3 | 4 | 5 | 6; text: string } | null {
+  const m = text.match(/^(#{1,6})\s*(.+)$/)
+  if (!m) return null
+  const markerCount = m[1].length
+  const level = markerCount <= 2 ? 2 : markerCount >= 6 ? 6 : (markerCount as 2 | 3 | 4 | 5 | 6)
+  return { level, text: m[2].trim() }
+}
+
+function parseNaturalHeading(lines: string[]): { level: 2 | 3 | 4 | 5 | 6; text: string } | null {
+  if (lines.length !== 1) return null
+  const text = lines[0].trim()
+  if (!text) return null
+  // Konservativ: nur eindeutige Marker wie "Titel:" als Headline interpretieren.
+  if (text.endsWith(":")) return { level: 3, text: text.slice(0, -1).trim() }
+  return null
+}
+
+function parseListLines(lines: string[]): {
+  type: "bulletList" | "orderedList"
+  items: string[]
+} | null {
+  const bulletItems = lines
+    .map((line) => line.match(/^\s*(?:[-*•·]|[–—])\s+(.+)$/)?.[1]?.trim() ?? null)
+  if (bulletItems.every((item) => item && item.length > 0)) {
+    return {
+      type: "bulletList",
+      items: bulletItems as string[],
+    }
+  }
+
+  const orderedItems = lines
+    .map((line) => line.match(/^\s*\d+[.)]\s+(.+)$/)?.[1]?.trim() ?? null)
+  if (orderedItems.every((item) => item && item.length > 0)) {
+    return {
+      type: "orderedList",
+      items: orderedItems as string[],
+    }
+  }
+
+  return null
+}
+
+/** Legacy `content` → strukturierte Inhaltsblöcke (inkl. #/Liste-Erkennung). */
 export function legalPlainTextToContentBlocks(content: string): LegalRichContentBlock[] {
   const paras = legalPlainTextToParagraphs(content)
   if (paras.length === 0) return [createLegalRichParagraphBlock()]
-  return paras.map((text) => ({
-    id: uuid(),
-    type: "paragraph" as const,
-    runs: [{ id: uuid(), text }],
-  }))
+  return paras.flatMap((paragraph) => {
+    const lines = paragraph
+      .split(/\n+/)
+      .map((line) => line.trim())
+      .filter(Boolean)
+    const heading = parseHeading(paragraph.trim())
+    if (heading) {
+      return [{
+        id: uuid(),
+        type: "heading" as const,
+        level: heading.level,
+        runs: [{ id: uuid(), text: heading.text }],
+      }]
+    }
+    const naturalHeading = parseNaturalHeading(lines)
+    if (naturalHeading) {
+      return [{
+        id: uuid(),
+        type: "heading" as const,
+        level: naturalHeading.level,
+        runs: [{ id: uuid(), text: naturalHeading.text }],
+      }]
+    }
+    if (lines.length > 0) {
+      const parsedList = parseListLines(lines)
+      if (parsedList) {
+        return [{
+          id: uuid(),
+          type: parsedList.type,
+          items: parsedList.items.map((text) => ({
+            id: uuid(),
+            runs: [{ id: uuid(), text }],
+          })),
+        }]
+      }
+    }
+    // Falls ein Absatz mit "Titel:" startet und danach Fliesstext folgt:
+    // als Heading + Paragraph importieren.
+    if (lines.length >= 2 && lines[0].endsWith(":")) {
+      const title = lines[0].slice(0, -1).trim()
+      const body = lines.slice(1).join("\n").trim()
+      if (title && body) {
+        return [
+          {
+            id: uuid(),
+            type: "heading" as const,
+            level: 3,
+            runs: [{ id: uuid(), text: title }],
+          },
+          {
+            id: uuid(),
+            type: "paragraph" as const,
+            runs: [{ id: uuid(), text: body }],
+          },
+        ]
+      }
+    }
+    return [{
+      id: uuid(),
+      type: "paragraph" as const,
+      runs: [{ id: uuid(), text: paragraph }],
+    }]
+  })
 }
 
 function runsToPlain(runs: LegalRichTextRun[]): string {
   return runs.map((r) => r.text).join("")
 }
 
-/** Grobe Rückkonvertierung für „einfachen Text“-Modus (Listen nur als Textzeilen). */
+/** Rückkonvertierung für „einfachen Text“-Modus mit Struktur-Markern (#, -, 1.). */
 export function legalContentBlocksToPlainText(blocks: LegalRichContentBlock[]): string {
   return blocks
     .map((b) => {
@@ -132,7 +232,7 @@ export function legalContentBlocksToPlainText(blocks: LegalRichContentBlock[]): 
         case "paragraph":
           return runsToPlain(b.runs)
         case "heading":
-          return runsToPlain(b.runs)
+          return `${"#".repeat(b.level)} ${runsToPlain(b.runs)}`
         case "bulletList":
           return b.items.map((i) => `- ${runsToPlain(i.runs)}`).join("\n")
         case "orderedList":

@@ -1791,6 +1791,8 @@ const legalRichTextRunSchema = z.object({
   text: z.string(),
   bold: z.boolean().optional(),
   italic: z.boolean().optional(),
+  underline: z.boolean().optional(),
+  color: z.string().optional(),
   link: z.object({ href: z.string(), label: z.string().optional() }).optional(),
 })
 
@@ -1808,7 +1810,7 @@ const legalRichParagraphBlockSchema = z.object({
 const legalRichHeadingBlockSchema = z.object({
   id: z.string(),
   type: z.literal("heading"),
-  level: z.union([z.literal(3), z.literal(4)]),
+  level: z.union([z.literal(2), z.literal(3), z.literal(4), z.literal(5), z.literal(6)]),
   runs: z.array(legalRichTextRunSchema),
 })
 

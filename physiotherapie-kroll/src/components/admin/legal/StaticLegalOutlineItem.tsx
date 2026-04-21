@@ -25,12 +25,12 @@ const kindBadge: Record<OutlineKind, { text: string; className: string }> = {
   hero: {
     text: "Header",
     className:
-      "border border-amber-500/35 bg-amber-500/10 text-amber-950 dark:text-amber-100 h-4 px-1 text-[9px] font-medium leading-none",
+      "border border-amber-700/55 bg-amber-100 text-amber-950 dark:border-amber-300/45 dark:bg-amber-900/35 dark:text-amber-50 h-5 px-1.5 text-[10px] font-semibold leading-none",
   },
   static: {
     text: "Block",
     className:
-      "border border-border bg-muted/80 text-muted-foreground h-4 px-1 text-[9px] font-medium leading-none",
+      "border border-slate-400/70 bg-slate-100 text-slate-900 dark:border-slate-500/70 dark:bg-slate-800 dark:text-slate-100 h-5 px-1.5 text-[10px] font-semibold leading-none",
   },
 }
 

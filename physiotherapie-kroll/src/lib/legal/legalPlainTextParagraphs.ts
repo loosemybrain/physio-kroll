@@ -28,7 +28,7 @@ export function legalLegacyHtmlToPlainText(html: string): string {
 
 /**
  * Split stored legal body into non-empty paragraph strings.
- * One or more line breaks (`\n`, `\r\n`) start a new paragraph; empty lines are skipped.
+ * A blank line starts a new paragraph; single line breaks stay inside a paragraph.
  */
 export function legalPlainTextToParagraphs(raw: string | undefined | null): string[] {
   if (raw == null) return []
@@ -38,7 +38,7 @@ export function legalPlainTextToParagraphs(raw: string | undefined | null): stri
   const plain = looksLikeHtml(normalized) ? legalLegacyHtmlToPlainText(normalized).trim() : normalized
 
   return plain
-    .split(/\n+/)
+    .split(/\n{2,}/)
     .map((p) => p.trim())
     .filter((p) => p.length > 0)
 }

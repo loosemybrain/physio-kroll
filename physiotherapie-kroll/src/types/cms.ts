@@ -1094,6 +1094,10 @@ export interface LegalRichTextRun {
   bold?: boolean
   /** Kursiv (rendert als `<em>`). */
   italic?: boolean
+  /** Unterstrichen (rendert als `<u>`). */
+  underline?: boolean
+  /** Optionale Textfarbe (z. B. `#1f2937`). */
+  color?: string
   /**
    * Link: Ziel-URL unter `href`, optional eigener Anzeigetext unter `label`.
    * Ohne `label` gilt der sichtbare Text aus `text` (sonst Fallback URL).
@@ -1110,7 +1114,7 @@ export interface LegalRichListItem {
 /** Strukturierter Inhalt für `legalRichText` (bevorzugt gegenüber `content`). */
 export type LegalRichContentBlock =
   | { id: string; type: "paragraph"; runs: LegalRichTextRun[] }
-  | { id: string; type: "heading"; level: 3 | 4; runs: LegalRichTextRun[] }
+  | { id: string; type: "heading"; level: 2 | 3 | 4 | 5 | 6; runs: LegalRichTextRun[] }
   | { id: string; type: "bulletList"; items: LegalRichListItem[] }
   | { id: string; type: "orderedList"; items: LegalRichListItem[] }
 

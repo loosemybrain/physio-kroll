@@ -11,10 +11,19 @@ import {
   trimLegalRichColor,
 } from "@/lib/legal/legalRichTextBlockColors"
 
+const headingTagByLevel = { 2: "h2", 3: "h3", 4: "h4", 5: "h5", 6: "h6" } as const
+const headingClassByLevel = {
+  2: "mt-7 mb-3 text-2xl font-semibold tracking-tight md:text-3xl [&_em]:italic [&_strong]:font-semibold",
+  3: "mt-6 mb-2 text-xl font-semibold tracking-tight md:text-2xl [&_em]:italic [&_strong]:font-semibold",
+  4: "mt-5 mb-2 text-lg font-semibold tracking-tight md:text-xl [&_em]:italic [&_strong]:font-semibold",
+  5: "mt-4 mb-2 text-base font-semibold tracking-tight md:text-lg [&_em]:italic [&_strong]:font-semibold",
+  6: "mt-4 mb-2 text-sm font-semibold tracking-tight md:text-base [&_em]:italic [&_strong]:font-semibold",
+} as const
+
 function runsHaveVisibleText(runs: LegalRichTextRun[]): boolean {
   return runs.some((r) => {
     const safe = r.link?.href ? sanitizeLegalLinkHref(r.link.href) : null
-    return r.text.trim().length > 0 || Boolean(r.link?.label?.trim()) || Boolean(safe)
+    return r.text.length > 0 || Boolean(r.link?.label?.trim()) || Boolean(safe)
   })
 }
 
@@ -27,11 +36,12 @@ type RunRenderCtx = {
 function renderRun(run: LegalRichTextRun, key: string, runIndex: number, ctx: RunRenderCtx): React.ReactNode | null {
   const safeHref = run.link?.href ? sanitizeLegalLinkHref(run.link.href) : null
   const label = run.link?.label?.trim() ?? ""
-  if (!run.text.trim() && !label && !safeHref) return null
+  if (!run.text && !label && !safeHref) return null
 
-  let inner: React.ReactNode = run.text.trim() || label || (safeHref ?? "")
+  let inner: React.ReactNode = run.text || label || (safeHref ?? "")
   if (run.italic) inner = <em>{inner}</em>
   if (run.bold) inner = <strong>{inner}</strong>
+  if (run.underline) inner = <u>{inner}</u>
   if (safeHref) {
     const external = isExternalLegalHref(safeHref)
     inner = (
@@ -48,7 +58,11 @@ function renderRun(run: LegalRichTextRun, key: string, runIndex: number, ctx: Ru
   const seg = previewAssistSegmentClass(ctx.previewAssistEditing)
   const preview = Boolean(ctx.cmsBlockId?.trim())
   if (!preview) {
-    return <React.Fragment key={key}>{inner}</React.Fragment>
+    return (
+      <span key={key} style={run.color ? { color: run.color } : undefined}>
+        {inner}
+      </span>
+    )
   }
 
   const runDomId = getLegalRichRunDomId(ctx.contentBlockId, run, runIndex)
@@ -60,7 +74,7 @@ function renderRun(run: LegalRichTextRun, key: string, runIndex: number, ctx: Ru
   }
 
   return (
-    <span key={key} {...dataAttrs} className={cn(seg)}>
+    <span key={key} {...dataAttrs} className={cn(seg)} style={run.color ? { color: run.color } : undefined}>
       {inner}
     </span>
   )
@@ -175,7 +189,7 @@ export function LegalRichContentRenderer({
             return (
               <p
                 key={block.id}
-                className={cn(!trimLegalRichColor(c.textColor) && "text-muted-foreground", "leading-relaxed", seg)}
+                className={cn(!trimLegalRichColor(c.textColor) && "text-muted-foreground", "leading-relaxed whitespace-pre-wrap", seg)}
                 {...contentBlockRepeaterAttrs(block)}
                 {...blockNodeDataAttrs(cmsBlockId, block.id, "paragraph")}
               >
@@ -183,37 +197,20 @@ export function LegalRichContentRenderer({
               </p>
             )
           case "heading":
-            if (block.level === 3) {
-              return (
-                <h3
-                  key={block.id}
-                  className={cn(
-                    "mt-6 mb-2 text-xl font-semibold tracking-tight md:text-2xl [&_em]:italic [&_strong]:font-semibold",
-                    !trimLegalRichColor(c.headingColor) && "text-foreground",
-                    !trimLegalRichColor(c.linkColor) && "[&_a]:text-primary",
-                    seg,
-                  )}
-                  {...contentBlockRepeaterAttrs(block)}
-                  {...blockNodeDataAttrs(cmsBlockId, block.id, "heading")}
-                >
-                  {renderRuns(block.runs, block.id, runCtx)}
-                </h3>
-              )
-            }
-            return (
-              <h4
-                key={block.id}
-                className={cn(
-                  "mt-5 mb-2 text-lg font-semibold tracking-tight md:text-xl [&_em]:italic [&_strong]:font-semibold",
+            return React.createElement(
+              headingTagByLevel[block.level],
+              {
+                key: block.id,
+                className: cn(
+                  headingClassByLevel[block.level],
                   !trimLegalRichColor(c.headingColor) && "text-foreground",
                   !trimLegalRichColor(c.linkColor) && "[&_a]:text-primary",
                   seg,
-                )}
-                {...contentBlockRepeaterAttrs(block)}
-                {...blockNodeDataAttrs(cmsBlockId, block.id, "heading")}
-              >
-                {renderRuns(block.runs, block.id, runCtx)}
-              </h4>
+                ),
+                ...contentBlockRepeaterAttrs(block),
+                ...blockNodeDataAttrs(cmsBlockId, block.id, "heading"),
+              },
+              renderRuns(block.runs, block.id, runCtx),
             )
           case "bulletList": {
             const li = block.items
@@ -233,7 +230,7 @@ export function LegalRichContentRenderer({
                   return (
                     <li
                       key={listItemDomId}
-                      className={cn(!trimLegalRichColor(c.listColor) && "text-muted-foreground", seg)}
+                      className={cn(!trimLegalRichColor(c.listColor) && "text-muted-foreground whitespace-pre-wrap", seg)}
                       {...(cmsBlockId?.trim()
                         ? {
                             ...blockNodeDataAttrs(cmsBlockId, block.id, "listItem"),
@@ -267,7 +264,7 @@ export function LegalRichContentRenderer({
                   return (
                     <li
                       key={listItemDomId}
-                      className={cn(!trimLegalRichColor(c.listColor) && "text-muted-foreground", seg)}
+                      className={cn(!trimLegalRichColor(c.listColor) && "text-muted-foreground whitespace-pre-wrap", seg)}
                       {...(cmsBlockId?.trim()
                         ? {
                             ...blockNodeDataAttrs(cmsBlockId, block.id, "listItem"),
