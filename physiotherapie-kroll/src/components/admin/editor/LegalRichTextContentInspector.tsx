@@ -273,7 +273,7 @@ function LegalTextRunsEditor({
                   variant="ghost"
                   size="sm"
                   className="h-7 text-xs"
-                  onClick={() => applySelectionFormat(i, { color: "" })}
+                  onClick={() => applySelectionFormat(i, runSelectionId, { color: "" })}
                 >
                   Farbe reset
                 </Button>
