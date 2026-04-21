@@ -6,6 +6,8 @@ import type {
   FooterBottomBar,
   FooterDesign,
   FooterSpacing,
+  FooterBackground,
+  FooterGlassmorphism,
   FooterLegalLinksConfig,
   LegalLinksItems,
   FooterSocialLinksConfig,
@@ -317,31 +319,33 @@ const footerLegalLinksSchema: z.ZodType<FooterLegalLinksConfig> = z.object({
 })
 
 const footerSocialLinksSchema: z.ZodType<FooterSocialLinksConfig> = z.object({
-  enabled: z.boolean(),
+  enabled: z.boolean().default(false),
   title: z.string().optional(),
-  placement: z.enum(["top", "section", "bottom", "bottomBar", "bottomBarLeft", "bottomBarCenter", "bottomBarRight"]),
-  align: z.enum(["left", "center", "right"]),
-  iconStyle: z.enum(["default", "round", "square", "outline", "minimal", "soft", "pill"]),
-  iconSet: z.enum(["brand", "simple", "monochrome"]),
+  placement: z
+    .enum(["top", "section", "bottom", "bottomBar", "bottomBarLeft", "bottomBarCenter", "bottomBarRight"])
+    .default("bottom"),
+  align: z.enum(["left", "center", "right"]).default("left"),
+  iconStyle: z.enum(["default", "round", "square", "outline", "minimal", "soft", "pill"]).default("default"),
+  iconSet: z.enum(["brand", "simple", "monochrome"]).default("brand"),
   hoverEffect: z.enum(["none", "lift", "shrink", "flip", "draw"]).optional(),
-  iconSize: z.enum(["xs", "sm", "md", "lg", "xl"]),
-  gap: z.enum(["xs", "sm", "md", "lg"]),
+  iconSize: z.enum(["xs", "sm", "md", "lg", "xl"]).default("md"),
+  gap: z.enum(["xs", "sm", "md", "lg"]).default("md"),
   color: z.string().optional(),
   hoverColor: z.string().optional(),
   backgroundColor: z.string().optional(),
   borderColor: z.string().optional(),
-  openInNewTab: z.boolean(),
-  showLabels: z.boolean(),
+  openInNewTab: z.boolean().default(true),
+  showLabels: z.boolean().default(false),
   labelColor: z.string().optional(),
   items: z.object({
     facebook: z.object({
-      enabled: z.boolean().optional(),
+      enabled: z.boolean().default(false),
       url: z.string().optional(),
       iconVariant: z.enum(["facebook", "facebook-f", "facebook-round"]).optional(),
       label: z.string().optional(),
     }),
     instagram: z.object({
-      enabled: z.boolean().optional(),
+      enabled: z.boolean().default(false),
       url: z.string().optional(),
       iconVariant: z.enum(["instagram", "instagram-outline", "instagram-round"]).optional(),
       label: z.string().optional(),
@@ -358,6 +362,52 @@ export const footerConfigSchema = z
     sections: z.array(footerSectionSchema).min(2).max(5),
     bottomBar: footerBottomBarSchema.optional(),
     design: footerDesignSchema.optional(),
+    layoutWidth: z.enum(["full", "contained"]).optional(),
+    background: z
+      .object({
+        mode: z.enum(["transparent", "color", "gradient", "image", "video"]).optional(),
+        color: z.string().optional(),
+        gradientPreset: z.string().optional(),
+        gradient: z
+          .object({
+            from: z.string().optional(),
+            via: z.string().optional(),
+            to: z.string().optional(),
+            angle: z.number().optional(),
+          })
+          .optional(),
+        mediaId: z.string().optional(),
+        mediaUrl: z.string().optional(),
+        overlay: z
+          .object({
+            enabled: z.boolean().optional(),
+            color: z.string().optional(),
+            opacity: z.number().optional(),
+          })
+          .optional(),
+        parallax: z
+          .object({
+            enabled: z.boolean().optional(),
+            strength: z.number().optional(),
+          })
+          .optional(),
+      })
+      .optional() as z.ZodType<FooterBackground | undefined>,
+    glassmorphism: z
+      .object({
+        enabled: z.boolean().optional(),
+        intensity: z.enum(["subtle", "medium", "strong"]).optional(),
+        blurPx: z.number().optional(),
+        panelOpacity: z.number().optional(),
+        borderOpacity: z.number().optional(),
+        borderColor: z.string().optional(),
+        highlightLine: z.boolean().optional(),
+        highlightColor: z.string().optional(),
+        shadowPreset: z.string().optional(),
+        panelShadow: z.any().optional(),
+        tintColor: z.string().optional(),
+      })
+      .optional() as z.ZodType<FooterGlassmorphism | undefined>,
     legalLinks: footerLegalLinksSchema.optional(),
     socialLinks: footerSocialLinksSchema.optional(),
   })
@@ -555,7 +605,7 @@ export function ensureLegalLinks(config: FooterConfig): FooterConfig {
   return { ...config, legalLinks: merged }
 }
 
-function normalizeUrl(value?: string): string | undefined {
+function normalizeOptionalString(value?: string): string | undefined {
   const trimmed = value?.trim()
   return trimmed ? trimmed : undefined
 }
@@ -573,36 +623,31 @@ export function ensureSocialLinks(config: FooterConfig): FooterConfig {
   const merged: FooterSocialLinksConfig = {
     enabled: typeof sl.enabled === "boolean" ? sl.enabled : DEFAULT_SOCIAL_LINKS_CONFIG.enabled,
     title: typeof sl.title === "string" ? sl.title : DEFAULT_SOCIAL_LINKS_CONFIG.title,
-    placement:
-      sl.placement === "bottomBarLeft" ||
-      sl.placement === "bottomBarCenter" ||
-      sl.placement === "bottomBarRight"
-        ? "bottomBar"
-        : (sl.placement ?? DEFAULT_SOCIAL_LINKS_CONFIG.placement),
+    placement: sl.placement ?? DEFAULT_SOCIAL_LINKS_CONFIG.placement,
     align: sl.align ?? DEFAULT_SOCIAL_LINKS_CONFIG.align,
     iconStyle: sl.iconStyle ?? DEFAULT_SOCIAL_LINKS_CONFIG.iconStyle,
     iconSet: sl.iconSet ?? DEFAULT_SOCIAL_LINKS_CONFIG.iconSet,
     hoverEffect: sl.hoverEffect ?? DEFAULT_SOCIAL_LINKS_CONFIG.hoverEffect,
     iconSize: sl.iconSize ?? DEFAULT_SOCIAL_LINKS_CONFIG.iconSize,
     gap: sl.gap ?? DEFAULT_SOCIAL_LINKS_CONFIG.gap,
-    color: normalizeUrl(sl.color),
-    hoverColor: normalizeUrl(sl.hoverColor),
-    backgroundColor: normalizeUrl(sl.backgroundColor),
-    borderColor: normalizeUrl(sl.borderColor),
+    color: normalizeOptionalString(sl.color),
+    hoverColor: normalizeOptionalString(sl.hoverColor),
+    backgroundColor: normalizeOptionalString(sl.backgroundColor),
+    borderColor: normalizeOptionalString(sl.borderColor),
     openInNewTab: sl.openInNewTab ?? DEFAULT_SOCIAL_LINKS_CONFIG.openInNewTab,
     showLabels: sl.showLabels ?? DEFAULT_SOCIAL_LINKS_CONFIG.showLabels,
-    labelColor: normalizeUrl(sl.labelColor),
+    labelColor: normalizeOptionalString(sl.labelColor),
     items: {
       facebook: {
         enabled: sl.items?.facebook?.enabled ?? DEFAULT_SOCIAL_LINKS_CONFIG.items.facebook.enabled,
-        url: normalizeUrl(sl.items?.facebook?.url),
+        url: normalizeOptionalString(sl.items?.facebook?.url),
         iconVariant:
           sl.items?.facebook?.iconVariant ?? DEFAULT_SOCIAL_LINKS_CONFIG.items.facebook.iconVariant,
         label: sl.items?.facebook?.label ?? DEFAULT_SOCIAL_LINKS_CONFIG.items.facebook.label,
       },
       instagram: {
         enabled: sl.items?.instagram?.enabled ?? DEFAULT_SOCIAL_LINKS_CONFIG.items.instagram.enabled,
-        url: normalizeUrl(sl.items?.instagram?.url),
+        url: normalizeOptionalString(sl.items?.instagram?.url),
         iconVariant:
           sl.items?.instagram?.iconVariant ?? DEFAULT_SOCIAL_LINKS_CONFIG.items.instagram.iconVariant,
         label: sl.items?.instagram?.label ?? DEFAULT_SOCIAL_LINKS_CONFIG.items.instagram.label,
