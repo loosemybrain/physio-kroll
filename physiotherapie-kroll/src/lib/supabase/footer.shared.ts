@@ -319,21 +319,19 @@ const footerLegalLinksSchema: z.ZodType<FooterLegalLinksConfig> = z.object({
 const footerSocialLinksSchema: z.ZodType<FooterSocialLinksConfig> = z.object({
   enabled: z.boolean(),
   title: z.string().optional(),
-  placement: z
-    .enum(["top", "section", "bottom", "bottomBar", "bottomBarLeft", "bottomBarCenter", "bottomBarRight"])
-    .optional(),
-  align: z.enum(["left", "center", "right"]).optional(),
-  iconStyle: z.enum(["default", "round", "square", "outline", "minimal", "soft", "pill"]).optional(),
-  iconSet: z.enum(["brand", "simple", "monochrome"]).optional(),
+  placement: z.enum(["top", "section", "bottom", "bottomBar", "bottomBarLeft", "bottomBarCenter", "bottomBarRight"]),
+  align: z.enum(["left", "center", "right"]),
+  iconStyle: z.enum(["default", "round", "square", "outline", "minimal", "soft", "pill"]),
+  iconSet: z.enum(["brand", "simple", "monochrome"]),
   hoverEffect: z.enum(["none", "lift", "shrink", "flip", "draw"]).optional(),
-  iconSize: z.enum(["xs", "sm", "md", "lg", "xl"]).optional(),
-  gap: z.enum(["xs", "sm", "md", "lg"]).optional(),
+  iconSize: z.enum(["xs", "sm", "md", "lg", "xl"]),
+  gap: z.enum(["xs", "sm", "md", "lg"]),
   color: z.string().optional(),
   hoverColor: z.string().optional(),
   backgroundColor: z.string().optional(),
   borderColor: z.string().optional(),
-  openInNewTab: z.boolean().optional(),
-  showLabels: z.boolean().optional(),
+  openInNewTab: z.boolean(),
+  showLabels: z.boolean(),
   labelColor: z.string().optional(),
   items: z.object({
     facebook: z.object({
