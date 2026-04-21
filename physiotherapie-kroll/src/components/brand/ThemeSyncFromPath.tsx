@@ -42,6 +42,7 @@ export function ThemeSyncFromPath() {
     if (typeof document === "undefined") return
 
     const root = document.documentElement
+    const switchTokenAtStart = root.getAttribute("data-brand-switch-token")
 
     const apply = (vars: Record<string, string>, targetBrand: BrandKey) => {
       Object.entries(vars).forEach(([key, value]) => {
@@ -54,9 +55,19 @@ export function ThemeSyncFromPath() {
         root.classList.remove("physio-konzept")
       }
       appliedBrandRef.current = targetBrand
-      // End global transition overlay after theme vars are painted on target route.
+      // End global transition overlay only after theme application on target route is painted.
+      const stillOwnsSwitch =
+        switchTokenAtStart != null &&
+        root.getAttribute("data-brand-switching") === "true" &&
+        root.getAttribute("data-brand-switch-token") === switchTokenAtStart
+      if (!stillOwnsSwitch) return
       window.requestAnimationFrame(() => {
-        root.removeAttribute("data-brand-switching")
+        window.requestAnimationFrame(() => {
+          if (root.getAttribute("data-brand-switch-token") !== switchTokenAtStart) return
+          root.removeAttribute("data-brand-switching")
+          root.removeAttribute("data-brand-switch-target")
+          root.removeAttribute("data-brand-switch-token")
+        })
       })
     }
 

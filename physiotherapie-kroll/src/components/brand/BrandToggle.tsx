@@ -41,6 +41,7 @@ export function BrandToggle({
 }: BrandToggleProps) {
   const router = useRouter()
   const [switching, setSwitching] = React.useState(false)
+  const [globalSwitching, setGlobalSwitching] = React.useState(false)
   const [mounted, setMounted] = React.useState(false)
   const [spinnerConfig, setSpinnerConfig] = React.useState<SpinnerConfig>({
     preset: "modern",
@@ -48,6 +49,8 @@ export function BrandToggle({
     overlayStrength: "medium",
   })
   const overlayClass = spinnerOverlayClass(spinnerConfig.overlayStrength)
+  const pendingRef = React.useRef(false)
+  const fallbackTimerRef = React.useRef<number | null>(null)
 
 
   React.useEffect(() => {
@@ -55,6 +58,29 @@ export function BrandToggle({
     const brand = value === "physio-konzept" ? "physio-konzept" : "physiotherapy"
     setSpinnerConfig(readSpinnerConfigForBrand(brand as SpinnerBrandKey))
   }, [value])
+
+  React.useEffect(() => {
+    if (typeof document === "undefined") return
+    const root = document.documentElement
+
+    const sync = () => {
+      const active = root.getAttribute("data-brand-switching") === "true"
+      setGlobalSwitching(active)
+      setSwitching(active)
+      if (!active) pendingRef.current = false
+    }
+
+    sync()
+    const observer = new MutationObserver(sync)
+    observer.observe(root, { attributes: true, attributeFilter: ["data-brand-switching"] })
+    return () => {
+      observer.disconnect()
+      if (fallbackTimerRef.current != null) {
+        window.clearTimeout(fallbackTimerRef.current)
+        fallbackTimerRef.current = null
+      }
+    }
+  }, [])
 
   const applyThemeBeforeNavigation = React.useCallback(async (brand: BrandKey) => {
     if (typeof document === "undefined") return
@@ -96,31 +122,40 @@ export function BrandToggle({
 
   const handleNavigate = React.useCallback(
     async (brand: BrandKey) => {
-      if (switching) return
+      if (pendingRef.current) return
       const targetPath = brand === "physiotherapy" ? "/" : "/konzept"
       if ((value === "physiotherapy" && targetPath === "/") || (value === "physio-konzept" && targetPath === "/konzept")) {
         return
       }
 
+      pendingRef.current = true
       setSwitching(true)
-      const startedAt = Date.now()
+      const token = `${Date.now()}-${Math.random().toString(36).slice(2)}`
+      if (typeof document !== "undefined") {
+        const root = document.documentElement
+        root.setAttribute("data-brand-switching", "true")
+        root.setAttribute("data-brand-switch-target", brand)
+        root.setAttribute("data-brand-switch-token", token)
+        if (fallbackTimerRef.current != null) window.clearTimeout(fallbackTimerRef.current)
+        fallbackTimerRef.current = window.setTimeout(() => {
+          const r = document.documentElement
+          if (r.getAttribute("data-brand-switch-token") === token) {
+            r.removeAttribute("data-brand-switching")
+            r.removeAttribute("data-brand-switch-target")
+            r.removeAttribute("data-brand-switch-token")
+          }
+        }, 10000)
+      }
       try {
         router.prefetch(targetPath)
         await applyThemeBeforeNavigation(brand)
         await waitForVisualStability()
-        const elapsedMs = Date.now() - startedAt
-        const minVisibleMs = 450
-        if (elapsedMs < minVisibleMs) {
-          await new Promise<void>((resolve) => window.setTimeout(resolve, minVisibleMs - elapsedMs))
-        }
       } catch {
         // Fallback: navigate even if theme fetch fails.
-      } finally {
-        router.push(targetPath)
-        setSwitching(false)
       }
+      router.push(targetPath)
     },
-    [applyThemeBeforeNavigation, router, switching, value, waitForVisualStability]
+    [applyThemeBeforeNavigation, router, value, waitForVisualStability]
   )
 
   return (
@@ -176,7 +211,7 @@ export function BrandToggle({
           <span className="hidden sm:inline">PhysioKonzept</span>
         </button>
       </nav>
-      {mounted && switching
+      {mounted && globalSwitching
         ? createPortal(
             <div className={`fixed inset-0 z-1000001 flex items-center justify-center ${overlayClass} backdrop-blur-sm`} aria-hidden>
               <SpinnerIndicator preset={spinnerConfig.preset} speed={spinnerConfig.speed} size="lg" />
