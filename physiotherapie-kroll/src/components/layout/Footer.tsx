@@ -170,7 +170,7 @@ export async function Footer({ brand }: FooterProps) {
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         <div 
           className="absolute -bottom-40 -left-20 h-96 w-96 rounded-full blur-3xl opacity-5"
-          style={{ backgroundColor: theme.colors.accent || "var(--primary)" }}
+          style={{ backgroundColor: "var(--primary)" }}
         />
         <div 
           className="absolute -top-40 -right-20 h-96 w-96 rounded-full blur-3xl opacity-5"
