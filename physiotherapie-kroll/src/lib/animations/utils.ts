@@ -5,11 +5,14 @@ import type { AnimationType, EasingType, SingleAnimationConfig } from "./types"
  * Hook: Respektiert prefers-reduced-motion
  */
 export function usePrefersReducedMotion(): boolean {
-  const [prefersReduced, setPrefersReduced] = useState(false)
+  const [prefersReduced, setPrefersReduced] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  )
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)")
-    setPrefersReduced(mediaQuery.matches)
 
     const handleChange = (e: MediaQueryListEvent) => {
       setPrefersReduced(e.matches)

@@ -9,6 +9,7 @@ import {
   loadUserStatus,
   parseUserStatus,
 } from "@/lib/server/adminUsers"
+import { writeAuditEvent } from "@/lib/admin/audit"
 
 type Params = { params: Promise<{ userId: string }> }
 
@@ -77,6 +78,26 @@ export async function PUT(request: Request, ctx: Params) {
       .from("user_profiles")
       .upsert({ user_id: userId, status: nextStatus }, { onConflict: "user_id" })
     if (error) throw error
+
+    await writeAuditEvent(
+      {
+        eventType: "user_status_changed",
+        category: "user",
+        severity: nextStatus === "disabled" ? "high" : "info",
+        outcome: "success",
+        actorUserId: actor.id,
+        targetUserId: userId,
+        route: `/api/admin/users/${userId}/status`,
+        entityType: "user_profile",
+        entityId: userId,
+        message: "Benutzerstatus wurde aktualisiert.",
+        metadata: {
+          previousStatus: targetCurrentStatus,
+          nextStatus,
+        },
+      },
+      { adminClient }
+    )
 
     return NextResponse.json({ userId, status: nextStatus }, { status: 200 })
   } catch (error) {

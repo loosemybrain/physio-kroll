@@ -24,7 +24,10 @@ export function TypographyInspectorSection({
 
   // Sync local state with prop changes
   useEffect(() => {
-    setLocalTypography(typography || null)
+    const raf = window.requestAnimationFrame(() => {
+      setLocalTypography(typography || null)
+    })
+    return () => window.cancelAnimationFrame(raf)
   }, [typography])
 
   const updateTypography = (updates: Partial<TypographySettings>) => {

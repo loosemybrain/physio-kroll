@@ -16,6 +16,26 @@ import {
   type PopupTriggerType,
 } from "@/types/popups"
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null
+}
+
+function asString(value: unknown, fallback = ""): string {
+  return typeof value === "string" ? value : fallback
+}
+
+function asNullableString(value: unknown): string | null {
+  return typeof value === "string" ? value : null
+}
+
+function asBool(value: unknown, fallback: boolean): boolean {
+  return typeof value === "boolean" ? value : fallback
+}
+
+function asNullableNumber(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null
+}
+
 function nowIso() {
   return new Date().toISOString()
 }
@@ -64,7 +84,8 @@ export async function getPopup(id: string): Promise<AdminPopup | null> {
     const body = await res.json().catch(() => ({}))
     throw new Error(body?.error || `Failed to load popup (${res.status})`)
   }
-  const p = (await res.json()) as any
+  const raw = (await res.json()) as unknown
+  const p = isRecord(raw) ? raw : {}
   return mapApiToAdminPopup(p)
 }
 
@@ -76,15 +97,17 @@ export async function upsertPopup(next: AdminPopup): Promise<AdminPopup> {
     body: JSON.stringify(payload),
   })
   if (!res.ok) {
-    const body = await res.json().catch(() => ({} as any))
+    const bodyRaw = await res.json().catch(() => ({} as unknown))
+    const body = isRecord(bodyRaw) ? bodyRaw : {}
     const parts: string[] = []
-    parts.push(body?.error || `Failed to save popup (${res.status})`)
+    parts.push(asString(body.error, `Failed to save popup (${res.status})`))
     if (body?.details) parts.push(`details: ${String(body.details)}`)
     if (body?.code) parts.push(`code: ${String(body.code)}`)
     if (body?.hint) parts.push(`hint: ${String(body.hint)}`)
     throw new Error(parts.join(" | "))
   }
-  const saved = (await res.json()) as any
+  const savedRaw = (await res.json()) as unknown
+  const saved = isRecord(savedRaw) ? savedRaw : {}
   return mapApiToAdminPopup(saved)
 }
 
@@ -112,7 +135,8 @@ export function createEmptyPopup(input?: Partial<Pick<AdminPopup, "name" | "slug
     id,
     name,
     slug,
-    isActive: false,
+    // Standard: sichtbar nach Speichern; sonst filtert popups_public (is_active) alles weg.
+    isActive: true,
     internalNotes: null,
     content: {
       headline: "Hinweis",
@@ -166,7 +190,7 @@ function safeEnum<T extends readonly string[]>(allowed: T, value: unknown, fallb
   return (allowed as readonly string[]).includes(value) ? (value as T[number]) : fallback
 }
 
-function mapApiToAdminPopup(p: any): AdminPopup {
+function mapApiToAdminPopup(p: Record<string, unknown>): AdminPopup {
   const triggerType = safeEnum(POPUP_TRIGGER_TYPES, p.triggerType ?? p.trigger_type, "delay") as PopupTriggerType
   const designVariant = safeEnum(POPUP_DESIGN_VARIANTS, p.designVariant ?? p.design_variant, "promotion") as PopupDesignVariant
   const size = safeEnum(POPUP_SIZES, p.size, "medium") as PopupSize
@@ -175,55 +199,55 @@ function mapApiToAdminPopup(p: any): AdminPopup {
   const animationVariant = safeEnum(POPUP_ANIMATION_VARIANTS, p.animationVariant ?? p.animation_variant, "fade") as PopupAnimationVariant
 
   return {
-    id: String(p.id),
-    name: String(p.name ?? ""),
-    slug: p.slug ?? null,
-    isActive: !!p.isActive,
-    internalNotes: p.internalNotes ?? null,
+    id: asString(p.id),
+    name: asString(p.name),
+    slug: asNullableString(p.slug),
+    isActive: asBool(p.isActive, false),
+    internalNotes: asNullableString(p.internalNotes),
     content: {
-      headline: p.headline ?? null,
-      body: p.body ?? null,
-      imageUrl: p.imageUrl ?? null,
-      ctaLabel: p.ctaLabel ?? null,
-      ctaUrl: p.ctaUrl ?? null,
-      closeLabel: p.closeLabel ?? null,
+      headline: asNullableString(p.headline),
+      body: asNullableString(p.body),
+      imageUrl: asNullableString(p.imageUrl),
+      ctaLabel: asNullableString(p.ctaLabel),
+      ctaUrl: asNullableString(p.ctaUrl),
+      closeLabel: asNullableString(p.closeLabel),
     },
     scheduling: {
-      startsAt: p.startsAt ?? null,
-      endsAt: p.endsAt ?? null,
+      startsAt: asNullableString(p.startsAt),
+      endsAt: asNullableString(p.endsAt),
     },
     trigger: {
       triggerType,
-      triggerDelaySeconds: p.triggerDelaySeconds ?? null,
-      triggerScrollPercent: p.triggerScrollPercent ?? null,
-      showOncePerSession: p.showOncePerSession ?? true,
-      showOncePerBrowser: p.showOncePerBrowser ?? false,
+      triggerDelaySeconds: asNullableNumber(p.triggerDelaySeconds),
+      triggerScrollPercent: asNullableNumber(p.triggerScrollPercent),
+      showOncePerSession: asBool(p.showOncePerSession, true),
+      showOncePerBrowser: asBool(p.showOncePerBrowser, false),
     },
-    allPages: p.allPages ?? false,
-    selectedPageIds: Array.isArray(p.selectedPageIds) ? (p.selectedPageIds as any[]).map(String) : [],
+    allPages: asBool(p.allPages, false),
+    selectedPageIds: Array.isArray(p.selectedPageIds) ? p.selectedPageIds.map(String) : [],
     design: {
       designVariant,
       size,
       position,
       layoutVariant,
       animationVariant,
-      animationFadeInMs: Number.isFinite(p.animationFadeInMs ?? p.animation_fade_in_ms) ? (p.animationFadeInMs ?? p.animation_fade_in_ms) : 620,
-      animationFadeOutMs: Number.isFinite(p.animationFadeOutMs ?? p.animation_fade_out_ms) ? (p.animationFadeOutMs ?? p.animation_fade_out_ms) : 220,
-      bgColor: p.bgColor ?? null,
-      textColor: p.textColor ?? null,
-      overlayOpacity: p.overlayOpacity ?? null,
-      borderRadius: p.borderRadius ?? null,
-      shadowPreset: p.shadowPreset ?? null,
-      buttonVariant: p.buttonVariant ?? null,
-      showCloseIcon: p.showCloseIcon ?? true,
+      animationFadeInMs: asNullableNumber(p.animationFadeInMs ?? p.animation_fade_in_ms) ?? 620,
+      animationFadeOutMs: asNullableNumber(p.animationFadeOutMs ?? p.animation_fade_out_ms) ?? 220,
+      bgColor: asNullableString(p.bgColor),
+      textColor: asNullableString(p.textColor),
+      overlayOpacity: asNullableNumber(p.overlayOpacity),
+      borderRadius: asNullableString(p.borderRadius),
+      shadowPreset: asNullableString(p.shadowPreset),
+      buttonVariant: asNullableString(p.buttonVariant),
+      showCloseIcon: asBool(p.showCloseIcon, true),
     },
     behavior: {
-      closeOnOverlay: p.closeOnOverlay ?? true,
-      closeOnEscape: p.closeOnEscape ?? true,
+      closeOnOverlay: asBool(p.closeOnOverlay, true),
+      closeOnEscape: asBool(p.closeOnEscape, true),
     },
-    priority: Number.isFinite(p.priority) ? p.priority : 0,
-    createdAt: p.createdAt ?? nowIso(),
-    updatedAt: p.updatedAt ?? nowIso(),
+    priority: asNullableNumber(p.priority) ?? 0,
+    createdAt: asString(p.createdAt, nowIso()),
+    updatedAt: asString(p.updatedAt, nowIso()),
   }
 }
 

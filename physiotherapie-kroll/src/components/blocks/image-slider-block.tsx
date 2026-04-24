@@ -301,6 +301,7 @@ function SlideImage({
   slideTitleColor,
   slideTextColor,
   variant,
+  priority = false,
 }: {
   slide: SlideItem
   aspect: string
@@ -310,11 +311,19 @@ function SlideImage({
   slideTitleColor?: string
   slideTextColor?: string
   variant: string
+  priority?: boolean
 }) {
   const shadowCss = resolveBoxShadow(slide.shadow)
   
   const viewportCls = viewportHeight !== "auto" ? viewportHeightMap[viewportHeight] : ""
   const mediaWrapperClass = viewportHeight !== "auto" ? cn("relative w-full overflow-hidden bg-muted", viewportCls) : cn("relative w-full overflow-hidden bg-muted", aspect || "aspect-video")
+
+  const imageSizes =
+    variant === "hero"
+      ? "100vw"
+      : variant === "cards" || variant === "thumbnails"
+        ? "(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+        : "(max-width: 640px) 100vw, (max-width: 1024px) 75vw, 50vw"
 
   return (
     <div
@@ -335,8 +344,8 @@ function SlideImage({
           alt={slide.alt || ""}
           fill
           className="object-cover"
-          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 75vw, 50vw"
-          priority={false}
+          sizes={imageSizes}
+          priority={priority}
         />
       </div>
 
@@ -432,6 +441,7 @@ function ClassicVariant({
               slideTitleColor={slideTitleColor}
               slideTextColor={slideTextColor}
               variant="classic"
+              priority={index === 0}
             />
           )
           return (
@@ -549,6 +559,7 @@ function ProgressVariant({
               slideTitleColor={slideTitleColor}
               slideTextColor={slideTextColor}
               variant="progress"
+              priority={index === 0}
             />
           )
           return (
@@ -688,6 +699,7 @@ function ThumbnailsVariant({
               slideTitleColor={slideTitleColor}
               slideTextColor={slideTextColor}
               variant="thumbnails"
+              priority={index === 0}
             />
           )
           return (
@@ -1001,6 +1013,7 @@ function CardsVariant({
             slideTitleColor={slideTitleColor}
             slideTextColor={slideTextColor}
             variant="cards"
+            priority={index === 0}
           />
         )
         return (
@@ -1102,7 +1115,6 @@ export function ImageSliderBlock({
   activeItemId = null,
   onItemSelect,
 }: ImageSliderBlockProps) {
-  if (!slides || slides.length === 0) return null
   const [cardsLightboxOpen, setCardsLightboxOpen] = React.useState(false)
   const [cardsLightboxIndex, setCardsLightboxIndex] = React.useState(0)
   const effectiveCardsLightbox = cardsLightbox ?? cardsFirstImageLightbox ?? false
@@ -1136,6 +1148,8 @@ export function ImageSliderBlock({
       "imageSlider.subheadline": el["imageSlider.subheadline"] ?? el["subheadline"],
     }
   }, [elements])
+
+  if (!slides || slides.length === 0) return null
 
   const aspectClass = aspectMap[aspect] || ""
   

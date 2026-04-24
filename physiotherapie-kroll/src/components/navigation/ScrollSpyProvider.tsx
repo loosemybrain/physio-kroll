@@ -5,7 +5,7 @@ import {
   useContext,
   useState,
   useEffect,
-  useRef,
+  useCallback,
   useMemo,
   type ReactNode,
 } from "react"
@@ -43,16 +43,13 @@ export function ScrollSpyProvider({
 }: ScrollSpyProviderProps) {
   const pathname = usePathname()
   const [activeAnchor, setActiveAnchor] = useState<string | null>(null)
-  const onActiveRef = useRef((blockId: string | null) => {
+  const handleActive = useCallback((blockId: string | null) => {
     setActiveAnchor((prev) => (prev === blockId ? prev : blockId))
-  })
-  onActiveRef.current = (blockId: string | null) => {
-    setActiveAnchor((prev) => (prev === blockId ? prev : blockId))
-  }
+  }, [])
 
   useEffect(() => {
     const cleanup = createScrollSpyObserver(
-      (blockId) => onActiveRef.current(blockId),
+      handleActive,
       {
         headerOffsetPx,
         bottomMarginPercent: 60,
@@ -60,7 +57,7 @@ export function ScrollSpyProvider({
       }
     )
     return cleanup
-  }, [pathname, headerOffsetPx])
+  }, [pathname, headerOffsetPx, handleActive])
 
   const value = useMemo<ScrollSpyContextValue>(
     () => ({ activeAnchor, headerOffsetPx }),

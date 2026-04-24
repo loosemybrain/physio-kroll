@@ -354,19 +354,6 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
     accordionValue,
   })
   
-  // Reset element selection and accordion when block selection changes
-  // Detect actual block switch (not just selection type change)
-  useEffect(() => {
-    if (blockIdChanged.changed) {
-      // Block was switched (or cleared)
-      setAccordionValue(undefined)
-      // Only reset repeater cards if switching away from a block (not just clearing)
-      if (blockIdChanged.from !== null && blockIdChanged.to !== blockIdChanged.from) {
-        setExpandedRepeaterCards({})
-      }
-    }
-  }, [blockIdChanged])
-
   // Set marker true only when a new page is first loaded with legal params from URL (no re-derivation from page.blocks)
   useEffect(() => {
     if (!page || !isNewPage) {
@@ -415,8 +402,21 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
   /** Löst Effect aus bei jedem Repeater-Klick (auch wenn derselbe Block schon gewählt war). */
   const [repeaterFocusRequestId, setRepeaterFocusRequestId] = useState(0)
 
+  // Reset element selection and accordion when block selection changes
+  // Detect actual block switch (not just selection type change)
+  useEffect(() => {
+    if (blockIdChanged.changed) {
+      // Block was switched (or cleared)
+      setAccordionValue(undefined)
+      // Only reset repeater cards if switching away from a block (not just clearing)
+      if (blockIdChanged.from !== null && blockIdChanged.to !== blockIdChanged.from) {
+        setExpandedRepeaterCards({})
+      }
+    }
+  }, [blockIdChanged])
+
   // Hilfsfunktion: Card suchen, scrollen, Fokus setzen (mit Retry falls Card noch nicht im DOM)
-  const runScrollAndFocusForItem = useCallback((itemId: string, retryCount = 0) => {
+  const runScrollAndFocusForItem = useCallback(function runScrollAndFocusForItem(itemId: string, retryCount = 0) {
     const container = inspectorScrollRef.current
     if (!container) return
     const escapedId = CSS.escape(itemId)
@@ -442,7 +442,7 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
   }, [])
 
   /** Preview → legalRichText: Textteil (Run) im Inspector kurz einrahmen. */
-  const highlightLegalRichRunInInspector = useCallback((runId: string, retryCount = 0) => {
+  const highlightLegalRichRunInInspector = useCallback(function highlightLegalRichRunInInspector(runId: string, retryCount = 0) {
     const container = inspectorScrollRef.current
     if (!container) return
     const row = container.querySelector<HTMLElement>(
@@ -463,7 +463,7 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
   }, [])
 
   /** Preview → legalRichText: Listenpunkt im Inspector kurz einrahmen. */
-  const highlightLegalRichListRowInInspector = useCallback((listItemId: string, retryCount = 0) => {
+  const highlightLegalRichListRowInInspector = useCallback(function highlightLegalRichListRowInInspector(listItemId: string, retryCount = 0) {
     const container = inspectorScrollRef.current
     if (!container) return
     const row = container.querySelector<HTMLElement>(
@@ -634,7 +634,16 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
     
     const heroProps = selectedBlock.props as HeroBlock["props"]
     let needsUpdate = false
-    let updatedBrandContent = heroProps.brandContent || {
+    let updatedBrandContent = heroProps.brandContent
+      ? {
+          physiotherapy: {
+            ...(heroProps.brandContent.physiotherapy ?? {}),
+          },
+          "physio-konzept": {
+            ...(heroProps.brandContent["physio-konzept"] ?? {}),
+          },
+        }
+      : {
       physiotherapy: {
         headline: heroProps.headline || "",
         subheadline: heroProps.subheadline || "",
@@ -954,7 +963,7 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
     setDeleteTarget(null)
   }
 
-  const updateSelectedProps = (nextProps: CMSBlock["props"]) => {
+  function updateSelectedProps(nextProps: CMSBlock["props"]) {
     if (!selectedBlock) return
     // Lock Live Preview scroll during update
     withLiveScrollLock(() => {
@@ -1022,7 +1031,7 @@ export function PageEditor({ pageId, onBack }: PageEditorProps) {
       let baseProps = block.props as Record<string, unknown>
 
       if (block.type === "contactForm" && actualFieldPath.startsWith("contactInfoCards.")) {
-        const cur = (baseProps as any).contactInfoCards
+        const cur = (baseProps as Record<string, unknown>).contactInfoCards
         const isEmpty = !Array.isArray(cur) || cur.length === 0
 
         if (isEmpty) {

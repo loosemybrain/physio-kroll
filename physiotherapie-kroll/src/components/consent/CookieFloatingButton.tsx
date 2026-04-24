@@ -16,13 +16,21 @@ export function CookieFloatingButton() {
   const { hasUserConsented, openSettings, isLoading } = useCookieConsent()
   const pathname = usePathname()
   const [isHovered, setIsHovered] = useState(false)
-  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false)
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(
+    () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  )
   const footerInView = useFooterInView({ rootMargin: "0px 0px -10% 0px", threshold: 0 })
 
   useEffect(() => {
-    setPrefersReducedMotion(
-      typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches
-    )
+    if (typeof window === "undefined") return
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)")
+    const onChange = (event: MediaQueryListEvent) => setPrefersReducedMotion(event.matches)
+    if (typeof media.addEventListener === "function") {
+      media.addEventListener("change", onChange)
+      return () => media.removeEventListener("change", onChange)
+    }
+    media.addListener(onChange)
+    return () => media.removeListener(onChange)
   }, [])
 
   // Don't show in admin area

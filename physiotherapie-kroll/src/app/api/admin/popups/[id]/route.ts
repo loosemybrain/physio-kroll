@@ -116,7 +116,7 @@ function parseIncoming(body: unknown): { ok: true; value: IncomingPopup } | { ok
   if (!isStringOrNull(endsAt)) return { ok: false, status: 400, error: "Invalid endsAt" }
 
   const triggerType = b.triggerType
-  if (typeof triggerType !== "string" || !new Set(POPUP_TRIGGER_TYPES).has(triggerType as any)) {
+  if (typeof triggerType !== "string" || !new Set(POPUP_TRIGGER_TYPES).has(triggerType as PopupTriggerType)) {
     return { ok: false, status: 400, error: "Invalid triggerType" }
   }
   const triggerDelaySeconds = b.triggerDelaySeconds
@@ -134,20 +134,20 @@ function parseIncoming(body: unknown): { ok: true; value: IncomingPopup } | { ok
   const selectedPageIds = Array.isArray(selectedPageIdsRaw) ? selectedPageIdsRaw.filter((x) => isUuid(x)) : []
 
   const designVariant = b.designVariant
-  if (typeof designVariant !== "string" || !new Set(POPUP_DESIGN_VARIANTS).has(designVariant as any)) {
+  if (typeof designVariant !== "string" || !new Set(POPUP_DESIGN_VARIANTS).has(designVariant as PopupDesignVariant)) {
     return { ok: false, status: 400, error: "Invalid designVariant" }
   }
 
   const size = b.size
-  if (typeof size !== "string" || !new Set(POPUP_SIZES).has(size as any)) return { ok: false, status: 400, error: "Invalid size" }
+  if (typeof size !== "string" || !new Set(POPUP_SIZES).has(size as PopupSize)) return { ok: false, status: 400, error: "Invalid size" }
   const position = b.position
-  if (typeof position !== "string" || !new Set(POPUP_POSITIONS).has(position as any)) return { ok: false, status: 400, error: "Invalid position" }
+  if (typeof position !== "string" || !new Set(POPUP_POSITIONS).has(position as PopupPosition)) return { ok: false, status: 400, error: "Invalid position" }
   const layoutVariant = b.layoutVariant
-  if (typeof layoutVariant !== "string" || !new Set(POPUP_LAYOUT_VARIANTS).has(layoutVariant as any)) {
+  if (typeof layoutVariant !== "string" || !new Set(POPUP_LAYOUT_VARIANTS).has(layoutVariant as PopupLayoutVariant)) {
     return { ok: false, status: 400, error: "Invalid layoutVariant" }
   }
   const animationVariant = b.animationVariant
-  if (typeof animationVariant !== "string" || !new Set(POPUP_ANIMATION_VARIANTS).has(animationVariant as any)) {
+  if (typeof animationVariant !== "string" || !new Set(POPUP_ANIMATION_VARIANTS).has(animationVariant as PopupAnimationVariant)) {
     return { ok: false, status: 400, error: "Invalid animationVariant" }
   }
 
@@ -283,7 +283,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
         showOncePerBrowser: popup.show_once_per_browser ?? false,
 
         allPages: popup.all_pages ?? false,
-        selectedPageIds: (mappings ?? []).map((m: any) => String(m.page_id)),
+        selectedPageIds: (mappings ?? []).map((m: Record<string, unknown>) => String(m.page_id)),
 
         designVariant: (popup.design_variant ?? "promotion") as PopupDesignVariant,
         size: (popup.size ?? "medium") as PopupSize,
@@ -329,6 +329,16 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
     if (parsed.value.id !== id) return NextResponse.json({ error: "Payload id mismatch" }, { status: 400 })
 
     const v = parsed.value
+
+    if (v.isActive && !v.allPages && v.selectedPageIds.length === 0) {
+      return NextResponse.json(
+        {
+          error:
+            "Popup ist aktiv, aber ohne Seitenzuordnung: Bitte mindestens eine Seite auswählen oder „Auf allen Seiten“ aktivieren. Sonst erscheint das Popup in popups_public / popup_pages_public nicht.",
+        },
+        { status: 400 }
+      )
+    }
 
     const { data: saved, error } = await adminClient
       .from("popups")
@@ -388,8 +398,8 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
         {
           error: "Failed to save popup",
           details: error?.message ?? null,
-          hint: (error as any)?.hint ?? null,
-          code: (error as any)?.code ?? null,
+          hint: (error as { hint?: unknown } | null)?.hint ?? null,
+          code: (error as { code?: unknown } | null)?.code ?? null,
         },
         { status: 500 }
       )
@@ -446,7 +456,7 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
         showOncePerBrowser: saved.show_once_per_browser ?? false,
 
         allPages: saved.all_pages ?? false,
-        selectedPageIds: (mappings ?? []).map((m: any) => String(m.page_id)),
+        selectedPageIds: (mappings ?? []).map((m: Record<string, unknown>) => String(m.page_id)),
 
         designVariant: (saved.design_variant ?? "promotion") as PopupDesignVariant,
         size: (saved.size ?? "medium") as PopupSize,

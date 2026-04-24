@@ -44,6 +44,13 @@ const ContactFormInspectorSectionContent = React.memo(
 
     const isValidEmailValue = recipientEmail === "" || isValidEmail(recipientEmail)
     const emailError = recipientEmail !== "" && !isValidEmail(recipientEmail) ? "Invalid email format" : null
+    const registerFieldRef = React.useCallback(
+      (key: string, el: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null) => {
+        // eslint-disable-next-line react-hooks/immutability -- imperative ref registry for inspector focus
+        fieldRefs.current[key] = el
+      },
+      [fieldRefs]
+    )
 
     return (
       <div className="space-y-6 p-4">
@@ -65,9 +72,7 @@ const ContactFormInspectorSectionContent = React.memo(
             </Label>
             <Input
               id="recipient-email"
-              ref={(el) => {
-                fieldRefs.current["recipientEmail"] = el
-              }}
+              ref={(el) => registerFieldRef("recipientEmail", el)}
               type="email"
               placeholder="contact@example.com"
               value={recipientEmail}

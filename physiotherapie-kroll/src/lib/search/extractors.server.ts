@@ -15,7 +15,7 @@ function s(v: unknown): string | null {
   return t ? t : null
 }
 
-function arr<T = any>(v: unknown): T[] {
+function arr<T = unknown>(v: unknown): T[] {
   return Array.isArray(v) ? (v as T[]) : []
 }
 

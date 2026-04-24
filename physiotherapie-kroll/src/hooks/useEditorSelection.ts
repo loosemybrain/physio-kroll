@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useMemo, useRef, useEffect } from "react"
+import { useState, useCallback, useMemo } from "react"
 
 /**
  * Unified Editor Selection Model
@@ -17,58 +17,92 @@ export type EditorSelection =
  * Provides both the selection model and convenient derived properties
  */
 export function useEditorSelection() {
-  const [selection, setSelectionState] = useState<EditorSelection>({ type: "none" })
-  /**
-   * Previous selected block ID: value from the end of the last commit.
-   * Updated in an effect after render so we can detect real block switches (Block A → Block B).
-   */
-  const previousSelectedBlockIdRef = useRef<string | null>(null)
+  const [selectionState, setSelectionState] = useState<{
+    selection: EditorSelection
+    previousSelectedBlockId: string | null
+  }>({
+    selection: { type: "none" },
+    previousSelectedBlockId: null,
+  })
+  const selection = selectionState.selection
 
   /**
    * Internal setter with validation
    */
   const setSelection = useCallback((next: EditorSelection) => {
-    setSelectionState(next)
+    setSelectionState((prev) => {
+      const previousBlockId =
+        prev.selection.type === "none"
+          ? null
+          : prev.selection.blockId
+      return { selection: next, previousSelectedBlockId: previousBlockId }
+    })
   }, [])
 
   /**
    * Clear selection (reset to "none")
    */
   const clearSelection = useCallback(() => {
-    setSelectionState({ type: "none" })
+    setSelectionState((prev) => {
+      const previousBlockId =
+        prev.selection.type === "none"
+          ? null
+          : prev.selection.blockId
+      return { selection: { type: "none" }, previousSelectedBlockId: previousBlockId }
+    })
   }, [])
 
   /**
    * Select a block (clears element and field selections)
    */
   const selectBlock = useCallback((blockId: string) => {
-    setSelectionState({ type: "block", blockId })
+    setSelectionState((prev) => {
+      const previousBlockId =
+        prev.selection.type === "none"
+          ? null
+          : prev.selection.blockId
+      return { selection: { type: "block", blockId }, previousSelectedBlockId: previousBlockId }
+    })
   }, [])
 
   /**
    * Select a field within a block (keeps block selected implicitly)
    */
   const selectField = useCallback((blockId: string, fieldPath: string) => {
-    setSelectionState({ type: "field", blockId, fieldPath })
+    setSelectionState((prev) => {
+      const previousBlockId =
+        prev.selection.type === "none"
+          ? null
+          : prev.selection.blockId
+      return { selection: { type: "field", blockId, fieldPath }, previousSelectedBlockId: previousBlockId }
+    })
   }, [])
 
   /**
    * Select an element within a block (clears field selection)
    */
   const selectElement = useCallback((blockId: string, elementId: string) => {
-    if (!elementId) {
-      // Empty elementId means deselect
-      setSelectionState({ type: "block", blockId })
-    } else {
-      setSelectionState({ type: "element", blockId, elementId })
-    }
+    setSelectionState((prev) => {
+      const previousBlockId =
+        prev.selection.type === "none"
+          ? null
+          : prev.selection.blockId
+      const nextSelection = !elementId ? { type: "block", blockId } as const : { type: "element", blockId, elementId } as const
+      return { selection: nextSelection, previousSelectedBlockId: previousBlockId }
+    })
   }, [])
 
   /**
    * Deselect element (go back to block selection)
    */
   const deselectElement = useCallback((blockId: string) => {
-    setSelectionState({ type: "block", blockId })
+    setSelectionState((prev) => {
+      const previousBlockId =
+        prev.selection.type === "none"
+          ? null
+          : prev.selection.blockId
+      return { selection: { type: "block", blockId }, previousSelectedBlockId: previousBlockId }
+    })
   }, [])
 
   /**
@@ -96,11 +130,6 @@ export function useEditorSelection() {
     return selection.type === "field" ? selection.fieldPath : null
   }, [selection])
 
-  /** After each commit: store current block ID so next render can compare previous vs current */
-  useEffect(() => {
-    previousSelectedBlockIdRef.current = selectedBlockId
-  }, [selectedBlockId])
-
   /**
    * Block change detection: previous vs current selected block ID.
    * - previousSelectedBlockId: block ID at end of previous render (from ref)
@@ -108,7 +137,7 @@ export function useEditorSelection() {
    * - blockIdChanged.changed === true when user actually switched to another block (e.g. A → B).
    * Used by PageEditor for reset logic (accordion, repeater cards) on real block switches.
    */
-  const previousSelectedBlockId = previousSelectedBlockIdRef.current
+  const previousSelectedBlockId = selectionState.previousSelectedBlockId
   const currentSelectedBlockId = selectedBlockId
   const blockIdChanged = useMemo(
     () => ({

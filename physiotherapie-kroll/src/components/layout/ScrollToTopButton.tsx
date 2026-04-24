@@ -9,15 +9,12 @@ const SCROLL_THRESHOLD = 400
 
 export function ScrollToTopButton() {
   const [visible, setVisible] = useState(false)
-  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false)
-  const footerInView = useFooterInView({ rootMargin: "0px 0px -10% 0px", threshold: 0 })
-
-  useEffect(() => {
-    setPrefersReducedMotion(
+  const [prefersReducedMotion] = useState(
+    () =>
       typeof window !== "undefined" &&
-        window.matchMedia("(prefers-reduced-motion: reduce)").matches
-    )
-  }, [])
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  )
+  const footerInView = useFooterInView({ rootMargin: "0px 0px -10% 0px", threshold: 0 })
 
   useEffect(() => {
     const onScroll = () => setVisible(window.scrollY > SCROLL_THRESHOLD)

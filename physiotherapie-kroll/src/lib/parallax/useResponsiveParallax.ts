@@ -154,7 +154,9 @@ export function useResponsiveParallax(props: UseResponsiveParallaxProps) {
       ...initialConfig,
       factor: initialConfig.factor * strength,
     }
-    setConfig(initialConfig)
+    const initialRaf = window.requestAnimationFrame(() => {
+      setConfig(initialConfig)
+    })
     props.onConfigChange?.(initialConfig)
 
     // Erstelle ParallaxItem
@@ -196,7 +198,9 @@ export function useResponsiveParallax(props: UseResponsiveParallaxProps) {
         factor: newConfig.factor * strength,
       }
       item.config = newConfig
-      setConfig(newConfig)
+      window.requestAnimationFrame(() => {
+        setConfig(newConfig)
+      })
       props.onConfigChange?.(newConfig)
       scheduleParallaxUpdate()
     })
@@ -204,6 +208,7 @@ export function useResponsiveParallax(props: UseResponsiveParallaxProps) {
 
     // Cleanup
     return () => {
+      window.cancelAnimationFrame(initialRaf)
       intersectionObserver.disconnect()
       resizeObserver.disconnect()
       parallaxItems.delete(item)

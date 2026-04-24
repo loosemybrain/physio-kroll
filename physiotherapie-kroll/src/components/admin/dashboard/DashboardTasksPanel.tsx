@@ -1,19 +1,44 @@
+"use client"
+
 import type { DashboardTask } from "@/lib/admin/dashboard"
+import Link from "next/link"
+import type { MouseEvent } from "react"
 import { ListChecks } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { CardSurface } from "@/components/ui/card"
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
+import styles from "./DashboardTheme.module.css"
 
 type DashboardTasksPanelProps = {
   tasks: DashboardTask[]
 }
 
 export function DashboardTasksPanel({ tasks }: DashboardTasksPanelProps) {
+  const handleTaskLinkClick = (event: MouseEvent<HTMLAnchorElement>, href: string) => {
+    if (!href.startsWith("/admin#")) return
+
+    event.preventDefault()
+    const id = href.split("#")[1]
+    if (!id) return
+    const target = document.getElementById(id)
+    if (!target) return
+
+    target.scrollIntoView({ behavior: "smooth", block: "start" })
+    window.history.replaceState(null, "", `#${id}`)
+    setTimeout(() => {
+      target.focus({ preventScroll: true })
+      target.classList.add("ring-2", "ring-primary/40", "ring-offset-2")
+      window.setTimeout(() => {
+        target.classList.remove("ring-2", "ring-primary/40", "ring-offset-2")
+      }, 1400)
+    }, 260)
+  }
+
   return (
-    <CardSurface className="gap-4 rounded-xl py-4">
+    <CardSurface className={`${styles.panelSurface} gap-4 rounded-xl py-4`}>
       <div className="px-6">
-        <h2 className="text-lg font-semibold text-foreground">Aufgaben</h2>
-        <p className="text-sm text-muted-foreground">
+        <h2 className={`text-lg font-semibold ${styles.title}`}>Aufgaben</h2>
+        <p className={`text-sm ${styles.textSoft}`}>
           Operative Hinweise aus dem aktuellen Projektzustand.
         </p>
       </div>
@@ -34,20 +59,34 @@ export function DashboardTasksPanel({ tasks }: DashboardTasksPanelProps) {
             {tasks.map((task) => (
               <div
                 key={task.id}
-                className={`rounded-xl border px-3 py-3 transition-colors hover:bg-muted/20 ${taskTone(task.level)}`}
-                style={{ borderColor: taskBorderColor(task.level) }}
+                className={`rounded-xl border px-3 py-3 transition-colors hover:bg-slate-50 ${taskTone(task.severity)}`}
+                style={{ borderColor: taskBorderColor(task.severity) }}
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-start gap-2.5">
-                    <span className={`mt-1.5 h-2.5 w-2.5 rounded-full ${taskDotClass(task.level)}`} />
+                    <span className={`mt-1.5 h-2.5 w-2.5 rounded-full ${taskDotClass(task.severity)}`} />
                     <div>
-                      <p className="text-sm font-medium text-foreground">{task.title}</p>
-                      <p className="mt-1 text-xs text-muted-foreground">{task.reason}</p>
+                      <p className={`text-sm font-medium ${styles.title}`}>{task.title}</p>
+                      <p className={`mt-1 text-xs ${styles.text}`}>{task.reason}</p>
+                      {task.href ? (
+                        <Link
+                          href={task.href}
+                          onClick={(event) => handleTaskLinkClick(event, task.href!)}
+                          className="mt-2 inline-flex text-xs font-medium text-primary underline-offset-2 hover:underline"
+                        >
+                          {task.ctaLabel ?? "Jetzt bearbeiten"}
+                        </Link>
+                      ) : null}
                     </div>
                   </div>
-                  <Badge variant="outline" className={taskBadgeClass(task.level)}>
-                    {taskLevelLabel(task.level)}
-                  </Badge>
+                  <div className="flex shrink-0 flex-col items-end gap-1">
+                    <Badge variant="outline" className={taskBadgeClass(task.severity)}>
+                      {taskSeverityLabel(task.severity)}
+                    </Badge>
+                    <Badge variant="outline" className="border-slate-300 bg-slate-100 text-[10px] uppercase tracking-wide text-slate-800 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-200">
+                      {taskCategoryLabel(task.category)}
+                    </Badge>
+                  </div>
                 </div>
               </div>
             ))}
@@ -58,32 +97,44 @@ export function DashboardTasksPanel({ tasks }: DashboardTasksPanelProps) {
   )
 }
 
-function taskTone(level: DashboardTask["level"]) {
-  if (level === "warning") return "bg-red-500/10"
-  if (level === "hint") return "bg-orange-500/10"
-  return "bg-blue-500/10"
+function taskTone(severity: DashboardTask["severity"]) {
+  if (severity === "critical") return "bg-red-700/15"
+  if (severity === "high") return "bg-red-500/10"
+  if (severity === "medium") return styles.warningPanel
+  return "bg-blue-50"
 }
 
-function taskBorderColor(level: DashboardTask["level"]) {
-  if (level === "warning") return "rgba(248, 113, 113, 0.45)"
-  if (level === "hint") return "rgba(251, 191, 36, 0.4)"
+function taskBorderColor(severity: DashboardTask["severity"]) {
+  if (severity === "critical") return "rgba(127, 29, 29, 0.55)"
+  if (severity === "high") return "rgba(248, 113, 113, 0.45)"
+  if (severity === "medium") return "rgba(249, 115, 22, 0.55)"
   return "rgba(147, 197, 253, 0.35)"
 }
 
-function taskBadgeClass(level: DashboardTask["level"]) {
-  if (level === "warning") return "border-red-400/45 bg-red-500/15 text-red-800 dark:text-red-200"
-  if (level === "hint") return "border-amber-400/45 bg-amber-500/15 text-amber-800 dark:text-amber-200"
-  return "border-blue-400/40 bg-blue-500/15 text-blue-800 dark:text-blue-200"
+function taskBadgeClass(severity: DashboardTask["severity"]) {
+  if (severity === "critical") return "border-red-900/70 bg-red-200 text-red-950 dark:border-red-500/70 dark:bg-red-900/50 dark:text-red-100"
+  if (severity === "high") return "border-red-700/60 bg-red-100 text-red-900 dark:border-red-400/70 dark:bg-red-900/40 dark:text-red-100"
+  if (severity === "medium") return "border-amber-700/60 bg-amber-100 text-amber-900 dark:border-amber-400/70 dark:bg-amber-900/40 dark:text-amber-100"
+  return "border-blue-700/50 bg-blue-100 text-blue-900 dark:border-blue-400/70 dark:bg-blue-900/40 dark:text-blue-100"
 }
 
-function taskLevelLabel(level: DashboardTask["level"]) {
-  if (level === "warning") return "Warnung"
-  if (level === "hint") return "Hinweis"
-  return "Info"
+function taskSeverityLabel(severity: DashboardTask["severity"]) {
+  if (severity === "critical") return "Kritisch"
+  if (severity === "high") return "Hoch"
+  if (severity === "medium") return "Mittel"
+  return "Niedrig"
 }
 
-function taskDotClass(level: DashboardTask["level"]) {
-  if (level === "warning") return "bg-red-500"
-  if (level === "hint") return "bg-amber-500"
+function taskDotClass(severity: DashboardTask["severity"]) {
+  if (severity === "critical") return "bg-red-900"
+  if (severity === "high") return "bg-red-500"
+  if (severity === "medium") return "bg-amber-500"
   return "bg-blue-500"
+}
+
+function taskCategoryLabel(category: DashboardTask["category"]) {
+  if (category === "security") return "Security"
+  if (category === "compliance") return "Compliance"
+  if (category === "operations") return "Operations"
+  return "Content"
 }

@@ -114,9 +114,10 @@ export function extractFilesFromInput(
   const folderPaths = options?.includeFolderPath ? new Map<string, string>() : undefined
 
   if (folderPaths) {
+    type FileWithRelativePath = File & { webkitRelativePath?: string }
     files.forEach((file) => {
       // webkitRelativePath is set when folder upload is used
-      const relativePath = (file as any).webkitRelativePath || ""
+      const relativePath = (file as FileWithRelativePath).webkitRelativePath || ""
       if (relativePath) {
         folderPaths.set(file.name, relativePath)
       }

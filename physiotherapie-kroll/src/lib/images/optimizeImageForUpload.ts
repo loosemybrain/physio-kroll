@@ -150,8 +150,8 @@ export async function optimizeImageForUpload(
   const url = URL.createObjectURL(file)
   try {
     const img = await loadImage(url)
-    let width = img.naturalWidth || img.width
-    let height = img.naturalHeight || img.height
+    const width = img.naturalWidth || img.width
+    const height = img.naturalHeight || img.height
 
     if (width <= 0 || height <= 0) {
       throw new Error("Bilddimensionen konnten nicht gelesen werden")

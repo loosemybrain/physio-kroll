@@ -27,9 +27,10 @@ import type { CustomFont } from "@/components/admin/CustomFontsList"
 
 export default function FontSettingsPage() {
   const { toast } = useToast()
+  type FontAuditFinding = { file: string; reason: string }
   const [selectedFont, setSelectedFont] = useState<string>("inter-local")
   const [loading, setLoading] = useState(false)
-  const [auditResults, setAuditResults] = useState<any[]>([])
+  const [auditResults, setAuditResults] = useState<FontAuditFinding[]>([])
   const [auditLoading, setAuditLoading] = useState(false)
   const [customFonts, setCustomFonts] = useState<CustomFont[]>([])
   const [loadingCustomFonts, setLoadingCustomFonts] = useState(true)
@@ -90,9 +91,20 @@ export default function FontSettingsPage() {
     try {
       const res = await fetch("/admin/api/fonts/audit")
       const data = await res.json()
-      setAuditResults(data.findings || [])
+      const findings = Array.isArray(data.findings)
+        ? data.findings
+            .filter((item: unknown) => item && typeof item === "object")
+            .map((item: unknown) => {
+              const record = item as Record<string, unknown>
+              return {
+                file: String(record.file ?? ""),
+                reason: String(record.reason ?? ""),
+              }
+            })
+        : []
+      setAuditResults(findings)
 
-      if (data.findings.length === 0) {
+      if (findings.length === 0) {
         toast({
           title: "✅ Audit bestanden",
           description: "Keine externen Google-Font-Requests gefunden",
@@ -100,7 +112,7 @@ export default function FontSettingsPage() {
       } else {
         toast({
           title: "⚠️ Audit-Ergebnisse",
-          description: `${data.findings.length} Fundstelle(n) gefunden`,
+          description: `${findings.length} Fundstelle(n) gefunden`,
           variant: "destructive",
         })
       }

@@ -318,7 +318,7 @@ export const PageEditorPreview = forwardRef<PageEditorPreviewHandle, PageEditorP
   const overlayIndex = useMemo(() => {
     if (!activeOverlayBlockId) return -1;
     return (current.blocks ?? []).findIndex(
-      (b: any) => String(b?.id ?? "") === String(activeOverlayBlockId)
+      (b) => String(b?.id ?? "") === String(activeOverlayBlockId)
     );
   }, [current.blocks, activeOverlayBlockId]);
 

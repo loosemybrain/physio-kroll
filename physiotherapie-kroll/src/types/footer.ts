@@ -217,6 +217,8 @@ export type FooterSocialIconStyle =
   | "minimal"
   | "soft"
   | "pill"
+  | "socialFillRise"
+  | "socialLiquidFill"
 export type FooterSocialIconSet = "brand" | "simple" | "monochrome"
 export type FooterSocialIconSize = "xs" | "sm" | "md" | "lg" | "xl"
 export type FooterSocialGap = "xs" | "sm" | "md" | "lg"
@@ -246,6 +248,42 @@ export type FooterSocialLinksConfig = {
   openInNewTab: boolean
   showLabels: boolean
   labelColor?: string
+  /** socialFillRise-only: per network colors (facebook/instagram) when available */
+  fillRiseUseNetworkColors?: boolean
+  /** socialFillRise-only fallback fill color when network colors disabled/unavailable */
+  fillRiseFallbackColor?: string
+  /** socialFillRise-only icon rotation toggle */
+  fillRiseIconRotate?: boolean
+  /** socialFillRise-only rotation angle in degrees (0-720) */
+  fillRiseRotationDegrees?: number
+  /** socialFillRise-only rotation axis */
+  fillRiseRotationAxis?: "x" | "y" | "z"
+  /** socialFillRise-only rotation duration in ms */
+  fillRiseRotationDurationMs?: number
+  /** socialFillRise-only fill direction */
+  fillRiseDirection?: "bottom" | "top" | "left" | "right"
+  /** socialFillRise-only border width in px */
+  fillRiseBorderWidth?: number
+  /** socialFillRise-only base background color */
+  fillRiseBaseBg?: string
+  /** socialFillRise-only active icon color */
+  fillRiseActiveIconColor?: string
+  /** socialFillRise-only shape mode */
+  fillRiseRadiusMode?: "circle" | "rounded"
+  /** socialLiquidFill-only: per network colors when available */
+  liquidUseNetworkColors?: boolean
+  /** socialLiquidFill-only fallback color when network colors disabled/unavailable */
+  liquidFallbackColor?: string
+  /** socialLiquidFill-only base background color */
+  liquidBaseBg?: string
+  /** socialLiquidFill-only active icon color */
+  liquidActiveIconColor?: string
+  /** socialLiquidFill-only border width in px */
+  liquidBorderWidth?: number
+  /** socialLiquidFill-only wave intensity */
+  liquidWaveIntensity?: "subtle" | "medium"
+  /** socialLiquidFill-only fill speed */
+  liquidSpeed?: "slow" | "normal"
   items: {
     facebook: FooterSocialPlatformItem & {
       iconVariant?: "facebook" | "facebook-f" | "facebook-round"

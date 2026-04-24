@@ -1,5 +1,4 @@
 import { ThemePresetSettings } from "@/components/admin/ThemePresetSettings"
-import type { BrandKey } from "@/components/brand/brandAssets"
 import { getBrandSettingsAuthed, getThemePresetsAuthed, type ThemePreset, type BrandSettings } from "@/lib/supabase/themePresets"
 import Link from "next/link"
 import { Palette, SlidersHorizontal, Type } from "lucide-react"
@@ -8,8 +7,6 @@ export const dynamic = "force-dynamic"
 export const runtime = "nodejs"
 
 export default async function AdminSettings() {
-  const brands: BrandKey[] = ["physiotherapy", "physio-konzept"]
-
   const [physioPresets, physioSettings, konzeptPresets, konzeptSettings] = await Promise.all([
     getThemePresetsAuthed("physiotherapy"),
     getBrandSettingsAuthed("physiotherapy"),

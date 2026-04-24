@@ -13,6 +13,14 @@ import type {
   FooterSocialLinksConfig,
 } from "@/types/footer"
 import type { SectionAlign, TypographySize, TypographyWeight } from "@/types/footer"
+import {
+  SOCIAL_LIQUID_FILL_DEFAULTS,
+  SOCIAL_FILL_RISE_DEFAULTS,
+  clampFillRiseBorderWidth,
+  clampFillRiseRotation,
+  clampFillRiseRotationDuration,
+  clampLiquidBorderWidth,
+} from "@/lib/footer/socialFillRise"
 
 /**
  * Whitelisted spacing options
@@ -325,7 +333,7 @@ const footerSocialLinksSchema: z.ZodType<FooterSocialLinksConfig> = z.object({
     .enum(["top", "section", "bottom", "bottomBar", "bottomBarLeft", "bottomBarCenter", "bottomBarRight"])
     .default("bottom"),
   align: z.enum(["left", "center", "right"]).default("left"),
-  iconStyle: z.enum(["default", "round", "square", "outline", "minimal", "soft", "pill"]).default("default"),
+  iconStyle: z.enum(["default", "round", "square", "outline", "minimal", "soft", "pill", "socialFillRise", "socialLiquidFill"]).default("default"),
   iconSet: z.enum(["brand", "simple", "monochrome"]).default("brand"),
   hoverEffect: z.enum(["none", "lift", "shrink", "flip", "draw"]).optional(),
   iconSize: z.enum(["xs", "sm", "md", "lg", "xl"]).default("md"),
@@ -337,6 +345,24 @@ const footerSocialLinksSchema: z.ZodType<FooterSocialLinksConfig> = z.object({
   openInNewTab: z.boolean().default(true),
   showLabels: z.boolean().default(false),
   labelColor: z.string().optional(),
+  fillRiseUseNetworkColors: z.boolean().optional(),
+  fillRiseFallbackColor: z.string().optional(),
+  fillRiseIconRotate: z.boolean().optional(),
+  fillRiseRotationDegrees: z.number().int().min(0).max(720).optional(),
+  fillRiseRotationAxis: z.enum(["x", "y", "z"]).optional(),
+  fillRiseRotationDurationMs: z.number().int().min(0).max(2000).optional(),
+  fillRiseDirection: z.enum(["bottom", "top", "left", "right"]).optional(),
+  fillRiseBorderWidth: z.number().int().min(0).max(8).optional(),
+  fillRiseBaseBg: z.string().optional(),
+  fillRiseActiveIconColor: z.string().optional(),
+  fillRiseRadiusMode: z.enum(["circle", "rounded"]).optional(),
+  liquidUseNetworkColors: z.boolean().optional(),
+  liquidFallbackColor: z.string().optional(),
+  liquidBaseBg: z.string().optional(),
+  liquidActiveIconColor: z.string().optional(),
+  liquidBorderWidth: z.number().int().min(0).max(8).optional(),
+  liquidWaveIntensity: z.enum(["subtle", "medium"]).optional(),
+  liquidSpeed: z.enum(["slow", "normal"]).optional(),
   items: z.object({
     facebook: z.object({
       enabled: z.boolean().default(false),
@@ -454,6 +480,18 @@ export const DEFAULT_SOCIAL_LINKS_CONFIG: FooterSocialLinksConfig = {
   gap: "md",
   openInNewTab: true,
   showLabels: false,
+  fillRiseUseNetworkColors: SOCIAL_FILL_RISE_DEFAULTS.fillRiseUseNetworkColors,
+  fillRiseIconRotate: SOCIAL_FILL_RISE_DEFAULTS.fillRiseIconRotate,
+  fillRiseRotationDegrees: SOCIAL_FILL_RISE_DEFAULTS.fillRiseRotationDegrees,
+  fillRiseRotationAxis: SOCIAL_FILL_RISE_DEFAULTS.fillRiseRotationAxis,
+  fillRiseRotationDurationMs: SOCIAL_FILL_RISE_DEFAULTS.fillRiseRotationDurationMs,
+  fillRiseDirection: SOCIAL_FILL_RISE_DEFAULTS.fillRiseDirection,
+  fillRiseBorderWidth: SOCIAL_FILL_RISE_DEFAULTS.fillRiseBorderWidth,
+  fillRiseRadiusMode: SOCIAL_FILL_RISE_DEFAULTS.fillRiseRadiusMode,
+  liquidUseNetworkColors: SOCIAL_LIQUID_FILL_DEFAULTS.liquidUseNetworkColors,
+  liquidBorderWidth: SOCIAL_LIQUID_FILL_DEFAULTS.liquidBorderWidth,
+  liquidWaveIntensity: SOCIAL_LIQUID_FILL_DEFAULTS.liquidWaveIntensity,
+  liquidSpeed: SOCIAL_LIQUID_FILL_DEFAULTS.liquidSpeed,
   items: {
     facebook: {
       enabled: false,
@@ -637,6 +675,24 @@ export function ensureSocialLinks(config: FooterConfig): FooterConfig {
     openInNewTab: sl.openInNewTab ?? DEFAULT_SOCIAL_LINKS_CONFIG.openInNewTab,
     showLabels: sl.showLabels ?? DEFAULT_SOCIAL_LINKS_CONFIG.showLabels,
     labelColor: normalizeOptionalString(sl.labelColor),
+    fillRiseUseNetworkColors: sl.fillRiseUseNetworkColors ?? DEFAULT_SOCIAL_LINKS_CONFIG.fillRiseUseNetworkColors,
+    fillRiseFallbackColor: normalizeOptionalString(sl.fillRiseFallbackColor),
+    fillRiseIconRotate: sl.fillRiseIconRotate ?? DEFAULT_SOCIAL_LINKS_CONFIG.fillRiseIconRotate,
+    fillRiseRotationDegrees: clampFillRiseRotation(sl.fillRiseRotationDegrees),
+    fillRiseRotationAxis: sl.fillRiseRotationAxis ?? DEFAULT_SOCIAL_LINKS_CONFIG.fillRiseRotationAxis,
+    fillRiseRotationDurationMs: clampFillRiseRotationDuration(sl.fillRiseRotationDurationMs),
+    fillRiseDirection: sl.fillRiseDirection ?? DEFAULT_SOCIAL_LINKS_CONFIG.fillRiseDirection,
+    fillRiseBorderWidth: clampFillRiseBorderWidth(sl.fillRiseBorderWidth),
+    fillRiseBaseBg: normalizeOptionalString(sl.fillRiseBaseBg),
+    fillRiseActiveIconColor: normalizeOptionalString(sl.fillRiseActiveIconColor),
+    fillRiseRadiusMode: sl.fillRiseRadiusMode ?? DEFAULT_SOCIAL_LINKS_CONFIG.fillRiseRadiusMode,
+    liquidUseNetworkColors: sl.liquidUseNetworkColors ?? DEFAULT_SOCIAL_LINKS_CONFIG.liquidUseNetworkColors,
+    liquidFallbackColor: normalizeOptionalString(sl.liquidFallbackColor),
+    liquidBaseBg: normalizeOptionalString(sl.liquidBaseBg),
+    liquidActiveIconColor: normalizeOptionalString(sl.liquidActiveIconColor),
+    liquidBorderWidth: clampLiquidBorderWidth(sl.liquidBorderWidth),
+    liquidWaveIntensity: sl.liquidWaveIntensity ?? DEFAULT_SOCIAL_LINKS_CONFIG.liquidWaveIntensity,
+    liquidSpeed: sl.liquidSpeed ?? DEFAULT_SOCIAL_LINKS_CONFIG.liquidSpeed,
     items: {
       facebook: {
         enabled: sl.items?.facebook?.enabled ?? DEFAULT_SOCIAL_LINKS_CONFIG.items.facebook.enabled,

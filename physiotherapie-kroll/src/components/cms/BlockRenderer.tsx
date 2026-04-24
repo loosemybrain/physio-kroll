@@ -111,7 +111,7 @@ export function BlockRenderer({
             ? (heroTypographyValue as Record<string, TypographySettings>)
             : undefined
         const elementsValue = extras.elements
-        const elements = elementsValue as Record<string, any> | undefined
+        const elements = elementsValue as Record<string, unknown> | undefined
         return (
           <HeroSection
             {...heroProps}
@@ -149,7 +149,7 @@ export function BlockRenderer({
         const props = block.props
         const extras = (block.props ?? {}) as Record<string, unknown>
         const elementsValue = extras.elements
-        const elements = elementsValue as Record<string, any> | undefined
+        const elements = elementsValue as Record<string, unknown> | undefined
         return (
           <ImageTextBlock
             {...props}
@@ -167,7 +167,7 @@ export function BlockRenderer({
         const props = block.props
         const extras = (block.props ?? {}) as Record<string, unknown>
         const elementsValue = extras.elements
-        const elements = elementsValue as Record<string, any> | undefined
+        const elements = elementsValue as Record<string, unknown> | undefined
         return (
           <FeatureGridBlock
             {...props}
@@ -185,7 +185,7 @@ export function BlockRenderer({
         const props = block.props
         const extras = (block.props ?? {}) as Record<string, unknown>
         const elementsValue = extras.elements
-        const elements = elementsValue as Record<string, any> | undefined
+        const elements = elementsValue as Record<string, unknown> | undefined
         return (
           <CtaBlock
             {...props}
@@ -203,7 +203,7 @@ export function BlockRenderer({
         const props = block.props
         const extras = (block.props ?? {}) as Record<string, unknown>
         const elementsValue = extras.elements
-        const elements = elementsValue as Record<string, any> | undefined
+        const elements = elementsValue as Record<string, unknown> | undefined
         return (
           <SectionBlock
             {...props}
@@ -221,7 +221,7 @@ export function BlockRenderer({
         const props = block.props
         const extras = (block.props ?? {}) as Record<string, unknown>
         const elementsValue = extras.elements
-        const elements = elementsValue as Record<string, any> | undefined
+        const elements = elementsValue as Record<string, unknown> | undefined
         return (
           <CardBlock
             {...props}
@@ -239,7 +239,7 @@ export function BlockRenderer({
         const props = block.props
         const extras = (block.props ?? {}) as Record<string, unknown>
         const elementsValue = extras.elements
-        const elements = elementsValue as Record<string, any> | undefined
+        const elements = elementsValue as Record<string, unknown> | undefined
         return (
           <ServicesGridBlock
             {...props}
@@ -260,7 +260,7 @@ export function BlockRenderer({
         const props = block.props
         const extras = (block.props ?? {}) as Record<string, unknown>
         const elementsValue = extras.elements
-        const elements = elementsValue as Record<string, any> | undefined
+        const elements = elementsValue as Record<string, unknown> | undefined
         return (
           <FaqAccordion
             {...props}
@@ -281,7 +281,7 @@ export function BlockRenderer({
         const props = block.props
         const extras = (block.props ?? {}) as Record<string, unknown>
         const elementsValue = extras.elements
-        const elements = elementsValue as Record<string, any> | undefined
+        const elements = elementsValue as Record<string, unknown> | undefined
         return (
           <TeamGridBlock
             {...props}
@@ -301,7 +301,7 @@ export function BlockRenderer({
       case "contactForm": {
         const props = block.props
         const elementsValue = (props as Record<string, unknown>).elements
-        const elements = elementsValue as Record<string, any> | undefined
+        const elements = elementsValue as Record<string, unknown> | undefined
         return (
           <ContactFormBlock
             {...props}
@@ -320,7 +320,7 @@ export function BlockRenderer({
         const props = block.props
         const extras = (block.props ?? {}) as Record<string, unknown>
         const elementsValue = extras.elements
-        const elements = elementsValue as Record<string, any> | undefined
+        const elements = elementsValue as Record<string, unknown> | undefined
         return (
           <TestimonialsBlock
             {...props}
@@ -341,7 +341,7 @@ export function BlockRenderer({
         const props = block.props
         const extras = (block.props ?? {}) as Record<string, unknown>
         const elementsValue = extras.elements
-        const elements = elementsValue as Record<string, any> | undefined
+        const elements = elementsValue as Record<string, unknown> | undefined
         return (
           <TestimonialSliderBlock
             data={block.props}
@@ -360,7 +360,7 @@ export function BlockRenderer({
         const props = block.props
         const extras = (block.props ?? {}) as Record<string, unknown>
         const elementsValue = extras.elements
-        const elements = elementsValue as Record<string, any> | undefined
+        const elements = elementsValue as Record<string, Record<string, unknown>> | undefined
         return (
           <GalleryBlock
             {...props}
@@ -378,7 +378,7 @@ export function BlockRenderer({
         const props = block.props
         const extras = (block.props ?? {}) as Record<string, unknown>
         const elementsValue = extras.elements
-        const elements = elementsValue as Record<string, any> | undefined
+        const elements = elementsValue as Record<string, unknown> | undefined
         return (
           <OpeningHoursBlock
             {...props}
@@ -401,7 +401,7 @@ export function BlockRenderer({
         const props = block.props
         const extras = (block.props ?? {}) as Record<string, unknown>
         const elementsValue = extras.elements
-        const elements = elementsValue as Record<string, any> | undefined
+        const elements = elementsValue as Record<string, unknown> | undefined
         return (
           <ImageSliderBlock
             {...props}

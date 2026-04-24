@@ -73,11 +73,11 @@ export default async function HomePage() {
     });
   }
 
-  const cmsBlocks: CMSBlock[] = (blocks ?? []).map((b: any) => ({
+  const cmsBlocks: CMSBlock[] = (blocks ?? []).map((b: Record<string, unknown>) => ({
     id: b.id,
     type: b.type,
-    props: (b.props ?? {}) as any,
-  }));
+    props: (b.props ?? {}) as unknown,
+  } as unknown as CMSBlock));
 
   return (
     <>

@@ -11,7 +11,7 @@ interface ElementWithShadowProps {
   className?: string
   children: React.ReactNode
   onClick?: (e: React.MouseEvent<HTMLDivElement>) => void
-  [key: string]: any
+  [key: string]: unknown
 }
 
 /**
@@ -27,6 +27,8 @@ export function ElementWithShadow({
   ...props
 }: ElementWithShadowProps) {
   const shadowStyle = resolveBoxShadow(elementConfig?.style?.shadow)
+  const styleFromProps =
+    props.style && typeof props.style === "object" ? (props.style as React.CSSProperties) : undefined
 
   return (
     <div
@@ -34,7 +36,7 @@ export function ElementWithShadow({
       className={cn(className)}
       style={{
         boxShadow: shadowStyle,
-        ...props.style,
+        ...styleFromProps,
       }}
       onClick={onClick}
       {...Object.entries(props)

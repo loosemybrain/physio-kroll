@@ -10,7 +10,6 @@ import {
   EASING_TYPES,
   EASING_LABELS,
 } from "@/lib/animations/types"
-import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
@@ -23,7 +22,6 @@ import {
 import { Checkbox } from "@/components/ui/checkbox"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent } from "@/components/ui/card"
-import { cn } from "@/lib/utils"
 
 interface AnimationInspectorProps {
   config: BlockAnimationConfig
@@ -161,7 +159,7 @@ function AnimationConfigSection({ stage, config, onChange }: AnimationConfigSect
       {/* Animation Type */}
       <div className="space-y-1 mb-4">
         <Label className="text-xs text-muted-foreground">Animationstyp</Label>
-        <Select value={config.type} onValueChange={(type) => onChange({ type: type as any })}>
+        <Select value={config.type} onValueChange={(type) => onChange({ type: type as SingleAnimationConfig["type"] })}>
           <SelectTrigger className="h-8">
             <SelectValue />
           </SelectTrigger>
@@ -180,7 +178,7 @@ function AnimationConfigSection({ stage, config, onChange }: AnimationConfigSect
           {/* Trigger */}
           <div className="space-y-1">
             <Label className="text-xs text-muted-foreground">Auslöser</Label>
-            <Select value={config.trigger} onValueChange={(trigger) => onChange({ trigger: trigger as any })}>
+            <Select value={config.trigger} onValueChange={(trigger) => onChange({ trigger: trigger as SingleAnimationConfig["trigger"] })}>
               <SelectTrigger className="h-8">
                 <SelectValue />
               </SelectTrigger>
@@ -226,7 +224,7 @@ function AnimationConfigSection({ stage, config, onChange }: AnimationConfigSect
           {/* Easing */}
           <div className="space-y-1">
             <Label className="text-xs text-muted-foreground">Easing-Funktion</Label>
-            <Select value={config.easing} onValueChange={(easing) => onChange({ easing: easing as any })}>
+            <Select value={config.easing} onValueChange={(easing) => onChange({ easing: easing as SingleAnimationConfig["easing"] })}>
               <SelectTrigger className="h-8">
                 <SelectValue />
               </SelectTrigger>

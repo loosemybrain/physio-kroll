@@ -1,52 +1,147 @@
 "use client"
 
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
-import type { PublicPopup } from "@/types/popups"
+import { POPUP_TRIGGER_TYPES, type PublicPopup, type PopupTriggerType } from "@/types/popups"
 
 type PopupPagePublicRow = { popup_id: string; page_id: string }
+const IS_DEV = process.env.NODE_ENV !== "production"
 
-function mapPublicPopupRow(r: any): PublicPopup {
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null
+}
+
+function asString(value: unknown, fallback = ""): string {
+  return typeof value === "string" ? value : fallback
+}
+
+function asNullableString(value: unknown): string | null {
+  return typeof value === "string" ? value : null
+}
+
+function asBool(value: unknown, fallback: boolean): boolean {
+  return typeof value === "boolean" ? value : fallback
+}
+
+function asNullableNumber(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null
+}
+
+/**
+ * PostgREST/Supabase-Fehler sind oft Klasseninstanzen — im Browser/DevTools wirken sie wie `{}`.
+ * Für Diagnose nur primitive Felder durchreichen.
+ */
+function summarizeDbError(e: unknown): Record<string, string | undefined> | null {
+  if (e == null) return null
+  if (typeof e === "object") {
+    const o = e as Record<string, unknown>
+    const message = typeof o.message === "string" ? o.message : undefined
+    const code = typeof o.code === "string" ? o.code : undefined
+    const details = typeof o.details === "string" ? o.details : undefined
+    const hint = typeof o.hint === "string" ? o.hint : undefined
+    if (message || code || details || hint) {
+      return { message, code, details, hint }
+    }
+  }
+  return { message: String(e) }
+}
+
+function logPublicPopupError(args: {
+  stage: "mapping" | "all_pages" | "mapped_popups"
+  tableOrView: "popup_pages_public" | "popups_public"
+  pageId: string
+  error: unknown
+  extra?: Record<string, unknown>
+}) {
+  if (!IS_DEV) return
+  const summary = summarizeDbError(args.error)
+  console.error("[popups-public] fetch error", {
+    stage: args.stage,
+    tableOrView: args.tableOrView,
+    pageId: args.pageId,
+    errorSummary: summary,
+    ...args.extra,
+  })
+  if (summary) {
+    console.error("[popups-public] fetch error (JSON)", JSON.stringify({ stage: args.stage, tableOrView: args.tableOrView, pageId: args.pageId, errorSummary: summary, ...args.extra }))
+  }
+}
+
+/** PostgREST `.in("id", …)` bricht bei ungültigen UUIDs komplett ab — nur syntaktisch gültige IDs durchlassen. */
+const POPUP_ID_UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+function filterValidPopupIds(ids: string[]): { valid: string[]; dropped: string[] } {
+  const valid: string[] = []
+  const dropped: string[] = []
+  for (const id of ids) {
+    if (POPUP_ID_UUID_RE.test(id)) valid.push(id)
+    else dropped.push(id)
+  }
+  return { valid, dropped }
+}
+
+function normalizeTriggerType(raw: unknown): PopupTriggerType {
+  const s = typeof raw === "string" ? raw.trim().toLowerCase() : ""
+  return (POPUP_TRIGGER_TYPES as readonly string[]).includes(s) ? (s as PopupTriggerType) : "delay"
+}
+
+function mapPublicPopupRow(r: Record<string, unknown>): PublicPopup {
   return {
-    id: String(r.id),
-    headline: r.headline ?? null,
-    body: r.body ?? null,
-    imageUrl: r.image_url ?? r.imageUrl ?? null,
-    ctaLabel: r.cta_label ?? r.ctaLabel ?? null,
-    ctaUrl: r.cta_url ?? r.ctaUrl ?? null,
-    closeLabel: r.close_label ?? r.closeLabel ?? null,
+    id: asString(r.id),
+    headline: asNullableString(r.headline),
+    body: asNullableString(r.body),
+    imageUrl: asNullableString(r.image_url ?? r.imageUrl),
+    ctaLabel: asNullableString(r.cta_label ?? r.ctaLabel),
+    ctaUrl: asNullableString(r.cta_url ?? r.ctaUrl),
+    closeLabel: asNullableString(r.close_label ?? r.closeLabel),
 
-    triggerType: (r.trigger_type ?? r.triggerType ?? "delay") as any,
-    triggerDelaySeconds: r.trigger_delay_seconds ?? r.triggerDelaySeconds ?? null,
-    triggerScrollPercent: r.trigger_scroll_percent ?? r.triggerScrollPercent ?? null,
-    showOncePerSession: r.show_once_per_session ?? r.showOncePerSession ?? true,
-    showOncePerBrowser: r.show_once_per_browser ?? r.showOncePerBrowser ?? false,
+    triggerType: normalizeTriggerType(r.trigger_type ?? r.triggerType ?? "delay"),
+    triggerDelaySeconds: asNullableNumber(r.trigger_delay_seconds ?? r.triggerDelaySeconds),
+    triggerScrollPercent: asNullableNumber(r.trigger_scroll_percent ?? r.triggerScrollPercent),
+    showOncePerSession: asBool(r.show_once_per_session ?? r.showOncePerSession, true),
+    showOncePerBrowser: asBool(r.show_once_per_browser ?? r.showOncePerBrowser, false),
 
-    allPages: r.all_pages ?? r.allPages ?? false,
+    allPages: asBool(r.all_pages ?? r.allPages, false),
 
-    designVariant: (r.design_variant ?? r.designVariant ?? "promotion") as any,
-    size: (r.size ?? "medium") as any,
-    position: (r.position ?? "center") as any,
-    layoutVariant: (r.layout_variant ?? r.layoutVariant ?? "image_top") as any,
-    animationVariant: (r.animation_variant ?? r.animationVariant ?? "fade") as any,
-    animationFadeInMs: r.animation_fade_in_ms ?? r.animationFadeInMs ?? 620,
-    animationFadeOutMs: r.animation_fade_out_ms ?? r.animationFadeOutMs ?? 220,
-    bgColor: r.bg_color ?? r.bgColor ?? null,
-    textColor: r.text_color ?? r.textColor ?? null,
-    overlayOpacity: r.overlay_opacity ?? r.overlayOpacity ?? null,
-    borderRadius: r.border_radius ?? r.borderRadius ?? null,
-    shadowPreset: r.shadow_preset ?? r.shadowPreset ?? null,
-    buttonVariant: r.button_variant ?? r.buttonVariant ?? null,
-    showCloseIcon: r.show_close_icon ?? r.showCloseIcon ?? true,
-    closeOnOverlay: r.close_on_overlay ?? r.closeOnOverlay ?? true,
-    closeOnEscape: r.close_on_escape ?? r.closeOnEscape ?? true,
+    designVariant: (r.design_variant ?? r.designVariant ?? "promotion") as PublicPopup["designVariant"],
+    size: (r.size ?? "medium") as PublicPopup["size"],
+    position: (r.position ?? "center") as PublicPopup["position"],
+    layoutVariant: (r.layout_variant ?? r.layoutVariant ?? "image_top") as PublicPopup["layoutVariant"],
+    animationVariant: (r.animation_variant ?? r.animationVariant ?? "fade") as PublicPopup["animationVariant"],
+    animationFadeInMs: asNullableNumber(r.animation_fade_in_ms ?? r.animationFadeInMs) ?? 620,
+    animationFadeOutMs: asNullableNumber(r.animation_fade_out_ms ?? r.animationFadeOutMs) ?? 220,
+    bgColor: asNullableString(r.bg_color ?? r.bgColor),
+    textColor: asNullableString(r.text_color ?? r.textColor),
+    overlayOpacity: asNullableNumber(r.overlay_opacity ?? r.overlayOpacity),
+    borderRadius: asNullableString(r.border_radius ?? r.borderRadius),
+    shadowPreset: asNullableString(r.shadow_preset ?? r.shadowPreset),
+    buttonVariant: asNullableString(r.button_variant ?? r.buttonVariant),
+    showCloseIcon: asBool(r.show_close_icon ?? r.showCloseIcon, true),
+    closeOnOverlay: asBool(r.close_on_overlay ?? r.closeOnOverlay, true),
+    closeOnEscape: asBool(r.close_on_escape ?? r.closeOnEscape, true),
 
-    priority: Number.isFinite(r.priority) ? r.priority : 0,
-    updatedAt: r.updated_at ?? r.updatedAt ?? new Date().toISOString(),
+    priority: asNullableNumber(r.priority) ?? 0,
+    updatedAt: asString(r.updated_at ?? r.updatedAt, new Date().toISOString()),
   }
 }
 
 export async function fetchActivePopupsForPage(pageId: string): Promise<PublicPopup[]> {
   const supabase = getSupabaseBrowserClient()
+
+  const { data: allPagesRows, error: allPagesErr } = await supabase
+    .from("popups_public")
+    .select("*")
+    .eq("all_pages", true)
+
+  if (allPagesErr) {
+    logPublicPopupError({
+      stage: "all_pages",
+      tableOrView: "popups_public",
+      pageId,
+      error: allPagesErr,
+      extra: { query: "all_pages = true" },
+    })
+  }
 
   const { data: mappings, error: mapErr } = await supabase
     .from("popup_pages_public")
@@ -54,27 +149,109 @@ export async function fetchActivePopupsForPage(pageId: string): Promise<PublicPo
     .eq("page_id", pageId)
 
   if (mapErr) {
-    console.error("popup_pages_public load error:", mapErr)
+    logPublicPopupError({
+      stage: "mapping",
+      tableOrView: "popup_pages_public",
+      pageId,
+      error: mapErr,
+    })
   }
 
-  const popupIds = Array.from(
-    new Set(((mappings ?? []) as unknown as PopupPagePublicRow[]).map((m) => String(m.popup_id)))
-  )
+  const mappingRows = Array.isArray(mappings) ? (mappings as PopupPagePublicRow[]) : []
+  const rawPopupIds = mapErr
+    ? []
+    : Array.from(
+        new Set(
+          mappingRows
+            .map((m) => (typeof m.popup_id === "string" ? m.popup_id.trim() : ""))
+            .filter((id) => id.length > 0)
+        )
+      )
 
-  // Always include all_pages=true popups; additionally include page-mapped popups.
-  let q = supabase.from("popups_public").select("*").eq("all_pages", true)
-  if (popupIds.length > 0) {
-    q = supabase.from("popups_public").select("*").or(`all_pages.eq.true,id.in.(${popupIds.join(",")})`)
+  const { valid: popupIds, dropped: droppedPopupIds } = filterValidPopupIds(rawPopupIds)
+  if (IS_DEV && droppedPopupIds.length > 0) {
+    console.error("[popups-public] dropped invalid popup_id values (mapping)", {
+      tableOrView: "popup_pages_public",
+      pageId,
+      droppedCount: droppedPopupIds.length,
+      sample: droppedPopupIds.slice(0, 5),
+    })
   }
 
-  const { data, error } = await q
-  if (error) {
-    console.error("popups_public load error:", error)
+  let mappedRows: unknown[] = []
+  let mappedErr: { message?: string; code?: string; details?: string; hint?: string } | null = null
+  if (!mapErr && popupIds.length > 0) {
+    const { data: mappedData, error: mappedQueryErr } = await supabase
+      .from("popups_public")
+      .select("*")
+      .in("id", popupIds)
+
+    if (mappedQueryErr) {
+      mappedErr = mappedQueryErr
+      logPublicPopupError({
+        stage: "mapped_popups",
+        tableOrView: "popups_public",
+        pageId,
+        error: mappedQueryErr,
+        extra: { popupIdsCount: popupIds.length },
+      })
+    } else if (Array.isArray(mappedData)) {
+      mappedRows = mappedData
+    }
+  }
+
+  if (allPagesErr && mapErr) {
+    if (IS_DEV) {
+      const fatalPayload = {
+        pageId,
+        views: ["popups_public", "popup_pages_public"],
+        allPagesError: summarizeDbError(allPagesErr),
+        mappingError: summarizeDbError(mapErr),
+      }
+      console.error("[popups-public] fatal: both all_pages and mapping failed", fatalPayload)
+      console.error("[popups-public] fatal (JSON)", JSON.stringify(fatalPayload))
+    }
     return []
   }
 
-  const rows = (data ?? []) as any[]
-  return rows.map(mapPublicPopupRow)
+  const combinedRows = [...(Array.isArray(allPagesRows) ? allPagesRows : []), ...mappedRows]
+  const byId = new Map<string, Record<string, unknown>>()
+  for (const row of combinedRows) {
+    if (!isRecord(row)) continue
+    const id = asString(row.id).trim()
+    if (!id) continue
+    byId.set(id, row)
+  }
+
+  const result = Array.from(byId.values()).map(mapPublicPopupRow)
+
+  if (IS_DEV && result.length === 0) {
+    const allPagesRowCount = Array.isArray(allPagesRows) ? allPagesRows.length : 0
+    const mappedRowCount = mappedRows.length
+    const anyQueryError = !!(allPagesErr || mapErr || mappedErr)
+    const payload = {
+      pageId,
+      views: ["popups_public", "popup_pages_public"],
+      allPagesRowCount,
+      mappedRowCount,
+      mappingRowCount: mappingRows.length,
+      validMappedIdCount: popupIds.length,
+      allPagesError: summarizeDbError(allPagesErr),
+      mappingError: summarizeDbError(mapErr),
+      mappedPopupsError: summarizeDbError(mappedErr),
+    }
+    if (anyQueryError) {
+      console.error("[popups-public] no popups after merge", payload)
+      console.error("[popups-public] no popups after merge (JSON)", JSON.stringify(payload))
+    } else {
+      console.info("[popups-public] no active popups for this page (queries ok, zero rows)", payload)
+      console.info(
+        "[popups-public] Hinweis: popups_public enthält nur Zeilen mit is_active=true, gültigem Zeitraum (starts_at/ends_at), und ggf. popup_pages_public-Zuordnung zur pageId — prüfen Sie im Admin: Aktiv, Zeitraum, „Alle Seiten“ oder Seitenauswahl."
+      )
+    }
+  }
+
+  return result
 }
 
 export function pickTopPopup(popups: PublicPopup[]): PublicPopup | null {

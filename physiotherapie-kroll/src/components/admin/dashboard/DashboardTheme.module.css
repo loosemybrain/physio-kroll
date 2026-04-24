@@ -1,0 +1,73 @@
+.dashboardShell {
+  --dashboard-card-bg: #ffffff;
+  --dashboard-card-bg-hover: #f8fbff;
+  --dashboard-card-border: #cfd8e3;
+  --dashboard-card-border-hover: #98a9bd;
+  --dashboard-card-title: #0f172a;
+  --dashboard-card-text: #334155;
+  --dashboard-card-text-soft: #475569;
+  --dashboard-card-accent: #c2410c;
+  --dashboard-card-accent-soft: #ffedd5;
+  --dashboard-card-focus: rgba(30, 64, 175, 0.32);
+  --dashboard-card-shadow: 0 1px 2px rgba(15, 23, 42, 0.06), 0 8px 24px rgba(15, 23, 42, 0.04);
+  --dashboard-card-shadow-hover: 0 4px 12px rgba(15, 23, 42, 0.09), 0 14px 30px rgba(15, 23, 42, 0.08);
+}
+
+.panelSurface {
+  background: var(--dashboard-card-bg);
+  border-color: var(--dashboard-card-border) !important;
+  box-shadow: var(--dashboard-card-shadow);
+  transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease, background-color 180ms ease;
+}
+
+.panelSurface:hover {
+  background: var(--dashboard-card-bg-hover);
+  border-color: var(--dashboard-card-border-hover) !important;
+  box-shadow: var(--dashboard-card-shadow-hover);
+  transform: translateY(-1px);
+}
+
+.panelSurface:focus-within {
+  border-color: var(--dashboard-card-border-hover) !important;
+  box-shadow: 0 0 0 3px var(--dashboard-card-focus), var(--dashboard-card-shadow-hover);
+}
+
+.title {
+  color: var(--dashboard-card-title);
+}
+
+.text {
+  color: var(--dashboard-card-text);
+}
+
+.textSoft {
+  color: var(--dashboard-card-text-soft);
+}
+
+.mutedPanel {
+  background: #f8fafc;
+  border-color: var(--dashboard-card-border) !important;
+}
+
+.warningPanel {
+  background: var(--dashboard-card-accent-soft);
+  border-color: #fdba74 !important;
+  color: #7c2d12;
+}
+
+.accentIcon {
+  background: var(--dashboard-card-accent-soft);
+  border-color: #fdba74 !important;
+  color: var(--dashboard-card-accent);
+}
+
+.accentText {
+  color: #9a3412;
+  font-weight: 600;
+}
+
+.accentBadge {
+  background: #ffedd5;
+  color: #9a3412;
+  border: 1px solid #fdba74;
+}

@@ -2,38 +2,50 @@
 
 import { useEffect, useMemo, useRef, useState } from "react"
 import { usePathname } from "next/navigation"
-import type { PublicPopup } from "@/types/popups"
+import { POPUP_TRIGGER_TYPES, type PublicPopup } from "@/types/popups"
 import { fetchActivePopupsForPage, pickTopPopup } from "@/lib/popups/publicPopups"
-import { POPUP_IMAGE_PRELOAD_MAX_MS, preloadImage } from "@/lib/media/preloadImage"
+import { warmupImage } from "@/lib/media/preloadImage"
 import { PopupModal } from "./PopupModal"
 
 type Props = {
   pageId: string
 }
 
-const STORAGE_PREFIX = "physio-kroll:popup-dismissed:v1:"
+const STORAGE_PREFIX = "physio-kroll:popup-dismissed:v2:"
+const IS_DEV = process.env.NODE_ENV !== "production"
 
-function dismissKey(popupId: string) {
-  return `${STORAGE_PREFIX}${popupId}`
+function dismissKey(popup: PublicPopup) {
+  const version = popup.updatedAt || "no-updated-at"
+  return `${STORAGE_PREFIX}${popup.id}:${version}`
 }
 
-function isDismissed(popup: PublicPopup) {
-  const key = dismissKey(popup.id)
+type DismissState = {
+  dismissed: boolean
+  storageKey: string
+  via: "localStorage" | "sessionStorage" | "none" | "storage_error"
+}
+
+function getDismissState(popup: PublicPopup): DismissState {
+  const key = dismissKey(popup)
   try {
     if (popup.showOncePerBrowser) {
-      if (typeof localStorage !== "undefined" && localStorage.getItem(key) === "1") return true
+      if (typeof localStorage !== "undefined" && localStorage.getItem(key) === "1") {
+        return { dismissed: true, storageKey: key, via: "localStorage" }
+      }
     }
     if (popup.showOncePerSession) {
-      if (typeof sessionStorage !== "undefined" && sessionStorage.getItem(key) === "1") return true
+      if (typeof sessionStorage !== "undefined" && sessionStorage.getItem(key) === "1") {
+        return { dismissed: true, storageKey: key, via: "sessionStorage" }
+      }
     }
   } catch {
-    // ignore storage errors (private mode etc.)
+    return { dismissed: false, storageKey: key, via: "storage_error" }
   }
-  return false
+  return { dismissed: false, storageKey: key, via: "none" }
 }
 
 function markDismissed(popup: PublicPopup) {
-  const key = dismissKey(popup.id)
+  const key = dismissKey(popup)
   try {
     if (popup.showOncePerBrowser && typeof localStorage !== "undefined") localStorage.setItem(key, "1")
     if (popup.showOncePerSession && typeof sessionStorage !== "undefined") sessionStorage.setItem(key, "1")
@@ -93,10 +105,10 @@ function getBestScrollPercent(eventTarget?: EventTarget | null): number {
 
 export function PopupRuntime({ pageId }: Props) {
   const pathname = usePathname()
-  const [mounted, setMounted] = useState(false)
   const [popup, setPopup] = useState<PublicPopup | null>(null)
   const [open, setOpen] = useState(false)
   const [ready, setReady] = useState(false)
+  const [candidateCount, setCandidateCount] = useState(0)
 
   const timerRef = useRef<number | null>(null)
   const rafRef = useRef<number | null>(null)
@@ -105,15 +117,12 @@ export function PopupRuntime({ pageId }: Props) {
   /** Nach manuellem Schließen: kein erneutes Auto-Öffnen auf derselben Route (sonst feuert der Trigger-Effect bei open=false erneut). */
   const userClosedPopupRef = useRef(false)
   const lastRouteKeyRef = useRef("")
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
+  const requestIdRef = useRef(0)
 
   // Load + pick top popup on route/page changes.
   useEffect(() => {
-    if (!mounted) return
     let cancelled = false
+    const requestId = ++requestIdRef.current
 
     const routeKey = `${pageId}:${pathname}`
     if (lastRouteKeyRef.current !== routeKey) {
@@ -121,33 +130,77 @@ export function PopupRuntime({ pageId }: Props) {
       userClosedPopupRef.current = false
     }
 
-    setReady(false)
-    setOpen(false)
-    setPopup(null)
+    queueMicrotask(() => {
+      if (cancelled) return
+      if (requestId !== requestIdRef.current) return
+      setReady(false)
+      setOpen(false)
+      setPopup(null)
+      setCandidateCount(0)
+    })
 
     const run = async () => {
       const candidates = await fetchActivePopupsForPage(pageId)
       if (cancelled) return
+      if (requestId !== requestIdRef.current) return
       const top = pickTopPopup(candidates)
+      setCandidateCount(candidates.length)
       setPopup(top)
       setReady(true)
+      if (IS_DEV) {
+        console.info("[PopupRuntime] fetch result", {
+          pageId,
+          pathname,
+          candidatesCount: candidates.length,
+          selectedPopupId: top?.id ?? null,
+          selectedPopupTriggerType: top?.triggerType ?? null,
+        })
+      }
     }
 
     run()
     return () => {
       cancelled = true
     }
-  }, [mounted, pageId, pathname])
+  }, [pageId, pathname])
+
+  const dismissState = useMemo(() => {
+    if (!popup) return null
+    return getDismissState(popup)
+  }, [popup])
 
   const shouldShow = useMemo(() => {
     if (!popup) return false
-    if (isDismissed(popup)) return false
+    if (dismissState?.dismissed) return false
     return true
-  }, [popup])
+  }, [popup, dismissState])
+
+  useEffect(() => {
+    if (!IS_DEV) return
+    const payload = {
+      pageId,
+      pathname,
+      ready,
+      open,
+      candidatesCount: candidateCount,
+      selectedPopupId: popup?.id ?? null,
+      triggerType: popup?.triggerType ?? null,
+      shouldShow,
+      dismissed: dismissState?.dismissed ?? false,
+      dismissedVia: dismissState?.via ?? "none",
+      dismissStorageKey: dismissState?.storageKey ?? null,
+    }
+    console.info("[PopupRuntime] visibility", payload)
+    if (dismissState?.dismissed) {
+      console.warn("[PopupRuntime] popup hidden: dismissed in storage", {
+        via: dismissState.via,
+        dismissStorageKey: dismissState.storageKey,
+      })
+    }
+  }, [pageId, pathname, ready, open, candidateCount, popup, shouldShow, dismissState])
 
   // Trigger engine (cleanup-safe).
   useEffect(() => {
-    if (!mounted) return
     if (!ready) return
     if (!popup) return
     if (!shouldShow) return
@@ -178,20 +231,20 @@ export function PopupRuntime({ pageId }: Props) {
       clear()
 
       const imageUrl = popup.imageUrl?.trim()
-      if (!imageUrl) {
-        if (!disposed) setOpen(true)
-        openingRef.current = false
-        return
+      // Popup-Anzeige niemals blockieren: Preload läuft nur als Hintergrundoptimierung.
+      if (imageUrl && imageUrl !== "null" && imageUrl !== "undefined") {
+        warmupImage(imageUrl)
       }
+      if (!disposed) setOpen(true)
+      openingRef.current = false
+    }
 
-      void (async () => {
-        try {
-          await preloadImage(imageUrl, POPUP_IMAGE_PRELOAD_MAX_MS)
-        } finally {
-          if (!disposed) setOpen(true)
-          openingRef.current = false
-        }
-      })()
+    const triggerOk = (POPUP_TRIGGER_TYPES as readonly string[]).includes(popup.triggerType)
+    if (IS_DEV && !triggerOk) {
+      console.warn("[PopupRuntime] unknown triggerType, falling back to delay", {
+        triggerType: popup.triggerType,
+        popupId: popup.id,
+      })
     }
 
     if (popup.triggerType === "immediate") {
@@ -203,7 +256,7 @@ export function PopupRuntime({ pageId }: Props) {
       }
     }
 
-    if (popup.triggerType === "delay") {
+    if (popup.triggerType === "delay" || !triggerOk) {
       const seconds = Math.max(0, popup.triggerDelaySeconds ?? 0)
       timerRef.current = window.setTimeout(openNow, seconds * 1000)
       return () => {
@@ -257,7 +310,7 @@ export function PopupRuntime({ pageId }: Props) {
       openingRef.current = false
       clear()
     }
-  }, [mounted, ready, popup, shouldShow, open])
+  }, [ready, popup, shouldShow, open])
 
   const handleOpenChange = (next: boolean) => {
     setOpen(next)
@@ -267,7 +320,6 @@ export function PopupRuntime({ pageId }: Props) {
     }
   }
 
-  if (!mounted) return null
   if (!popup) return null
   if (!shouldShow && !open) return null
 

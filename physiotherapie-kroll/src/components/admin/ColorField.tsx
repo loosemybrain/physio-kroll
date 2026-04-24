@@ -59,13 +59,6 @@ function parseColorWithAlpha(value: string): { hex: string; alpha: number } | nu
   return null
 }
 
-function colorToHex8(value: string, alpha: number): string {
-  const parsed = parseColorWithAlpha(value)
-  if (!parsed) return "#000000ff"
-  const alphaHex = toHex2(Math.round(parsed.alpha * 255))
-  return `${parsed.hex}${alphaHex}`
-}
-
 function supportsEyeDropper(): boolean {
   return typeof window !== "undefined" && "EyeDropper" in window
 }

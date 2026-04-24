@@ -43,8 +43,9 @@ export async function GET() {
         console.error("admin popup_pages list error:", mapErr)
       } else {
         for (const m of mappings ?? []) {
-          const popupId = (m as any).popup_id as string
-          const page = (m as any).pages as { id: string; title: string; slug: string; brand: string | null } | null
+          const row = m as Record<string, unknown>
+          const popupId = typeof row.popup_id === "string" ? row.popup_id : ""
+          const page = (row.pages ?? null) as { id: string; title: string; slug: string; brand: string | null } | null
           if (!popupId || !page) continue
           const list = pagesByPopupId.get(popupId) ?? []
           list.push(page)

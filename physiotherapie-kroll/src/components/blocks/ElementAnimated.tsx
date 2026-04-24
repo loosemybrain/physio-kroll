@@ -8,7 +8,7 @@ import { DEFAULT_ANIMATION_CONFIG } from "@/lib/animations/types"
 
 type ElementAnimatedProps = {
   elementId: string
-  elements?: Record<string, ElementConfig | undefined> | undefined
+  elements?: Record<string, unknown> | undefined
   className?: string
   children: ReactNode
 }
@@ -17,7 +17,8 @@ type ElementAnimatedProps = {
  * Wendet `elements[elementId].animation` an (wie Block-Section-Animation), sonst nur Kinder.
  */
 export function ElementAnimated({ elementId, elements, className, children }: ElementAnimatedProps) {
-  const raw = elements?.[elementId]?.animation
+  const elementConfig = elements?.[elementId] as ElementConfig | undefined
+  const raw = elementConfig?.animation
   const merged = {
     ...DEFAULT_ANIMATION_CONFIG,
     ...raw,

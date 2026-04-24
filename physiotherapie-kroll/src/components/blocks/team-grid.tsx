@@ -12,10 +12,10 @@ import {
 import { resolveSectionBg } from "@/lib/theme/resolveSectionBg"
 import { resolveContainerBg } from "@/lib/theme/resolveContainerBg"
 import { resolveBoxShadow } from "@/lib/shadow/resolveBoxShadow"
-import { mergeTypographyClasses } from "@/lib/typography"
+import { mergeTypographyClasses, type TypographySettings } from "@/lib/typography"
 import { AnimatedBlock } from "@/components/blocks/AnimatedBlock"
 import { ElementAnimated } from "@/components/blocks/ElementAnimated"
-import type { BlockSectionProps, ElementShadow } from "@/types/cms"
+import type { BlockSectionProps, ElementConfig, ElementShadow } from "@/types/cms"
 import type { GradientPresetValue } from "@/lib/theme/gradientPresets"
 
 interface TeamMember {
@@ -54,10 +54,8 @@ export interface TeamGridBlockProps {
   ) => void
   onElementClick?: (blockId: string, elementId: string) => void
   selectedElementId?: string | null
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  elements?: Record<string, any>
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  typography?: Record<string, any>
+  elements?: Record<string, unknown>
+  typography?: Record<string, unknown>
 
   section?: BlockSectionProps
 
@@ -337,8 +335,8 @@ function MemberCard({
   editable?: boolean
   blockId?: string
   onEditField?: TeamGridBlockProps["onEditField"]
-  typography?: Record<string, any>
-  elements?: Record<string, any>
+  typography?: Record<string, unknown>
+  elements?: Record<string, unknown>
   interactivePreview?: boolean
   activeItemId?: string | null
   onItemSelect?: (itemId: string) => void
@@ -429,7 +427,7 @@ function MemberCard({
         )}
       >
         {/* Name */}
-        <ElementAnimated elementId="team.member.name" elements={elements}>
+        <ElementAnimated elementId="team.member.name" elements={elements as Record<string, ElementConfig | undefined> | undefined}>
         <h3
           data-element-id="team.member.name"
           onClick={(e) => handleEdit(e, `members.${index}.name`)}
@@ -437,7 +435,7 @@ function MemberCard({
             mergeTypographyClasses(
               // Allow long names to wrap (no truncation/cropping)
               "w-full text-balance text-lg font-semibold leading-tight tracking-tight text-card-foreground wrap-break-word",
-              (typography ?? {})["team.member.name"]
+              ((typography ?? {}) as Record<string, TypographySettings | undefined>)["team.member.name"]
             ),
             editable && blockId && onEditField && "cursor-pointer rounded px-1 hover:bg-primary/10",
           )}
@@ -449,14 +447,14 @@ function MemberCard({
 
         {/* Role */}
         {member.role && (
-          <ElementAnimated elementId="team.member.role" elements={elements}>
+          <ElementAnimated elementId="team.member.role" elements={elements as Record<string, ElementConfig | undefined> | undefined}>
           <p
             data-element-id="team.member.role"
             onClick={(e) => handleEdit(e, `members.${index}.role`)}
             className={cn(
               mergeTypographyClasses(
                 "mt-1 w-full text-pretty text-sm leading-snug text-muted-foreground wrap-break-word",
-                (typography ?? {})["team.member.role"]
+                ((typography ?? {}) as Record<string, TypographySettings | undefined>)["team.member.role"]
               ),
               editable && blockId && onEditField && "cursor-pointer rounded px-1 hover:bg-primary/10",
             )}
@@ -683,14 +681,14 @@ export function TeamGridBlock({
             {eyebrow && (
               <div className="mb-5 flex items-center justify-center gap-4">
                 <div className="h-px w-12 bg-linear-to-r from-transparent to-primary/40" />
-                <ElementAnimated elementId="team.eyebrow" elements={elements}>
+                <ElementAnimated elementId="team.eyebrow" elements={elements as Record<string, ElementConfig | undefined> | undefined}>
                 <span
                   data-element-id="team.eyebrow"
                   onClick={(e) => handleInlineEdit(e, "eyebrow")}
                   className={cn(
                     mergeTypographyClasses(
                       "text-xs font-semibold uppercase tracking-[0.2em] text-primary",
-                      (typography ?? {})["team.eyebrow"]
+                      ((typography ?? {}) as Record<string, TypographySettings | undefined>)["team.eyebrow"]
                     ),
                     editable && blockId && onEditField && "cursor-pointer rounded px-1 transition-colors hover:bg-primary/10",
                   )}
@@ -705,14 +703,14 @@ export function TeamGridBlock({
 
             {/* Headline */}
             {headline && (
-              <ElementAnimated elementId="team.headline" elements={elements}>
+              <ElementAnimated elementId="team.headline" elements={elements as Record<string, ElementConfig | undefined> | undefined}>
               <h2
                 data-element-id="team.headline"
                 onClick={(e) => handleInlineEdit(e, "headline")}
                 className={cn(
                   mergeTypographyClasses(
                     "mx-auto max-w-3xl text-balance text-3xl font-bold tracking-tight text-foreground md:text-4xl lg:text-5xl",
-                    (typography ?? {})["team.headline"]
+                    ((typography ?? {}) as Record<string, TypographySettings | undefined>)["team.headline"]
                   ),
                   editable && blockId && onEditField && "cursor-pointer rounded px-1 transition-colors hover:bg-primary/10",
                 )}
@@ -725,14 +723,14 @@ export function TeamGridBlock({
 
             {/* Subheadline */}
             {subheadline && (
-              <ElementAnimated elementId="team.subheadline" elements={elements}>
+              <ElementAnimated elementId="team.subheadline" elements={elements as Record<string, ElementConfig | undefined> | undefined}>
               <p
                 data-element-id="team.subheadline"
                 onClick={(e) => handleInlineEdit(e, "subheadline")}
                 className={cn(
                   mergeTypographyClasses(
                     "mx-auto mt-4 max-w-2xl text-pretty text-base leading-relaxed text-muted-foreground md:text-lg",
-                    (typography ?? {})["team.subheadline"]
+                    ((typography ?? {}) as Record<string, TypographySettings | undefined>)["team.subheadline"]
                   ),
                   editable && blockId && onEditField && "cursor-pointer rounded px-1 transition-colors hover:bg-primary/10",
                 )}
@@ -766,7 +764,7 @@ export function TeamGridBlock({
               blockId={blockId}
               onEditField={onEditField}
               typography={typography}
-              elements={elements}
+              elements={elements as Record<string, ElementConfig | undefined> | undefined}
               interactivePreview={interactivePreview}
               activeItemId={activeItemId}
               onItemSelect={onItemSelect}

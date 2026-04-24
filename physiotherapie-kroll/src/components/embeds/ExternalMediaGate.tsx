@@ -26,12 +26,20 @@ export interface ExternalMediaGateProps {
  */
 export function ExternalMediaGate({ provider, children, className }: ExternalMediaGateProps) {
   const { hasConsent, setCategory, openSettings } = useCookieConsent()
-  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false)
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(
+    () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  )
 
   useEffect(() => {
-    setPrefersReducedMotion(
-      typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches
-    )
+    if (typeof window === "undefined") return
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)")
+    const onChange = (event: MediaQueryListEvent) => setPrefersReducedMotion(event.matches)
+    if (typeof media.addEventListener === "function") {
+      media.addEventListener("change", onChange)
+      return () => media.removeEventListener("change", onChange)
+    }
+    media.addListener(onChange)
+    return () => media.removeListener(onChange)
   }, [])
 
   const meta = EXTERNAL_MEDIA_PROVIDERS[provider]

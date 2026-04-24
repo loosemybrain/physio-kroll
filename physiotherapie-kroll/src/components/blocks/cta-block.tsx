@@ -6,10 +6,10 @@ import { Button } from "@/components/ui/button"
 import { ArrowRight } from "lucide-react"
 import { AnimatedBlock } from "@/components/blocks/AnimatedBlock"
 import { ElementAnimated } from "@/components/blocks/ElementAnimated"
-import type { BlockSectionProps } from "@/types/cms"
+import type { BlockSectionProps, ElementConfig } from "@/types/cms"
 import { useElementShadowStyle } from "@/lib/shadow"
 import { resolveButtonPresetStyles } from "@/lib/buttonPresets"
-import { mergeTypographyClasses } from "@/lib/typography"
+import { mergeTypographyClasses, type TypographySettings } from "@/lib/typography"
 
 interface CtaBlockProps {
   section?: BlockSectionProps
@@ -41,7 +41,7 @@ interface CtaBlockProps {
   onEditField?: (blockId: string, fieldPath: string, anchorRect?: DOMRect) => void
   
   // Shadow/Element Props
-  elements?: Record<string, any>
+  elements?: Record<string, unknown>
   onElementClick?: (blockId: string, elementId: string) => void
   selectedElementId?: string | null
 
@@ -87,23 +87,25 @@ export function CtaBlock({
 
   const primaryPreset = resolveButtonPresetStyles(buttonPreset, undefined, undefined)
   const secondaryPreset = resolveButtonPresetStyles(buttonPreset, "outline", undefined)
+  const elementMap = (elements ?? {}) as Record<string, ElementConfig>
+  const typographyMap = (typography as Record<string, TypographySettings | undefined> | undefined) ?? {}
 
   // Element shadows
   const headlineShadow = useElementShadowStyle({
     elementId: "headline",
-    elementConfig: (elements ?? {})["headline"],
+    elementConfig: elementMap["headline"],
   })
   const subheadlineShadow = useElementShadowStyle({
     elementId: "subheadline",
-    elementConfig: (elements ?? {})["subheadline"],
+    elementConfig: elementMap["subheadline"],
   })
   const primaryCtaShadow = useElementShadowStyle({
     elementId: "primaryCta",
-    elementConfig: (elements ?? {})["primaryCta"],
+    elementConfig: elementMap["primaryCta"],
   })
   const secondaryCtaShadow = useElementShadowStyle({
     elementId: "secondaryCta",
-    elementConfig: (elements ?? {})["secondaryCta"],
+    elementConfig: elementMap["secondaryCta"],
   })
   
   const canInlineEdit = Boolean(editable && blockId && onEditField)
@@ -152,12 +154,12 @@ export function CtaBlock({
             )}
           >
             <div className={cn("flex-1", isSplit && "lg:max-w-xl")}>
-              <ElementAnimated elementId="headline" elements={elements}>
+              <ElementAnimated elementId="headline" elements={elementMap}>
                 <h2
                   className={cn(
                     mergeTypographyClasses(
                       "text-3xl font-bold tracking-tight text-foreground md:text-4xl",
-                      (typography as Record<string, any> ?? {})["cta.headline"]
+                      typographyMap["cta.headline"]
                     ),
                     canInlineEdit && "cursor-pointer"
                   )}
@@ -172,12 +174,12 @@ export function CtaBlock({
                 </h2>
               </ElementAnimated>
               {(subheadline || canInlineEdit) && (
-                <ElementAnimated elementId="subheadline" elements={elements}>
+                <ElementAnimated elementId="subheadline" elements={elementMap}>
                   <p
                     className={cn(
                       mergeTypographyClasses(
                         "mt-4 text-lg text-muted-foreground",
-                        (typography as Record<string, any> ?? {})["cta.subheadline"]
+                        typographyMap["cta.subheadline"]
                       ),
                       canInlineEdit && "cursor-pointer"
                     )}
@@ -200,8 +202,8 @@ export function CtaBlock({
                 isSplit && "lg:shrink-0"
               )}
             >
-              <ElementAnimated elementId="primaryCta" elements={elements}>
-                <div className="contents" data-element-id="primaryCta" style={primaryCtaShadow as any}>
+              <ElementAnimated elementId="primaryCta" elements={elementMap}>
+                <div className="contents" data-element-id="primaryCta" style={primaryCtaShadow as React.CSSProperties}>
                   {/* Primary CTA */}
                   {canInlineEdit ? (
                     <div className="flex items-center gap-2">
@@ -257,8 +259,8 @@ export function CtaBlock({
 
               {/* Secondary CTA */}
               {(secondaryCtaText || canInlineEdit) && (
-                <ElementAnimated elementId="secondaryCta" elements={elements}>
-                  <div className="contents" data-element-id="secondaryCta" style={secondaryCtaShadow as any}>
+                <ElementAnimated elementId="secondaryCta" elements={elementMap}>
+                  <div className="contents" data-element-id="secondaryCta" style={secondaryCtaShadow as React.CSSProperties}>
                     {canInlineEdit ? (
                       <div className="flex items-center gap-2">
                         <Button

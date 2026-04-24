@@ -1,5 +1,6 @@
 import { Activity, Clock3, FileClock, ShieldCheck } from "lucide-react"
 import { CardSurface } from "@/components/ui/card"
+import styles from "./DashboardTheme.module.css"
 
 type DashboardActivityPanelProps = {
   pagesUpdatedLast7d: number
@@ -37,10 +38,10 @@ export function DashboardActivityPanel({
   ] as const
 
   return (
-    <CardSurface className="gap-4 rounded-2xl border-indigo-400/25 bg-linear-to-br from-indigo-500/10 via-card to-sky-500/5">
+    <CardSurface className={`${styles.panelSurface} gap-4 rounded-2xl`}>
       <div className="px-6">
-        <h2 className="text-base font-semibold text-foreground">Aktivitaet</h2>
-        <p className="text-sm text-muted-foreground">Aktuelle Bewegung in Content und Betrieb.</p>
+        <h2 className={`text-base font-semibold ${styles.title}`}>Aktivitaet</h2>
+        <p className={`text-sm ${styles.textSoft}`}>Aktuelle Bewegung in Content und Betrieb.</p>
       </div>
 
       <div className="space-y-2 px-6 pb-6">
@@ -62,7 +63,7 @@ export function DashboardActivityPanel({
           style={{ borderColor: "rgba(125, 211, 252, 0.35)" }}
         >
           <ShieldCheck className="h-4 w-4 text-sky-700 dark:text-sky-300" />
-          <span className="text-sm text-muted-foreground">Quelle: serverseitiger Dashboard-Loader</span>
+          <span className={`text-sm ${styles.text}`}>Quelle: serverseitiger Dashboard-Loader</span>
         </div>
       </div>
     </CardSurface>

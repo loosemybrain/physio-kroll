@@ -16,6 +16,11 @@ type Props = {
   previewMode?: boolean
 }
 
+type PopupMotionVars = React.CSSProperties & {
+  "--popup-fade-in-ms": string
+  "--popup-fade-out-ms": string
+}
+
 function overlayStyle(opacity: number | null | undefined): React.CSSProperties | undefined {
   if (opacity === null || opacity === undefined) return undefined
   const clamped = Math.max(0, Math.min(1, opacity))
@@ -25,6 +30,14 @@ function overlayStyle(opacity: number | null | undefined): React.CSSProperties |
 function clampDuration(value: number | null | undefined, fallback: number, min: number, max: number) {
   const raw = typeof value === "number" && Number.isFinite(value) ? value : fallback
   return Math.max(min, Math.min(max, Math.trunc(raw)))
+}
+
+function normalizePopupImageUrl(value: string | null | undefined): string | null {
+  if (typeof value !== "string") return null
+  const trimmed = value.trim()
+  if (!trimmed) return null
+  if (trimmed === "null" || trimmed === "undefined") return null
+  return trimmed
 }
 
 function contentClasses(p: PublicPopup) {
@@ -70,6 +83,8 @@ function PopupCoverImage({
       return
     }
     setVisible(false)
+    const timeout = window.setTimeout(() => setVisible(true), 1500)
+    return () => window.clearTimeout(timeout)
   }, [src])
   return (
     <div className={cn("relative overflow-hidden bg-muted", containerClassName)}>
@@ -80,7 +95,7 @@ function PopupCoverImage({
         src={src}
         alt=""
         className={cn(imageClassName, "relative z-1", visible ? "opacity-100" : "opacity-0")}
-        loading="lazy"
+        loading="eager"
         decoding="async"
         onLoad={() => setVisible(true)}
         onError={() => setVisible(true)}
@@ -104,7 +119,8 @@ export function PopupModal({ popup, open, onOpenChange }: Props) {
   const ctaLabel = popup.ctaLabel?.trim() || ""
   const ctaUrl = popup.ctaUrl?.trim() || ""
 
-  const hasImage = popup.layoutVariant !== "no_image" && !!popup.imageUrl
+  const normalizedImageUrl = normalizePopupImageUrl(popup.imageUrl)
+  const hasImage = popup.layoutVariant !== "no_image" && !!normalizedImageUrl
   const layout = popup.layoutVariant
 
   const hasCustomBgColor = !!popup.bgColor?.trim()
@@ -115,6 +131,50 @@ export function PopupModal({ popup, open, onOpenChange }: Props) {
   const fadeInMs = clampDuration(popup.animationFadeInMs, 620, 100, 4000)
   const fadeOutMs = clampDuration(popup.animationFadeOutMs, 220, 80, 3000)
   const [contentVisible, setContentVisible] = React.useState(false)
+  const [imageWarmupDone, setImageWarmupDone] = React.useState(() =>
+    !hasImage || !normalizedImageUrl ? true : isImagePreloaded(normalizedImageUrl)
+  )
+
+  React.useEffect(() => {
+    if (!hasImage || !normalizedImageUrl) {
+      setImageWarmupDone(true)
+      return
+    }
+    if (isImagePreloaded(normalizedImageUrl)) {
+      setImageWarmupDone(true)
+      return
+    }
+
+    let settled = false
+    setImageWarmupDone(false)
+    const timeout = window.setTimeout(() => {
+      if (settled) return
+      settled = true
+      setImageWarmupDone(true)
+    }, 1500)
+
+    const preloader = new window.Image()
+    preloader.onload = () => {
+      if (settled) return
+      settled = true
+      window.clearTimeout(timeout)
+      setImageWarmupDone(true)
+    }
+    preloader.onerror = () => {
+      if (settled) return
+      settled = true
+      window.clearTimeout(timeout)
+      setImageWarmupDone(true)
+    }
+    preloader.src = normalizedImageUrl
+
+    return () => {
+      settled = true
+      window.clearTimeout(timeout)
+      preloader.onload = null
+      preloader.onerror = null
+    }
+  }, [hasImage, normalizedImageUrl, popup.id])
 
   React.useEffect(() => {
     if (!open) {
@@ -214,18 +274,19 @@ export function PopupModal({ popup, open, onOpenChange }: Props) {
           )}
           style={{
             ...overlayStyle(popup.overlayOpacity),
-            ["--popup-fade-in-ms" as any]: `${fadeInMs}ms`,
-            ["--popup-fade-out-ms" as any]: `${fadeOutMs}ms`,
-          }}
+            "--popup-fade-in-ms": `${fadeInMs}ms`,
+            "--popup-fade-out-ms": `${fadeOutMs}ms`,
+          } as PopupMotionVars}
         />
         <DialogPrimitive.Content
           className={cn(contentClasses(popup), shadowClass(popup.shadowPreset), !hasCustomTextColor && "text-foreground")}
+          data-image-warm={imageWarmupDone ? "ready" : "warming"}
           style={{
             ...bgStyle,
             ...radiusStyle,
-            ["--popup-fade-in-ms" as any]: `${fadeInMs}ms`,
-            ["--popup-fade-out-ms" as any]: `${fadeOutMs}ms`,
-          }}
+            "--popup-fade-in-ms": `${fadeInMs}ms`,
+            "--popup-fade-out-ms": `${fadeOutMs}ms`,
+          } as PopupMotionVars}
           onPointerDownOutside={(e) => {
             if (!popup.closeOnOverlay) e.preventDefault()
           }}
@@ -264,6 +325,7 @@ export function PopupModal({ popup, open, onOpenChange }: Props) {
                 ctaLabel={ctaLabel}
                 ctaUrl={ctaUrl}
                 onCtaAction={handleCtaAction}
+                normalizedImageUrl={normalizedImageUrl}
               />
             ) : (
               <PromotionPopupContent
@@ -277,6 +339,7 @@ export function PopupModal({ popup, open, onOpenChange }: Props) {
                 ctaLabel={ctaLabel}
                 ctaUrl={ctaUrl}
                 onCtaAction={handleCtaAction}
+                normalizedImageUrl={normalizedImageUrl}
               />
             )}
           </div>
@@ -405,6 +468,7 @@ function PromotionPopupContent({
   ctaLabel,
   ctaUrl,
   onCtaAction,
+  normalizedImageUrl,
 }: {
   popup: PublicPopup
   hasImage: boolean
@@ -416,6 +480,7 @@ function PromotionPopupContent({
   ctaLabel: string
   ctaUrl: string
   onCtaAction: (href: string) => void
+  normalizedImageUrl: string | null
 }) {
   const primaryVariant = normalizeButtonVariant(popup.buttonVariant, "default")
 
@@ -439,9 +504,9 @@ function PromotionPopupContent({
     return (
       <div className={cn("p-0")} style={textStyle}>
         <div className="flex flex-col overflow-hidden sm:flex-row">
-          {hasImage ? (
+          {hasImage && normalizedImageUrl ? (
             <PopupCoverImage
-              src={popup.imageUrl!}
+              src={normalizedImageUrl}
               containerClassName="h-56 w-full sm:h-96 sm:w-64 sm:shrink-0"
               imageClassName="absolute inset-0 h-full w-full object-cover"
             />
@@ -464,7 +529,7 @@ function PromotionPopupContent({
               closeLabel={closeLabel}
               ctaLabel={ctaLabel}
               ctaUrl={ctaUrl}
-              primaryVariant={primaryVariant as any}
+              primaryVariant={primaryVariant}
               onCtaAction={onCtaAction}
             />
           </div>
@@ -476,11 +541,11 @@ function PromotionPopupContent({
   // image_top or no_image
   return (
     <div className="p-0" style={textStyle}>
-      {layout === "image_top" && hasImage ? (
+      {layout === "image_top" && hasImage && normalizedImageUrl ? (
         <div className="overflow-hidden bg-muted">
           <div className="relative h-56 w-full sm:h-80">
             <PopupCoverImage
-              src={popup.imageUrl!}
+              src={normalizedImageUrl}
               containerClassName="absolute inset-0"
               imageClassName="absolute inset-0 h-full w-full object-cover"
             />
@@ -508,7 +573,7 @@ function PromotionPopupContent({
         closeLabel={closeLabel}
         ctaLabel={ctaLabel}
         ctaUrl={ctaUrl}
-        primaryVariant={primaryVariant as any}
+        primaryVariant={primaryVariant}
         onCtaAction={onCtaAction}
       />
       </div>
@@ -527,6 +592,7 @@ function AnnouncementPopupContent({
   ctaLabel,
   ctaUrl,
   onCtaAction,
+  normalizedImageUrl,
 }: {
   popup: PublicPopup
   hasImage: boolean
@@ -538,6 +604,7 @@ function AnnouncementPopupContent({
   ctaLabel: string
   ctaUrl: string
   onCtaAction: (href: string) => void
+  normalizedImageUrl: string | null
 }) {
   const primaryVariant = normalizeButtonVariant(popup.buttonVariant, "secondary")
 
@@ -584,12 +651,12 @@ function AnnouncementPopupContent({
   )
 
   // v0-like split layout for announcement (image-left)
-  if (layout === "image_left" && hasImage) {
+  if (layout === "image_left" && hasImage && normalizedImageUrl) {
     return (
       <div className="p-0" style={textStyle}>
         <div className="flex flex-col overflow-hidden sm:flex-row">
           <PopupCoverImage
-            src={popup.imageUrl!}
+            src={normalizedImageUrl}
             containerClassName="h-56 w-full sm:h-96 sm:w-64 sm:shrink-0"
             imageClassName="absolute inset-0 h-full w-full object-cover"
           />
@@ -620,10 +687,10 @@ function AnnouncementPopupContent({
 
   return (
     <div className={cn("p-6 sm:p-7")} style={textStyle}>
-      {layout === "image_top" && hasImage ? (
+      {layout === "image_top" && hasImage && normalizedImageUrl ? (
         <div className="mb-4 overflow-hidden rounded-xl border border-border/50">
           <PopupCoverImage
-            src={popup.imageUrl!}
+            src={normalizedImageUrl}
             containerClassName="h-40 w-full"
             imageClassName="block h-full w-full object-cover"
           />

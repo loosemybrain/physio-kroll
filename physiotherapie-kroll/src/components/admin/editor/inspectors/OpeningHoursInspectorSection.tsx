@@ -9,13 +9,18 @@ import { UniversalRepeaterInspector } from "../repeater/UniversalRepeaterInspect
 import { ShadowInspector } from "../../ShadowInspector"
 import type { InspectorFieldType } from "@/cms/blocks/registry"
 
+type RepeaterEditorActions = {
+  handleAddArrayItem: (blockId: string, arrayPath: string, createItem: () => unknown) => void
+  handleMoveArrayItem: (blockId: string, arrayPath: string, from: number, to: number) => void
+}
+
 export interface PageEditorInspectorSectionProps {
   selectedBlock: CMSBlock
   selectedBlockId: string | null
   expandedRepeaterCards: Record<string, string | null>
   setExpandedRepeaterCards: React.Dispatch<React.SetStateAction<Record<string, string | null>>>
   updateSelectedProps: (nextProps: CMSBlock["props"]) => void
-  editorActions: any
+  editorActions: RepeaterEditorActions
   handleRemoveArrayItem: (blockId: string, arrayPath: string, index: number) => void
   selectedElementId: string | null
   deselectElement: (blockId: string) => void

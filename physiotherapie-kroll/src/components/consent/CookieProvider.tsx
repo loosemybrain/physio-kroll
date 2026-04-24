@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react"
+import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react"
 import { getConsentFromDocumentCookie, setConsentCookie, type ConsentState, type ConsentCategory } from "@/lib/consent/cookie"
 import { defaultConsentState } from "@/lib/consent/types"
 
@@ -25,21 +25,24 @@ interface CookieProviderProps {
 }
 
 export function CookieProvider({ children }: CookieProviderProps) {
-  const [consent, setConsent] = useState<ConsentState | null>(null)
+  const [consent, setConsent] = useState<ConsentState | null>(defaultConsentState)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [hasUserConsented, setHasUserConsented] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    const cookieConsent = getConsentFromDocumentCookie()
-    if (cookieConsent) {
-      setConsent(cookieConsent)
-      setHasUserConsented(true)
-    } else {
-      setConsent(defaultConsentState)
-      setHasUserConsented(false)
-    }
-    setIsLoading(false)
+    const initialConsent = getConsentFromDocumentCookie()
+    const raf = window.requestAnimationFrame(() => {
+      if (initialConsent) {
+        setConsent(initialConsent)
+        setHasUserConsented(true)
+      } else {
+        setConsent(defaultConsentState)
+        setHasUserConsented(false)
+      }
+      setIsLoading(false)
+    })
+    return () => window.cancelAnimationFrame(raf)
   }, [])
 
   const updateConsent = useCallback((newConsent: ConsentState) => {

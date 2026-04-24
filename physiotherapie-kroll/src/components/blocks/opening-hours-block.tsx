@@ -4,9 +4,10 @@ import * as React from "react"
 import type { CSSProperties, MouseEvent } from "react"
 import { Clock } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { mergeTypographyClasses } from "@/lib/typography"
+import { mergeTypographyClasses, type TypographySettings } from "@/lib/typography"
 import { useElementShadowStyle } from "@/lib/shadow"
 import { ElementAnimated } from "@/components/blocks/ElementAnimated"
+import type { ElementConfig } from "@/types/cms"
 
 export interface OpeningHoursBlockProps {
   section?: unknown
@@ -35,7 +36,7 @@ export interface OpeningHoursBlockProps {
   blockId?: string
   onEditField?: (blockId: string, fieldPath: string, anchorRect?: DOMRect) => void
   // Shadow/Element Props
-  elements?: Record<string, any>
+  elements?: Record<string, unknown>
   onElementClick?: (blockId: string, elementId: string) => void
   selectedElementId?: string | null
 }
@@ -68,9 +69,9 @@ export function OpeningHoursBlock({
   onElementClick,
   selectedElementId,
 }: OpeningHoursBlockProps) {
-  const typo = (typography as Record<string, any> | undefined) ?? {}
+  const typo = (typography as Record<string, TypographySettings | undefined> | undefined) ?? {}
 
-  const mergedElements = React.useMemo(() => {
+  const mergedElements: Record<string, ElementConfig | undefined> | undefined = React.useMemo(() => {
     if (!elements) return undefined
     return {
       ...elements,
@@ -80,17 +81,18 @@ export function OpeningHoursBlock({
       "openingHours.value": elements["openingHours.value"] ?? elements["value"],
       "openingHours.note": elements["openingHours.note"] ?? elements["note"],
       "openingHours.surface": elements["openingHours.surface"] ?? elements["surface"],
-    }
+    } as Record<string, ElementConfig | undefined>
   }, [elements])
   
   const canEdit = editable && !!blockId && !!onEditField
   const canSelect = !!blockId && !!onElementClick
   const editableClass = canEdit && "cursor-pointer rounded-md px-2 py-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 hover:bg-primary/7"
+  const elementMap = (mergedElements ?? {}) as Record<string, ElementConfig | undefined>
 
   // Element shadows
   const surfaceShadow = useElementShadowStyle({
     elementId: "openingHours.surface",
-    elementConfig: (elements ?? {})["openingHours.surface"],
+    elementConfig: elementMap["openingHours.surface"],
   })
 
   const handleInlineEdit = (e: MouseEvent<HTMLElement>, fieldPath: string) => {

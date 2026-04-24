@@ -43,7 +43,6 @@ export function useFooterInView(options?: {
       setup(initial)
     } else {
       // Footer is loaded async (FooterWrapper fetch). Wait until it appears.
-      setInView(false)
       mo = new MutationObserver(() => {
         if (cancelled) return
         const el = findFooter()

@@ -182,7 +182,7 @@ export function PageEditorInspector({
       if (imageSliderShadowSlideId) setImageSliderShadowSlideId("")
       return
     }
-    const sliderSlides = (((selectedBlock.props as any)?.slides ?? []) as Array<{ id?: string }>)
+    const sliderSlides = (((selectedBlock.props as Record<string, unknown>)?.slides ?? []) as Array<{ id?: string }>)
       .filter((slide) => typeof slide?.id === "string" && slide.id.length > 0) as Array<{ id: string }>
     if (sliderSlides.length === 0) {
       if (imageSliderShadowSlideId) setImageSliderShadowSlideId("")
@@ -1047,8 +1047,11 @@ export function PageEditorInspector({
     const shouldShowField = (field: InspectorField): boolean => {
       if (!field.showWhen) return true
       const currentProps = selectedBlock?.props as Record<string, unknown>
-      const getByPath = (obj: any, path: string): any => {
-        return path.split(".").reduce((acc, part) => acc?.[part], obj)
+      const getByPath = (obj: Record<string, unknown>, path: string): unknown => {
+        return path.split(".").reduce<unknown>((acc, part) => {
+          if (typeof acc !== "object" || acc === null) return undefined
+          return (acc as Record<string, unknown>)[part]
+        }, obj)
       }
       const currentValue = getByPath(currentProps, field.showWhen.key)
       return currentValue === field.showWhen.equals
@@ -1613,7 +1616,7 @@ export function PageEditorInspector({
 
             {/* Slide Shadow Inspector (kompakt per Dropdown) */}
             {(() => {
-              const sliderSlides = (((selectedBlock.props as any)?.slides ?? []) as Array<{ id?: string; title?: string; shadow?: ElementShadow }>)
+              const sliderSlides = (((selectedBlock.props as Record<string, unknown>)?.slides ?? []) as Array<{ id?: string; title?: string; shadow?: ElementShadow }>)
                 .filter((slide) => typeof slide?.id === "string" && slide.id.length > 0) as Array<{ id: string; title?: string; shadow?: ElementShadow }>
               if (sliderSlides.length === 0) return null
               const activeSlideId = sliderSlides.some((slide) => slide.id === imageSliderShadowSlideId)
@@ -1648,7 +1651,9 @@ export function PageEditorInspector({
                       onChange={(shadowConfig) => {
                         if (!selectedBlock) return
                         const currentProps = selectedBlock.props as Record<string, unknown>
-                        const slides = Array.isArray(currentProps.slides) ? [...(currentProps.slides as any[])] : []
+                        const slides = Array.isArray(currentProps.slides)
+                          ? [...(currentProps.slides as Array<Record<string, unknown>>)]
+                          : []
                         if (slides.length === 0) return
                         if (applyToAllSlides) {
                           for (let i = 0; i < slides.length; i += 1) {
@@ -1943,7 +1948,7 @@ export function PageEditorInspector({
               <div className="space-y-1.5">
                 <Label className="text-xs">Spalten</Label>
                 <Select
-                  value={((selectedBlock.props as any)?.columns || 3).toString()}
+                  value={((selectedBlock.props as Record<string, unknown>)?.columns || 3).toString()}
                   onValueChange={(v) => {
                     if (!selectedBlock) return
                     const currentProps = selectedBlock.props as Record<string, unknown>
@@ -1966,10 +1971,10 @@ export function PageEditorInspector({
               <div className="space-y-1.5">
                 <Label className="text-xs font-semibold text-primary">Design Preset</Label>
                 <Select
-                  value={(selectedBlock.props as any)?.designPreset || "standard"}
+                  value={String((selectedBlock.props as Record<string, unknown>)?.designPreset || "standard")}
                   onValueChange={(v) => {
                     if (!selectedBlock) return
-                    const presets: Record<string, any> = {
+                    const presets: Record<string, Record<string, unknown>> = {
                       standard: {
                         style: { variant: "default", radius: "xl", border: "subtle", shadow: "sm", accent: "none" },
                         animation: { entrance: "fade", hover: "none", durationMs: 400, delayMs: 0 },
@@ -2023,7 +2028,7 @@ export function PageEditorInspector({
                 <div className="space-y-1.5">
                   <Label className="text-xs">Variante</Label>
                   <Select
-                    value={(selectedBlock.props as any)?.style?.variant || "default"}
+                    value={String(((selectedBlock.props as Record<string, unknown>)?.style as Record<string, unknown> | undefined)?.variant || "default")}
                     onValueChange={(v) => {
                       if (!selectedBlock) return
                       const currentProps = selectedBlock.props as Record<string, unknown>
@@ -2051,7 +2056,7 @@ export function PageEditorInspector({
                 <div className="space-y-1.5">
                   <Label className="text-xs">Border Radius</Label>
                   <Select
-                    value={(selectedBlock.props as any)?.style?.radius || "xl"}
+                    value={String(((selectedBlock.props as Record<string, unknown>)?.style as Record<string, unknown> | undefined)?.radius || "xl")}
                     onValueChange={(v) => {
                       if (!selectedBlock) return
                       const currentProps = selectedBlock.props as Record<string, unknown>
@@ -2078,7 +2083,7 @@ export function PageEditorInspector({
                 <div className="space-y-1.5">
                   <Label className="text-xs">Border</Label>
                   <Select
-                    value={(selectedBlock.props as any)?.style?.border || "subtle"}
+                    value={String(((selectedBlock.props as Record<string, unknown>)?.style as Record<string, unknown> | undefined)?.border || "subtle")}
                     onValueChange={(v) => {
                       if (!selectedBlock) return
                       const currentProps = selectedBlock.props as Record<string, unknown>
@@ -2105,7 +2110,7 @@ export function PageEditorInspector({
                 <div className="space-y-1.5">
                   <Label className="text-xs">Schatten</Label>
                   <Select
-                    value={(selectedBlock.props as any)?.style?.shadow || "sm"}
+                    value={String(((selectedBlock.props as Record<string, unknown>)?.style as Record<string, unknown> | undefined)?.shadow || "sm")}
                     onValueChange={(v) => {
                       if (!selectedBlock) return
                       const currentProps = selectedBlock.props as Record<string, unknown>
@@ -2133,7 +2138,7 @@ export function PageEditorInspector({
                 <div className="space-y-1.5">
                   <Label className="text-xs">Akzentfarbe</Label>
                   <Select
-                    value={(selectedBlock.props as any)?.style?.accent || "none"}
+                    value={String(((selectedBlock.props as Record<string, unknown>)?.style as Record<string, unknown> | undefined)?.accent || "none")}
                     onValueChange={(v) => {
                       if (!selectedBlock) return
                       const currentProps = selectedBlock.props as Record<string, unknown>
@@ -2165,7 +2170,7 @@ export function PageEditorInspector({
                 <div className="space-y-1.5">
                   <Label className="text-xs">Eintrittsanimation</Label>
                   <Select
-                    value={(selectedBlock.props as any)?.animation?.entrance || "fade"}
+                    value={String(((selectedBlock.props as Record<string, unknown>)?.animation as Record<string, unknown> | undefined)?.entrance || "fade")}
                     onValueChange={(v) => {
                       if (!selectedBlock) return
                       const currentProps = selectedBlock.props as Record<string, unknown>
@@ -2194,7 +2199,7 @@ export function PageEditorInspector({
                 <div className="space-y-1.5">
                   <Label className="text-xs">Hover-Animation</Label>
                   <Select
-                    value={(selectedBlock.props as any)?.animation?.hover || "none"}
+                    value={String(((selectedBlock.props as Record<string, unknown>)?.animation as Record<string, unknown> | undefined)?.hover || "none")}
                     onValueChange={(v) => {
                       if (!selectedBlock) return
                       const currentProps = selectedBlock.props as Record<string, unknown>
@@ -2226,7 +2231,7 @@ export function PageEditorInspector({
                     min="100"
                     max="1000"
                     step="50"
-                    value={(selectedBlock.props as any)?.animation?.durationMs || 400}
+                    value={Number(((selectedBlock.props as Record<string, unknown>)?.animation as Record<string, unknown> | undefined)?.durationMs || 400)}
                     onChange={(e) => {
                       if (!selectedBlock) return
                       const currentProps = selectedBlock.props as Record<string, unknown>
@@ -2249,7 +2254,7 @@ export function PageEditorInspector({
                     min="0"
                     max="500"
                     step="50"
-                    value={(selectedBlock.props as any)?.animation?.delayMs || 0}
+                    value={Number(((selectedBlock.props as Record<string, unknown>)?.animation as Record<string, unknown> | undefined)?.delayMs || 0)}
                     onChange={(e) => {
                       if (!selectedBlock) return
                       const currentProps = selectedBlock.props as Record<string, unknown>
@@ -2274,7 +2279,7 @@ export function PageEditorInspector({
                   <div className="flex gap-2">
                     <input
                       type="color"
-                      value={(selectedBlock.props as any)?.titleColor || "#111111"}
+                      value={String((selectedBlock.props as Record<string, unknown>)?.titleColor || "#111111")}
                       onChange={(e) => {
                         if (!selectedBlock) return
                         const currentProps = selectedBlock.props as Record<string, unknown>
@@ -2285,7 +2290,7 @@ export function PageEditorInspector({
                     />
                     <input
                       type="text"
-                      value={(selectedBlock.props as any)?.titleColor || "#111111"}
+                      value={String((selectedBlock.props as Record<string, unknown>)?.titleColor || "#111111")}
                       onChange={(e) => {
                         if (!selectedBlock) return
                         const currentProps = selectedBlock.props as Record<string, unknown>
@@ -2302,7 +2307,7 @@ export function PageEditorInspector({
                   <div className="flex gap-2">
                     <input
                       type="color"
-                      value={(selectedBlock.props as any)?.descriptionColor || "#666666"}
+                      value={String((selectedBlock.props as Record<string, unknown>)?.descriptionColor || "#666666")}
                       onChange={(e) => {
                         if (!selectedBlock) return
                         const currentProps = selectedBlock.props as Record<string, unknown>
@@ -2313,7 +2318,7 @@ export function PageEditorInspector({
                     />
                     <input
                       type="text"
-                      value={(selectedBlock.props as any)?.descriptionColor || "#666666"}
+                      value={String((selectedBlock.props as Record<string, unknown>)?.descriptionColor || "#666666")}
                       onChange={(e) => {
                         if (!selectedBlock) return
                         const currentProps = selectedBlock.props as Record<string, unknown>
@@ -2330,7 +2335,7 @@ export function PageEditorInspector({
                   <div className="flex gap-2">
                     <input
                       type="color"
-                      value={(selectedBlock.props as any)?.iconColor || "#111111"}
+                      value={String((selectedBlock.props as Record<string, unknown>)?.iconColor || "#111111")}
                       onChange={(e) => {
                         if (!selectedBlock) return
                         const currentProps = selectedBlock.props as Record<string, unknown>
@@ -2341,7 +2346,7 @@ export function PageEditorInspector({
                     />
                     <input
                       type="text"
-                      value={(selectedBlock.props as any)?.iconColor || "#111111"}
+                      value={String((selectedBlock.props as Record<string, unknown>)?.iconColor || "#111111")}
                       onChange={(e) => {
                         if (!selectedBlock) return
                         const currentProps = selectedBlock.props as Record<string, unknown>
@@ -2358,7 +2363,7 @@ export function PageEditorInspector({
                   <div className="flex gap-2">
                     <input
                       type="color"
-                      value={(selectedBlock.props as any)?.cardBgColor || "#ffffff"}
+                      value={String((selectedBlock.props as Record<string, unknown>)?.cardBgColor || "#ffffff")}
                       onChange={(e) => {
                         if (!selectedBlock) return
                         const currentProps = selectedBlock.props as Record<string, unknown>
@@ -2369,7 +2374,7 @@ export function PageEditorInspector({
                     />
                     <input
                       type="text"
-                      value={(selectedBlock.props as any)?.cardBgColor || "#ffffff"}
+                      value={String((selectedBlock.props as Record<string, unknown>)?.cardBgColor || "#ffffff")}
                       onChange={(e) => {
                         if (!selectedBlock) return
                         const currentProps = selectedBlock.props as Record<string, unknown>
@@ -2386,7 +2391,7 @@ export function PageEditorInspector({
                   <div className="flex gap-2">
                     <input
                       type="color"
-                      value={(selectedBlock.props as any)?.cardBorderColor || "#e5e7eb"}
+                      value={String((selectedBlock.props as Record<string, unknown>)?.cardBorderColor || "#e5e7eb")}
                       onChange={(e) => {
                         if (!selectedBlock) return
                         const currentProps = selectedBlock.props as Record<string, unknown>
@@ -2397,7 +2402,7 @@ export function PageEditorInspector({
                     />
                     <input
                       type="text"
-                      value={(selectedBlock.props as any)?.cardBorderColor || "#e5e7eb"}
+                      value={String((selectedBlock.props as Record<string, unknown>)?.cardBorderColor || "#e5e7eb")}
                       onChange={(e) => {
                         if (!selectedBlock) return
                         const currentProps = selectedBlock.props as Record<string, unknown>
@@ -2466,10 +2471,10 @@ export function PageEditorInspector({
               <div className="space-y-1.5">
                 <Label className="text-xs font-semibold text-primary">Layout Preset</Label>
                 <Select
-                  value={(selectedBlock.props as any)?.designPreset || "standard"}
+                  value={String((selectedBlock.props as Record<string, unknown>)?.designPreset || "standard")}
                   onValueChange={(v) => {
                     if (!selectedBlock) return
-                    const presets: Record<string, any> = {
+                    const presets: Record<string, Record<string, unknown>> = {
                       standard: {
                         style: { variant: "default", verticalAlign: "center", textAlign: "left", maxWidth: "lg" },
                         background: "none",
@@ -2535,7 +2540,7 @@ export function PageEditorInspector({
                 <div className="space-y-1.5">
                   <Label className="text-xs">Variante</Label>
                   <Select
-                    value={(selectedBlock.props as any)?.style?.variant || "default"}
+                    value={String(((selectedBlock.props as Record<string, unknown>)?.style as Record<string, unknown> | undefined)?.variant || "default")}
                     onValueChange={(v) => {
                       if (!selectedBlock) return
                       const currentProps = selectedBlock.props as Record<string, unknown>
@@ -2561,7 +2566,7 @@ export function PageEditorInspector({
                 <div className="space-y-1.5">
                   <Label className="text-xs">Vertikale Ausrichtung</Label>
                   <Select
-                    value={(selectedBlock.props as any)?.style?.verticalAlign || "center"}
+                    value={String(((selectedBlock.props as Record<string, unknown>)?.style as Record<string, unknown> | undefined)?.verticalAlign || "center")}
                     onValueChange={(v) => {
                       if (!selectedBlock) return
                       const currentProps = selectedBlock.props as Record<string, unknown>
@@ -2587,7 +2592,7 @@ export function PageEditorInspector({
                 <div className="space-y-1.5">
                   <Label className="text-xs">Text Ausrichtung</Label>
                   <Select
-                    value={(selectedBlock.props as any)?.style?.textAlign || "left"}
+                    value={String(((selectedBlock.props as Record<string, unknown>)?.style as Record<string, unknown> | undefined)?.textAlign || "left")}
                     onValueChange={(v) => {
                       if (!selectedBlock) return
                       const currentProps = selectedBlock.props as Record<string, unknown>
@@ -2613,7 +2618,7 @@ export function PageEditorInspector({
                 <div className="space-y-1.5">
                   <Label className="text-xs">Maximale Breite</Label>
                   <Select
-                    value={(selectedBlock.props as any)?.style?.maxWidth || "lg"}
+                    value={String(((selectedBlock.props as Record<string, unknown>)?.style as Record<string, unknown> | undefined)?.maxWidth || "lg")}
                     onValueChange={(v) => {
                       if (!selectedBlock) return
                       const currentProps = selectedBlock.props as Record<string, unknown>
@@ -2640,7 +2645,7 @@ export function PageEditorInspector({
                 <div className="space-y-1.5">
                   <Label className="text-xs">Bild Seitenverhältnis</Label>
                   <Select
-                    value={(selectedBlock.props as any)?.style?.imageAspectRatio || "4/3"}
+                    value={String(((selectedBlock.props as Record<string, unknown>)?.style as Record<string, unknown> | undefined)?.imageAspectRatio || "4/3")}
                     onValueChange={(v) => {
                       if (!selectedBlock) return
                       const currentProps = selectedBlock.props as Record<string, unknown>
@@ -2955,7 +2960,7 @@ export function PageEditorInspector({
                 <Label className="text-xs">Eyebrow (optional)</Label>
                 <input
                   type="text"
-                  value={(selectedBlock.props as any)?.eyebrow || ""}
+                  value={String((selectedBlock.props as Record<string, unknown>)?.eyebrow || "")}
                   onChange={(e) => {
                     if (!selectedBlock) return
                     const currentProps = selectedBlock.props as Record<string, unknown>
@@ -2971,7 +2976,7 @@ export function PageEditorInspector({
               <div className="space-y-1.5">
                 <Label className="text-xs">Layout</Label>
                 <Select
-                  value={(selectedBlock.props as any)?.layout || "cards"}
+                  value={String((selectedBlock.props as Record<string, unknown>)?.layout || "cards")}
                   onValueChange={(v) => {
                     if (!selectedBlock) return
                     const currentProps = selectedBlock.props as Record<string, unknown>
@@ -2993,7 +2998,7 @@ export function PageEditorInspector({
               <div className="space-y-1.5">
                 <Label className="text-xs">Hintergrund</Label>
                 <Select
-                  value={(selectedBlock.props as any)?.background || "none"}
+                  value={String((selectedBlock.props as Record<string, unknown>)?.background || "none")}
                   onValueChange={(v) => {
                     if (!selectedBlock) return
                     const currentProps = selectedBlock.props as Record<string, unknown>
@@ -3016,7 +3021,7 @@ export function PageEditorInspector({
               <div className="space-y-1.5">
                 <Label className="text-xs">Spalten</Label>
                 <Select
-                  value={String((selectedBlock.props as any)?.columns || 3)}
+                  value={String((selectedBlock.props as Record<string, unknown>)?.columns || 3)}
                   onValueChange={(v) => {
                     if (!selectedBlock) return
                     const currentProps = selectedBlock.props as Record<string, unknown>
@@ -3620,7 +3625,7 @@ export function PageEditorInspector({
                     selectedElementId
                   ]?.style?.shadow
 
-                const shouldShowShadow = Boolean((elementDef as any)?.supportsShadow)
+                const shouldShowShadow = Boolean((elementDef as { supportsShadow?: unknown } | null)?.supportsShadow)
                 if (!shouldShowShadow) return null
                 return (
                   <>
@@ -5041,7 +5046,7 @@ export function PageEditorInspector({
                 {selectedBlock.type === "hero" && (() => {
                   const props = selectedBlock.props as HeroBlock["props"]
                   const trustItems = normalizeStringArray(props.trustItems ?? [])
-                  const mood = (props as any)?.mood ?? "physiotherapy"
+                  const mood = (props as Record<string, unknown>)?.mood ?? "physiotherapy"
                   const actions = props.actions ?? (props.brandContent?.[mood as keyof typeof props.brandContent]?.actions) ?? []
                   
                   if (trustItems.length === 0 && actions.length === 0) return null
@@ -5086,18 +5091,18 @@ export function PageEditorInspector({
                         <div className="space-y-2 rounded-md border border-border bg-muted/20 p-3">
                           <Label className="text-xs font-semibold">CTA Actions</Label>
                           <div className="flex flex-wrap gap-2">
-                            {actions.map((action: any, index: number) => {
+                            {actions.map((action: Record<string, unknown>, index: number) => {
                               const itemId = `action-${action.id}`
                               const isSelected = selectedElementId === itemId
                               return (
                                 <Button
-                                  key={action?.id ?? `action-${action?.label ?? "unnamed"}-${action?.href ?? "nohref"}-${index}`}
+                                  key={String(action?.id ?? `action-${String(action?.label ?? "unnamed")}-${String(action?.href ?? "nohref")}-${index}`)}
                                   variant={isSelected ? "default" : "outline"}
                                   size="sm"
                                   className="text-xs"
                                   onClick={() => selectElement(selectedBlockId || "", itemId)}
                                 >
-                                  {action.label || `Action ${index + 1}`}
+                                  {String(action.label || `Action ${index + 1}`)}
                                 </Button>
                               )
                             })}
@@ -5131,7 +5136,7 @@ export function PageEditorInspector({
                         selectedBlock,
                         "actions",
                         "Action",
-                        (action: any, index: number) => `${index + 1}. ${action.label || "Action"}`,
+                        (action: Record<string, unknown>, index: number) => `${index + 1}. ${String(action.label || "Action")}`,
                         createHeroAction,
                         [
                           {

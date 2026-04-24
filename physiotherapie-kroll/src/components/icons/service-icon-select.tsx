@@ -19,11 +19,10 @@ interface ServiceIconSelectProps {
 }
 
 function ServiceIconOption({ iconName }: { iconName: string }) {
-  const Icon = getServiceIcon(iconName)
   return (
     <SelectItem value={iconName} className="flex items-center gap-2">
       <div className="flex items-center gap-2">
-        <Icon className="h-4 w-4" />
+        {React.createElement(getServiceIcon(iconName), { className: "h-4 w-4" })}
         <span>{humanizeIconName(iconName)}</span>
       </div>
     </SelectItem>
@@ -31,10 +30,9 @@ function ServiceIconOption({ iconName }: { iconName: string }) {
 }
 
 function ServiceIconDisplay({ iconName }: { iconName: string }) {
-  const Icon = getServiceIcon(iconName)
   return (
     <div className="flex items-center gap-2">
-      <Icon className="h-4 w-4" />
+      {React.createElement(getServiceIcon(iconName), { className: "h-4 w-4" })}
       <span>{humanizeIconName(iconName)}</span>
     </div>
   )

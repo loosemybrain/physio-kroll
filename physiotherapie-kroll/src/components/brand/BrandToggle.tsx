@@ -114,12 +114,6 @@ export function BrandToggle({
     }
   }, [])
 
-  if (!showToggle) {
-    return null
-  }
-
-  const isPhysiotherapy = value === "physiotherapy"
-
   const handleNavigate = React.useCallback(
     async (brand: BrandKey) => {
       if (pendingRef.current) return
@@ -157,6 +151,12 @@ export function BrandToggle({
     },
     [applyThemeBeforeNavigation, router, value, waitForVisualStability]
   )
+
+  if (!showToggle) {
+    return null
+  }
+
+  const isPhysiotherapy = value === "physiotherapy"
 
   return (
     <>

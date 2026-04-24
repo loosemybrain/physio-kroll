@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ isLegalPage: false })
     }
     if (page) {
-      const isLegalPage = (page as any).page_type === "legal"
+      const isLegalPage = (page as Record<string, unknown>).page_type === "legal"
       return NextResponse.json({ isLegalPage })
     }
 

@@ -4,12 +4,16 @@ import * as React from "react"
 import { Separator } from "@/components/ui/separator"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
-import { cn } from "@/lib/utils"
 import type { CMSBlock } from "@/types/cms"
 import { createFeatureItem } from "@/cms/blocks/registry"
 import { getByPath } from "@/lib/cms/editorPathOps"
 import { UniversalRepeaterInspector } from "../repeater/UniversalRepeaterInspector"
 import type { InspectorFieldType } from "@/cms/blocks/registry"
+
+type RepeaterEditorActions = {
+  handleAddArrayItem: (blockId: string, arrayPath: string, createItem: () => unknown) => void
+  handleMoveArrayItem: (blockId: string, arrayPath: string, from: number, to: number) => void
+}
 
 export interface PageEditorInspectorSectionProps {
   selectedBlock: CMSBlock
@@ -17,7 +21,7 @@ export interface PageEditorInspectorSectionProps {
   expandedRepeaterCards: Record<string, string | null>
   setExpandedRepeaterCards: React.Dispatch<React.SetStateAction<Record<string, string | null>>>
   updateSelectedProps: (nextProps: CMSBlock["props"]) => void
-  editorActions: any
+  editorActions: RepeaterEditorActions
   confirmDeleteItem: (blockId: string, arrayPath: string, index: number) => void
   lastAddedRepeaterRef: React.MutableRefObject<{ key: string; itemId: string } | null>
   renderOneRepeaterItemFields: (

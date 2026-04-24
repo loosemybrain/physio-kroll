@@ -243,7 +243,7 @@ export function BackgroundInspectorSection(props: {
                       : never,
                     direction: bg.gradient?.direction,
                     stops: ensureStops(bg.gradient?.stops),
-                  } as any,
+                  } as NonNullable<BackgroundSettings["gradient"]>,
                 })
               }
             >
@@ -469,7 +469,7 @@ export function BackgroundInspectorSection(props: {
                     image: {
                       mediaId: bg.image?.mediaId ?? null,
                       fit: bg.image?.fit ?? "cover",
-                      position: v as any,
+                      position: v as NonNullable<NonNullable<BackgroundSettings["image"]>["position"]>,
                       overlay: bg.image?.overlay,
                       blur: bg.image?.blur,
                     },

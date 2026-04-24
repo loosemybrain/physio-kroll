@@ -9,13 +9,18 @@ import { useEffect, useState } from "react"
  * content is always visible. Desktop users get full animations.
  */
 export function useMotionPreference() {
-  const [isMobile, setIsMobile] = useState(false)
-  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false)
+  const [isMobile, setIsMobile] = useState(
+    () => typeof window !== "undefined" && window.matchMedia("(hover: none)").matches
+  )
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  )
 
   useEffect(() => {
     // Check for reduced motion preference
     const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)")
-    setPrefersReducedMotion(motionQuery.matches)
     
     const motionHandler = (e: MediaQueryListEvent) => {
       setPrefersReducedMotion(e.matches)
@@ -24,7 +29,6 @@ export function useMotionPreference() {
 
     // Check for touch/mobile
     const touchQuery = window.matchMedia("(hover: none)")
-    setIsMobile(touchQuery.matches)
     
     const touchHandler = (e: MediaQueryListEvent) => {
       setIsMobile(e.matches)

@@ -28,7 +28,6 @@ interface AdminRootProviderProps {
  */
 export function AdminRootProvider({ children }: AdminRootProviderProps) {
   const [adminTheme, setAdminThemeState] = React.useState<"light" | "dark">("light")
-  const [isMounted, setIsMounted] = React.useState(false)
   const wrapperRef = React.useRef<HTMLDivElement>(null)
 
   // Initialize from localStorage on mount
@@ -42,7 +41,6 @@ export function AdminRootProvider({ children }: AdminRootProviderProps) {
       wrapperRef.current.setAttribute("data-admin-theme", initialTheme)
     }
     
-    setIsMounted(true)
   }, [])
 
   const setAdminTheme = React.useCallback((theme: "light" | "dark") => {

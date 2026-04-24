@@ -5,7 +5,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { Menu, Search } from "lucide-react"
-import { motion, AnimatePresence, useReducedMotion } from "framer-motion"
+import { motion, AnimatePresence, useReducedMotion, type TargetAndTransition, type Transition } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import {
   Sheet,
@@ -442,8 +442,8 @@ export function HeaderClient({ brand, navConfig }: HeaderClientProps) {
           rel={link.newTab ? "noopener noreferrer" : undefined}
           className={linkClass}
           onClick={onClick}
-          whileHover={hoverPreset.motion?.whileHover as any}
-          transition={hoverPreset.motion?.transition as any}
+          whileHover={hoverPreset.motion?.whileHover as TargetAndTransition}
+          transition={hoverPreset.motion?.transition as Transition}
         >
           {linkContent}
         </motion.a>

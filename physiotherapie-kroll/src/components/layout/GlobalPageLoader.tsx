@@ -27,7 +27,7 @@ export function GlobalPageLoader() {
     speed: "normal",
     overlayStrength: "medium",
   })
-  const startedAtRef = React.useRef<number>(Date.now())
+  const startedAtRef = React.useRef<number>(0)
   const hideTimerRef = React.useRef<number | null>(null)
   const fallbackTimerRef = React.useRef<number | null>(null)
   const bootstrappedRef = React.useRef(false)

@@ -60,7 +60,7 @@ type Props = {
   selectedElementId?: string | null
   
   // Shadow/Element Props
-  elements?: Record<string, any>
+  elements?: Record<string, unknown>
 }
 
 function getRect(el: EventTarget | null): DOMRect | undefined {

@@ -2,8 +2,6 @@
 
 import { useEffect, useRef } from "react"
 import {
-  PREVIEW_BRIDGE_NS,
-  PREVIEW_BRIDGE_V,
   PREVIEW_MESSAGE_TYPES,
   EDITOR_MESSAGE_TYPES,
   isBridgeMessage,

@@ -1,6 +1,4 @@
 "use client"
-
-import { useEffect, useState } from "react"
 import {
   LegalRichContentRenderer,
   type LegalRichContentRendererProps,
@@ -12,10 +10,5 @@ import {
  */
 export function LegalRichContentRendererPreviewGate(props: LegalRichContentRendererProps) {
   const { previewAssistEditing, ...rest } = props
-  const [mounted, setMounted] = useState(false)
-  useEffect(() => {
-    setMounted(true)
-  }, [])
-  const assist = Boolean(previewAssistEditing && mounted)
-  return <LegalRichContentRenderer {...rest} previewAssistEditing={assist} />
+  return <LegalRichContentRenderer {...rest} previewAssistEditing={Boolean(previewAssistEditing)} />
 }

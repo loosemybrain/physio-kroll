@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Card, CardContent, CardDescription, CardHeader, CardSurface, CardTitle } from "@/components/ui/card"
+import { CardContent, CardDescription, CardHeader, CardSurface, CardTitle } from "@/components/ui/card"
 import { createSupabaseBrowserClient } from "@/lib/supabase/client"
 import { normalizeInternalRedirectTarget, toLoginRedirect } from "@/lib/auth/redirects"
 
@@ -24,6 +24,24 @@ type TotpFactor = {
     qr_code?: string
     uri?: string
     secret?: string
+  }
+}
+
+async function sendAuditEvent(
+  eventType: "mfa_setup_started" | "mfa_setup_completed",
+  metadata: Record<string, unknown>
+): Promise<void> {
+  try {
+    await fetch("/api/admin/audit/event", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        eventType,
+        metadata,
+      }),
+    })
+  } catch {
+    // Audit ist best effort und darf den MFA-Flow nicht blockieren.
   }
 }
 
@@ -177,6 +195,9 @@ export function MfaSetupClient({ nextPath }: Props) {
           if (enrollError) throw enrollError
           console.log("[MFA SETUP] enroll:success", enrollData)
           factorToSet = enrollData as TotpFactor
+          void sendAuditEvent("mfa_setup_started", {
+            factorId: factorToSet.id,
+          })
         }
 
         setFactor(factorToSet)
@@ -212,6 +233,9 @@ export function MfaSetupClient({ nextPath }: Props) {
       })
       if (verifyError) throw verifyError
       await supabase.auth.refreshSession()
+      void sendAuditEvent("mfa_setup_completed", {
+        factorId: factor.id,
+      })
       setSuccess("MFA erfolgreich eingerichtet.")
       router.replace(safeNext)
       router.refresh()

@@ -6,7 +6,8 @@ import { CardSurface } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { ArrowRight } from "lucide-react"
 import { getServiceIcon } from "@/components/icons/service-icons"
-import { mergeTypographyClasses } from "@/lib/typography"
+import { mergeTypographyClasses, type TypographySettings } from "@/lib/typography"
+import type { ElementConfig } from "@/types/cms"
 
 interface ServicesGridBlockProps {
   section?: unknown
@@ -46,7 +47,7 @@ interface ServicesGridBlockProps {
   blockId?: string
   onEditField?: (blockId: string, fieldPath: string, anchorRect?: DOMRect) => void
   // Shadow/Element Props
-  elements?: Record<string, any>
+  elements?: Record<string, unknown>
   onElementClick?: (blockId: string, elementId: string) => void
   selectedElementId?: string | null
   /** Admin Live-Preview: Klick auf Card öffnet zugehörige Inspector-Card */
@@ -94,6 +95,9 @@ export function ServicesGridBlock({
   activeItemId = null,
   onItemSelect,
 }: ServicesGridBlockProps) {
+  const elementMap = (elements ?? {}) as Record<string, ElementConfig>
+  const typographyMap = (typography as Record<string, TypographySettings | undefined> | undefined) ?? {}
+
   // Inline edit helper
   const handleInlineEdit = (e: React.MouseEvent, fieldPath: string) => {
     if (!editable || !blockId || !onEditField) return
@@ -115,14 +119,14 @@ export function ServicesGridBlock({
         {(headline || subheadline) && (
           <header className="mb-16 text-center">
             {subheadline && (
-              <ElementAnimated elementId="services.subheadline" elements={elements}>
+              <ElementAnimated elementId="services.subheadline" elements={elementMap}>
               <p
                 data-element-id="services.subheadline"
                 onClick={(e) => handleInlineEdit(e, "subheadline")}
                 className={cn(
                   mergeTypographyClasses(
                     "mb-5 text-xs font-semibold uppercase tracking-[0.2em] text-primary",
-                    (typography as Record<string, any> ?? {})["services.subheadline"]
+                    typographyMap["services.subheadline"]
                   ),
                   editable && blockId && onEditField && "cursor-pointer rounded px-1 transition-colors hover:bg-primary/10"
                 )}
@@ -133,14 +137,14 @@ export function ServicesGridBlock({
               </ElementAnimated>
             )}
             {headline && (
-              <ElementAnimated elementId="services.headline" elements={elements}>
+              <ElementAnimated elementId="services.headline" elements={elementMap}>
               <h2
                 data-element-id="services.headline"
                 onClick={(e) => handleInlineEdit(e, "headline")}
                 className={cn(
                   mergeTypographyClasses(
                     "text-balance text-3xl font-bold tracking-tight text-foreground md:text-4xl lg:text-5xl",
-                    (typography as Record<string, any> ?? {})["services.headline"]
+                    typographyMap["services.headline"]
                   ),
                   editable && blockId && onEditField && "cursor-pointer rounded px-1 transition-colors hover:bg-primary/10"
                 )}
@@ -166,7 +170,7 @@ export function ServicesGridBlock({
 
             const isPreviewActive = interactivePreview && activeItemId === card.id
             return (
-              <ElementAnimated key={card.id} elementId={elementId} elements={elements}>
+              <ElementAnimated key={card.id} elementId={elementId} elements={elementMap}>
               <CardSurface
                 data-element-id={elementId}
                 data-repeater-field="cards"
@@ -240,7 +244,7 @@ export function ServicesGridBlock({
                     className={cn(
                       mergeTypographyClasses(
                         "mb-3 text-lg font-semibold tracking-tight text-card-foreground",
-                        (typography as Record<string, any> ?? {})["services.card.title"]
+                        typographyMap["services.card.title"]
                       ),
                       editable && blockId && onEditField && "cursor-pointer rounded px-1 transition-colors hover:bg-primary/10"
                     )}

@@ -1019,7 +1019,7 @@ export function FooterEditorClient({
                                 </div>
                               </div>
 
-                              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
                                 <div className="space-y-2">
                                   <Label className="text-xs">Ausrichtung</Label>
                                   <Select
@@ -1034,7 +1034,7 @@ export function FooterEditorClient({
                                       })
                                     }
                                   >
-                                    <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+                                    <SelectTrigger className="h-8 w-full"><SelectValue /></SelectTrigger>
                                     <SelectContent>
                                       <SelectItem value="left">Links</SelectItem>
                                       <SelectItem value="center">Mitte</SelectItem>
@@ -1056,7 +1056,7 @@ export function FooterEditorClient({
                                       })
                                     }
                                   >
-                                    <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+                                    <SelectTrigger className="h-8 w-full"><SelectValue /></SelectTrigger>
                                     <SelectContent>
                                       <SelectItem value="default">Default</SelectItem>
                                       <SelectItem value="round">Round</SelectItem>
@@ -1065,6 +1065,8 @@ export function FooterEditorClient({
                                       <SelectItem value="minimal">Minimal</SelectItem>
                                       <SelectItem value="soft">Soft</SelectItem>
                                       <SelectItem value="pill">Pill</SelectItem>
+                                      <SelectItem value="socialFillRise">Fill Rise Circle</SelectItem>
+                                      <SelectItem value="socialLiquidFill">Liquid Fill</SelectItem>
                                     </SelectContent>
                                   </Select>
                                 </div>
@@ -1082,7 +1084,7 @@ export function FooterEditorClient({
                                       })
                                     }
                                   >
-                                    <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+                                    <SelectTrigger className="h-8 w-full"><SelectValue /></SelectTrigger>
                                     <SelectContent>
                                       <SelectItem value="brand">Brand</SelectItem>
                                       <SelectItem value="simple">Simple</SelectItem>
@@ -1104,7 +1106,7 @@ export function FooterEditorClient({
                                       })
                                     }
                                   >
-                                    <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+                                    <SelectTrigger className="h-8 w-full"><SelectValue /></SelectTrigger>
                                     <SelectContent>
                                       <SelectItem value="none">Kein Effekt</SelectItem>
                                       <SelectItem value="lift">Lift</SelectItem>
@@ -1128,7 +1130,7 @@ export function FooterEditorClient({
                                       })
                                     }
                                   >
-                                    <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+                                    <SelectTrigger className="h-8 w-full"><SelectValue /></SelectTrigger>
                                     <SelectContent>
                                       <SelectItem value="xs">XS</SelectItem>
                                       <SelectItem value="sm">SM</SelectItem>
@@ -1140,7 +1142,7 @@ export function FooterEditorClient({
                                 </div>
                               </div>
 
-                              <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+                              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                                 <div className="space-y-2">
                                   <Label className="text-xs">Abstand</Label>
                                   <Select
@@ -1164,8 +1166,8 @@ export function FooterEditorClient({
                                     </SelectContent>
                                   </Select>
                                 </div>
-                                <div className="grid grid-cols-1 gap-3 pt-1 sm:grid-cols-2 xl:pt-5">
-                                  <div className="flex items-start space-x-2 rounded-md border border-border/60 px-3 py-2">
+                                <div className="grid grid-cols-1 gap-3 pt-1 lg:pt-5">
+                                  <div className="flex min-w-0 items-start gap-2 rounded-md border border-border/60 px-3 py-2">
                                     <Switch
                                       id="social-new-tab"
                                       checked={footerConfig.socialLinks?.openInNewTab ?? DEFAULT_SOCIAL_LINKS_CONFIG.openInNewTab}
@@ -1179,9 +1181,9 @@ export function FooterEditorClient({
                                         })
                                       }
                                     />
-                                    <Label htmlFor="social-new-tab" className="text-sm leading-tight">In neuem Tab öffnen</Label>
+                                    <Label htmlFor="social-new-tab" className="min-w-0 wrap-break-word text-sm leading-tight">In neuem Tab öffnen</Label>
                                   </div>
-                                  <div className="flex items-start space-x-2 rounded-md border border-border/60 px-3 py-2">
+                                  <div className="flex min-w-0 items-start gap-2 rounded-md border border-border/60 px-3 py-2">
                                     <Switch
                                       id="social-show-labels"
                                       checked={footerConfig.socialLinks?.showLabels ?? DEFAULT_SOCIAL_LINKS_CONFIG.showLabels}
@@ -1195,10 +1197,373 @@ export function FooterEditorClient({
                                         })
                                       }
                                     />
-                                    <Label htmlFor="social-show-labels" className="text-sm leading-tight">Labels anzeigen</Label>
+                                    <Label htmlFor="social-show-labels" className="min-w-0 wrap-break-word text-sm leading-tight">Labels anzeigen</Label>
                                   </div>
                                 </div>
                               </div>
+
+                              {footerConfig.socialLinks?.iconStyle === "socialFillRise" && (
+                                <div className="space-y-4 rounded-md border border-border/60 p-3">
+                                  <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+                                    <div className="flex min-w-0 items-start gap-2 rounded-md border border-border/50 px-3 py-2">
+                                      <Switch
+                                        id="fill-rise-network-colors"
+                                        checked={footerConfig.socialLinks?.fillRiseUseNetworkColors ?? true}
+                                        onCheckedChange={(fillRiseUseNetworkColors) =>
+                                          updateConfig({
+                                            socialLinks: {
+                                              ...DEFAULT_SOCIAL_LINKS_CONFIG,
+                                              ...footerConfig.socialLinks,
+                                              fillRiseUseNetworkColors,
+                                            },
+                                          })
+                                        }
+                                      />
+                                      <Label htmlFor="fill-rise-network-colors" className="min-w-0 wrap-break-word text-sm leading-tight">
+                                        Netzwerkfarben verwenden
+                                      </Label>
+                                    </div>
+                                    <div className="min-w-0 space-y-1">
+                                      <Label className="block text-xs leading-snug">Fallback-Farbe</Label>
+                                      <p className="text-[11px] leading-snug text-muted-foreground">
+                                        Wird genutzt, wenn Netzwerkfarben deaktiviert sind.
+                                      </p>
+                                      <ColorField
+                                        value={footerConfig.socialLinks?.fillRiseFallbackColor ?? ""}
+                                        onChange={(v) =>
+                                          updateConfig({
+                                            socialLinks: {
+                                              ...DEFAULT_SOCIAL_LINKS_CONFIG,
+                                              ...footerConfig.socialLinks,
+                                              fillRiseFallbackColor: v.trim() || undefined,
+                                            },
+                                          })
+                                        }
+                                      />
+                                    </div>
+                                    <div className="min-w-0 space-y-1">
+                                      <Label className="block text-xs leading-snug">Basis-Hintergrund</Label>
+                                      <ColorField
+                                        value={footerConfig.socialLinks?.fillRiseBaseBg ?? ""}
+                                        onChange={(v) =>
+                                          updateConfig({
+                                            socialLinks: {
+                                              ...DEFAULT_SOCIAL_LINKS_CONFIG,
+                                              ...footerConfig.socialLinks,
+                                              fillRiseBaseBg: v.trim() || undefined,
+                                            },
+                                          })
+                                        }
+                                      />
+                                    </div>
+                                    <div className="min-w-0 space-y-1">
+                                      <Label className="block text-xs leading-snug">Aktive Icon-Farbe</Label>
+                                      <ColorField
+                                        value={footerConfig.socialLinks?.fillRiseActiveIconColor ?? ""}
+                                        onChange={(v) =>
+                                          updateConfig({
+                                            socialLinks: {
+                                              ...DEFAULT_SOCIAL_LINKS_CONFIG,
+                                              ...footerConfig.socialLinks,
+                                              fillRiseActiveIconColor: v.trim() || undefined,
+                                            },
+                                          })
+                                        }
+                                      />
+                                    </div>
+                                    <div className="min-w-0 space-y-2">
+                                      <Label className="block text-xs leading-snug">Fill-Richtung</Label>
+                                      <Select
+                                        value={footerConfig.socialLinks?.fillRiseDirection ?? "bottom"}
+                                        onValueChange={(fillRiseDirection) =>
+                                          updateConfig({
+                                            socialLinks: {
+                                              ...DEFAULT_SOCIAL_LINKS_CONFIG,
+                                              ...footerConfig.socialLinks,
+                                              fillRiseDirection: fillRiseDirection as NonNullable<FooterConfig["socialLinks"]>["fillRiseDirection"],
+                                            },
+                                          })
+                                        }
+                                      >
+                                        <SelectTrigger className="h-8 w-full"><SelectValue /></SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="bottom">Von unten</SelectItem>
+                                          <SelectItem value="top">Von oben</SelectItem>
+                                          <SelectItem value="left">Von links</SelectItem>
+                                          <SelectItem value="right">Von rechts</SelectItem>
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+                                    <div className="min-w-0 space-y-2">
+                                      <Label className="block text-xs leading-snug">Radius-Modus</Label>
+                                      <Select
+                                        value={footerConfig.socialLinks?.fillRiseRadiusMode ?? "circle"}
+                                        onValueChange={(fillRiseRadiusMode) =>
+                                          updateConfig({
+                                            socialLinks: {
+                                              ...DEFAULT_SOCIAL_LINKS_CONFIG,
+                                              ...footerConfig.socialLinks,
+                                              fillRiseRadiusMode: fillRiseRadiusMode as NonNullable<FooterConfig["socialLinks"]>["fillRiseRadiusMode"],
+                                            },
+                                          })
+                                        }
+                                      >
+                                        <SelectTrigger className="h-8 w-full"><SelectValue /></SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="circle">Circle</SelectItem>
+                                          <SelectItem value="rounded">Rounded</SelectItem>
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+                                    <div className="min-w-0 space-y-2">
+                                      <Label className="block text-xs leading-snug">Border-Breite (px)</Label>
+                                      <Input
+                                        type="number"
+                                        min={0}
+                                        max={8}
+                                        step={1}
+                                        className="h-8"
+                                        value={footerConfig.socialLinks?.fillRiseBorderWidth ?? 2}
+                                        onChange={(e) => {
+                                          const parsed = Number(e.target.value || 2)
+                                          const fillRiseBorderWidth = Math.max(0, Math.min(8, Number.isFinite(parsed) ? parsed : 2))
+                                          updateConfig({
+                                            socialLinks: {
+                                              ...DEFAULT_SOCIAL_LINKS_CONFIG,
+                                              ...footerConfig.socialLinks,
+                                              fillRiseBorderWidth,
+                                            },
+                                          })
+                                        }}
+                                      />
+                                    </div>
+                                  </div>
+                                  <div className="grid grid-cols-1 gap-3">
+                                    <div className="flex min-w-0 items-start gap-2 rounded-md border border-border/50 px-3 py-2">
+                                      <Switch
+                                        id="fill-rise-rotate"
+                                        checked={footerConfig.socialLinks?.fillRiseIconRotate ?? true}
+                                        onCheckedChange={(fillRiseIconRotate) =>
+                                          updateConfig({
+                                            socialLinks: {
+                                              ...DEFAULT_SOCIAL_LINKS_CONFIG,
+                                              ...footerConfig.socialLinks,
+                                              fillRiseIconRotate,
+                                            },
+                                          })
+                                        }
+                                      />
+                                      <Label htmlFor="fill-rise-rotate" className="min-w-0 wrap-break-word text-sm leading-tight">
+                                        Rotation aktiv
+                                      </Label>
+                                    </div>
+                                    {(footerConfig.socialLinks?.fillRiseIconRotate ?? true) && (
+                                      <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
+                                        <div className="min-w-0 space-y-2">
+                                          <Label className="block text-xs leading-snug">Rotationsachse</Label>
+                                          <Select
+                                            value={footerConfig.socialLinks?.fillRiseRotationAxis ?? "z"}
+                                            onValueChange={(fillRiseRotationAxis) =>
+                                              updateConfig({
+                                                socialLinks: {
+                                                  ...DEFAULT_SOCIAL_LINKS_CONFIG,
+                                                  ...footerConfig.socialLinks,
+                                                  fillRiseRotationAxis: fillRiseRotationAxis as NonNullable<FooterConfig["socialLinks"]>["fillRiseRotationAxis"],
+                                                },
+                                              })
+                                            }
+                                          >
+                                            <SelectTrigger className="h-8 w-full"><SelectValue /></SelectTrigger>
+                                            <SelectContent>
+                                              <SelectItem value="z">2D (Z-Achse)</SelectItem>
+                                              <SelectItem value="x">3D (X-Achse)</SelectItem>
+                                              <SelectItem value="y">3D (Y-Achse)</SelectItem>
+                                            </SelectContent>
+                                          </Select>
+                                        </div>
+                                        <div className="min-w-0 space-y-2">
+                                          <Label className="block text-xs leading-snug">Rotationsgrad</Label>
+                                          <Input
+                                            type="number"
+                                            min={0}
+                                            max={720}
+                                            step={10}
+                                            className="h-8"
+                                            value={footerConfig.socialLinks?.fillRiseRotationDegrees ?? 360}
+                                            onChange={(e) => {
+                                              const parsed = Number(e.target.value || 360)
+                                              const fillRiseRotationDegrees = Math.max(0, Math.min(720, Number.isFinite(parsed) ? parsed : 360))
+                                              updateConfig({
+                                                socialLinks: {
+                                                  ...DEFAULT_SOCIAL_LINKS_CONFIG,
+                                                  ...footerConfig.socialLinks,
+                                                  fillRiseRotationDegrees,
+                                                },
+                                              })
+                                            }}
+                                          />
+                                        </div>
+                                        <div className="min-w-0 space-y-2">
+                                          <Label className="block text-xs leading-snug">Rotationsdauer (ms)</Label>
+                                          <Input
+                                            type="number"
+                                            min={0}
+                                            max={2000}
+                                            step={25}
+                                            className="h-8"
+                                            value={footerConfig.socialLinks?.fillRiseRotationDurationMs ?? 300}
+                                            onChange={(e) => {
+                                              const parsed = Number(e.target.value || 300)
+                                              const fillRiseRotationDurationMs = Math.max(0, Math.min(2000, Number.isFinite(parsed) ? parsed : 300))
+                                              updateConfig({
+                                                socialLinks: {
+                                                  ...DEFAULT_SOCIAL_LINKS_CONFIG,
+                                                  ...footerConfig.socialLinks,
+                                                  fillRiseRotationDurationMs,
+                                                },
+                                              })
+                                            }}
+                                          />
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+
+                              {footerConfig.socialLinks?.iconStyle === "socialLiquidFill" && (
+                                <div className="space-y-4 rounded-md border border-border/60 p-3">
+                                  <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+                                    <div className="flex min-w-0 items-start gap-2 rounded-md border border-border/50 px-3 py-2">
+                                      <Switch
+                                        id="liquid-network-colors"
+                                        checked={footerConfig.socialLinks?.liquidUseNetworkColors ?? true}
+                                        onCheckedChange={(liquidUseNetworkColors) =>
+                                          updateConfig({
+                                            socialLinks: {
+                                              ...DEFAULT_SOCIAL_LINKS_CONFIG,
+                                              ...footerConfig.socialLinks,
+                                              liquidUseNetworkColors,
+                                            },
+                                          })
+                                        }
+                                      />
+                                      <Label htmlFor="liquid-network-colors" className="min-w-0 wrap-break-word text-sm leading-tight">
+                                        Netzwerkfarben verwenden
+                                      </Label>
+                                    </div>
+                                    <div className="min-w-0 space-y-1">
+                                      <Label className="block text-xs leading-snug">Fallback-Farbe</Label>
+                                      <ColorField
+                                        value={footerConfig.socialLinks?.liquidFallbackColor ?? ""}
+                                        onChange={(v) =>
+                                          updateConfig({
+                                            socialLinks: {
+                                              ...DEFAULT_SOCIAL_LINKS_CONFIG,
+                                              ...footerConfig.socialLinks,
+                                              liquidFallbackColor: v.trim() || undefined,
+                                            },
+                                          })
+                                        }
+                                      />
+                                    </div>
+                                    <div className="min-w-0 space-y-1">
+                                      <Label className="block text-xs leading-snug">Basis-Hintergrund</Label>
+                                      <ColorField
+                                        value={footerConfig.socialLinks?.liquidBaseBg ?? ""}
+                                        onChange={(v) =>
+                                          updateConfig({
+                                            socialLinks: {
+                                              ...DEFAULT_SOCIAL_LINKS_CONFIG,
+                                              ...footerConfig.socialLinks,
+                                              liquidBaseBg: v.trim() || undefined,
+                                            },
+                                          })
+                                        }
+                                      />
+                                    </div>
+                                    <div className="min-w-0 space-y-1">
+                                      <Label className="block text-xs leading-snug">Aktive Icon-Farbe</Label>
+                                      <ColorField
+                                        value={footerConfig.socialLinks?.liquidActiveIconColor ?? ""}
+                                        onChange={(v) =>
+                                          updateConfig({
+                                            socialLinks: {
+                                              ...DEFAULT_SOCIAL_LINKS_CONFIG,
+                                              ...footerConfig.socialLinks,
+                                              liquidActiveIconColor: v.trim() || undefined,
+                                            },
+                                          })
+                                        }
+                                      />
+                                    </div>
+                                    <div className="min-w-0 space-y-2">
+                                      <Label className="block text-xs leading-snug">Border-Breite (px)</Label>
+                                      <Input
+                                        type="number"
+                                        min={0}
+                                        max={8}
+                                        step={1}
+                                        className="h-8"
+                                        value={footerConfig.socialLinks?.liquidBorderWidth ?? 2}
+                                        onChange={(e) => {
+                                          const parsed = Number(e.target.value || 2)
+                                          const liquidBorderWidth = Math.max(0, Math.min(8, Number.isFinite(parsed) ? parsed : 2))
+                                          updateConfig({
+                                            socialLinks: {
+                                              ...DEFAULT_SOCIAL_LINKS_CONFIG,
+                                              ...footerConfig.socialLinks,
+                                              liquidBorderWidth,
+                                            },
+                                          })
+                                        }}
+                                      />
+                                    </div>
+                                    <div className="min-w-0 space-y-2">
+                                      <Label className="block text-xs leading-snug">Wellenintensität</Label>
+                                      <Select
+                                        value={footerConfig.socialLinks?.liquidWaveIntensity ?? "subtle"}
+                                        onValueChange={(liquidWaveIntensity) =>
+                                          updateConfig({
+                                            socialLinks: {
+                                              ...DEFAULT_SOCIAL_LINKS_CONFIG,
+                                              ...footerConfig.socialLinks,
+                                              liquidWaveIntensity: liquidWaveIntensity as NonNullable<FooterConfig["socialLinks"]>["liquidWaveIntensity"],
+                                            },
+                                          })
+                                        }
+                                      >
+                                        <SelectTrigger className="h-8 w-full"><SelectValue /></SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="subtle">Subtle</SelectItem>
+                                          <SelectItem value="medium">Medium</SelectItem>
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+                                    <div className="min-w-0 space-y-2">
+                                      <Label className="block text-xs leading-snug">Geschwindigkeit</Label>
+                                      <Select
+                                        value={footerConfig.socialLinks?.liquidSpeed ?? "normal"}
+                                        onValueChange={(liquidSpeed) =>
+                                          updateConfig({
+                                            socialLinks: {
+                                              ...DEFAULT_SOCIAL_LINKS_CONFIG,
+                                              ...footerConfig.socialLinks,
+                                              liquidSpeed: liquidSpeed as NonNullable<FooterConfig["socialLinks"]>["liquidSpeed"],
+                                            },
+                                          })
+                                        }
+                                      >
+                                        <SelectTrigger className="h-8 w-full"><SelectValue /></SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="normal">Normal</SelectItem>
+                                          <SelectItem value="slow">Langsam</SelectItem>
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
 
                               <Separator />
 
@@ -1547,7 +1912,7 @@ export function FooterEditorClient({
                           updateConfig({
                             background: {
                               ...footerConfig.background,
-                              mode: value as any,
+                              mode: value as NonNullable<NonNullable<typeof footerConfig.background>["mode"]>,
                             },
                           })
                         }}
@@ -1593,7 +1958,7 @@ export function FooterEditorClient({
                             updateConfig({
                               background: {
                                 ...footerConfig.background,
-                                gradientPreset: value as any,
+                                gradientPreset: value as NonNullable<NonNullable<typeof footerConfig.background>["gradientPreset"]>,
                               },
                             })
                           }}
@@ -1748,7 +2113,7 @@ export function FooterEditorClient({
                               updateConfig({
                                 glassmorphism: {
                                   ...footerConfig.glassmorphism,
-                                  intensity: value as any,
+                                  intensity: value as NonNullable<NonNullable<typeof footerConfig.glassmorphism>["intensity"]>,
                                 },
                               })
                             }}
@@ -2788,7 +3153,7 @@ export function FooterEditorClient({
                                 ...currentDesign,
                                 bottomBar: {
                                   ...currentDesign.bottomBar,
-                                  dividerClass: value as any,
+                                  dividerClass: value as string,
                                 },
                               },
                             })

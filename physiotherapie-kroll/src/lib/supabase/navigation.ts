@@ -6,6 +6,22 @@ import { DEFAULT_NAV_CONFIG } from "@/lib/consent/navigation-defaults"
 import { ensureDefaultPresets } from "@/lib/cms/sectionPresets"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
 
+function asErrorLike(error: unknown): {
+  message?: string
+  details?: string
+  hint?: string
+  code?: string
+} {
+  if (typeof error !== "object" || error === null) return {}
+  const e = error as Record<string, unknown>
+  return {
+    message: typeof e.message === "string" ? e.message : undefined,
+    details: typeof e.details === "string" ? e.details : undefined,
+    hint: typeof e.hint === "string" ? e.hint : undefined,
+    code: typeof e.code === "string" ? e.code : undefined,
+  }
+}
+
 /**
  * Normalizes brand key to ensure consistency with database values
  * Maps legacy values to current BrandKey format
@@ -46,11 +62,12 @@ export async function getNavigation(brand: BrandKey): Promise<NavConfig> {
       .maybeSingle()
 
     if (error) {
+      const err = asErrorLike(error)
       console.error("Error fetching navigation:", {
-        message: (error as any)?.message,
-        details: (error as any)?.details,
-        hint: (error as any)?.hint,
-        code: (error as any)?.code,
+        message: err.message,
+        details: err.details,
+        hint: err.hint,
+        code: err.code,
         requestedBrand: brand,
         normalizedBrand,
       })
@@ -99,7 +116,7 @@ export async function saveNavigation(
       .upsert(
         {
           brand,
-          config: nextConfig as any,
+          config: nextConfig as unknown,
         },
         {
           onConflict: "brand",

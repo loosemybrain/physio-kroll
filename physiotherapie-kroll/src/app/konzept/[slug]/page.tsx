@@ -177,11 +177,11 @@ export default async function KonzeptCMSPageRoute({ params }: { params: Promise<
     );
   }
 
-  const cmsBlocksRaw: CMSBlock[] = (blocks ?? []).map((b: any) => ({
+  const cmsBlocksRaw: CMSBlock[] = (blocks ?? []).map((b: Record<string, unknown>) => ({
     id: b.id,
     type: b.type,
-    props: (b.props ?? {}) as any,
-  }));
+    props: (b.props ?? {}) as unknown,
+  } as unknown as CMSBlock));
 
   const isCookieLegalPage =
     (page as { page_type?: string; page_subtype?: string }).page_type === "legal" &&

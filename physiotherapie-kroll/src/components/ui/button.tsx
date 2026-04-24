@@ -58,7 +58,7 @@ function Button({
   }) {
   const Comp = asChild ? Slot : "button"
 
-  const ariaDisabledRaw = (props as any)["aria-disabled"]
+  const ariaDisabledRaw = (props as Record<string, unknown>)["aria-disabled"]
   const isAriaDisabled =
     ariaDisabledRaw === true ||
     ariaDisabledRaw === "true" ||

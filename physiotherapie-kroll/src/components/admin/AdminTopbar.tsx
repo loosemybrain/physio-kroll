@@ -15,7 +15,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { AdminThemeToggle } from "./AdminThemeToggle"
 import { readLastPublicHome, writeLastPublicHome, type PublicHomePath } from "@/lib/publicHomePreference"
 
 type AdminTopbarProps = {

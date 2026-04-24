@@ -1,5 +1,6 @@
 import { BellRing, FileCheck2, FileText, Image, ShieldCheck, Users } from "lucide-react"
 import { CardSurface } from "@/components/ui/card"
+import styles from "./DashboardTheme.module.css"
 
 type DashboardStatsGridProps = {
   pagesTotal: number
@@ -93,45 +94,47 @@ function StatCard({
     blue: {
       surface: "py-4 hover:-translate-y-0.5 hover:border-blue-300/45 hover:shadow-md transition-all",
       icon: "border-blue-200/60 bg-blue-500/15 text-blue-700 dark:text-blue-300",
-      detail: "text-blue-700/70 dark:text-blue-300/80",
+      detail: styles.text,
     },
     green: {
       surface: "py-4 hover:-translate-y-0.5 hover:border-emerald-300/45 hover:shadow-md transition-all",
       icon: "border-emerald-200/60 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
-      detail: "text-emerald-700/70 dark:text-emerald-300/80",
+      detail: styles.text,
     },
     orange: {
       surface: "py-4 hover:-translate-y-0.5 hover:border-amber-300/45 hover:shadow-md transition-all",
-      icon: "border-amber-200/60 bg-amber-500/15 text-amber-700 dark:text-amber-300",
-      detail: "text-amber-700/70 dark:text-amber-300/80",
+      icon: styles.accentIcon,
+      detail: styles.accentText,
     },
     red: {
       surface: "py-4 hover:-translate-y-0.5 hover:border-red-300/45 hover:shadow-md transition-all",
       icon: "border-red-200/60 bg-red-500/15 text-red-700 dark:text-red-300",
-      detail: "text-red-700/70 dark:text-red-300/80",
+      detail: styles.text,
     },
   }
 
   return (
-    <CardSurface className={`gap-2 rounded-xl py-4 ${toneClasses[tone].surface}`}>
+    <CardSurface className={`${styles.panelSurface} gap-2 rounded-xl py-4 ${toneClasses[tone].surface}`}>
       <div className="flex items-start justify-between px-4">
         <div className={`inline-flex h-10 w-10 items-center justify-center rounded-lg border ${toneClasses[tone].icon}`}>
           {icon}
         </div>
-        <span className={`text-xs font-semibold ${trendToneClass(trend.tone)}`}>{trend.label}</span>
+        <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold ${trendToneClass(trend.tone)}`}>
+          {trend.label}
+        </span>
       </div>
       <div className="px-4 pb-1">
-        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
-        <p className="mt-1 text-3xl font-bold tracking-tight text-foreground">{value}</p>
-        <p className={`mt-1 text-xs ${toneClasses[tone].detail}`}>{detail}</p>
+        <p className={`text-xs font-medium uppercase tracking-wide ${styles.textSoft}`}>{label}</p>
+        <p className={`mt-1 text-3xl font-bold tracking-tight ${styles.title}`}>{value}</p>
+        <p className={`mt-1 text-xs leading-5 ${toneClasses[tone].detail}`}>{detail}</p>
       </div>
     </CardSurface>
   )
 }
 
 function trendToneClass(tone: "blue" | "green" | "orange" | "red") {
-  if (tone === "green") return "text-emerald-600"
-  if (tone === "orange") return "text-amber-600"
-  if (tone === "red") return "text-red-600"
-  return "text-blue-600"
+  if (tone === "green") return "border border-emerald-200 bg-emerald-100 text-emerald-800"
+  if (tone === "orange") return styles.accentBadge
+  if (tone === "red") return "border border-red-200 bg-red-100 text-red-800"
+  return "border border-blue-200 bg-blue-100 text-blue-800"
 }

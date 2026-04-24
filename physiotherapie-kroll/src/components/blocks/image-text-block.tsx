@@ -12,7 +12,7 @@ import { resolveButtonPresetStyles } from "@/lib/buttonPresets"
 import { Editable } from "@/components/editor/Editable"
 import { ElementAnimated } from "@/components/blocks/ElementAnimated"
 import { useMotionPreference, getAnimationInitial, getViewportTrigger } from "@/lib/motion/useMotionPreference"
-import type { ImageTextStyle } from "@/types/cms"
+import type { ImageTextStyle, ElementConfig } from "@/types/cms"
 
 interface ImageTextBlockProps {
   section?: unknown
@@ -53,7 +53,7 @@ interface ImageTextBlockProps {
   onEditField?: (blockId: string, fieldPath: string, anchorRect?: DOMRect) => void
   
   // Shadow/Element Props
-  elements?: Record<string, any>
+  elements?: Record<string, unknown>
   onElementClick?: (blockId: string, elementId: string) => void
   selectedElementId?: string | null
 
@@ -178,8 +178,12 @@ function prefersReducedMotion(): boolean {
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches
 }
 
-function getElementConfig(elementId: string, canonical: string, elements: Record<string, any> | undefined) {
-  return elements?.[canonical] ?? elements?.[elementId]
+function getElementConfig(
+  elementId: string,
+  canonical: string,
+  elements: Record<string, unknown> | undefined
+): ElementConfig | undefined {
+  return (elements?.[canonical] ?? elements?.[elementId]) as ElementConfig | undefined
 }
 
 export function ImageTextBlock(props: ImageTextBlockProps) {
@@ -214,7 +218,7 @@ export function ImageTextBlock(props: ImageTextBlockProps) {
 
   const ctaPreset = resolveButtonPresetStyles(buttonPreset, undefined, undefined)
 
-  const mergedElements = React.useMemo(() => {
+  const mergedElements: Record<string, ElementConfig | undefined> | undefined = React.useMemo(() => {
     if (!elements) return undefined
     return {
       ...elements,
@@ -224,7 +228,7 @@ export function ImageTextBlock(props: ImageTextBlockProps) {
       "imageText.headline": elements["imageText.headline"] ?? elements["headline"],
       "imageText.content": elements["imageText.content"] ?? elements["content"],
       "imageText.cta": elements["imageText.cta"] ?? elements["cta"],
-    }
+    } as Record<string, ElementConfig | undefined>
   }, [elements])
 
   // Resolve effective design from preset or overrides
@@ -330,7 +334,7 @@ export function ImageTextBlock(props: ImageTextBlockProps) {
           )}
           style={{
             ...(backgroundColor ? { backgroundColor } : {}),
-            ...(surfaceShadow as any),
+            ...(surfaceShadow as React.CSSProperties),
           }}
         >
           <motion.div

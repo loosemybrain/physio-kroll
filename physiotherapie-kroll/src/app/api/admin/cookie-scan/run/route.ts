@@ -3,6 +3,8 @@ import { requireAdminGuard } from "@/lib/auth/adminGuard"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
 import { getSupabaseAdmin } from "@/lib/supabase/admin.server"
 import { isLocalOrPrivateUrl } from "@/lib/cookie-scan/isLocalOrPrivateUrl"
+import { writeAuditEvent } from "@/lib/admin/audit"
+import { writeWorkerHeartbeat } from "@/lib/server/db/adminWrites"
 
 /**
  * POST /api/admin/cookie-scan/run
@@ -10,6 +12,7 @@ import { isLocalOrPrivateUrl } from "@/lib/cookie-scan/isLocalOrPrivateUrl"
  * Ein separater Cookie-Scan-Worker (Docker) holt den Job und führt den Scan aus.
  */
 export async function POST(request: Request) {
+  await writeWorkerHeartbeat("api-admin-cookie-scan-run", "cookie-scan-api", "running")
   try {
     const supabase = await createSupabaseServerClient()
     const guard = await requireAdminGuard(supabase)
@@ -67,6 +70,27 @@ export async function POST(request: Request) {
       )
     }
 
+    await writeAuditEvent(
+      {
+        eventType: "cookie_scan_started",
+        category: "operations",
+        severity: "info",
+        outcome: "success",
+        actorUserId: guard.user.id,
+        targetUserId: null,
+        route: "/api/admin/cookie-scan/run",
+        entityType: "cookie_scan",
+        entityId: scan.id,
+        message: "Cookie-Scan-Job wurde gestartet.",
+        metadata: {
+          targetUrl,
+          consentMode,
+          environment,
+        },
+      },
+      { adminClient: admin }
+    )
+
     return NextResponse.json({
       id: scan.id,
       status: "queued",
@@ -78,5 +102,7 @@ export async function POST(request: Request) {
       { error: "Scan-Job konnte nicht angelegt werden." },
       { status: 500 }
     )
+  } finally {
+    await writeWorkerHeartbeat("api-admin-cookie-scan-run", "cookie-scan-api", "idle")
   }
 }

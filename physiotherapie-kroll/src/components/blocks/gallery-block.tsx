@@ -15,7 +15,7 @@ import { useMotionPreference, getAnimationInitial, getViewportTrigger } from "@/
 import { scheduleWarmupImage } from "@/lib/media/preloadImage"
 import { AnimatedBlock } from "@/components/blocks/AnimatedBlock"
 import { ElementAnimated } from "@/components/blocks/ElementAnimated"
-import type { BlockSectionProps, ElementShadow } from "@/types/cms"
+import type { BlockSectionProps, ElementConfig, ElementShadow } from "@/types/cms"
 import type { GradientPresetValue } from "@/lib/theme/gradientPresets"
 
 /* ------------------------------------------------------------------ */
@@ -185,7 +185,7 @@ function Lightbox({
 
   useEffect(() => {
     if (!cur || !currentSrc) return
-    setImgDecoded(false)
+    const resetRaf = window.requestAnimationFrame(() => setImgDecoded(false))
 
     let clearNextWarmup: (() => void) | undefined
     if (images.length > 1) {
@@ -197,6 +197,7 @@ function Lightbox({
     }
 
     return () => {
+      window.cancelAnimationFrame(resetRaf)
       clearNextWarmup?.()
     }
   }, [cur, currentSrc, idx, images])
@@ -365,8 +366,8 @@ function GalleryTile({
           alt={alt}
           fill
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-          loading="lazy"
           quality={80}
+          priority={index === 0}
           className={cn(
             "h-full w-full object-cover",
             fit === "contain" && "object-contain",
@@ -683,6 +684,7 @@ export function GalleryBlock({
   const reduced = useReducedMotion()
   const { shouldDisableViewAnimations } = useMotionPreference()
   const noMotion = reduced || !enableMotion || shouldDisableViewAnimations
+  const elementMap = (elements ?? {}) as Record<string, ElementConfig>
 
   const effectiveLayout = layoutProp ?? (variant === "slider" ? "carousel" : "grid")
   const openLb = useCallback((i: number) => {
@@ -757,7 +759,7 @@ export function GalleryBlock({
               {subheadline && (
                 <div className="mb-5 flex items-center justify-center gap-4">
                   <div className="h-px w-12 bg-linear-to-r from-transparent to-primary/40" aria-hidden="true" />
-                  <ElementAnimated elementId="gallery.subheadline" elements={elements as Record<string, any>}>
+                  <ElementAnimated elementId="gallery.subheadline" elements={elementMap}>
                   <span
                     data-element-id={blockId ? "gallery.subheadline" : undefined}
                     data-cms-field={blockId ? "subheadline" : undefined}
@@ -778,7 +780,7 @@ export function GalleryBlock({
                 </div>
               )}
               {headline && (
-                <ElementAnimated elementId="gallery.headline" elements={elements as Record<string, any>}>
+                <ElementAnimated elementId="gallery.headline" elements={elementMap}>
                 <h2
                   data-element-id={blockId ? "gallery.headline" : undefined}
                   data-cms-field={blockId ? "headline" : undefined}
@@ -803,7 +805,7 @@ export function GalleryBlock({
           )}
 
           <AnimatedBlock config={section?.animation}>
-            <ElementAnimated elementId="gallery.container" elements={elements as Record<string, any>}>
+            <ElementAnimated elementId="gallery.container" elements={elementMap}>
             <div
               className={cn(
                 usesContainerPanel && "rounded-3xl p-6 md:p-10 m-4 md:m-6",

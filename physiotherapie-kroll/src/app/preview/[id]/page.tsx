@@ -1,4 +1,3 @@
-import { CMSRenderer } from "@/components/cms/BlockRenderer"
 import { PreviewBrandSetter } from "@/components/preview/PreviewBrandSetter"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
 import type { CMSBlock } from "@/types/cms"
@@ -104,8 +103,8 @@ export default async function PreviewPage({
     props: {
       ...(typeof b.props === "object" && b.props ? (b.props as Record<string, unknown>) : {}),
       __previewBrand: brand,
-    } as any,
-  }))
+    } as Record<string, unknown>,
+  } as unknown as CMSBlock))
 
   return (
     <article

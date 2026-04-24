@@ -5,18 +5,16 @@ import { useToast } from "@/hooks/use-toast"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { Separator } from "@/components/ui/separator"
 import { Textarea } from "@/components/ui/textarea"
 import { ImageField } from "./ImageField"
-import { MediaPickerDialog } from "./MediaPickerDialog"
 import { Plus, Trash2, ChevronUp, ChevronDown, ChevronRight, Save, Zap } from "lucide-react"
 import { arrayMove, arrayRemove } from "@/lib/cms/arrayOps"
 import { uuid } from "@/lib/cms/arrayOps"
 import type { BrandKey } from "@/components/brand/brandAssets"
-import type { NavConfig, NavLink, NavCta } from "@/types/navigation"
+import type { NavConfig, NavLink } from "@/types/navigation"
 import { DEFAULT_NAV_CONFIG } from "@/lib/consent/navigation-defaults"
 import type { PageForNavigation, AnchorTargetPage } from "@/lib/supabase/pages.server"
 import { getLogoSizeClasses } from "@/lib/theme/logoSize"
@@ -25,8 +23,8 @@ import { useEffect } from "react"
 import { cn } from "@/lib/utils"
 import { ensureDefaultPresets } from "@/lib/cms/sectionPresets"
 import { HEADER_PRESETS } from "@/lib/admin/header-presets"
-import { NAV_STYLE_PRESETS, getPresetById } from "@/lib/navigation/nav-style-presets"
-import { NAV_HOVER_PRESETS, getNavHoverPreset } from "@/lib/navigation/nav-hover-presets"
+import { NAV_STYLE_PRESETS, getPresetById, type NavStylePresetId } from "@/lib/navigation/nav-style-presets"
+import { NAV_HOVER_PRESETS, getNavHoverPreset, type NavHoverPresetId } from "@/lib/navigation/nav-hover-presets"
 import { HeaderClient } from "@/components/navigation/HeaderClient"
 import { blockRegistry } from "@/cms/blocks/registry"
 import {
@@ -295,19 +293,6 @@ export function NavigationEditorClient({
     return null
   }, [])
 
-  // Link management
-  const addLink = useCallback(() => {
-    if (!navConfig) return
-    const newLink: NavLink = {
-      id: uuid(),
-      label: "Neuer Link",
-      type: "page",
-      visibility: "both",
-      sort: navConfig.links.length,
-    }
-    updateConfig({ links: [...navConfig.links, newLink] })
-  }, [navConfig, updateConfig])
-
   const removeLink = useCallback(
     (index: number) => {
       if (!navConfig) return
@@ -513,7 +498,7 @@ export function NavigationEditorClient({
                 <Label className="text-xs font-medium text-muted-foreground">Vordefinierter Stil</Label>
                 <Select
                   value={navConfig.navStylePresetId ?? "minimal"}
-                  onValueChange={(value) => updateConfig({ navStylePresetId: value as any })}
+                  onValueChange={(value) => updateConfig({ navStylePresetId: value as NavStylePresetId })}
                 >
                   <SelectTrigger className="px-4 py-2.5">
                     <SelectValue />
@@ -548,7 +533,7 @@ export function NavigationEditorClient({
                 <Label className="text-xs font-medium text-muted-foreground">Effekt-Voreinstellung</Label>
                 <Select
                   value={navConfig.navHoverPresetId ?? "underline-slide"}
-                  onValueChange={(value) => updateConfig({ navHoverPresetId: value as any })}
+                  onValueChange={(value) => updateConfig({ navHoverPresetId: value as NavHoverPresetId })}
                 >
                   <SelectTrigger className="px-4 py-2.5">
                     <SelectValue />

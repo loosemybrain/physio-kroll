@@ -12,13 +12,18 @@ import { UniversalRepeaterInspector } from "../repeater/UniversalRepeaterInspect
 import { ShadowInspector } from "../../ShadowInspector"
 import type { InspectorFieldType } from "@/cms/blocks/registry"
 
+type RepeaterEditorActions = {
+  handleAddArrayItem: (blockId: string, arrayPath: string, createItem: () => unknown) => void
+  handleMoveArrayItem: (blockId: string, arrayPath: string, from: number, to: number) => void
+}
+
 export interface PageEditorInspectorSectionProps {
   selectedBlock: CMSBlock
   selectedBlockId: string | null
   expandedRepeaterCards: Record<string, string | null>
   setExpandedRepeaterCards: React.Dispatch<React.SetStateAction<Record<string, string | null>>>
   updateSelectedProps: (nextProps: CMSBlock["props"]) => void
-  editorActions: any
+  editorActions: RepeaterEditorActions
   handleRemoveArrayItem: (blockId: string, arrayPath: string, index: number) => void
   lastAddedRepeaterRef: React.MutableRefObject<{ key: string; itemId: string } | null>
   renderOneRepeaterItemFields: (
@@ -37,7 +42,7 @@ const ImageSliderInspectorSectionContent = React.memo(
     setExpandedRepeaterCards,
     updateSelectedProps,
     editorActions,
-    handleRemoveArrayItem,
+    handleRemoveArrayItem: _handleRemoveArrayItem,
     lastAddedRepeaterRef,
     renderOneRepeaterItemFields,
   }: PageEditorInspectorSectionProps) => {
@@ -122,11 +127,11 @@ const ImageSliderInspectorSectionContent = React.memo(
                 </Select>
               </div>
               <ShadowInspector
-                config={(effectiveShadowSlide as any).shadow}
+                config={(effectiveShadowSlide as Record<string, unknown>).shadow as ElementShadow | undefined}
                 onChange={(shadowConfig: ElementShadow | undefined) => {
                   if (!selectedBlock) return
                   const currentProps = selectedBlock.props as Record<string, unknown>
-                  const currentSlides = Array.isArray(currentProps.slides) ? [...(currentProps.slides as any[])] : []
+                  const currentSlides = Array.isArray(currentProps.slides) ? [...(currentProps.slides as unknown[])] : []
                   if (!currentSlides[effectiveShadowSlideIndex]) return
                   currentSlides[effectiveShadowSlideIndex] = {
                     ...currentSlides[effectiveShadowSlideIndex],

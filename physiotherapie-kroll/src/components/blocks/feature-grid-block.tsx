@@ -39,7 +39,7 @@ interface FeatureGridBlockProps {
   editable?: boolean
   blockId?: string
   onEditField?: (blockId: string, fieldPath: string, anchorRect?: DOMRect) => void
-  elements?: Record<string, any>
+  elements?: Record<string, unknown>
   onElementClick?: (blockId: string, elementId: string) => void
   selectedElementId?: string | null
 }

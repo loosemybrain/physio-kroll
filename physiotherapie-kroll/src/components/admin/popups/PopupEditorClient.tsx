@@ -22,12 +22,30 @@ import {
   POPUP_POSITIONS,
   POPUP_SIZES,
   POPUP_TRIGGER_TYPES,
+  type PopupAnimationVariant,
+  type PopupDesignVariant,
+  type PopupLayoutVariant,
+  type PopupPosition,
+  type PopupSize,
 } from "@/types/popups"
 import { listPages, type AdminPageSummary } from "@/lib/cms/supabaseStore"
 import { PopupModal } from "@/components/popups/PopupModal"
 import { POPUP_PRESET_KEYS, applyPopupPreset, type PopupPresetKey } from "@/lib/popups/presets"
 
 type Props = { popupId: string | null }
+
+function isPopupPresetKey(value: string): value is PopupPresetKey {
+  return (POPUP_PRESET_KEYS as readonly string[]).includes(value)
+}
+
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message
+  if (typeof error === "object" && error !== null && "message" in error) {
+    const message = (error as { message?: unknown }).message
+    if (typeof message === "string") return message
+  }
+  return String(error)
+}
 
 function toDatetimeLocal(iso: string | null) {
   if (!iso) return ""
@@ -113,7 +131,7 @@ export function PopupEditorClient({ popupId }: Props) {
     if (popupId) return
     if (!popup) return
     if (presetAppliedRef.current) return
-    if (!POPUP_PRESET_KEYS.includes(presetKey as any)) return
+    if (!isPopupPresetKey(presetKey)) return
     setPopup(applyPopupPreset(popup, presetKey))
     presetAppliedRef.current = true
   }, [popupId, popup, presetKey, setPopup])
@@ -196,7 +214,7 @@ export function PopupEditorClient({ popupId }: Props) {
               </Button>
             </div>
             <h1 className="mt-2 text-2xl font-bold">{title}</h1>
-            {error ? <p className="mt-1 text-sm text-destructive">Fehler: {String((error as any)?.message ?? error)}</p> : null}
+            {error ? <p className="mt-1 text-sm text-destructive">Fehler: {getErrorMessage(error)}</p> : null}
           </div>
 
           <div className="flex items-center gap-2">
@@ -579,7 +597,7 @@ export function PopupEditorClient({ popupId }: Props) {
                 <Select
                   value={popup.design.designVariant}
                   onValueChange={(v) => {
-                    const next = v as any
+                    const next = v as PopupDesignVariant
                     // Enforce sensible layout defaults per design variant
                     const currentLayout = popup.design.layoutVariant
                     const hasImage = !!popup.content.imageUrl
@@ -618,7 +636,7 @@ export function PopupEditorClient({ popupId }: Props) {
                   <Label>Größe</Label>
                   <Select
                     value={popup.design.size}
-                    onValueChange={(v) => setPopup({ ...popup, design: { ...popup.design, size: v as any } })}
+                    onValueChange={(v) => setPopup({ ...popup, design: { ...popup.design, size: v as PopupSize } })}
                   >
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Größe" />
@@ -636,7 +654,7 @@ export function PopupEditorClient({ popupId }: Props) {
                   <Label>Position</Label>
                   <Select
                     value={popup.design.position}
-                    onValueChange={(v) => setPopup({ ...popup, design: { ...popup.design, position: v as any } })}
+                    onValueChange={(v) => setPopup({ ...popup, design: { ...popup.design, position: v as PopupPosition } })}
                   >
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Position" />
@@ -657,7 +675,7 @@ export function PopupEditorClient({ popupId }: Props) {
                   <Label>Layout</Label>
                   <Select
                     value={popup.design.layoutVariant}
-                    onValueChange={(v) => setPopup({ ...popup, design: { ...popup.design, layoutVariant: v as any } })}
+                    onValueChange={(v) => setPopup({ ...popup, design: { ...popup.design, layoutVariant: v as PopupLayoutVariant } })}
                   >
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Layout" />
@@ -675,7 +693,7 @@ export function PopupEditorClient({ popupId }: Props) {
                   <Label>Animation</Label>
                   <Select
                     value={popup.design.animationVariant}
-                    onValueChange={(v) => setPopup({ ...popup, design: { ...popup.design, animationVariant: v as any } })}
+                    onValueChange={(v) => setPopup({ ...popup, design: { ...popup.design, animationVariant: v as PopupAnimationVariant } })}
                   >
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Animation" />

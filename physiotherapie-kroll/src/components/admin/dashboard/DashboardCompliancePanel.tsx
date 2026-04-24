@@ -2,6 +2,7 @@ import type { DashboardMetric } from "@/lib/admin/dashboard"
 import { AlertTriangle, CheckCircle2 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { CardSurface } from "@/components/ui/card"
+import styles from "./DashboardTheme.module.css"
 
 type DashboardCompliancePanelProps = {
   pendingReview: number
@@ -12,7 +13,9 @@ type DashboardCompliancePanelProps = {
     published: number
     missing: string[]
   }
-  auditLog: DashboardMetric<never>
+  auditLog: DashboardMetric<string>
+  auditEventsLast24h: DashboardMetric<number>
+  auditFailuresLast24h: DashboardMetric<number>
 }
 
 export function DashboardCompliancePanel({
@@ -21,12 +24,14 @@ export function DashboardCompliancePanel({
   reviewed,
   legalPages,
   auditLog,
+  auditEventsLast24h,
+  auditFailuresLast24h,
 }: DashboardCompliancePanelProps) {
   return (
-    <CardSurface className="gap-4 rounded-xl border-purple-400/25 bg-linear-to-br from-purple-500/10 via-card to-emerald-500/5 py-4">
+    <CardSurface className={`${styles.panelSurface} gap-4 rounded-xl py-4`}>
       <div className="px-6">
-        <h2 className="text-lg font-semibold text-foreground">Compliance</h2>
-        <p className="text-sm text-muted-foreground">Cookie-Freigaben plus Audit-Log-Verfuegbarkeit.</p>
+        <h2 className={`text-lg font-semibold ${styles.title}`}>Compliance</h2>
+        <p className={`text-sm ${styles.textSoft}`}>Cookie-Freigaben plus Audit-Log-Verfuegbarkeit.</p>
       </div>
 
       <div className="space-y-3 px-6 pb-6">
@@ -40,45 +45,27 @@ export function DashboardCompliancePanel({
           positive={legalPages.published >= legalPages.required}
           tone="violet"
         />
+        <MetricBadgeRow label="Audit-Events (24h)" metric={auditEventsLast24h} />
+        <MetricBadgeRow label="Audit-Failures (24h)" metric={auditFailuresLast24h} />
 
         {legalPages.missing.length > 0 && (
-          <div
-            className="rounded-xl border px-3 py-2 text-sm font-medium"
-            style={{
-              borderColor: "rgba(217, 119, 6, 0.65)",
-              backgroundColor: "#fffbeb",
-              color: "#7c2d12",
-            }}
-          >
+          <div className={`${styles.warningPanel} rounded-xl border px-3 py-2 text-sm font-medium`}>
             Fehlende Legal-Seiten: {legalPages.missing.join(", ")}
           </div>
         )}
 
         {auditLog.status === "unavailable" ? (
-          <div
-            className="flex items-start gap-2 rounded-xl border px-3 py-2"
-            style={{
-              borderColor: "rgba(217, 119, 6, 0.65)",
-              backgroundColor: "#fffbeb",
-              color: "#7c2d12",
-            }}
-          >
+          <div className={`${styles.warningPanel} flex items-start gap-2 rounded-xl border px-3 py-2`}>
             <AlertTriangle
               className="mt-0.5 h-4 w-4 shrink-0"
-              style={{ color: "#b45309" }}
+              style={{ color: "#9a3412" }}
             />
-            <div className="text-sm">
-              <p
-                className="font-semibold tracking-tight"
-                style={{ color: "#7c2d12" }}
-              >
-                Audit-Log derzeit nicht angebunden
+            <div className={`text-sm ${styles.text}`}>
+              <p className={`font-semibold tracking-tight ${styles.title}`}>
+                Audit-Log derzeit nicht angebunden (Governance-Luecke)
               </p>
-              <p
-                className="mt-0.5 font-medium"
-                style={{ color: "#92400e" }}
-              >
-                {auditLog.reason}
+              <p className={`mt-0.5 font-medium ${styles.accentText}`}>
+                Nachvollziehbarkeit administrativer Aktionen ist dadurch eingeschraenkt. {auditLog.reason}
               </p>
             </div>
           </div>
@@ -88,8 +75,22 @@ export function DashboardCompliancePanel({
             Audit-Log verfuegbar
           </Badge>
         )}
+        {auditLog.status === "available" ? (
+          <p className={`text-xs ${styles.text}`}>{auditLog.value}</p>
+        ) : null}
       </div>
     </CardSurface>
+  )
+}
+
+function MetricBadgeRow({ label, metric }: { label: string; metric: DashboardMetric<number> }) {
+  return (
+    <div className={`${styles.mutedPanel} flex items-center justify-between rounded-xl border px-3 py-2.5`}>
+      <span className={`text-sm ${styles.title}`}>{label}</span>
+      <Badge variant={metric.status === "available" ? "secondary" : "outline"}>
+        {metric.status === "available" ? metric.value : "unavailable"}
+      </Badge>
+    </div>
   )
 }
 
@@ -125,12 +126,12 @@ function Row({
       className={`flex items-center justify-between rounded-xl border px-3 py-2.5 ${toneClasses[tone]}`}
       style={{ borderColor: toneBorderColors[tone] }}
     >
-      <span className="text-sm text-foreground">{label}</span>
+      <span className={`text-sm ${styles.title}`}>{label}</span>
       <div className="text-right">
         <span className={positive ? "text-sm font-semibold text-emerald-600" : "text-sm font-semibold text-foreground"}>
           {value}
         </span>
-        {detail ? <p className="text-[11px] text-muted-foreground">{detail}</p> : null}
+        {detail ? <p className={`text-[11px] ${styles.textSoft}`}>{detail}</p> : null}
       </div>
     </div>
   )

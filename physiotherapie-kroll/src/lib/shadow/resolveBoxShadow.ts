@@ -15,8 +15,8 @@ export function resolveBoxShadow(shadowConfig?: ElementShadow): string | undefin
   if (shadowConfig.preset && shadowConfig.preset !== "custom") {
     if (shadowConfig.preset === "glow") {
       // Parse color (hex or rgb/rgba), default if not provided
-      let color = shadowConfig.color ?? "#3b82f6"
-      let opacity = shadowConfig.opacity ?? 0.5
+      const color = shadowConfig.color ?? "#3b82f6"
+      const opacity = shadowConfig.opacity ?? 0.5
       let rgbaColor = ""
 
       // Helper function to convert hex to {r,g,b}

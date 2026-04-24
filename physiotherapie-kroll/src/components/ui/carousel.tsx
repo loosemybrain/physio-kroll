@@ -136,9 +136,7 @@ export function Carousel({
       mql.addEventListener('change', update)
       return () => mql.removeEventListener('change', update)
     }
-    // eslint-disable-next-line deprecation/deprecation
     mql.addListener(update)
-    // eslint-disable-next-line deprecation/deprecation
     return () => mql.removeListener(update)
   }, [])
 

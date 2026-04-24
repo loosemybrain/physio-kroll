@@ -13,6 +13,7 @@ import {
   type ManageableRole,
 } from "@/lib/server/adminUsers"
 import { parseAalFromAssuranceData } from "@/lib/auth/mfaAal"
+import { writeAuditEvent } from "@/lib/admin/audit"
 
 type Params = { params: Promise<{ userId: string }> }
 
@@ -106,6 +107,26 @@ export async function PUT(request: Request, ctx: Params) {
     await setUserRolesAtomic(adminClient, userId, requestedRoles, actor.id)
 
     const roles = await loadUserRoles(adminClient, userId)
+    await writeAuditEvent(
+      {
+        eventType: "user_role_changed",
+        category: "user",
+        severity: "high",
+        outcome: "success",
+        actorUserId: actor.id,
+        targetUserId: userId,
+        route: `/api/admin/users/${userId}/roles`,
+        entityType: "user_role",
+        entityId: userId,
+        message: "Rollen eines Benutzers wurden angepasst.",
+        metadata: {
+          previousRoles: targetRoles,
+          nextRoles: roles,
+        },
+      },
+      { adminClient }
+    )
+
     return NextResponse.json({ userId, roles }, { status: 200 })
   } catch (error) {
     if ((error as { code?: string })?.code === "USER_NOT_FOUND") {

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef, useMemo } from "react"
+import { useState, useEffect, useRef } from "react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { HeroDecoration } from "@/components/decorations/HeroDecoration"
@@ -13,7 +13,7 @@ import { usePathname } from "next/navigation"
 import { AnimatedBlock } from "@/components/blocks/AnimatedBlock"
 import { ElementAnimated } from "@/components/blocks/ElementAnimated"
 
-import type { HeroBlock, MediaValue, CommonBlockProps } from "@/types/cms"
+import type { HeroBlock, MediaValue, CommonBlockProps, ElementConfig } from "@/types/cms"
 import type { BrandKey } from "@/components/brand/brandAssets"
 import { useElementShadowStyle } from "@/lib/shadow"
 import { resolveDynamicElementId } from "@/lib/editableElements"
@@ -143,59 +143,63 @@ export function HeroSection({
   const [ctaHovered, setCtaHovered] = useState(false)
   const [playHovered, setPlayHovered] = useState(false)
   const [actionHoveredStates, setActionHoveredStates] = useState<Record<string, boolean>>({})
+  const [shouldAnimateIn, setShouldAnimateIn] = useState(false)
   const pathname = usePathname()
+  const elementMap = (elements ?? {}) as Record<string, ElementConfig>
 
   const animationKey = `${pathname || "unknown"}::${blockId || "no-block"}`
-
-  // Decide once per mount; never flip during this mount (prevents abrupt stop). State set in effect to avoid reading ref during render.
-  const [shouldAnimateIn, setShouldAnimateIn] = useState(false)
   useEffect(() => {
     const first = !heroAnimatedOnce.has(animationKey)
-    if (first) heroAnimatedOnce.add(animationKey)
-    setShouldAnimateIn(first)
+    if (first) {
+      heroAnimatedOnce.add(animationKey)
+    }
+    const raf = window.requestAnimationFrame(() => {
+      setShouldAnimateIn(first)
+    })
+    return () => window.cancelAnimationFrame(raf)
   }, [animationKey])
 
   // Element shadows
   const heroHeadlineShadow = useElementShadowStyle({
     elementId: "headline",
-    elementConfig: (elements ?? {})["headline"],
+    elementConfig: elementMap["headline"],
   })
   const heroSubheadlineShadow = useElementShadowStyle({
     elementId: "subheadline",
-    elementConfig: (elements ?? {})["subheadline"],
+    elementConfig: elementMap["subheadline"],
   })
   const heroBadgeShadow = useElementShadowStyle({
     elementId: "badge",
-    elementConfig: (elements ?? {})["badge"],
+    elementConfig: elementMap["badge"],
   })
   const heroPrimaryCtaShadow = useElementShadowStyle({
     elementId: "cta",
-    elementConfig: (elements ?? {})["cta"],
+    elementConfig: elementMap["cta"],
   })
   const heroSecondaryCtaShadow = useElementShadowStyle({
     elementId: "secondaryCtaText",
-    elementConfig: (elements ?? {})["secondaryCtaText"],
+    elementConfig: elementMap["secondaryCtaText"],
   })
   const heroMediaShadow = useElementShadowStyle({
     elementId: "media",
-    elementConfig: (elements ?? {})["media"],
+    elementConfig: elementMap["media"],
   })
   const heroTrustShadow = useElementShadowStyle({
     elementId: "trust",
-    elementConfig: (elements ?? {})["trust"],
+    elementConfig: elementMap["trust"],
   })
   // Floating element shadows
   const heroFloatingTitleShadow = useElementShadowStyle({
     elementId: "floatingTitle",
-    elementConfig: (elements ?? {})["floatingTitle"],
+    elementConfig: elementMap["floatingTitle"],
   })
   const heroFloatingValueShadow = useElementShadowStyle({
     elementId: "floatingValue",
-    elementConfig: (elements ?? {})["floatingValue"],
+    elementConfig: elementMap["floatingValue"],
   })
   const heroFloatingLabelShadow = useElementShadowStyle({
     elementId: "floatingLabel",
-    elementConfig: (elements ?? {})["floatingLabel"],
+    elementConfig: elementMap["floatingLabel"],
   })
 
   const showBrandToggleNav = false // Toggle moved to HomePageClient/BrandToggle component
@@ -204,7 +208,7 @@ export function HeroSection({
   // 1) __previewBrand (iframe preview must be authoritative)
   // 2) heroProps.mood
   // 3) pathname fallback (public routes)
-  const previewBrandRaw = (heroProps as any)?.__previewBrand
+  const previewBrandRaw = (heroProps as Record<string, unknown>)?.__previewBrand
   const previewBrand: BrandKey | null =
     previewBrandRaw === "physio-konzept" || previewBrandRaw === "physiotherapy" ? previewBrandRaw : null
 
@@ -261,8 +265,8 @@ export function HeroSection({
   const resolvedImageUrl = resolveMediaUrl(activeBrandContent.image) ?? props.mediaUrl ?? mediaUrl ?? "/placeholder.svg"
   const resolvedImageAlt = activeBrandContent.imageAlt ?? props.imageAlt ?? ""
   const resolvedImageVariant = activeBrandContent.imageVariant ?? "landscape"
-  const resolvedImageFit: "cover" | "contain" =
-    activeBrandContent.imageFit ?? (props as any)?.imageFit ?? "cover"
+  const imageFitRaw = activeBrandContent.imageFit ?? (props as Record<string, unknown>)?.imageFit
+  const resolvedImageFit: "cover" | "contain" = imageFitRaw === "contain" ? "contain" : "cover"
   const resolvedImageFocus = activeBrandContent.imageFocus ?? "center"
   const resolvedContainBackground = activeBrandContent.containBackground ?? "blur"
 
@@ -278,15 +282,27 @@ export function HeroSection({
   const resolvedCtaBorderColor = opt(activeBrandContent.ctaBorderColor)
   const resolvedBadgeColor = opt(activeBrandContent.badgeColor)
   const resolvedBadgeBgColor = opt(activeBrandContent.badgeBgColor)
-  const resolvedBadgeBorderColor = opt((activeBrandContent as any).badgeBorderColor)
-  const resolvedBadgeRadiusPreset = opt((activeBrandContent as any).badgeRadiusPreset) as
+  const resolvedBadgeBorderColor = opt(
+    typeof (activeBrandContent as Record<string, unknown>).badgeBorderColor === "string"
+      ? (activeBrandContent as Record<string, unknown>).badgeBorderColor as string
+      : undefined
+  )
+  const resolvedBadgeRadiusPreset = opt(
+    typeof (activeBrandContent as Record<string, unknown>).badgeRadiusPreset === "string"
+      ? (activeBrandContent as Record<string, unknown>).badgeRadiusPreset as string
+      : undefined
+  ) as
     | "pill"
     | "lg"
     | "md"
     | "sm"
     | "none"
     | undefined
-  const resolvedBadgeBorderRadius = opt((activeBrandContent as any).badgeBorderRadius)
+  const resolvedBadgeBorderRadius = opt(
+    typeof (activeBrandContent as Record<string, unknown>).badgeBorderRadius === "string"
+      ? (activeBrandContent as Record<string, unknown>).badgeBorderRadius as string
+      : undefined
+  )
 
   const badgeRadiusFromPreset = (() => {
     switch (resolvedBadgeRadiusPreset) {
@@ -382,7 +398,7 @@ export function HeroSection({
           )}
         >
           {/* Badge */}
-          <ElementAnimated elementId="badge" elements={elements}>
+          <ElementAnimated elementId="badge" elements={elementMap}>
             <Editable
               blockId={blockId || ""}
               elementId="badge"
@@ -457,7 +473,7 @@ export function HeroSection({
           </ElementAnimated>
 
           {/* Headline */}
-          <ElementAnimated elementId="headline" elements={elements}>
+          <ElementAnimated elementId="headline" elements={elementMap}>
             <Editable
               blockId={blockId || ""}
               elementId="headline"
@@ -485,7 +501,7 @@ export function HeroSection({
           </ElementAnimated>
 
           {/* Subheadline */}
-          <ElementAnimated elementId="subheadline" elements={elements}>
+          <ElementAnimated elementId="subheadline" elements={elementMap}>
             <Editable
               blockId={blockId || ""}
               elementId="subheadline"
@@ -635,7 +651,7 @@ export function HeroSection({
 
           {/* Trust indicators for calm mood */}
           {isCalm && resolvedTrustItems.length > 0 && (
-            <ElementAnimated elementId="trust" elements={elements}>
+            <ElementAnimated elementId="trust" elements={elementMap}>
               <div
                 className={cn("hero-trust mt-6 flex flex-wrap items-center gap-6 text-sm text-muted-foreground", shouldAnimateIn && "animate-fade-in-up animate-delay-500")}
                 data-element-id="trust"
@@ -647,7 +663,7 @@ export function HeroSection({
                     key={item}
                     item={item}
                     index={index}
-                    elements={elements}
+                    elements={elementMap}
                     blockId={blockId}
                     onElementClick={onElementClick}
                     resolvedTrustItemsColor={resolvedTrustItemsColor}
@@ -668,7 +684,7 @@ export function HeroSection({
             )}
           >
             {mediaType === "video" && mediaUrl ? (
-              <ElementAnimated elementId="media" elements={elements}>
+              <ElementAnimated elementId="media" elements={elementMap}>
               <div
                 className={cn(
                   "relative w-full shadow-2xl",
@@ -780,7 +796,7 @@ export function HeroSection({
               </div>
               </ElementAnimated>
             ) : (
-              <ElementAnimated elementId="media" elements={elements}>
+              <ElementAnimated elementId="media" elements={elementMap}>
               <div
                 className={cn(
                   "relative w-full shadow-nonel overflow-x-hidden",
@@ -967,7 +983,7 @@ interface HeroTrustItemProps {
   index: number
   questionColor?: string
   answerColor?: string
-  elements?: Record<string, any>
+  elements?: Record<string, unknown>
   blockId?: string
   onElementClick?: (blockId: string, elementId: string) => void
   resolvedTrustItemsColor?: string
@@ -986,9 +1002,10 @@ function HeroTrustItem({
 }: HeroTrustItemProps) {
   // Hook call is safe here (not in map)
   const trustItemId = `trustItems.${index}`
+  const trustElementMap = (elements ?? {}) as Record<string, ElementConfig>
   const trustItemShadow = useElementShadowStyle({
     elementId: trustItemId,
-    elementConfig: (elements ?? {})[trustItemId],
+    elementConfig: trustElementMap[trustItemId],
   })
 
   return (

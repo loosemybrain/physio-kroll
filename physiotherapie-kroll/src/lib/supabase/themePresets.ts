@@ -106,10 +106,11 @@ export async function getBrandSettings(brand: BrandKey): Promise<BrandSettings |
 
   if (error) throw new Error(error.message)
   if (!data) return null
+  const row: Record<string, unknown> = isRecord(data) ? data : {}
 
   return {
     brand: normalizedBrand,
-    active_theme_preset_id: (data as any).active_theme_preset_id ?? null,
+    active_theme_preset_id: typeof row.active_theme_preset_id === "string" ? row.active_theme_preset_id : null,
   }
 }
 
@@ -132,10 +133,11 @@ export async function getBrandSettingsAuthed(brand: BrandKey): Promise<BrandSett
 
   if (error) throw new Error(error.message)
   if (!data) return null
+  const row: Record<string, unknown> = isRecord(data) ? data : {}
 
   return {
     brand: normalizedBrand,
-    active_theme_preset_id: (data as any).active_theme_preset_id ?? null,
+    active_theme_preset_id: typeof row.active_theme_preset_id === "string" ? row.active_theme_preset_id : null,
   }
 }
 
@@ -163,7 +165,8 @@ export async function setActiveThemePreset(brand: BrandKey, presetId: string | n
     .maybeSingle()
 
   if (error) throw new Error(error.message)
-  return (data as any)?.active_theme_preset_id ?? null
+  if (!isRecord(data)) return null
+  return typeof data.active_theme_preset_id === "string" ? data.active_theme_preset_id : null
 }
 
 /**
@@ -183,7 +186,8 @@ export async function getActiveThemePresetForBrand(brand: BrandKey): Promise<Act
   if (bsErr) throw new Error(bsErr.message)
   if (!bs) return null
 
-  const presetId = (bs as any).active_theme_preset_id ?? null
+  const bsRow: Record<string, unknown> = isRecord(bs) ? bs : {}
+  const presetId = typeof bsRow.active_theme_preset_id === "string" ? bsRow.active_theme_preset_id : null
   if (!presetId) return { presetId: null, presetName: null, tokens: {} }
 
   const { data: tp, error: tpErr } = await supabase
@@ -194,10 +198,11 @@ export async function getActiveThemePresetForBrand(brand: BrandKey): Promise<Act
 
   if (tpErr) throw new Error(tpErr.message)
 
+  const tpRow = isRecord(tp) ? tp : null
   return {
     presetId,
-    presetName: tp?.name ? String((tp as any).name) : null,
-    tokens: (tp as any)?.tokens ?? {},
+    presetName: tpRow && typeof tpRow.name === "string" ? tpRow.name : null,
+    tokens: tpRow?.tokens ?? {},
   }
 }
 
@@ -221,10 +226,10 @@ export async function getActiveThemePresetsForBrands(brands: BrandKey[]): Promis
   const presetIds = new Set<string>()
   const brandToPresetId: Partial<Record<BrandKey, string | null>> = {}
 
-  for (const row of (bsRows ?? []) as any[]) {
+  for (const row of (bsRows ?? []).filter(isRecord)) {
     const b = row.brand as BrandKey
     if (b !== "physiotherapy" && b !== "physio-konzept") continue
-    const presetId = row.active_theme_preset_id ?? null
+    const presetId = typeof row.active_theme_preset_id === "string" ? row.active_theme_preset_id : null
     brandToPresetId[b] = presetId
     if (typeof presetId === "string" && presetId) presetIds.add(presetId)
   }
@@ -240,8 +245,8 @@ export async function getActiveThemePresetsForBrands(brands: BrandKey[]): Promis
     if (tpErr) throw new Error(tpErr.message)
 
     presetsById = new Map(
-      (tpRows ?? []).map((r: any) => [
-        String(r.id),
+      (tpRows ?? []).filter(isRecord).map((r) => [
+        String(r.id ?? ""),
         { name: typeof r.name === "string" ? r.name : null, tokens: r.tokens ?? {} },
       ])
     )

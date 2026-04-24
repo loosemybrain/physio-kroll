@@ -909,3 +909,103 @@ html.cursor-down .cursor-dot {
   --font-sans: var(--font-quicksand), system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
 }
 
+@keyframes fill-rise-liquid-wave {
+  0% {
+    transform: translateY(-30%) scaleX(1);
+    border-radius: 46% 54% 60% 40% / 48% 52% 44% 56%;
+  }
+  50% {
+    transform: translateY(-8%) scaleX(1.06);
+    border-radius: 54% 46% 42% 58% / 62% 38% 58% 42%;
+  }
+  100% {
+    transform: translateY(-30%) scaleX(1);
+    border-radius: 46% 54% 60% 40% / 48% 52% 44% 56%;
+  }
+}
+
+.fill-rise-liquid {
+  will-change: transform;
+}
+
+.fill-rise-liquid-wave {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0.08) 100%);
+  animation-name: fill-rise-liquid-wave;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  will-change: transform, border-radius;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fill-rise-liquid-wave {
+    animation: none;
+  }
+}
+
+@keyframes footer-social-liquid-cap-a {
+  0% { transform: translateX(-8%) translateY(0); }
+  50% { transform: translateX(8%) translateY(-6%); }
+  100% { transform: translateX(-8%) translateY(0); }
+}
+
+@keyframes footer-social-liquid-cap-b {
+  0% { transform: translateX(6%) translateY(0); }
+  50% { transform: translateX(-6%) translateY(6%); }
+  100% { transform: translateX(6%) translateY(0); }
+}
+
+.footer-social-liquid-layer {
+  overflow: hidden;
+}
+
+.footer-social-liquid-fill {
+  will-change: transform;
+}
+
+.footer-social-liquid-body {
+  background-color: currentColor;
+  opacity: 0.94;
+}
+
+.footer-social-liquid-cap {
+  position: absolute;
+  left: -34%;
+  width: 168%;
+  height: 28%;
+  top: -9%;
+  color: currentColor;
+  will-change: transform;
+}
+
+.footer-social-liquid-cap-a {
+  opacity: 0.92;
+  animation-name: footer-social-liquid-cap-a;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+
+.footer-social-liquid-cap-b {
+  top: -6%;
+  opacity: 0.38;
+  animation-name: footer-social-liquid-cap-b;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+
+.footer-social-liquid-wave-subtle {
+  animation-duration: 1600ms;
+}
+
+.footer-social-liquid-wave-medium {
+  animation-duration: 1200ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .footer-social-liquid-layer {
+    transition-duration: 140ms !important;
+  }
+  .footer-social-liquid-cap {
+    animation: none;
+  }
+}
+

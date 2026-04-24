@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Card, CardContent, CardDescription, CardHeader, CardSurface, CardTitle } from "@/components/ui/card"
+import { CardContent, CardDescription, CardHeader, CardSurface, CardTitle } from "@/components/ui/card"
 import { createSupabaseBrowserClient } from "@/lib/supabase/client"
 import { normalizeInternalRedirectTarget, toLoginRedirect } from "@/lib/auth/redirects"
 import { mapMfaVerifyError } from "@/lib/auth/mfaClientErrors"
@@ -22,6 +22,24 @@ type TotpFactor = {
   status?: string
   factor_type?: string
   factorType?: string
+}
+
+async function sendAuditEvent(
+  eventType: "mfa_verify_succeeded" | "mfa_verify_failed",
+  metadata: Record<string, unknown>
+): Promise<void> {
+  try {
+    await fetch("/api/admin/audit/event", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        eventType,
+        metadata,
+      }),
+    })
+  } catch {
+    // Audit ist best effort und darf den MFA-Flow nicht blockieren.
+  }
 }
 
 function getVerifiedTotpFactor(list: TotpFactor[] | undefined): TotpFactor | null {
@@ -90,6 +108,9 @@ export function MfaVerifyClient({ nextPath }: Props) {
       })
       const supabase = createSupabaseBrowserClient()
       await verifyTotpCodeAndRefreshToAal2(supabase, factorId, code.trim())
+      void sendAuditEvent("mfa_verify_succeeded", {
+        factorId,
+      })
       console.log("[MFA VERIFY] challengeAndVerify:success")
       await new Promise((resolve) => setTimeout(resolve, 150))
       console.log("[MFA VERIFY] redirect:next", {
@@ -98,6 +119,10 @@ export function MfaVerifyClient({ nextPath }: Props) {
       window.location.href = safeNext
     } catch (e) {
       console.error("[MFA VERIFY] error", e)
+      void sendAuditEvent("mfa_verify_failed", {
+        factorId,
+        errorCode: e instanceof Error ? "verify_error" : "unknown_error",
+      })
       setError(mapMfaVerifyError(e))
     } finally {
       setSubmitting(false)

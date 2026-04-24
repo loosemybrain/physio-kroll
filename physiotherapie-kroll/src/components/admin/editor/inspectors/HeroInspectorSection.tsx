@@ -118,8 +118,15 @@ const HeroInspectorSectionContent = React.memo(
     }
 
     const trustItems = normalizeStringArray(props.trustItems ?? [])
-    const mood = (props as any)?.mood ?? "physiotherapy"
+    const mood = (props as Record<string, unknown>)?.mood ?? "physiotherapy"
     const actions = props.actions ?? (props.brandContent?.[mood as keyof typeof props.brandContent]?.actions) ?? []
+    const registerFieldRef = React.useCallback(
+      (key: string, el: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null) => {
+        // eslint-disable-next-line react-hooks/immutability -- imperative ref registry for inspector focus
+        fieldRefs.current[key] = el
+      },
+      [fieldRefs]
+    )
 
     return (
       <div className="space-y-4">
@@ -171,9 +178,7 @@ const HeroInspectorSectionContent = React.memo(
                   <Label className="text-xs font-semibold">Überschrift</Label>
                   <Input
                     id={`${selectedBlock.id}.headline`}
-                    ref={(el) => {
-                      fieldRefs.current[`${selectedBlock.id}.headline`] = el
-                    }}
+                    ref={(el) => registerFieldRef(`${selectedBlock.id}.headline`, el)}
                     value={String(brandContent.headline ?? "")}
                     onChange={(e) => handleBrandFieldChange("headline", e.target.value)}
                     placeholder="Ihre Gesundheit in besten Händen"
@@ -184,9 +189,7 @@ const HeroInspectorSectionContent = React.memo(
                   <Label className="text-xs font-semibold">Unterüberschrift</Label>
                   <Textarea
                     id={`${selectedBlock.id}.subheadline`}
-                    ref={(el) => {
-                      fieldRefs.current[`${selectedBlock.id}.subheadline`] = el
-                    }}
+                    ref={(el) => registerFieldRef(`${selectedBlock.id}.subheadline`, el)}
                     value={String(brandContent.subheadline ?? "")}
                     onChange={(e) => handleBrandFieldChange("subheadline", e.target.value)}
                     placeholder="Professionelle Physiotherapie mit ganzheitlichem Ansatz. Wir begleiten Sie auf dem Weg zu mehr Wohlbefinden und Lebensqualität."
@@ -198,9 +201,7 @@ const HeroInspectorSectionContent = React.memo(
                   <Label className="text-xs">CTA Text</Label>
                   <Input
                     id={`${selectedBlock.id}.ctaText`}
-                    ref={(el) => {
-                      fieldRefs.current[`${selectedBlock.id}.ctaText`] = el
-                    }}
+                    ref={(el) => registerFieldRef(`${selectedBlock.id}.ctaText`, el)}
                     value={String(brandContent.ctaText || "")}
                     onChange={(e) => handleBrandFieldChange("ctaText", e.target.value)}
                     placeholder="CTA Text"
@@ -211,9 +212,7 @@ const HeroInspectorSectionContent = React.memo(
                   <Label className="text-xs">CTA Link</Label>
                   <Input
                     id={`${selectedBlock.id}.ctaHref`}
-                    ref={(el) => {
-                      fieldRefs.current[`${selectedBlock.id}.ctaHref`] = el
-                    }}
+                    ref={(el) => registerFieldRef(`${selectedBlock.id}.ctaHref`, el)}
                     value={String(brandContent.ctaHref || "")}
                     onChange={(e) => handleBrandFieldChange("ctaHref", e.target.value)}
                     placeholder="/kontakt"
@@ -229,9 +228,7 @@ const HeroInspectorSectionContent = React.memo(
                         value={String(props.heroBgColor || "")}
                         onChange={(v) => handleHeroRootFieldChange("heroBgColor", v)}
                         placeholder="#rrggbb"
-                        inputRef={(el) => {
-                          fieldRefs.current[`${selectedBlock.id}.heroBgColor`] = el
-                        }}
+                        inputRef={(el) => registerFieldRef(`${selectedBlock.id}.heroBgColor`, el)}
                       />
                     </div>
                     <div className="space-y-1.5">
@@ -240,9 +237,7 @@ const HeroInspectorSectionContent = React.memo(
                         value={String((brandContent as Record<string, unknown>).headlineColor || "")}
                         onChange={(v) => handleBrandFieldChange("headlineColor", v)}
                         placeholder="#rrggbb"
-                        inputRef={(el) => {
-                          fieldRefs.current[`${selectedBlock.id}.headlineColor`] = el
-                        }}
+                        inputRef={(el) => registerFieldRef(`${selectedBlock.id}.headlineColor`, el)}
                       />
                     </div>
                     <div className="space-y-1.5">
@@ -251,9 +246,7 @@ const HeroInspectorSectionContent = React.memo(
                         value={String((brandContent as Record<string, unknown>).subheadlineColor || "")}
                         onChange={(v) => handleBrandFieldChange("subheadlineColor", v)}
                         placeholder="#rrggbb"
-                        inputRef={(el) => {
-                          fieldRefs.current[`${selectedBlock.id}.subheadlineColor`] = el
-                        }}
+                        inputRef={(el) => registerFieldRef(`${selectedBlock.id}.subheadlineColor`, el)}
                       />
                     </div>
                   </div>
@@ -282,9 +275,7 @@ const HeroInspectorSectionContent = React.memo(
                   <Label className="text-xs font-semibold">Überschrift</Label>
                   <Input
                     id={`${selectedBlock.id}.headline-pk`}
-                    ref={(el) => {
-                      fieldRefs.current[`${selectedBlock.id}.headline-pk`] = el
-                    }}
+                    ref={(el) => registerFieldRef(`${selectedBlock.id}.headline-pk`, el)}
                     value={String(brandContent.headline ?? "")}
                     onChange={(e) => handleBrandFieldChange("headline", e.target.value)}
                     placeholder="Ihre Gesundheit in besten Händen"
@@ -295,9 +286,7 @@ const HeroInspectorSectionContent = React.memo(
                   <Label className="text-xs font-semibold">Unterüberschrift</Label>
                   <Textarea
                     id={`${selectedBlock.id}.subheadline-pk`}
-                    ref={(el) => {
-                      fieldRefs.current[`${selectedBlock.id}.subheadline-pk`] = el
-                    }}
+                    ref={(el) => registerFieldRef(`${selectedBlock.id}.subheadline-pk`, el)}
                     value={String(brandContent.subheadline ?? "")}
                     onChange={(e) => handleBrandFieldChange("subheadline", e.target.value)}
                     placeholder="Professionelle Physiotherapie mit ganzheitlichem Ansatz. Wir begleiten Sie auf dem Weg zu mehr Wohlbefinden und Lebensqualität."
@@ -309,9 +298,7 @@ const HeroInspectorSectionContent = React.memo(
                   <Label className="text-xs">CTA Text</Label>
                   <Input
                     id={`${selectedBlock.id}.ctaText-pk`}
-                    ref={(el) => {
-                      fieldRefs.current[`${selectedBlock.id}.ctaText-pk`] = el
-                    }}
+                    ref={(el) => registerFieldRef(`${selectedBlock.id}.ctaText-pk`, el)}
                     value={String(brandContent.ctaText || "")}
                     onChange={(e) => handleBrandFieldChange("ctaText", e.target.value)}
                     placeholder="CTA Text"
@@ -322,9 +309,7 @@ const HeroInspectorSectionContent = React.memo(
                   <Label className="text-xs">CTA Link</Label>
                   <Input
                     id={`${selectedBlock.id}.ctaHref-pk`}
-                    ref={(el) => {
-                      fieldRefs.current[`${selectedBlock.id}.ctaHref-pk`] = el
-                    }}
+                    ref={(el) => registerFieldRef(`${selectedBlock.id}.ctaHref-pk`, el)}
                     value={String(brandContent.ctaHref || "")}
                     onChange={(e) => handleBrandFieldChange("ctaHref", e.target.value)}
                     placeholder="/kontakt"
@@ -388,18 +373,18 @@ const HeroInspectorSectionContent = React.memo(
           <div className="space-y-2 rounded-md border border-border bg-muted/20 p-3">
             <Label className="text-xs font-semibold">CTA Actions</Label>
             <div className="flex flex-wrap gap-2">
-              {actions.map((action: any, index: number) => {
+              {actions.map((action: Record<string, unknown>, index: number) => {
                 const itemId = `action-${action.id}`
                 const isSelected = selectedElementId === itemId
                 return (
                   <Button
-                    key={action?.id ?? `action-${action?.label ?? "unnamed"}-${action?.href ?? "nohref"}-${index}`}
+                    key={String(action.id ?? `action-${String(action.label ?? "unnamed")}-${String(action.href ?? "nohref")}-${index}`)}
                     variant={isSelected ? "default" : "outline"}
                     size="sm"
                     className="text-xs"
                     onClick={() => selectElement(selectedBlockId || "", itemId)}
                   >
-                    {action.label || `Action ${index + 1}`}
+                    {String(action.label || `Action ${index + 1}`)}
                   </Button>
                 )
               })}

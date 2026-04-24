@@ -3,6 +3,7 @@ import { ArrowRight, BellPlus, FileText, FolderOpen, LayoutList, Users, Workflow
 import Link from "next/link"
 import { Badge } from "@/components/ui/badge"
 import { CardSurface } from "@/components/ui/card"
+import styles from "./DashboardTheme.module.css"
 
 type DashboardQuickActionsProps = {
   actions: DashboardQuickAction[]
@@ -10,10 +11,10 @@ type DashboardQuickActionsProps = {
 
 export function DashboardQuickActions({ actions }: DashboardQuickActionsProps) {
   return (
-    <CardSurface className="gap-4 rounded-xl py-4">
+    <CardSurface className={`${styles.panelSurface} gap-4 rounded-xl py-4`}>
       <div className="px-6">
-        <h2 className="text-lg font-semibold text-foreground">Schnellaktionen</h2>
-        <p className="text-sm text-muted-foreground">Direkte Spruenge zu den wichtigsten Admin-Bereichen.</p>
+        <h2 className={`text-lg font-semibold ${styles.title}`}>Schnellaktionen</h2>
+        <p className={`text-sm ${styles.textSoft}`}>Direkte Spruenge zu den wichtigsten Admin-Bereichen.</p>
       </div>
 
       <div className="grid gap-3 px-6 pb-6 sm:grid-cols-2">
@@ -21,7 +22,7 @@ export function DashboardQuickActions({ actions }: DashboardQuickActionsProps) {
           <Link
             key={action.id}
             href={action.href}
-            className={`flex items-center justify-between rounded-xl border px-4 py-3 transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25 ${toneClass(index)}`}
+            className={`flex items-center justify-between rounded-xl border px-4 py-3 transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 ${toneClass(index)}`}
             style={{ borderColor: toneBorderColor(index) }}
           >
             <span className="flex items-center gap-2.5">
@@ -29,13 +30,13 @@ export function DashboardQuickActions({ actions }: DashboardQuickActionsProps) {
                 <QuickActionIcon id={action.id} />
               </span>
               <span className="flex flex-col items-start gap-0.5">
-                <span className="text-sm font-medium">{action.label}</span>
+                <span className={`text-sm font-medium ${styles.title}`}>{action.label}</span>
                 <Badge variant="secondary" className="text-[10px]">
                   {action.source}
                 </Badge>
               </span>
             </span>
-            <ArrowRight className="h-4 w-4 text-muted-foreground" />
+            <ArrowRight className={`h-4 w-4 ${styles.textSoft}`} />
           </Link>
         ))}
       </div>
@@ -44,7 +45,7 @@ export function DashboardQuickActions({ actions }: DashboardQuickActionsProps) {
 }
 
 function toneClass(index: number) {
-  const tones = ["bg-blue-500/10", "bg-blue-500/10", "bg-blue-500/10", "bg-blue-500/10"]
+  const tones = ["bg-slate-50 hover:bg-slate-100/80 focus-visible:ring-blue-500/30", "bg-slate-50 hover:bg-slate-100/80 focus-visible:ring-blue-500/30", "bg-slate-50 hover:bg-slate-100/80 focus-visible:ring-blue-500/30", "bg-slate-50 hover:bg-slate-100/80 focus-visible:ring-blue-500/30"]
   return tones[index % tones.length]
 }
 

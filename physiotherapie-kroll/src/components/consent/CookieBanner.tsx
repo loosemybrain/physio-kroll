@@ -20,11 +20,19 @@ export function CookieBanner() {
   const lastFocusableRef = useRef<HTMLButtonElement>(null)
 
   // Respect prefers-reduced-motion
-  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false)
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(
+    () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  )
   useEffect(() => {
-    setPrefersReducedMotion(
-      typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches
-    )
+    if (typeof window === "undefined") return
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)")
+    const onChange = (event: MediaQueryListEvent) => setPrefersReducedMotion(event.matches)
+    if (typeof media.addEventListener === "function") {
+      media.addEventListener("change", onChange)
+      return () => media.removeEventListener("change", onChange)
+    }
+    media.addListener(onChange)
+    return () => media.removeListener(onChange)
   }, [])
 
   // Focus trap

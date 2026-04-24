@@ -8,13 +8,18 @@ import { getByPath } from "@/lib/cms/editorPathOps"
 import { UniversalRepeaterInspector } from "../repeater/UniversalRepeaterInspector"
 import type { InspectorFieldType } from "@/cms/blocks/registry"
 
+type RepeaterEditorActions = {
+  handleAddArrayItem: (blockId: string, arrayPath: string, createItem: () => unknown) => void
+  handleMoveArrayItem: (blockId: string, arrayPath: string, from: number, to: number) => void
+}
+
 export interface PageEditorInspectorSectionProps {
   selectedBlock: CMSBlock
   selectedBlockId: string | null
   expandedRepeaterCards: Record<string, string | null>
   setExpandedRepeaterCards: React.Dispatch<React.SetStateAction<Record<string, string | null>>>
   updateSelectedProps: (nextProps: CMSBlock["props"]) => void
-  editorActions: any
+  editorActions: RepeaterEditorActions
   handleRemoveArrayItem: (blockId: string, arrayPath: string, index: number) => void
   lastAddedRepeaterRef: React.MutableRefObject<{ key: string; itemId: string } | null>
   renderOneRepeaterItemFields: (
@@ -31,7 +36,7 @@ const GalleryInspectorSectionContent = React.memo(
     selectedBlock,
     expandedRepeaterCards,
     setExpandedRepeaterCards,
-    updateSelectedProps,
+    updateSelectedProps: _updateSelectedProps,
     editorActions,
     handleRemoveArrayItem,
     lastAddedRepeaterRef,

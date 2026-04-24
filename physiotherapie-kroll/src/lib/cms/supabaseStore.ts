@@ -17,6 +17,22 @@ export type AdminPage = CMSPage & {
 
 export type AdminPageSummary = Pick<AdminPage, "id" | "title" | "slug" | "brand" | "status" | "pageType" | "pageSubtype" | "updatedAt">;
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null
+}
+
+function asString(value: unknown, fallback = ""): string {
+  return typeof value === "string" ? value : fallback
+}
+
+function asBrandKey(value: unknown): BrandKey {
+  return value === "physio-konzept" ? "physio-konzept" : "physiotherapy"
+}
+
+function asPageStatus(value: unknown): PageStatus {
+  return value === "published" ? "published" : "draft"
+}
+
 function normalizePageSubtype(v: unknown): PageSubtype {
   if (v === null || v === undefined || v === "") return null;
   if (typeof v === "string" && (v === "privacy" || v === "cookies" || v === "imprint")) return v;
@@ -114,16 +130,17 @@ export async function listPages(brand?: string): Promise<AdminPageSummary[]> {
     const body = await res.json().catch(() => ({}));
     throw new Error(body?.error || `Failed to load pages (${res.status})`);
   }
-  const data = (await res.json()) as any[];
-  return (data ?? []).map((p: any) => ({
-    id: p.id,
-    title: p.title,
-    slug: p.slug,
-    brand: p.brand,
-    status: p.status,
+  const data = (await res.json()) as unknown;
+  const rows = Array.isArray(data) ? data.filter(isRecord) : []
+  return rows.map((p) => ({
+    id: asString(p.id),
+    title: asString(p.title),
+    slug: asString(p.slug),
+    brand: asBrandKey(p.brand),
+    status: asPageStatus(p.status),
     pageType: (p.pageType ?? p.page_type ?? "default") as PageType,
     pageSubtype: normalizePageSubtype(p.pageSubtype ?? p.page_subtype),
-    updatedAt: p.updatedAt ?? p.updated_at ?? nowIso(),
+    updatedAt: asString(p.updatedAt ?? p.updated_at, nowIso()),
   }));
 }
 
@@ -134,20 +151,21 @@ export async function getPage(id: string): Promise<AdminPage | null> {
     const body = await res.json().catch(() => ({}));
     throw new Error(body?.error || `Failed to load page (${res.status})`);
   }
-  const p = (await res.json()) as any;
+  const raw = (await res.json()) as unknown;
+  const p = isRecord(raw) ? raw : {}
   const pageType = (p.pageType ?? p.page_type ?? "default") as PageType
   const blocks = (p.blocks ?? []) as CMSBlock[]
   const migratedBlocks = migrateLegalBlocksForPageType(blocks, pageType)
 
   return {
-    id: p.id,
-    title: p.title,
-    slug: p.slug,
-    brand: p.brand,
-    status: p.status,
+    id: asString(p.id),
+    title: asString(p.title),
+    slug: asString(p.slug),
+    brand: asBrandKey(p.brand),
+    status: asPageStatus(p.status),
     pageType,
     pageSubtype: normalizePageSubtype(p.pageSubtype ?? p.page_subtype),
-    updatedAt: p.updatedAt ?? nowIso(),
+    updatedAt: asString(p.updatedAt, nowIso()),
     blocks: migratedBlocks,
     meta: undefined,
   };
@@ -174,11 +192,11 @@ export async function getPublishedPageBySlug(slug: string): Promise<AdminPage | 
 
   if (blocksErr) throw blocksErr;
 
-  const cmsBlocksRaw: CMSBlock[] = (blocks ?? []).map((b: any) => ({
-    id: b.id,
-    type: b.type,
-    props: (b.props ?? {}) as any,
-  }));
+  const cmsBlocksRaw = (blocks ?? []).map((b: Record<string, unknown>) => ({
+    id: asString(b.id),
+    type: asString(b.type) as CMSBlock["type"],
+    props: (isRecord(b.props) ? b.props : {}) as CMSBlock["props"],
+  })) as CMSBlock[];
   const pageType = (page.page_type ?? "default") as PageType
   const cmsBlocks = migrateLegalBlocksForPageType(cmsBlocksRaw, pageType)
 
@@ -221,16 +239,17 @@ export async function upsertPage(next: AdminPage): Promise<AdminPage> {
     throw new Error(body?.error || `Failed to save page (${res.status})`);
   }
 
-  const saved = (await res.json()) as any;
+  const savedRaw = (await res.json()) as unknown;
+  const saved = isRecord(savedRaw) ? savedRaw : {}
   return {
-    id: saved.id,
-    title: saved.title,
-    slug: saved.slug,
-    brand: saved.brand,
-    status: saved.status,
+    id: asString(saved.id),
+    title: asString(saved.title),
+    slug: asString(saved.slug),
+    brand: asBrandKey(saved.brand),
+    status: asPageStatus(saved.status),
     pageType: (saved.pageType ?? saved.page_type ?? "default") as PageType,
     pageSubtype: normalizePageSubtype(saved.pageSubtype ?? saved.page_subtype),
-    updatedAt: saved.updatedAt ?? nowIso(),
+    updatedAt: asString(saved.updatedAt, nowIso()),
     blocks: (saved.blocks ?? []) as CMSBlock[],
     meta: undefined,
   };

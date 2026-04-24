@@ -16,20 +16,27 @@ import { ChevronLeft } from "lucide-react"
  */
 export function CookieSettingsDialog() {
   const { isSettingsOpen, closeSettings, consent, setCategory, acceptAll, rejectAll } = useCookieConsent()
-  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false)
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(
+    () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  )
   const [draftConsent, setDraftConsent] = useState(consent)
-  const [isMounted, setIsMounted] = useState(false)
 
   useEffect(() => {
-    setIsMounted(true)
-    setPrefersReducedMotion(
-      typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches
-    )
+    if (typeof window === "undefined") return
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)")
+    const onChange = (event: MediaQueryListEvent) => setPrefersReducedMotion(event.matches)
+    if (typeof media.addEventListener === "function") {
+      media.addEventListener("change", onChange)
+      return () => media.removeEventListener("change", onChange)
+    }
+    media.addListener(onChange)
+    return () => media.removeListener(onChange)
   }, [])
 
   useEffect(() => {
     if (isSettingsOpen && consent) {
-      setDraftConsent(consent)
+      const raf = window.requestAnimationFrame(() => setDraftConsent(consent))
+      return () => window.cancelAnimationFrame(raf)
     }
   }, [isSettingsOpen, consent])
 
@@ -58,10 +65,6 @@ export function CookieSettingsDialog() {
   )
 
   if (!consent || !draftConsent) return null
-
-  if (!isMounted) {
-    return null
-  }
 
   const categories: ConsentCategory[] = ["necessary", "externalMedia"]
 

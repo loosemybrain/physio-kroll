@@ -10,7 +10,7 @@ import type { BrandKey } from "@/components/brand/brandAssets"
 export function sanitizeString(input: string): string {
   if (typeof input !== "string") return ""
   
-  let sanitized = input
+  const sanitized = input
     // Remove control characters (except tab, newline internally in message body, which will be handled separately)
     .replace(/[\x00-\x08\x0B-\x0C\x0E-\x1F\x7F]/g, "")
     // Remove header injection patterns (CRLF)

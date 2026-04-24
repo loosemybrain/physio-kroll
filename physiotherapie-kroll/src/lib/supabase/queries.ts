@@ -10,10 +10,25 @@ async function supabaseAdmin() {
   return adminPromise
 }
 
+type SupabaseBlockRow = {
+  id: string
+  type: string
+  props: unknown
+  sort?: number | null
+}
+
+type SupabasePageRow = {
+  id: string
+  title: string
+  slug: string
+  page_type?: string | null
+  page_subtype?: string | null
+}
+
 /**
  * Transforms database row to CMSBlock
  */
-function transformBlockToCMS(block: any): CMSBlock | null {
+function transformBlockToCMS(block: SupabaseBlockRow): CMSBlock | null {
   try {
     const props = (block.props ?? {}) as Record<string, unknown>
     return {
@@ -31,8 +46,8 @@ function transformBlockToCMS(block: any): CMSBlock | null {
  * Transforms database rows to CMSPage
  */
 function transformPageToCMS(
-  page: any,
-  blocks: any[]
+  page: SupabasePageRow,
+  blocks: SupabaseBlockRow[]
 ): CMSPage {
   const cmsBlocks = blocks
     .map(transformBlockToCMS)

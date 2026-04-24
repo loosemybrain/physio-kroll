@@ -11,6 +11,14 @@ import Link from "next/link"
 import { getSupabasePublic } from "@/lib/supabase/serverPublic"
 import { cn } from "@/lib/utils"
 import { Facebook, Instagram } from "lucide-react"
+import {
+  getFillRiseColor,
+  getFillRiseIconStateClass,
+  getFillRiseOverlayClass,
+  getLiquidFillColor,
+  getLiquidFillDurationMs,
+  getNetworkSocialColor,
+} from "@/lib/footer/socialFillRise"
 
 interface FooterProps {
   brand: BrandKey
@@ -706,6 +714,8 @@ function SocialLinksRenderer({
     lg: "h-10 w-10",
     xl: "h-12 w-12",
   }[socialLinks.iconSize]
+  const isFillRise = socialLinks.iconStyle === "socialFillRise"
+  const isLiquidFill = socialLinks.iconStyle === "socialLiquidFill"
 
   const withSurface = socialLinks.iconStyle === "round" || socialLinks.iconStyle === "square" || socialLinks.iconStyle === "outline"
   const withEnhancedSurface = withSurface || socialLinks.iconStyle === "soft" || socialLinks.iconStyle === "pill"
@@ -731,6 +741,9 @@ function SocialLinksRenderer({
     socialLinks.iconStyle === "outline" && "rounded-md bg-transparent",
     socialLinks.iconStyle === "soft" && "rounded-lg bg-muted/20",
     socialLinks.iconStyle === "pill" && "rounded-full px-2.5",
+    (isFillRise || isLiquidFill) && "relative overflow-hidden border",
+    isFillRise && (socialLinks.fillRiseRadiusMode === "rounded" ? "rounded-lg" : "rounded-full"),
+    isLiquidFill && "rounded-full",
     socialLinks.iconStyle === "minimal" && "bg-transparent border-0",
     socialLinks.iconStyle === "default" && "rounded bg-transparent border-0",
     "inline-flex items-center justify-center transition-all duration-200 ease-out",
@@ -777,6 +790,19 @@ function SocialLinksRenderer({
       color: socialLinks.color || theme.colors.text,
     }
   }
+  const getBrandColor = (item: ResolvedSocialItem) => getNetworkSocialColor(item.key)
+
+  const fillRiseOverlayClass = getFillRiseOverlayClass(socialLinks.fillRiseDirection)
+  const fillRiseBorderWidth = socialLinks.fillRiseBorderWidth ?? 2
+  const fillRiseActiveIconColor = socialLinks.fillRiseActiveIconColor || "#ffffff"
+  const fillRiseRotateDeg = socialLinks.fillRiseIconRotate === false ? 0 : (socialLinks.fillRiseRotationDegrees ?? 360)
+  const fillRiseRotateAxis = socialLinks.fillRiseRotationAxis ?? "z"
+  const fillRiseRotateDurationMs = socialLinks.fillRiseRotationDurationMs ?? 300
+  const liquidDurationMs = getLiquidFillDurationMs(socialLinks.liquidSpeed)
+  const liquidActiveIconColor = socialLinks.liquidActiveIconColor || "#ffffff"
+  const liquidBorderWidth = socialLinks.liquidBorderWidth ?? 2
+  const liquidWaveClass =
+    socialLinks.liquidWaveIntensity === "medium" ? "footer-social-liquid-wave-medium" : "footer-social-liquid-wave-subtle"
 
   return (
     <nav
@@ -814,6 +840,7 @@ function SocialLinksRenderer({
               aria-label={item.label}
               className={cn(
                 "group inline-flex items-center gap-2 rounded outline-none transition-all duration-200 ease-out",
+                "focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
                 hoverLinkClass
               )}
               style={{ color: socialLinks.color || theme.colors.text }}
@@ -823,11 +850,114 @@ function SocialLinksRenderer({
                 style={{
                   ...iconSetStyle(item),
                   backgroundColor:
-                    withEnhancedSurface && socialLinks.backgroundColor ? socialLinks.backgroundColor : undefined,
-                  borderColor: withEnhancedSurface && socialLinks.borderColor ? socialLinks.borderColor : undefined,
+                    isFillRise
+                      ? socialLinks.fillRiseBaseBg || socialLinks.backgroundColor || "#ffffff"
+                      : isLiquidFill
+                        ? socialLinks.liquidBaseBg || socialLinks.backgroundColor || "#ffffff"
+                      : withEnhancedSurface && socialLinks.backgroundColor
+                        ? socialLinks.backgroundColor
+                        : undefined,
+                  borderColor: isFillRise || isLiquidFill
+                    ? socialLinks.borderColor || (socialLinks.iconSet === "brand" ? getBrandColor(item) : undefined)
+                    : withEnhancedSurface && socialLinks.borderColor
+                      ? socialLinks.borderColor
+                      : undefined,
+                  borderWidth: isFillRise ? `${fillRiseBorderWidth}px` : isLiquidFill ? `${liquidBorderWidth}px` : undefined,
                 }}
               >
+                  {isFillRise ? (
+                    <span
+                      aria-hidden
+                      className={cn(
+                      "fill-rise-liquid pointer-events-none absolute inset-0 transition-transform ease-out motion-reduce:transform-none",
+                      fillRiseOverlayClass,
+                      fillRiseRotateAxis !== "z" && "motion-safe:perspective-normal"
+                      )}
+                    style={{
+                      backgroundColor: getFillRiseColor({
+                        key: item.key,
+                        socialLinks,
+                        accentFallback: theme.colors.accent || "var(--primary)",
+                      }),
+                      transitionDuration: `${fillRiseRotateDurationMs}ms`,
+                    }}
+                    />
+                  ) : null}
+                  {isLiquidFill ? (
+                    <span
+                      aria-hidden
+                      className="footer-social-liquid-layer pointer-events-none absolute inset-0"
+                    >
+                    <span
+                      aria-hidden
+                      className="footer-social-liquid-fill absolute inset-x-0 bottom-0 top-0 translate-y-[102%] transition-transform ease-out group-hover:translate-y-0 group-focus-visible:translate-y-0 motion-reduce:translate-y-0"
+                      style={{
+                        color: getLiquidFillColor({
+                          key: item.key,
+                          socialLinks,
+                          accentFallback: theme.colors.accent || "var(--primary)",
+                        }),
+                        transitionDuration: `${liquidDurationMs}ms`,
+                      }}
+                    >
+                      <span
+                        aria-hidden
+                        className="footer-social-liquid-body absolute inset-x-0 bottom-[-2px] top-[18%]"
+                      />
+                      <span
+                        aria-hidden
+                        className="absolute inset-x-0 top-[16%] h-[8%] bg-current"
+                      />
+                      <span
+                        aria-hidden
+                        className={cn("footer-social-liquid-cap footer-social-liquid-cap-a", liquidWaveClass)}
+                        style={{ animationDuration: `${liquidDurationMs}ms` }}
+                      >
+                        <svg viewBox="0 0 144 32" preserveAspectRatio="none" className="h-full w-full fill-current">
+                          <path d="M0 17 C 16 9, 30 26, 48 17 C 64 9, 80 26, 96 17 C 112 9, 128 24, 144 16 L144 32 L0 32 Z" />
+                        </svg>
+                      </span>
+                      <span
+                        aria-hidden
+                        className={cn("footer-social-liquid-cap footer-social-liquid-cap-b", liquidWaveClass)}
+                        style={{ animationDuration: `${Math.round(liquidDurationMs * 1.18)}ms` }}
+                      >
+                        <svg viewBox="0 0 144 32" preserveAspectRatio="none" className="h-full w-full fill-current">
+                          <path d="M0 16 C 14 24, 30 8, 48 16 C 64 24, 80 8, 96 16 C 112 24, 128 8, 144 16 L144 32 L0 32 Z" />
+                        </svg>
+                      </span>
+                    </span>
+                    </span>
+                  ) : null}
+                  <span
+                    className={cn(
+                      "relative z-10 inline-flex items-center justify-center transition-transform duration-300 ease-out motion-reduce:transform-none",
+                      isFillRise && getFillRiseIconStateClass(fillRiseRotateAxis),
+                      isLiquidFill && "text-(--liquid-icon-base) group-hover:text-(--liquid-icon-active) group-focus-visible:text-(--liquid-icon-active)"
+                    )}
+                  style={{
+                    ...(isFillRise
+                      ? ({
+                          "--fill-rise-rot": `${fillRiseRotateDeg}deg`,
+                          "--fill-rise-active-icon": fillRiseActiveIconColor,
+                          "--fill-rise-icon-base":
+                            socialLinks.iconSet === "brand" ? getBrandColor(item) : socialLinks.color || theme.colors.text,
+                          transitionDuration: `${fillRiseRotateDurationMs}ms`,
+                          transformStyle: fillRiseRotateAxis === "z" ? "flat" : "preserve-3d",
+                        } as React.CSSProperties)
+                      : {}),
+                    ...(isLiquidFill
+                      ? ({
+                          "--liquid-icon-base":
+                            socialLinks.iconSet === "brand" ? getBrandColor(item) : socialLinks.color || theme.colors.text,
+                          "--liquid-icon-active": liquidActiveIconColor,
+                          transitionDuration: `${liquidDurationMs}ms`,
+                        } as React.CSSProperties)
+                      : {}),
+                  }}
+                  >
                 {renderIcon(item)}
+                  </span>
               </span>
               {socialLinks.showLabels ? (
                 <span className="text-sm" style={{ color: socialLinks.labelColor || socialLinks.color || theme.colors.text }}>

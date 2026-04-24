@@ -44,9 +44,14 @@ export const renderRepeaterItemFields = ({
   isTypingRef,
   fieldRefs,
   updateSelectedProps,
-}: RenderRepeaterItemFieldsOptions): React.ReactNode => (
-  <div className="space-y-3 pt-2 border-t border-border">
-    {itemFields.map((itemField) => {
+}: RenderRepeaterItemFieldsOptions): React.ReactNode => {
+  const registerFieldRef = (key: string, el: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null) => {
+    // eslint-disable-next-line react-hooks/immutability -- imperative ref registry for inspector focus
+    fieldRefs.current[key] = el
+  }
+  return (
+    <div className="space-y-3 pt-2 border-t border-border">
+      {itemFields.map((itemField) => {
       const itemFieldKey = `${arrayPath}.${index}.${itemField.key}`
       const itemFieldValue = getByPath(item, itemField.key) ?? ""
       const itemFieldId = `${block.id}.${itemFieldKey}`
@@ -79,7 +84,7 @@ export const renderRepeaterItemFields = ({
             <div key={itemField.key} className="space-y-1.5">
               <Label htmlFor={itemFieldId} className="text-xs">{itemField.label}</Label>
               <div className={cn(isActive && "ring-2 ring-primary rounded-md")}>
-                <ColorField value={String(itemFieldValue)} onChange={(v: string) => handleItemFieldChange(v)} placeholder={itemField.placeholder || "#rrggbb"} inputRef={(el: HTMLInputElement | null) => { fieldRefs.current[itemFieldId] = el }} />
+                <ColorField value={String(itemFieldValue)} onChange={(v: string) => handleItemFieldChange(v)} placeholder={itemField.placeholder || "#rrggbb"} inputRef={(el: HTMLInputElement | null) => { registerFieldRef(itemFieldId, el) }} />
               </div>
             </div>
           )
@@ -113,7 +118,7 @@ export const renderRepeaterItemFields = ({
           return (
             <div key={itemField.key} className="space-y-1.5">
               <Label htmlFor={itemFieldId} className="text-xs">{itemField.label}</Label>
-              <ImageField id={itemFieldId} label="" value={String(itemFieldValue)} onChange={(v: string) => handleItemFieldChange(v)} placeholder={itemField.placeholder} inputRef={(el: HTMLInputElement | null) => { fieldRefs.current[itemFieldId] = el }} />
+              <ImageField id={itemFieldId} label="" value={String(itemFieldValue)} onChange={(v: string) => handleItemFieldChange(v)} placeholder={itemField.placeholder} inputRef={(el: HTMLInputElement | null) => { registerFieldRef(itemFieldId, el) }} />
             </div>
           )
         case "url":
@@ -141,6 +146,7 @@ export const renderRepeaterItemFields = ({
         default:
           return null
       }
-    })}
-  </div>
-)
+      })}
+    </div>
+  )
+}

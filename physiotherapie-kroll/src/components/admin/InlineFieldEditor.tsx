@@ -54,9 +54,11 @@ export function InlineFieldEditor({
   // Calculate position based on anchorRect
   useEffect(() => {
     if (!open || typeof window === "undefined") {
-      setPosition(null)
-      return
+      const raf = window.requestAnimationFrame(() => setPosition(null))
+      return () => window.cancelAnimationFrame(raf)
     }
+
+    let nextPosition: { left: number; top: number } | null = null
 
     if (anchorRect) {
       const popoverWidth = 420
@@ -73,19 +75,26 @@ export function InlineFieldEditor({
       const bottomSpace = window.innerHeight - top
       if (bottomSpace < popoverHeight) {
         // Position above anchor instead
-        setPosition({
+        nextPosition = {
           left,
           top: anchorRect.top - popoverHeight - 8,
-        })
+        }
       } else {
-        setPosition({ left, top })
+        nextPosition = { left, top }
       }
     } else {
       // Fallback: center on screen
-      setPosition({
+      nextPosition = {
         left: window.innerWidth / 2 - 210,
         top: window.innerHeight / 2 - 100,
-      })
+      }
+    }
+
+    const raf = window.requestAnimationFrame(() => {
+      setPosition(nextPosition)
+    })
+    return () => {
+      window.cancelAnimationFrame(raf)
     }
   }, [open, anchorRect, multiline])
 

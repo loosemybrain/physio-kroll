@@ -190,7 +190,7 @@ export function getServiceIcon(
   }
 
   // Try direct match first
-  let iconName = name as ServiceIconName
+  const iconName = name as ServiceIconName
   if (iconName in serviceIconMap) {
     const Icon = serviceIconMap[iconName]
     return Icon || Circle

@@ -38,7 +38,7 @@ export function useBlockAnimation({
 }: UseBlockAnimationProps) {
   const prefersReduced = usePrefersReducedMotion()
   const [state, setState] = useState<AnimationState>({
-    enterTriggered: false,
+    enterTriggered: config.enter?.trigger === "onLoad",
     exitTriggered: false,
     isHovering: false,
     isVisible: config.enter?.trigger === "onLoad",
@@ -114,7 +114,6 @@ export function useBlockAnimation({
     if (trigger === "onLoad") {
       // Sofort
       hasAnimatedOnce.current = true
-      setState((s) => ({ ...s, enterTriggered: true }))
       return applyAnimation(config.enter, "enter")
     } else if (trigger === "onScroll") {
       // Mit IntersectionObserver

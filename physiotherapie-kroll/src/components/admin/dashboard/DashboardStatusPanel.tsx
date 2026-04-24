@@ -1,6 +1,9 @@
 import { Badge } from "@/components/ui/badge"
 import { CardSurface } from "@/components/ui/card"
 import type { DashboardMetric } from "@/lib/admin/dashboard"
+import type { FeatureStatus } from "@/lib/admin/features/types"
+import { DashboardFeatureStatusBadge } from "./DashboardFeatureStatus"
+import styles from "./DashboardTheme.module.css"
 
 type DashboardStatusPanelProps = {
   queued: number
@@ -13,6 +16,25 @@ type DashboardStatusPanelProps = {
   suspiciousAccess: DashboardMetric<never>
   backupStatus: DashboardMetric<never>
   uptime: DashboardMetric<never>
+  loginObservability: FeatureStatus
+  workerHeartbeat: DashboardMetric<{
+    status: "running" | "idle" | "stale" | "offline"
+    workerId: string | null
+    type: string | null
+    lastSeenAt: string | null
+  }>
+}
+
+function metricToFeatureStatus(metric: DashboardMetric<never>): FeatureStatus {
+  return metric.status === "unavailable" ? "inactive" : "active"
+}
+
+function softenInfrastructureReason(reason: string): string {
+  return reason
+    .replace(/nicht vollstaendig messbar/gi, "nicht aktiviert")
+    .replace(/nicht messbar/gi, "nicht aktiviert")
+    .replace(/\bfehlt\b/gi, "als optionale Erweiterung nicht aktiviert")
+    .replace(/nicht verfuegbar/gi, "noch nicht Bestandteil der aktiven Ausbaustufe")
 }
 
 export function DashboardStatusPanel({
@@ -26,15 +48,17 @@ export function DashboardStatusPanel({
   suspiciousAccess,
   backupStatus,
   uptime,
+  loginObservability,
+  workerHeartbeat,
 }: DashboardStatusPanelProps) {
   const hasIssue = failed > 0
 
   return (
-    <CardSurface className="gap-4 rounded-2xl border-emerald-400/25 bg-linear-to-br from-emerald-500/10 via-card to-cyan-500/5">
+    <CardSurface className={`${styles.panelSurface} gap-4 rounded-2xl`}>
       <div className="flex items-start justify-between gap-3 px-6">
         <div>
-          <h2 className="text-base font-semibold text-foreground">Systemstatus</h2>
-          <p className="text-sm text-muted-foreground">
+          <h2 className={`text-base font-semibold ${styles.title}`}>Systemstatus</h2>
+          <p className={`text-sm ${styles.textSoft}`}>
             Betriebsdaten aus den aktuellen Cookie-Scan-Quellen.
           </p>
         </div>
@@ -52,16 +76,68 @@ export function DashboardStatusPanel({
       </div>
 
       <div className="px-6">
-        <div className="rounded-xl border border-border/30 bg-muted/20 px-3 py-2.5 text-sm text-muted-foreground">
+        <div className={`${styles.mutedPanel} rounded-xl border px-3 py-2.5 text-sm ${styles.text}`}>
           Letzter Scan: {lastScannedAt ? new Date(lastScannedAt).toLocaleString("de-DE") : "keine Scan-Historie"}
         </div>
       </div>
 
       <div className="space-y-2 px-6 pb-6">
-        <UnavailableRow label="Login attempts" metric={loginAttempts} />
-        <UnavailableRow label="Suspicious access" metric={suspiciousAccess} />
-        <UnavailableRow label="Backup status" metric={backupStatus} />
-        <UnavailableRow label="Uptime" metric={uptime} />
+        <OperationFeatureRow
+          label="Passwortzugriffs-Fehlversuche"
+          featureStatus={loginObservability}
+          detail={loginAttempts.status === "unavailable" ? softenInfrastructureReason(loginAttempts.reason) : undefined}
+          statusLabelOverride={
+            loginObservability === "unavailable" ? "nicht Bestandteil der aktiven Ausbaustufe" : undefined
+          }
+        />
+        <OperationFeatureRow
+          label="Suspicious access"
+          featureStatus={metricToFeatureStatus(suspiciousAccess)}
+          detail={
+            suspiciousAccess.status === "unavailable"
+              ? "Optionale Infrastruktur-Erweiterung: noch nicht Bestandteil der aktiven Ausbaustufe."
+              : undefined
+          }
+        />
+        <OperationFeatureRow
+          label="Backup status"
+          featureStatus={metricToFeatureStatus(backupStatus)}
+          detail={
+            backupStatus.status === "unavailable"
+              ? "Optionale Infrastruktur-Erweiterung: noch nicht Bestandteil der aktiven Ausbaustufe."
+              : undefined
+          }
+        />
+        <OperationFeatureRow
+          label="Uptime"
+          featureStatus={metricToFeatureStatus(uptime)}
+          detail={
+            uptime.status === "unavailable"
+              ? "Optionale Infrastruktur-Erweiterung: noch nicht Bestandteil der aktiven Ausbaustufe."
+              : undefined
+          }
+        />
+        <OperationFeatureRow
+          label="Worker heartbeat"
+          featureStatus={
+            workerHeartbeat.status !== "available"
+              ? "inactive"
+              : workerHeartbeat.value.status === "offline"
+                ? "unavailable"
+                : workerHeartbeat.value.status === "stale"
+                  ? "not_configured"
+                  : "active"
+          }
+          detail={
+            workerHeartbeat.status !== "available"
+              ? "Keine Heartbeat-Daten verfuegbar."
+              : `Status: ${workerHeartbeat.value.status}${
+                  workerHeartbeat.value.lastSeenAt
+                    ? `, zuletzt gesehen ${new Date(workerHeartbeat.value.lastSeenAt).toLocaleString("de-DE")}`
+                    : ""
+                }`
+          }
+        />
       </div>
     </CardSurface>
   )
@@ -97,30 +173,32 @@ function StatusCell({
       className={`rounded-xl border px-4 py-3 ${toneClasses[tone]}`}
       style={{ borderColor: toneBorderColors[tone] }}
     >
-      <p className="text-xs uppercase tracking-wide text-muted-foreground">{label}</p>
-      <p className={emphasized ? "mt-1 text-xl font-semibold text-destructive" : "mt-1 text-xl font-semibold text-foreground"}>
+      <p className={`text-xs uppercase tracking-wide ${styles.textSoft}`}>{label}</p>
+      <p className={emphasized ? "mt-1 text-xl font-semibold text-destructive" : `mt-1 text-xl font-semibold ${styles.title}`}>
         {value}
       </p>
     </div>
   )
 }
 
-function UnavailableRow({
+function OperationFeatureRow({
   label,
-  metric,
+  featureStatus,
+  detail,
+  statusLabelOverride,
 }: {
   label: string
-  metric: DashboardMetric<never>
+  featureStatus: FeatureStatus
+  detail?: string
+  statusLabelOverride?: string
 }) {
   return (
-    <div
-      className="flex items-center justify-between gap-2 rounded-xl border border-dashed bg-amber-500/10 px-3 py-2.5"
-      style={{ borderColor: "rgba(252, 211, 77, 0.4)" }}
-    >
-      <p className="text-sm text-foreground">{label}</p>
-      <Badge variant={metric.status === "unavailable" ? "outline" : "secondary"}>
-        {metric.status === "unavailable" ? "unavailable" : "available"}
-      </Badge>
+    <div className={`${styles.mutedPanel} rounded-xl border px-3 py-2.5`}>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className={`text-sm font-medium ${styles.title}`}>{label}</p>
+        <DashboardFeatureStatusBadge status={featureStatus} labelOverride={statusLabelOverride} />
+      </div>
+      {detail && featureStatus !== "active" ? <p className={`mt-1 text-xs ${styles.textSoft}`}>{detail}</p> : null}
     </div>
   )
 }

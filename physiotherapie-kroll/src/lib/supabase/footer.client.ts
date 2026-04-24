@@ -38,7 +38,7 @@ export async function saveFooterClient(
       .upsert(
         {
           brand,
-          config: config as any,
+          config: config as unknown,
         },
         {
           onConflict: "brand",

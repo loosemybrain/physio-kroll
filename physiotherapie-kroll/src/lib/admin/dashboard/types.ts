@@ -1,3 +1,5 @@
+import type { FeatureStatus } from "@/lib/admin/features/types"
+
 export type DashboardMetricUnavailable = {
   status: "unavailable"
   reason: string
@@ -20,9 +22,14 @@ export type DashboardQuickAction = {
 export type DashboardTask = {
   id: string
   title: string
-  level: "info" | "hint" | "warning"
+  severity: "low" | "medium" | "high" | "critical"
+  category: "content" | "security" | "compliance" | "operations"
   reason: string
+  href?: string
+  ctaLabel?: string
 }
+
+export type DashboardHealthStatus = "healthy" | "info" | "warning" | "critical"
 
 export type DashboardActivityItem = {
   id: string
@@ -34,6 +41,11 @@ export type DashboardActivityItem = {
 
 export type DashboardViewModel = {
   generatedAt: string
+  health: {
+    status: DashboardHealthStatus
+    reasons: string[]
+  }
+  systemMaturity: number
   summary: {
     pagesTotal: number
     pagesPublished: number
@@ -89,6 +101,12 @@ export type DashboardViewModel = {
     suspiciousAccess: DashboardMetric<never>
     backupStatus: DashboardMetric<never>
     uptime: DashboardMetric<never>
+    workerHeartbeat: DashboardMetric<{
+      status: "running" | "idle" | "stale" | "offline"
+      workerId: string | null
+      type: string | null
+      lastSeenAt: string | null
+    }>
   }
   users: {
     totalAuthUsers: number
@@ -101,6 +119,40 @@ export type DashboardViewModel = {
       user: number
     }
   }
+  security: {
+    singleAdminRisk: boolean
+    disabledProfiles: number
+    adminCapable: number
+    mfaCoverageNote: DashboardMetric<string>
+    loginObservability: DashboardMetric<never>
+    auditObservability: DashboardMetric<string>
+    adminLoginsLast24h: DashboardMetric<number>
+    failedAuthEventsLast24h: DashboardMetric<number>
+    mfaEventsLast24h: DashboardMetric<number>
+    lastSecurityEventAt: DashboardMetric<string | null>
+    snapshotFreshness: DashboardMetric<"fresh" | "stale">
+    totalAdminSnapshots: DashboardMetric<number>
+    mfaEnabledAdmins: DashboardMetric<number>
+    mfaVerifiedAdmins: DashboardMetric<number>
+    staleSnapshots: DashboardMetric<number>
+  }
+  audit: {
+    eventsLast24h: DashboardMetric<number>
+    failuresLast24h: DashboardMetric<number>
+    highOrCriticalLast24h: DashboardMetric<number>
+    lastEventAt: DashboardMetric<string | null>
+    recent: DashboardMetric<
+      Array<{
+        id: string
+        eventType: string
+        category: string
+        severity: string
+        outcome: string
+        message: string
+        createdAt: string
+      }>
+    >
+  }
   compliance: {
     cookieScans: {
       pendingReview: number
@@ -112,9 +164,17 @@ export type DashboardViewModel = {
       published: number
       missing: string[]
     }
-    auditLog: DashboardMetric<never>
+    auditLog: DashboardMetric<string>
   }
   quickActions: DashboardQuickAction[]
   activity: DashboardActivityItem[]
   tasks: DashboardTask[]
+  features: {
+    audit: FeatureStatus
+    loginObservability: FeatureStatus
+    mfaCoverage: FeatureStatus
+    cookieScan: FeatureStatus
+    content: FeatureStatus
+    users: FeatureStatus
+  }
 }

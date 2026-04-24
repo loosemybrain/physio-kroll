@@ -44,7 +44,7 @@ export interface InspectorField {
   sliderMin?: number
   sliderMax?: number
   sliderStep?: number
-  showWhen?: { key: string; equals: any }
+  showWhen?: { key: string; equals: unknown }
   group?: "basics" | "layout" | "panel" | "design" | "content" | "interactions" | "elements"
 }
 
@@ -590,7 +590,7 @@ function withInnerPanel<T extends BlockDefinition>(def: T): T {
 
   return {
     ...def,
-    zodSchema: def.zodSchema ? (def.zodSchema as any).merge(panelPropsSchema) : panelPropsSchema,
+    zodSchema: def.zodSchema ? (def.zodSchema as z.ZodObject<z.ZodRawShape>).merge(panelPropsSchema) : panelPropsSchema,
     defaults: { ...panelDefaults, ...(def.defaults ?? {}) } as T["defaults"],
     inspectorFields,
   } as T

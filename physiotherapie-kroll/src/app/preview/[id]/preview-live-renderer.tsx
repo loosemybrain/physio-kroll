@@ -18,7 +18,16 @@ import {
 import { getBlockAnchorId } from "@/lib/navigation/scrollToAnchor"
 
 function isLikelyBlockArray(v: unknown): v is CMSBlock[] {
-  return Array.isArray(v) && v.every((x) => x && typeof x === "object" && "id" in (x as any) && "type" in (x as any))
+  return (
+    Array.isArray(v) &&
+    v.every(
+      (x) =>
+        x &&
+        typeof x === "object" &&
+        "id" in (x as Record<string, unknown>) &&
+        "type" in (x as Record<string, unknown>)
+    )
+  )
 }
 
 function withPreviewBrand(blocks: CMSBlock[], brand: BrandKey): CMSBlock[] {
@@ -27,8 +36,8 @@ function withPreviewBrand(blocks: CMSBlock[], brand: BrandKey): CMSBlock[] {
     props: {
       ...(typeof b.props === "object" && b.props ? (b.props as Record<string, unknown>) : {}),
       __previewBrand: brand,
-    } as any,
-  }))
+    } as Record<string, unknown>,
+  } as unknown as CMSBlock))
 }
 
 function clearInlineOutline(el: HTMLElement) {
@@ -56,10 +65,20 @@ export function PreviewLiveRenderer({
   const [pageSlug, setPageSlug] = useState<string>(initialPageSlug)
   const [blocks, setBlocks] = useState<CMSBlock[]>(() => withPreviewBrand(initialBlocks, initialBrand))
 
-  const [mounted, setMounted] = useState(false)
   const [showDebug, setShowDebug] = useState(false)
-  const [queryBrand, setQueryBrand] = useState<string>("")
-  const [htmlDataBrand, setHtmlDataBrand] = useState<string>("")
+  const [queryBrand] = useState<string>(() => {
+    if (typeof window === "undefined" || process.env.NODE_ENV === "production") return ""
+    try {
+      const sp = new URLSearchParams(window.location.search)
+      return sp.get("brand") ?? ""
+    } catch {
+      return ""
+    }
+  })
+  const [htmlDataBrand] = useState<string>(() => {
+    if (typeof document === "undefined" || process.env.NODE_ENV === "production") return ""
+    return document.documentElement.getAttribute("data-brand") ?? ""
+  })
   const [headerBrand, setHeaderBrand] = useState<string>("")
 
   const sessionIdRef = useRef<string | null>(null)
@@ -67,14 +86,13 @@ export function PreviewLiveRenderer({
   const lastHighlightedBlockRef = useRef<HTMLElement | null>(null)
 
   useEffect(() => {
-    setMounted(true)
-  }, [])
-
-  useEffect(() => {
     if (process.env.NODE_ENV === "production") return
     try {
       const stored = window.sessionStorage.getItem("preview.debug")
-      if (stored === "1") setShowDebug(true)
+      if (stored === "1") {
+        const t = window.setTimeout(() => setShowDebug(true), 0)
+        return () => window.clearTimeout(t)
+      }
     } catch {
       // ignore
     }
@@ -82,24 +100,12 @@ export function PreviewLiveRenderer({
 
   useEffect(() => {
     if (process.env.NODE_ENV === "production") return
-    if (!mounted) return
     try {
       window.sessionStorage.setItem("preview.debug", showDebug ? "1" : "0")
     } catch {
       // ignore
     }
-  }, [mounted, showDebug])
-
-  useEffect(() => {
-    if (process.env.NODE_ENV === "production") return
-    try {
-      const sp = new URLSearchParams(window.location.search)
-      setQueryBrand(sp.get("brand") ?? "")
-      setHtmlDataBrand(document.documentElement.getAttribute("data-brand") ?? "")
-    } catch {
-      // ignore
-    }
-  }, [])
+  }, [showDebug])
 
   useEffect(() => {
     if (process.env.NODE_ENV === "production") return
@@ -239,7 +245,7 @@ export function PreviewLiveRenderer({
 
   const stableBlocks = useMemo(() => blocks, [blocks])
   const previewBrandFromBlocks =
-    ((stableBlocks?.[0]?.props as any)?.__previewBrand as string | undefined) ?? ""
+    ((stableBlocks?.[0]?.props as Record<string, unknown> | undefined)?.__previewBrand as string | undefined) ?? ""
 
   const handleEditField = (blockId: string, fieldPath: string, anchorRect?: DOMRect) => {
     const rect = anchorRect
@@ -270,7 +276,7 @@ export function PreviewLiveRenderer({
 
   return (
     <>
-      {process.env.NODE_ENV !== "production" && mounted ? (
+      {process.env.NODE_ENV !== "production" ? (
         <button
           type="button"
           className="fixed left-3 bottom-3 z-9999 inline-flex items-center gap-2 rounded-lg border border-border bg-background/90 px-3 py-2 text-xs text-foreground shadow-sm backdrop-blur hover:bg-background"
@@ -281,7 +287,7 @@ export function PreviewLiveRenderer({
         </button>
       ) : null}
 
-      {process.env.NODE_ENV !== "production" && mounted && showDebug ? (
+      {process.env.NODE_ENV !== "production" && showDebug ? (
         <div
           className="fixed left-3 top-3 z-9999 rounded-lg border border-border bg-background/90 px-3 py-2 text-xs text-foreground shadow-sm backdrop-blur"
           style={{ pointerEvents: "none" }}

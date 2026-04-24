@@ -12,8 +12,8 @@ import { useElementShadowStyle } from "@/lib/shadow"
 import { resolveSectionBg } from "@/lib/theme/resolveSectionBg"
 import { resolveContainerBg } from "@/lib/theme/resolveContainerBg"
 import { resolveBoxShadow } from "@/lib/shadow/resolveBoxShadow"
-import { mergeTypographyClasses } from "@/lib/typography"
-import type { BlockSectionProps } from "@/types/cms"
+import { mergeTypographyClasses, type TypographySettings } from "@/lib/typography"
+import type { BlockSectionProps, ElementConfig, ElementShadow } from "@/types/cms"
 import type { GradientPresetValue } from "@/lib/theme/gradientPresets"
 import { sanitizeCmsHtml } from "@/lib/security/sanitizeCmsHtml"
 import { AnimatedBlock } from "@/components/blocks/AnimatedBlock"
@@ -46,16 +46,14 @@ interface FaqAccordionProps {
   containerGradientVia?: string
   containerGradientTo?: string
   containerGradientAngle?: number
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  containerShadow?: any
+  containerShadow?: unknown
   containerBorder?: boolean
   containerBorderColor?: string
   editable?: boolean
   blockId?: string
   onEditField?: (blockId: string, fieldPath: string, anchorRect?: DOMRect) => void
   // Shadow/Element Props
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  elements?: Record<string, any>
+  elements?: Record<string, unknown>
   onElementClick?: (blockId: string, elementId: string) => void
   selectedElementId?: string | null
   /** Admin Live-Preview: Klick auf Item öffnet zugehörige Inspector-Card */
@@ -83,11 +81,10 @@ interface FaqItemProps {
   canInlineEdit: boolean
   editable?: boolean
   onEditField?: (blockId: string, fieldPath: string, anchorRect?: DOMRect) => void
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  elements?: Record<string, any>
+  elements?: Record<string, unknown>
   onElementClick?: (blockId: string, elementId: string) => void
   selectedElementId?: string | null
-  typography?: Record<string, any>
+  typography?: Record<string, TypographySettings | undefined>
   interactivePreview?: boolean
   activeItemId?: string | null
   onItemSelect?: (itemId: string) => void
@@ -113,18 +110,20 @@ function FaqItemComponent({
 }: FaqItemProps) {
   const itemSurfaceId = `faq.item.${item.id}`
   const isPreviewActive = interactivePreview && activeItemId === item.id
+  const elementMap = (elements ?? {}) as Record<string, ElementConfig>
+  const typographyMap = typography ?? {}
   const itemSurfaceShadow = useElementShadowStyle({
     elementId: itemSurfaceId,
-    elementConfig: (elements ?? {})[itemSurfaceId],
+    elementConfig: elementMap[itemSurfaceId],
   })
   // Use registry element IDs for question/answer so Shadow Inspector (faq.question, faq.answer) applies
   const itemQuestionShadow = useElementShadowStyle({
     elementId: "faq.question",
-    elementConfig: (elements ?? {})["faq.question"],
+    elementConfig: elementMap["faq.question"],
   })
   const itemAnswerShadow = useElementShadowStyle({
     elementId: "faq.answer",
-    elementConfig: (elements ?? {})["faq.answer"],
+    elementConfig: elementMap["faq.answer"],
   })
 
   const isItemSelected = selectedElementId === itemSurfaceId
@@ -174,7 +173,7 @@ function FaqItemComponent({
           "[&>svg]:size-5 [&>svg]:text-muted-foreground/60",
         )}
       >
-        <ElementAnimated elementId="faq.question" elements={elements}>
+        <ElementAnimated elementId="faq.question" elements={elementMap}>
         <span
           data-element-id="faq.question"
           onClick={(e) => {
@@ -187,7 +186,7 @@ function FaqItemComponent({
           className={cn(
             mergeTypographyClasses(
               "flex-1 text-left transition-all rounded",
-              (typography as Record<string, any> ?? {})["faq.question"]
+              typographyMap["faq.question"]
             ),
             isQuestionSelected && "ring-2 ring-primary/30 px-2 py-1",
             canInlineEdit && "cursor-pointer px-1 transition-colors hover:bg-primary/10"
@@ -203,7 +202,7 @@ function FaqItemComponent({
       </AccordionTrigger>
 
       <AccordionContent className="pb-5">
-        <ElementAnimated elementId="faq.answer" elements={elements}>
+        <ElementAnimated elementId="faq.answer" elements={elementMap}>
         <div
           data-element-id="faq.answer"
           onClick={(e) => {
@@ -216,7 +215,7 @@ function FaqItemComponent({
           className={cn(
             mergeTypographyClasses(
               "text-sm leading-relaxed text-muted-foreground md:text-base transition-all rounded",
-              (typography as Record<string, any> ?? {})["faq.answer"]
+              typographyMap["faq.answer"]
             ),
             isAnswerSelected && "ring-2 ring-primary/30 px-2 py-1",
             canInlineEdit && "cursor-pointer px-1 transition-colors hover:bg-primary/10"
@@ -270,6 +269,8 @@ export function FaqAccordion({
   onItemSelect,
 }: FaqAccordionProps) {
   const canInlineEdit = Boolean(editable && blockId && onEditField)
+  const elementMap = (elements ?? {}) as Record<string, ElementConfig>
+  const typographyMap = (typography as Record<string, TypographySettings | undefined> | undefined) ?? {}
 
   // Resolve section and container backgrounds
   const sectionBg = resolveSectionBg(section)
@@ -284,7 +285,7 @@ export function FaqAccordion({
       angle: containerGradientAngle ?? 135,
     },
   })
-  const containerShadowCss = resolveBoxShadow(containerShadow)
+  const containerShadowCss = resolveBoxShadow(containerShadow as ElementShadow | undefined)
   const containerBorderStyle: React.CSSProperties = {}
   if (containerBorder) {
     containerBorderStyle.borderWidth = "1px"
@@ -296,11 +297,11 @@ export function FaqAccordion({
   // Element shadows
   const surfaceShadow = useElementShadowStyle({
     elementId: "faq.surface",
-    elementConfig: (elements ?? {})["faq.surface"],
+    elementConfig: elementMap["faq.surface"],
   })
   const headlineShadow = useElementShadowStyle({
     elementId: "faq.headline",
-    elementConfig: (elements ?? {})["faq.headline"],
+    elementConfig: elementMap["faq.headline"],
   })
 
   // Inline edit helper
@@ -330,7 +331,7 @@ export function FaqAccordion({
       <div className="mx-auto max-w-4xl px-4 sm:px-6">
         {/* Inner Container Panel (EIN Panel - nicht doppelt!) */}
         <AnimatedBlock config={section?.animation}>
-          <ElementAnimated elementId="faq.surface" elements={elements}>
+          <ElementAnimated elementId="faq.surface" elements={elementMap}>
           <div
             data-element-id="faq.surface"
             onClick={(e) => {
@@ -356,7 +357,7 @@ export function FaqAccordion({
           {/* Headline */}
           {headline && (
             <div className="mb-10">
-              <ElementAnimated elementId="faq.headline" elements={elements}>
+              <ElementAnimated elementId="faq.headline" elements={elementMap}>
               <h2
                 data-element-id="faq.headline"
                 onClick={(e) => {
@@ -369,7 +370,7 @@ export function FaqAccordion({
                 className={cn(
                   mergeTypographyClasses(
                     "text-3xl font-semibold tracking-tight text-foreground md:text-4xl transition-all rounded",
-                    (typography as Record<string, any> ?? {})["faq.headline"]
+                    typographyMap["faq.headline"]
                   ),
                   isElementSelected("faq.headline") && "ring-2 ring-primary/30 px-2 py-1",
                   canInlineEdit && "cursor-pointer px-1 transition-colors hover:bg-primary/10"
@@ -413,10 +414,10 @@ export function FaqAccordion({
                 canInlineEdit={canInlineEdit}
                 editable={editable}
                 onEditField={onEditField}
-                elements={elements}
+                elements={elementMap}
                 onElementClick={onElementClick}
                 selectedElementId={selectedElementId}
-                typography={(typography as Record<string, any>) ?? {}}
+                typography={typographyMap}
                 interactivePreview={interactivePreview}
                 activeItemId={activeItemId}
                 onItemSelect={onItemSelect}

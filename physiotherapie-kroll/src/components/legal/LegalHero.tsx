@@ -5,7 +5,7 @@ import {
 } from "@/lib/cms/cmsContentWidthClasses"
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
-import { getLegalIcon } from "@/lib/legal/legal-icon-registry"
+import { legalIconRegistry } from "@/lib/legal/legal-icon-registry"
 import { LegalPlainTextBody } from "@/components/legal/LegalPlainTextBody"
 
 export type LegalHeroProps = {
@@ -71,7 +71,7 @@ export function LegalHero({
 }: LegalHeroProps) {
   const align = alignment === "center" ? "text-center" : "text-left"
   const alignFlex = alignment === "center" ? "justify-center" : "justify-start"
-  const IconComponent = getLegalIcon(legalIcon)
+  const iconKey = legalIcon in legalIconRegistry ? legalIcon : "Scale"
 
   // Typography Mapping für Tailwind
   const fontSizeMap: Record<"xs" | "sm" | "base" | "lg", string> = {
@@ -112,7 +112,16 @@ export function LegalHero({
             className="inline-flex items-center justify-center p-3 rounded-lg"
             style={{ backgroundColor: legalIconBgColor }}
           >
-            <IconComponent className="h-6 w-6 text-foreground" />
+            {iconKey === "Scale" ? <legalIconRegistry.Scale.icon className="h-6 w-6 text-foreground" /> : null}
+            {iconKey === "Shield" ? <legalIconRegistry.Shield.icon className="h-6 w-6 text-foreground" /> : null}
+            {iconKey === "FileText" ? <legalIconRegistry.FileText.icon className="h-6 w-6 text-foreground" /> : null}
+            {iconKey === "AlertCircle" ? <legalIconRegistry.AlertCircle.icon className="h-6 w-6 text-foreground" /> : null}
+            {iconKey === "CheckCircle" ? <legalIconRegistry.CheckCircle.icon className="h-6 w-6 text-foreground" /> : null}
+            {iconKey === "Lock" ? <legalIconRegistry.Lock.icon className="h-6 w-6 text-foreground" /> : null}
+            {iconKey === "Eye" ? <legalIconRegistry.Eye.icon className="h-6 w-6 text-foreground" /> : null}
+            {iconKey === "Cookie" ? <legalIconRegistry.Cookie.icon className="h-6 w-6 text-foreground" /> : null}
+            {iconKey === "Info" ? <legalIconRegistry.Info.icon className="h-6 w-6 text-foreground" /> : null}
+            {iconKey === "Gavel" ? <legalIconRegistry.Gavel.icon className="h-6 w-6 text-foreground" /> : null}
           </div>
         </div>
       )}

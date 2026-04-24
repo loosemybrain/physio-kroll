@@ -84,11 +84,14 @@ export function UniversalRepeaterInspector<T>({
   const canAdd = maxItems == null || items.length < maxItems
   const canRemove = items.length > minItems
 
-  const summaryNode = React.useMemo(() => {
-    if (renderSummary) return renderSummary
-    if (getItemLabel) return (item: T) => getItemLabel(item, getIndex(item))
-    return (item: T) => <span className="truncate">{String(getItemId(item))}</span>
-  }, [renderSummary, getItemLabel, getIndex])
+  const renderSummaryNode = React.useCallback(
+    (item: T) => {
+      if (renderSummary) return renderSummary(item)
+      if (getItemLabel) return getItemLabel(item, getIndex(item))
+      return <span className="truncate">{String(getItemId(item))}</span>
+    },
+    [renderSummary, getItemLabel, getIndex, getItemId]
+  )
 
   const handleRemoveByIndex = React.useCallback(
     (index: number) => {
@@ -117,7 +120,7 @@ export function UniversalRepeaterInspector<T>({
     <UniversalRepeaterInspectorInner
       items={items}
       getItemId={getItemId}
-      renderSummary={summaryNode}
+      renderSummary={renderSummaryNode}
       renderContent={renderContent}
       getIndex={getIndex}
       expandedId={expandedId}

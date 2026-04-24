@@ -76,7 +76,7 @@ export type BlockType =
  */
 export interface CommonBlockProps {
   /** Global element styles (keyed by elementId from data-element-id) */
-  elements?: Record<string, ElementConfig>
+  elements?: Record<string, unknown>
 }
 
 export type BackgroundType = "none" | "color" | "gradient" | "image" | "video"
@@ -451,9 +451,9 @@ export interface SectionBlock extends BaseBlock {
     ctaHoverBgColor?: string
     ctaBorderColor?: string
     /** Per-element typography */
-    typography?: Record<string, any>
+    typography?: Record<string, unknown>
     /** Per-element shadows & other properties */
-    elements?: Record<string, any>
+    elements?: Record<string, unknown>
     /** Backward compat - old prop names */
     primaryCtaText?: string
     primaryCtaHref?: string
@@ -535,7 +535,7 @@ export interface FaqBlock extends BaseBlock {
     containerGradientVia?: string
     containerGradientTo?: string
     containerGradientAngle?: number
-    containerShadow?: any
+    containerShadow?: unknown
     containerBorder?: boolean
     containerBorderColor?: string
   }
@@ -547,7 +547,7 @@ export interface FaqBlock extends BaseBlock {
 export interface TeamBlock extends BaseBlock {
   type: "team"
   props: {
-    typography?: Record<string, any>
+    typography?: Record<string, unknown>
     section?: BlockSectionProps
     headline?: string
     subheadline?: string

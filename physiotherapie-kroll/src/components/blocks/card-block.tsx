@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge"
 import { useElementShadowStyle } from "@/lib/shadow"
 import { resolveButtonPresetStyles } from "@/lib/buttonPresets"
 import { useMotionPreference, getAnimationInitial, getViewportTrigger } from "@/lib/motion/useMotionPreference"
+import type { ElementConfig } from "@/types/cms"
 
 // ============================================================================
 // Types
@@ -73,7 +74,7 @@ export type CardBlockProps = {
   onEditField?: (blockId: string, fieldPath: string, anchorRect?: DOMRect) => void
   
   // Shadow/Element Props
-  elements?: Record<string, any>
+  elements?: Record<string, unknown>
   onElementClick?: (blockId: string, elementId: string) => void
   selectedElementId?: string | null
   buttonPreset?: string
@@ -122,7 +123,7 @@ function resolveTextAlign(align: "left" | "center" | "right" | undefined): strin
   }
 }
 
-function getIcon(icon: CardButton["icon"], position: "left" | "right") {
+function getIcon(icon: CardButton["icon"], _position?: "left" | "right") {
   if (!icon || icon === "none") return null
 
   const iconMap = {
@@ -399,7 +400,7 @@ export function CardBlock({
   onEditField,
   elements,
   onElementClick,
-  selectedElementId,
+  selectedElementId: _selectedElementId,
   buttonPreset,
 }: CardBlockProps) {
   const [prefersReducedMotion, setPrefersReducedMotion] = React.useState(false)
@@ -413,30 +414,32 @@ export function CardBlock({
     return () => mediaQuery.removeEventListener("change", handler)
   }, [])
 
+  const elementMap = (elements ?? {}) as Record<string, ElementConfig>
+
   // Element shadows
   const cardShadow = useElementShadowStyle({
     elementId: "card.surface",
-    elementConfig: (elements ?? {})["card.surface"],
+    elementConfig: elementMap["card.surface"],
   })
   const eyebrowShadow = useElementShadowStyle({
     elementId: "card.eyebrow",
-    elementConfig: (elements ?? {})["card.eyebrow"],
+    elementConfig: elementMap["card.eyebrow"],
   })
   const titleShadow = useElementShadowStyle({
     elementId: "card.title",
-    elementConfig: (elements ?? {})["card.title"],
+    elementConfig: elementMap["card.title"],
   })
   const descriptionShadow = useElementShadowStyle({
     elementId: "card.description",
-    elementConfig: (elements ?? {})["card.description"],
+    elementConfig: elementMap["card.description"],
   })
   const contentShadow = useElementShadowStyle({
     elementId: "card.content",
-    elementConfig: (elements ?? {})["card.content"],
+    elementConfig: elementMap["card.content"],
   })
   const actionShadow = useElementShadowStyle({
     elementId: "card.action",
-    elementConfig: (elements ?? {})["card.action"],
+    elementConfig: elementMap["card.action"],
   })
 
   const canInlineEdit = Boolean(editable && blockId && onEditField)

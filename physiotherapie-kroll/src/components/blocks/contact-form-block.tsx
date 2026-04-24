@@ -19,6 +19,7 @@ import { resolveButtonPresetStyles } from "@/lib/buttonPresets"
 import { mergeTypographyClasses } from "@/lib/typography"
 import { ElementAnimated } from "@/components/blocks/ElementAnimated"
 import type { CommonBlockProps } from "@/types/cms"
+import type { ElementConfig } from "@/types/cms"
 
 type ContactFormBlockProps = ContactFormBlock["props"] & CommonBlockProps & {
   blockId?: string
@@ -56,7 +57,7 @@ function ContactInfoCardRow({
 }: {
   card: ContactInfoCard
   renderIndex: number
-  elements?: Record<string, import("@/types/cms").ElementConfig>
+  elements?: Record<string, unknown>
   blockId?: string
   onElementClick?: (blockId: string, elementId: string) => void
   editable?: boolean
@@ -66,7 +67,7 @@ function ContactInfoCardRow({
   const cardElementId = `contact-info-${card.id}`
   const cardShadow = useElementShadowStyle({
     elementId: cardElementId,
-    elementConfig: (elements ?? {})[cardElementId],
+    elementConfig: (elements?.[cardElementId] as ElementConfig | undefined),
   })
   const IconComponent =
     card.icon === "mail"
@@ -157,6 +158,11 @@ function buildFormSchema(fields: ContactFormBlock["props"]["fields"], requireCon
 
 type FormState = "idle" | "loading" | "success" | "error"
 
+type RegisterField = (name: string) => {
+  ref?: (instance: HTMLInputElement | HTMLTextAreaElement | null) => void
+  [key: string]: unknown
+}
+
 /**
  * Floating label input component with premium styling
  */
@@ -178,7 +184,7 @@ function FloatingLabelInputField({
   placeholder?: string
   error?: string
   errorId?: string
-  register: any
+  register: RegisterField
   styleOverrides?: React.CSSProperties
 }) {
   const [isFocused, setIsFocused] = React.useState(false)
@@ -285,7 +291,7 @@ function FloatingLabelTextareaField({
   placeholder?: string
   error?: string
   errorId?: string
-  register: any
+  register: RegisterField
   styleOverrides?: React.CSSProperties
 }) {
   const [isFocused, setIsFocused] = React.useState(false)
@@ -636,7 +642,7 @@ export function ContactFormBlock({
                   editable && blockId && onEditField && "cursor-pointer rounded px-1 transition-colors hover:bg-primary/10"
                 )}
                 style={{
-                  ...(formHeadingShadow as any),
+                  ...(formHeadingShadow as React.CSSProperties),
                   ...(headingColor ? { color: headingColor } : {}),
                 }}
                 onClick={handleInlineEdit("heading")}
@@ -690,7 +696,7 @@ export function ContactFormBlock({
               <ElementAnimated elementId="formCard" elements={mergedContactElements}>
               <div 
                 data-element-id="formCard"
-                style={formCardShadow as any}
+                style={formCardShadow as React.CSSProperties}
                 className="relative rounded-3xl border border-border/40 bg-card p-8 shadow-2xl shadow-primary/5 lg:p-12">
                 {/* Error Alert */}
                 {formState === "error" && submitError && (
@@ -738,7 +744,7 @@ export function ContactFormBlock({
                       const hasCustomColors = inputTextColor || inputBgColor || inputBorderColor
                       if (hasCustomColors && inputBgColor) {
                         // Add dark mode filter for better visibility
-                        (inputStyleOverrides as any)["--tw-shadow"] = `var(--tw-shadow-colored)`
+                        ;(inputStyleOverrides as Record<string, string>)["--tw-shadow"] = `var(--tw-shadow-colored)`
                       }
 
                       if (isTextarea) {
@@ -834,7 +840,7 @@ export function ContactFormBlock({
                   </div>
 
                   {/* Premium Submit Button with shimmer */}
-                  <div className="pt-4" data-element-id="submitButton" style={submitButtonShadow as any}>
+                  <div className="pt-4" data-element-id="submitButton" style={submitButtonShadow as React.CSSProperties}>
                     <Button
                       type="submit"
                       disabled={isSubmitting || formState === "loading"}
@@ -900,7 +906,7 @@ export function ContactFormBlock({
               editable && blockId && onEditField && "cursor-pointer rounded px-1 transition-colors hover:bg-primary/10"
             )}
             style={{
-              ...(stackedHeadingShadow as any),
+              ...(stackedHeadingShadow as React.CSSProperties),
               ...(headingColor ? { color: headingColor } : {}),
             }}
             onClick={handleInlineEdit("props.heading")}
@@ -934,7 +940,7 @@ export function ContactFormBlock({
         <ElementAnimated elementId="formCardStacked" elements={mergedContactElements}>
         <div 
             data-element-id="formCardStacked"
-          style={formCardStackedShadow as any}
+          style={formCardStackedShadow as React.CSSProperties}
           className="rounded-2xl border border-border/40 bg-card/80 p-8 shadow-sm backdrop-blur-sm">
           {/* Error Alert */}
           {formState === "error" && submitError && (
@@ -975,7 +981,7 @@ export function ContactFormBlock({
               const hasCustomColors = inputTextColor || inputBgColor || inputBorderColor
               if (hasCustomColors && inputBgColor) {
                 // Add dark mode filter for better visibility
-                (inputStyleOverrides as any)["--tw-shadow"] = `var(--tw-shadow-colored)`
+                ;(inputStyleOverrides as Record<string, string>)["--tw-shadow"] = `var(--tw-shadow-colored)`
               }
 
               if (isTextarea) {
@@ -1067,7 +1073,7 @@ export function ContactFormBlock({
             </div>
 
             {/* Premium Submit Button with shimmer */}
-            <div className="pt-4" data-element-id="stackedSubmitButton" style={stackedSubmitButtonShadow as any}>
+            <div className="pt-4" data-element-id="stackedSubmitButton" style={stackedSubmitButtonShadow as React.CSSProperties}>
               <Button
                 type="submit"
                 disabled={isSubmitting || formState === "loading"}

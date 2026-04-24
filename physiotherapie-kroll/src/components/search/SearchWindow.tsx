@@ -45,8 +45,8 @@ export function SearchWindow({ brand, navItems, isOpen, onOpenChange }: SearchWi
   const brandTintIconSoft = brand === "physio-konzept" ? "text-accent/60" : "text-primary/60"
 
   const [query, setQuery] = useState("")
-  const [hasSearched, setHasSearched] = useState(false)
   const [pageItems, setPageItems] = useState<SearchItem[]>([])
+  const hasSearched = isOpen && query.trim().length > 0
 
   const allItems = useMemo(() => {
     // Dedup by href+title, keep highest priority
@@ -83,13 +83,11 @@ export function SearchWindow({ brand, navItems, isOpen, onOpenChange }: SearchWi
   const handleClose = () => {
     onOpenChange(false)
     setQuery("")
-    setHasSearched(false)
     setPageItems([])
   }
 
   const handleClear = () => {
     setQuery("")
-    setHasSearched(false)
     setPageItems([])
     inputRef.current?.focus()
   }
@@ -111,9 +109,7 @@ export function SearchWindow({ brand, navItems, isOpen, onOpenChange }: SearchWi
   useEffect(() => {
     if (!isOpen) return
     const q = query.trim()
-    setHasSearched(q.length > 0)
     if (q.length < 2) {
-      setPageItems([])
       return
     }
 
@@ -125,7 +121,7 @@ export function SearchWindow({ brand, navItems, isOpen, onOpenChange }: SearchWi
         const mapped = (await res.json()) as SearchItem[]
         if (requestSeq !== requestSeqRef.current) return
         setPageItems(mapped ?? [])
-      } catch (err: unknown) {
+      } catch {
         // ignore other fetch errors (offline, etc.)
       }
     }, 250)

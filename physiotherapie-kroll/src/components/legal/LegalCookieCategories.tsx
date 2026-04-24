@@ -18,13 +18,20 @@ const spacingBottomMap = { none: "pb-0", sm: "pb-4", md: "pb-8", lg: "pb-12" }
 
 function getCategoryIcon(name: string) {
   const lower = name.toLowerCase()
-  if (lower.includes("essenz") || lower.includes("notwendig") || lower.includes("erforderlich")) return Lock
-  return Settings
+  if (lower.includes("essenz") || lower.includes("notwendig") || lower.includes("erforderlich")) return "Lock"
+  return "Settings"
+}
+
+function CategoryIcon({ iconName, className }: { iconName: "Lock" | "Settings"; className: string }) {
+  if (iconName === "Lock") {
+    return <Lock className={className} aria-hidden="true" />
+  }
+  return <Settings className={className} aria-hidden="true" />
 }
 
 function CategoryCard({ category }: { category: LegalCookieCategory }) {
   const [expanded, setExpanded] = useState(false)
-  const Icon = getCategoryIcon(category.name)
+  const iconName = getCategoryIcon(category.name)
   const hasCookies = category.cookies?.length > 0
 
   return (
@@ -43,7 +50,7 @@ function CategoryCard({ category }: { category: LegalCookieCategory }) {
             category.required ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground",
           )}
         >
-          <Icon className="h-5 w-5" aria-hidden="true" />
+          <CategoryIcon iconName={iconName} className="h-5 w-5" />
         </div>
         <div className="min-w-0 flex-1">
           <div className="mb-1 flex flex-wrap items-center gap-2">
@@ -120,7 +127,7 @@ function CategoryAccordion({ categories }: { categories: LegalCookieCategory[] }
   return (
     <Accordion type="multiple" className="flex flex-col gap-3">
       {categories.map((category) => {
-        const Icon = getCategoryIcon(category.name)
+        const iconName = getCategoryIcon(category.name)
         return (
           <AccordionItem
             key={category.id}
@@ -138,7 +145,7 @@ function CategoryAccordion({ categories }: { categories: LegalCookieCategory[] }
                     category.required ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground",
                   )}
                 >
-                  <Icon className="h-4 w-4" aria-hidden="true" />
+                  <CategoryIcon iconName={iconName} className="h-4 w-4" />
                 </div>
                 <span className="font-semibold text-foreground">{category.name}</span>
                 {category.required && (

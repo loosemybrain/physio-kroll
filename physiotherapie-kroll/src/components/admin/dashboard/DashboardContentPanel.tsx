@@ -1,6 +1,7 @@
 import type { DashboardMetric } from "@/lib/admin/dashboard"
 import { CardSurface } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import styles from "./DashboardTheme.module.css"
 
 type DashboardContentPanelProps = {
   pagesTotal: number
@@ -31,10 +32,10 @@ export function DashboardContentPanel(props: DashboardContentPanelProps) {
   ]
 
   return (
-    <CardSurface className="gap-4 rounded-xl border-border/30 py-4">
+    <CardSurface className={`${styles.panelSurface} gap-4 rounded-xl py-4`}>
       <div className="px-6">
-        <h2 className="text-lg font-semibold text-foreground">Content-Bestand</h2>
-        <p className="text-sm text-muted-foreground">Tabellarische Sicht auf zentrale CMS-Quellen.</p>
+        <h2 className={`text-lg font-semibold ${styles.title}`}>Content-Bestand</h2>
+        <p className={`text-sm ${styles.textSoft}`}>Tabellarische Sicht auf zentrale CMS-Quellen.</p>
       </div>
 
       <div className="px-6 pb-6">

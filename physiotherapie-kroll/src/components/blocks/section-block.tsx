@@ -8,11 +8,12 @@ import { motion, useReducedMotion, cubicBezier } from "framer-motion"
 import type { BlockSectionProps } from "@/types/cms"
 import { useElementShadowStyle } from "@/lib/shadow"
 import { resolveButtonPresetStyles } from "@/lib/buttonPresets"
-import { mergeTypographyClasses } from "@/lib/typography"
+import { mergeTypographyClasses, type TypographySettings } from "@/lib/typography"
 import { useMotionPreference, getAnimationInitial, getViewportTrigger } from "@/lib/motion/useMotionPreference"
 import { resolveContainerBg } from "@/lib/theme/resolveContainerBg"
 import { resolveBoxShadow } from "@/lib/shadow/resolveBoxShadow"
-import type { ElementShadow } from "@/types/cms"
+import type { ElementConfig, ElementShadow } from "@/types/cms"
+import type { GradientPresetValue } from "@/lib/theme/gradientPresets"
 import { AnimatedBlock } from "@/components/blocks/AnimatedBlock"
 import { ElementAnimated } from "@/components/blocks/ElementAnimated"
 
@@ -30,8 +31,8 @@ export interface SectionBlockProps {
   ) => void
   onElementClick?: (blockId: string, elementId: string) => void
   selectedElementId?: string | null
-  elements?: Record<string, any>
-  typography?: Record<string, any>
+  elements?: Record<string, unknown>
+  typography?: Record<string, unknown>
 
   eyebrow?: string
   headline: string
@@ -72,7 +73,7 @@ export interface SectionBlockProps {
   containerOpacity?: number
   containerBackgroundMode?: "transparent" | "color" | "gradient"
   containerBackgroundColor?: string
-  containerBackgroundGradientPreset?: any
+  containerBackgroundGradientPreset?: GradientPresetValue
   containerGradientFrom?: string
   containerGradientVia?: string
   containerGradientTo?: string
@@ -241,7 +242,7 @@ export function SectionBlock({
   elements,
   // Backward compat props (not in interface but may come from saved data)
   ...restProps
-}: SectionBlockProps & Record<string, any>) {
+}: SectionBlockProps & Record<string, unknown>) {
   const prefersReducedMotion = useReducedMotion()
   const { shouldDisableViewAnimations } = useMotionPreference()
   
@@ -281,9 +282,12 @@ export function SectionBlock({
   const resolvedDividerColor =
     typeof rawDividerColor === "string"
       ? rawDividerColor
-      : (rawDividerColor?.value ?? rawDividerColor?.hex ?? rawDividerColor?.color)
+      : ((rawDividerColor as Record<string, unknown> | undefined)?.value ??
+        (rawDividerColor as Record<string, unknown> | undefined)?.hex ??
+        (rawDividerColor as Record<string, unknown> | undefined)?.color)
 
-  const hasDividerColor = Boolean((resolvedDividerColor ?? "").trim())
+  const resolvedDividerColorText = typeof resolvedDividerColor === "string" ? resolvedDividerColor : ""
+  const hasDividerColor = Boolean(resolvedDividerColorText.trim())
 
   // Resolve showDivider: handle string/boolean/missing/fallback
   const rawShowDivider =
@@ -312,39 +316,41 @@ export function SectionBlock({
   const hasSecondaryCta = resolvedSecondaryText.length > 0 && resolvedSecondaryHref
   
   const hasCta = showCta && (hasPrimaryCta || hasSecondaryCta)
+  const elementMap = (elements ?? {}) as Record<string, ElementConfig>
+  const typographyMap = (typography ?? {}) as Record<string, TypographySettings | undefined>
 
   // Element shadows
   const surfaceShadow = useElementShadowStyle({
     elementId: "section.surface",
-    elementConfig: (elements ?? {})["section.surface"],
+    elementConfig: elementMap["section.surface"],
   })
   const eyebrowShadow = useElementShadowStyle({
     elementId: "section.eyebrow",
-    elementConfig: (elements ?? {})["section.eyebrow"],
+    elementConfig: elementMap["section.eyebrow"],
   })
   const headlineShadow = useElementShadowStyle({
     elementId: "section.headline",
-    elementConfig: (elements ?? {})["section.headline"],
+    elementConfig: elementMap["section.headline"],
   })
   const subheadlineShadow = useElementShadowStyle({
     elementId: "section.subheadline",
-    elementConfig: (elements ?? {})["section.subheadline"],
+    elementConfig: elementMap["section.subheadline"],
   })
   const dividerShadow = useElementShadowStyle({
     elementId: "section.divider",
-    elementConfig: (elements ?? {})["section.divider"],
+    elementConfig: elementMap["section.divider"],
   })
   const contentShadow = useElementShadowStyle({
     elementId: "section.content",
-    elementConfig: (elements ?? {})["section.content"],
+    elementConfig: elementMap["section.content"],
   })
   const primaryCtaShadow = useElementShadowStyle({
     elementId: "section.ctaPrimary",
-    elementConfig: (elements ?? {})["section.ctaPrimary"],
+    elementConfig: elementMap["section.ctaPrimary"],
   })
   const secondaryCtaShadow = useElementShadowStyle({
     elementId: "section.ctaSecondary",
-    elementConfig: (elements ?? {})["section.ctaSecondary"],
+    elementConfig: elementMap["section.ctaSecondary"],
   })
 
   const handleInlineEdit = (
@@ -481,14 +487,14 @@ export function SectionBlock({
         )}
 
         <AnimatedBlock config={section?.animation}>
-          <ElementAnimated elementId="section.surface" elements={elements}>
+          <ElementAnimated elementId="section.surface" elements={elementMap}>
           <div
             className={cn(
               // Inner card surface with layered shadow system
               "relative overflow-hidden rounded-3xl px-8 py-8 md:px-14 md:py-10",
               // Check if surface shadow is enabled
               (() => {
-                const surfaceShadowEnabled = Boolean(elements?.["section.surface"]?.style?.shadow?.enabled)
+                const surfaceShadowEnabled = Boolean(elementMap["section.surface"]?.style?.shadow?.enabled)
                 return cn(
                   // Soft outer shadow with blue tint for brand
                   background === "gradient-brand"
@@ -572,7 +578,7 @@ export function SectionBlock({
                   className="h-px w-10 bg-linear-to-r from-transparent via-primary/40 to-primary/60"
                   aria-hidden="true"
                 />
-                <ElementAnimated elementId="section.eyebrow" elements={elements}>
+                <ElementAnimated elementId="section.eyebrow" elements={elementMap}>
                 <span
                   onClick={(e) => handleInlineEdit(e, "eyebrow", "section.eyebrow")}
                   data-element-id="section.eyebrow"
@@ -580,7 +586,7 @@ export function SectionBlock({
                     "text-xs font-semibold uppercase tracking-[0.2em] text-primary/80",
                     mergeTypographyClasses(
                       "text-xs font-semibold uppercase tracking-[0.2em] text-primary/80",
-                      (typography ?? {})["section.eyebrow"]
+                      typographyMap["section.eyebrow"]
                     ),
                     editable &&
                       blockId &&
@@ -605,7 +611,7 @@ export function SectionBlock({
             )}
 
             {/* ---- Headline ---- */}
-            <ElementAnimated elementId="section.headline" elements={elements}>
+            <ElementAnimated elementId="section.headline" elements={elementMap}>
             <motion.h2
               variants={itemVariants}
               initial={disableViewMotion ? "visible" : undefined}
@@ -615,7 +621,7 @@ export function SectionBlock({
               className={cn(
                 mergeTypographyClasses(
                   "text-4xl font-semibold tracking-tight text-foreground md:text-5xl",
-                  (typography ?? {})["section.headline"]
+                  typographyMap["section.headline"]
                 ),
                 isCentered && "text-balance",
                 editable &&
@@ -634,7 +640,7 @@ export function SectionBlock({
 
             {/* ---- Subheadline ---- */}
             {subheadline && (
-              <ElementAnimated elementId="section.subheadline" elements={elements}>
+              <ElementAnimated elementId="section.subheadline" elements={elementMap}>
               <motion.p
                 variants={itemVariants}
                 initial={disableViewMotion ? "visible" : undefined}
@@ -644,7 +650,7 @@ export function SectionBlock({
                 className={cn(
                   mergeTypographyClasses(
                     "mt-4 text-lg text-muted-foreground/80 md:text-xl",
-                    (typography ?? {})["section.subheadline"]
+                    typographyMap["section.subheadline"]
                   ),
                   isCentered && "mx-auto max-w-2xl text-balance",
                   editable &&
@@ -664,7 +670,7 @@ export function SectionBlock({
 
             {/* ---- Divider ---- */}
             {resolvedShowDivider && (
-              <ElementAnimated elementId="section.divider" elements={elements}>
+              <ElementAnimated elementId="section.divider" elements={elementMap}>
               <motion.div
                 variants={itemVariants}
                 initial={disableViewMotion ? "visible" : undefined}
@@ -684,7 +690,7 @@ export function SectionBlock({
                   className={cn("h-px w-full rounded opacity-70")}
                   style={{
                     ...dividerShadow,
-                    backgroundColor: resolvedDividerColor?.trim() ? resolvedDividerColor.trim() : "var(--border)",
+                    backgroundColor: resolvedDividerColorText.trim() ? resolvedDividerColorText.trim() : "var(--border)",
                     height: "1px",
                   }}
                   aria-hidden="true"
@@ -694,7 +700,7 @@ export function SectionBlock({
             )}
 
             {/* ---- Content paragraphs ---- */}
-            <ElementAnimated elementId="section.content" elements={elements}>
+            <ElementAnimated elementId="section.content" elements={elementMap}>
             <motion.div
               variants={itemVariants}
               initial={disableViewMotion ? "visible" : undefined}
@@ -705,7 +711,7 @@ export function SectionBlock({
                 resolvedShowDivider ? "mt-2" : "mt-8",
                 mergeTypographyClasses(
                   "space-y-5 text-base leading-relaxed text-muted-foreground md:text-lg md:leading-8",
-                  (typography ?? {})["section.content"]
+                  typographyMap["section.content"]
                 ),
                 alignTextMap[align],
                 isJustified && justifyBiasMap[justifyBias],
@@ -738,7 +744,7 @@ export function SectionBlock({
               >
                 {/* Primary CTA */}
                 {hasPrimaryCta && (
-                  <ElementAnimated elementId="section.ctaPrimary" elements={elements}>
+                  <ElementAnimated elementId="section.ctaPrimary" elements={elementMap}>
                   <div
                     data-element-id="section.ctaPrimary"
                     style={primaryCtaShadow}
@@ -752,7 +758,7 @@ export function SectionBlock({
                           primaryPreset.className,
                           mergeTypographyClasses(
                             "gap-2 rounded-xl px-8 text-base shadow-lg transition-all duration-300",
-                            (typography ?? {})["section.ctaPrimary"]
+                            typographyMap["section.ctaPrimary"]
                           ),
                           "hover:-translate-y-0.5 hover:shadow-xl",
                           background === "gradient-brand"
@@ -809,7 +815,7 @@ export function SectionBlock({
 
                 {/* Secondary CTA */}
                 {hasSecondaryCta && (
-                  <ElementAnimated elementId="section.ctaSecondary" elements={elements}>
+                  <ElementAnimated elementId="section.ctaSecondary" elements={elementMap}>
                   <div
                     data-element-id="section.ctaSecondary"
                     style={secondaryCtaShadow}
